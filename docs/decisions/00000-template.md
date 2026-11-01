@@ -1,5 +1,6 @@
 ---
 description: The description of the decision.
+status: The status of the decision.
 ---
 
 # Motivation

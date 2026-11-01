@@ -1,5 +1,6 @@
 ---
 description: Define OAS specification for the Public API.
+status: implemented
 ---
 
 # Motivation
@@ -11,7 +12,7 @@ To allow the UI and API to be developed independently, we need to define the Ope
 [scope]: #scope
 
 In scope:
-- defining the Public API OAS specification in `public-openapi.yaml`
+- defining the Public API OAS specification in `specs/public-openapi.yaml`
 - APIs for review subjects
 - APIs for reviews
 
@@ -34,7 +35,7 @@ New Concepts:
 - **Subject**: a thing that can be reviewed
   - a subject has zero to many reviews
 
-The file `public-openapi.yaml` contains the OpenAPI Specification (OAS) for the Public API. In the OAS file,
+The file `specs/public-openapi.yaml` contains the OpenAPI Specification (OAS) for the Public API. In the OAS file,
 the endpoints, request/response schemas, and authentication mechanisms are defined.
 
 All paths in this document are relative to the versioned base path `/v1`.
@@ -50,7 +51,7 @@ The subjects API exists on the base path `/subjects`.
 
 The properties of a subject are as follows:
 - required properties:
-    - `title`: string with a length of 1 to 255 characters. It must contain at least one non-whitespace character.
+    - `title`: string with a length of 1 to 255 characters. It must contain at least one character that is not ASCII whitespace.
     - `kind`: enum of "book", "movie", or "restaurant"
 - optional properties:
     - `description`: string with a maximum length of 10,000 characters
@@ -121,7 +122,7 @@ The reviews API exists on the base path `/subjects/{subjectId}/reviews`.
 The properties of a review are as follows:
 - required properties:
     - `rating`: integer with a minimum value of 1 and a maximum value of 5
-    - `title`: string with a length of 1 to 255 characters. It must contain at least one non-whitespace character.
+    - `title`: string with a length of 1 to 255 characters. It must contain at least one character that is not ASCII whitespace.
 - optional properties:
     - `feedback`: string with a maximum length of 10,000 characters
     - `tags`: see [Tags](#tags)

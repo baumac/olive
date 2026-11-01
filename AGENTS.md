@@ -33,13 +33,14 @@ make run-local        # Run with -tags=local for local development mocks
 ## Architecture
 
 - **`makefile`** - the Makefile for building, developing, and testing the project
-- **`public-openapi.yaml`** - the OpenAPI specification for the Public API
+- **`specs`** - the directory containing API specifications
+  - **`specs/public-openapi.yaml`** - the OpenAPI specification for the Public API
 - **`api`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
-  - Implements the OpenAPI specification for the Public API defined in `public-openapi.yaml`
+  - Implements the OpenAPI specification for the Public API defined in `specs/public-openapi.yaml`
   - Written in the Go programming language
   - Built using the Pocketbase framework
 - **`ui`** - the directory containing the app that serves the Public UI
-  - Implemented against the OpenAPI specification defined in `public-openapi.yaml`
+  - Implemented against the OpenAPI specification defined in `specs/public-openapi.yaml`
   - Written in the TypeScript programming language
   - Built using the Vue framework
 
