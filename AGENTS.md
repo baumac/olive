@@ -37,7 +37,7 @@ make run-local        # Run with -tags=local for local development mocks
   - **`specs/public-openapi.yaml`** - the OpenAPI specification for the Public API
   - **`specs/design-system`** - the Sponga47 design system: tokens, brand book, and component guidelines
     - Start with `specs/design-system/README.md`
-    - Edit tokens in `tokens.json`. `tokens.css` is generated from it.
+    - Edit tokens in `tokens.json`. Update `tokens.css` in the same change; it has no generator yet.
 - **`api`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification for the Public API defined in `specs/public-openapi.yaml`
   - Written in the Go programming language

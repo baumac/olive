@@ -1,4 +1,4 @@
-/* Sponga47 — generated from tokens.json */
+/* Keep every value in step with tokens.json. */
 :root, [data-theme="light"] {
   --surface: #f4f6f8;
   --surface-raised: #ffffff;
@@ -39,10 +39,10 @@
   --font-sans: "Instrument Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
-.display { font-family: var(--font-display); font-size: 56px; line-height: 60px; font-weight: 700; letter-spacing: -0.02em; }
-.heading { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 600; }
-.subheading { font-family: var(--font-display); font-size: 20px; line-height: 28px; font-weight: 600; }
-.body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
-.small { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }
-.label { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.04em; }
-.code { font-family: var(--font-mono); font-size: 14px; line-height: 20px; font-weight: 400; }
+.sp-text-display { font-family: var(--font-display); font-size: 56px; line-height: 60px; font-weight: 700; letter-spacing: -0.02em; }
+.sp-text-heading { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 600; }
+.sp-text-subheading { font-family: var(--font-display); font-size: 20px; line-height: 28px; font-weight: 600; }
+.sp-text-body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
+.sp-text-small { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }
+.sp-text-label { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.04em; }
+.sp-text-code { font-family: var(--font-mono); font-size: 14px; line-height: 20px; font-weight: 400; }

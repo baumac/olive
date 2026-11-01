@@ -7,6 +7,10 @@
     return Array.prototype.filter.call(arguments, Boolean).join(' ');
   }
 
+  function joinIds() {
+    return cx.apply(null, arguments) || undefined;
+  }
+
   function Button(props) {
     var { variant = 'secondary', size = 'md', type = 'button', className, children, ...rest } = props;
     return h('button', {
@@ -37,8 +41,8 @@
           ...rest,
           id: fieldId,
           className: cx('sp-input', multiline && 'sp-textarea'),
-          'aria-invalid': error ? true : undefined,
-          'aria-describedby': describedBy
+          'aria-invalid': error ? true : rest['aria-invalid'],
+          'aria-describedby': joinIds(rest['aria-describedby'], describedBy)
         });
       }
     });
@@ -48,16 +52,18 @@
     var { label, hint, error, options = [], placeholder, className, id, ...rest } = props;
     var auto = React.useId();
     var fieldId = id || auto;
+    var showPlaceholder = placeholder && rest.value === undefined && rest.defaultValue === undefined;
     return h(FieldShell, {
       id: fieldId, label: label, hint: hint, error: error, className: className,
       control: function (describedBy) {
         return h('div', { className: 'sp-select' },
           h('select', {
+            ...(showPlaceholder ? { defaultValue: '' } : null),
             ...rest,
             id: fieldId,
             className: 'sp-input',
-            'aria-invalid': error ? true : undefined,
-            'aria-describedby': describedBy
+            'aria-invalid': error ? true : rest['aria-invalid'],
+            'aria-describedby': joinIds(rest['aria-describedby'], describedBy)
           },
             placeholder && h('option', { value: '', disabled: true }, placeholder),
             options.map(function (o) {
@@ -74,7 +80,7 @@
     var auto = React.useId();
     var boxId = id || auto;
     return h('div', { className: cx('sp-check', className) },
-      h('input', { ...rest, id: boxId, type: 'checkbox', 'aria-describedby': hint ? boxId + '-hint' : undefined }),
+      h('input', { ...rest, id: boxId, type: 'checkbox', 'aria-describedby': joinIds(rest['aria-describedby'], hint && boxId + '-hint') }),
       h('div', null,
         h('label', { htmlFor: boxId }, label),
         hint && h('p', { id: boxId + '-hint', className: 'sp-hint' }, hint)

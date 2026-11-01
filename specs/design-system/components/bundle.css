@@ -1,9 +1,8 @@
-:where(.sp-btn, .sp-input, .sp-check input, .sp-tab, .sp-tabpanel):focus-visible {
+.sp-btn:focus-visible, .sp-input:focus-visible, .sp-check input:focus-visible, .sp-tab:focus-visible, .sp-tabpanel:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* Button */
 .sp-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
   height: 36px; padding: 0 var(--space-4);
@@ -23,7 +22,6 @@
 .sp-btn-danger:hover { background: color-mix(in srgb, var(--danger) 86%, var(--ink)); }
 .sp-btn:disabled { background: transparent; color: var(--ink-muted); border-color: var(--line); cursor: not-allowed; }
 
-/* Fields */
 .sp-field { display: flex; flex-direction: column; gap: var(--space-1); font-family: var(--font-sans); color: var(--ink); }
 .sp-label { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .04em; }
 .sp-input {
@@ -49,13 +47,11 @@
   transform: rotate(45deg); pointer-events: none;
 }
 
-/* Checkbox */
 .sp-check { display: flex; gap: var(--space-2); align-items: flex-start; font-family: var(--font-sans); font-size: 16px; line-height: 24px; color: var(--ink); }
 .sp-check input { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--brand); flex: none; cursor: pointer; }
 .sp-check label { cursor: pointer; }
 .sp-check input:disabled, .sp-check input:disabled + div label { cursor: not-allowed; color: var(--ink-muted); }
 
-/* Card */
 .sp-card {
   display: flex; flex-direction: column; gap: var(--space-4);
   padding: var(--space-4);
@@ -68,7 +64,6 @@
 .sp-card-actions { display: flex; gap: var(--space-2); }
 .sp-card-foot { display: flex; justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--line); }
 
-/* Tabs */
 .sp-tabs { font-family: var(--font-sans); color: var(--ink); }
 .sp-tablist { display: flex; gap: var(--space-1); box-shadow: inset 0 -1px 0 var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .sp-tab {
@@ -81,7 +76,6 @@
 .sp-tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--brand); }
 .sp-tabpanel { padding-top: var(--space-4); font-size: 16px; line-height: 24px; }
 
-/* Badge */
 .sp-badge {
   display: inline-flex; align-items: center; gap: var(--space-1);
   padding: 2px var(--space-2);
@@ -93,7 +87,6 @@
 .sp-badge-success { background: var(--success); color: var(--on-accent); }
 .sp-badge-danger { background: var(--danger); color: var(--on-accent); }
 
-/* Alert */
 .sp-alert {
   --tone: var(--accent);
   display: grid; grid-template-columns: 20px 1fr; gap: var(--space-2);

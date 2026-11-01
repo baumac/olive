@@ -9,13 +9,13 @@ This folder is the source of truth for Sponga47.
 | Path | What |
 | --- | --- |
 | `tokens.json` | Every token, with its value per theme and a usage note. Edit tokens here. |
-| `tokens.css` | The tokens as CSS custom properties and type style classes. Generated from `tokens.json`; never edit it by hand. |
+| `tokens.css` | The tokens as CSS custom properties, plus one `sp-text-<style>` class per type style. It has no generator yet, so update it in the same change as `tokens.json`. |
 | `fonts.css` | Loads the three font families from Google Fonts. Optional: apps can self-host the fonts instead. |
 | `components/bundle.css` | The framework-agnostic component styles. Every class starts with `sp-`. |
 | `components/bundle.js` | The React 18 reference components, as one classic script that sets `window.Sponga47`. |
 | `components/index.d.ts` | The component props, as TypeScript types. |
 | `components/<Name>/README.md` | Usage guidelines for one component. |
-| `components/<Name>/preview.html` | A reference example of one component. It expects `tokens.css`, `bundle.css`, React 18 and `bundle.js` to be loaded already. |
+| `components/<Name>/preview.html` | A reference example of one component. Open it in a browser; it loads the stylesheets and `bundle.js` from this folder and React 18.3.1 from jsDelivr. |
 
 Load the stylesheets in this order: `tokens.css`, then `components/bundle.css`, then app styles.
 
@@ -43,7 +43,8 @@ Load the stylesheets in this order: `tokens.css`, then `components/bundle.css`, 
 - Headings use the display family (`display`, `heading`, `subheading`). Use `display` at most once per page.
 - Running text is `body`. Use `small` for metadata and table cells, `label` for form labels and badges.
 - Use `code` for IDs, API tokens and log output.
-- Load Bricolage Grotesque, Instrument Sans and JetBrains Mono from Google Fonts.
+- Apply a type style with its class, for example `sp-text-body` or `sp-text-label`.
+- Self-host Bricolage Grotesque, Instrument Sans and JetBrains Mono with the app, for example from `@fontsource` packages, so the app works offline. Use `fonts.css` (Google Fonts) only for quick prototypes.
 
 ## Spacing, radius and layout
 

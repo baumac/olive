@@ -104,7 +104,7 @@ Changing a token:
 specs/design-system/
   README.md            brand book and file guide
   tokens.json          source of every token
-  tokens.css           made from tokens.json, committed
+  tokens.css           CSS form of tokens.json, committed
   fonts.css            optional Google Fonts import
   components/
     bundle.css         sp- component styles
@@ -116,7 +116,8 @@ specs/design-system/
 ```
 
 `tokens.css` is committed so that apps and previews can use it without a build step.
-A test fails when `tokens.css` does not match `tokens.json`.
+Until `make design-tokens` exists, `tokens.css` is edited by hand in the same change as `tokens.json`.
+After that, a test fails when `tokens.css` does not match `tokens.json`.
 
 ## UI layout
 
@@ -148,10 +149,10 @@ A Vite alias `@design-system` points at `../specs/design-system`.
 :root, [data-theme="light"] { --surface: #f4f6f8; --brand: #1d5fd1; /* ... */ }
 [data-theme="dark"] { --surface: #0f1318; --brand: #5b9cf5; /* ... */ }
 :root { --space-1: 4px; --radius-md: 8px; --font-sans: "Instrument Sans", system-ui, sans-serif; /* ... */ }
-.body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; /* ... */ }
+.sp-text-body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; /* ... */ }
 ```
 
-The first line of `tokens.css` is `/* Sponga47 — generated from tokens.json */`.
+Type style classes use the `sp-text-` prefix, so they do not clash with app classes such as `.label`.
 
 ## Components
 
@@ -220,5 +221,3 @@ It installs the three fonts from `@fontsource` packages and imports them in `mai
   Until it has its own repository, do they copy `specs/design-system/` from this repo?
 - When Sponga47 moves to its own repository, should apps install it as a git dependency or from a private registry?
 - Should the React reference components stay, or should the Vue components become the reference?
-- How can someone view the reference previews locally?
-  They expect the stylesheets, React, and `bundle.js` to be loaded already.
