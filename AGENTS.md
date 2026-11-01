@@ -35,12 +35,16 @@ make run-local        # Run with -tags=local for local development mocks
 - **`makefile`** - the Makefile for building, developing, and testing the project
 - **`specs`** - the directory containing API specifications
   - **`specs/public-openapi.yaml`** - the OpenAPI specification for the Public API
+  - **`specs/design-system`** - the Sponga47 design system: tokens, brand book, and component guidelines
+    - Start with `specs/design-system/README.md`
+    - Edit tokens in `tokens.json`. `tokens.css` is generated from it.
 - **`api`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification for the Public API defined in `specs/public-openapi.yaml`
   - Written in the Go programming language
   - Built using the Pocketbase framework
 - **`ui`** - the directory containing the app that serves the Public UI
   - Implemented against the OpenAPI specification defined in `specs/public-openapi.yaml`
+  - Styled with the Sponga47 design system defined in `specs/design-system`
   - Written in the TypeScript programming language
   - Built using the Vue framework
 

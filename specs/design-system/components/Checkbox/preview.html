@@ -1,0 +1,18 @@
+<!-- @dsCard group="Forms" height=150 subtitle="Checked, unchecked, hint, disabled" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Checkbox preview</title>
+<style>body{margin:0;padding:16px;background:var(--surface)} .stack{display:flex;flex-direction:column;gap:8px}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var S = window.Sponga47, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'stack' },
+    h(S.Checkbox, { label: 'Show my name on reviews', defaultChecked: true }),
+    h(S.Checkbox, { label: 'Email me when someone replies', hint: 'At most one email a day.' }),
+    h(S.Checkbox, { label: 'Allow public sharing', disabled: true })
+  ));
+</script>
+</body>
+</html>

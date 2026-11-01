@@ -1,0 +1,48 @@
+<!-- @dsCard height=288 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Instrument+Sans:wght@400&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: var(--surface); }
+  .cover { position: relative; width: 960px; height: 288px; overflow: hidden; background: var(--surface); }
+  .art { position: absolute; left: 480px; top: 0; }
+  .brand { fill: var(--brand); }
+  .accent { fill: var(--accent); }
+  .ink { fill: var(--ink); }
+  .tint { fill: var(--line-strong); }
+  .pore { fill: var(--surface); }
+  .tile { rx: var(--radius-md); }
+  .text { position: absolute; left: 32px; bottom: 32px; max-width: 440px; }
+  .name { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 88px; line-height: .92; letter-spacing: -0.02em; color: var(--ink); }
+  .tag { margin: 16px 0 0; font-family: var(--font-sans); font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+</style>
+<div class="cover">
+  <svg class="art" width="480" height="288" viewBox="0 0 480 288" aria-hidden="true">
+    <!--
+      blocks: brand 256x256 slab; accent 192x128; ink 96x112; line-strong 80x112 tint.
+      arrangement: one tall sponge slab with satellites bleeding off the top-right and bottom edges.
+      pattern: literal motif, sponge pores. The name says sponge, so pores cut from the brand slab in surface.
+      steps and radii: gaps space-4 and space-8, sides multiples of space-8, corners radius-md, pores radius-sm to space-4.
+    -->
+    <rect class="brand tile" x="16" y="16" width="256" height="256"/>
+    <rect class="accent tile" x="288" y="-8" width="200" height="136"/>
+    <rect class="ink tile" x="288" y="144" width="96" height="152"/>
+    <rect class="tint tile" x="400" y="144" width="88" height="152"/>
+    <circle class="pore" cx="64" cy="64" r="16"/>
+    <circle class="pore" cx="120" cy="48" r="8"/>
+    <circle class="pore" cx="176" cy="80" r="12"/>
+    <circle class="pore" cx="232" cy="52" r="6"/>
+    <circle class="pore" cx="96" cy="120" r="8"/>
+    <circle class="pore" cx="148" cy="140" r="16"/>
+    <circle class="pore" cx="224" cy="132" r="8"/>
+    <circle class="pore" cx="52" cy="180" r="8"/>
+    <circle class="pore" cx="104" cy="208" r="12"/>
+    <circle class="pore" cx="196" cy="196" r="6"/>
+    <circle class="pore" cx="236" cy="228" r="12"/>
+    <circle class="pore" cx="156" cy="240" r="4"/>
+    <circle class="pore" cx="60" cy="240" r="4"/>
+  </svg>
+  <div class="text">
+    <h1 class="name">Sponga47</h1>
+    <p class="tag">The shared look for a family of self-hosted web apps.</p>
+  </div>
+</div>

@@ -1,0 +1,19 @@
+<!-- @dsCard group="Forms" height=300 subtitle="Default, hint, error, multiline" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>TextField preview</title>
+<style>body{margin:0;padding:16px;background:var(--surface)} .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var S = window.Sponga47, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'grid' },
+    h(S.TextField, { label: 'Title', placeholder: 'What are you reviewing?' }),
+    h(S.TextField, { label: 'Server URL', defaultValue: 'https://reviews.local', hint: 'Include the protocol.' }),
+    h(S.TextField, { label: 'Email', defaultValue: 'chris@', error: 'Enter a full email address, like name@example.com.' }),
+    h(S.TextField, { label: 'Review', multiline: true, placeholder: 'Write a few sentences.' })
+  ));
+</script>
+</body>
+</html>

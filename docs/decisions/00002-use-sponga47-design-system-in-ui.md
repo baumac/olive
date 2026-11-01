@@ -1,5 +1,5 @@
 ---
-description: Use the Sponga47 design system in the Vue Public UI.
+description: Store the Sponga47 design system in this repo and use it in the Vue Public UI.
 status: proposed
 ---
 
@@ -7,26 +7,27 @@ status: proposed
 [motivation]: #motivation
 
 Sponga47 is the shared look for all self-hosted projects, including this one.
-Its source of truth is the Sponga47 design system artifact:
-https://claude.ai/artifact/H6kBoW5YMTn6B9NuEDaXkX
+It defines tokens (color, type, spacing, radius), a brand book, and eight core components.
+It is stored in `specs/design-system/`, next to the Public API specification.
+Like the API spec, it is a contract that the `ui` app implements.
 
-The design system defines tokens (color, type, spacing, radius), a brand book, and eight core components.
-Its components are React, because the design system page renders its previews with React.
+The reference components are React.
 The Public UI is Vue.
 We need a way for the Public UI to look and behave like Sponga47 without React,
-and without each app drifting into its own version of the look.
+and without the app drifting into its own version of the look.
 
 Expected outcome:
-- The Public UI uses the Sponga47 tokens and component styles unchanged.
+- The Public UI uses the Sponga47 tokens and component styles directly from `specs/design-system/`.
 - The Public UI has Vue versions of the eight core components with the same props, states, and accessibility.
-- A token change in the design system reaches the Public UI by re-running one command.
+- A token change is one edit to `specs/design-system/tokens.json` and one command.
 - Light and dark themes both work, and follow the operating system by default.
 
 # Scope
 [scope]: #scope
 
 In scope:
-- How the `ui` app gets the Sponga47 tokens and stylesheet
+- The layout of `specs/design-system/`
+- How the `ui` app loads the Sponga47 tokens and stylesheet
 - The Vue component set and its API: `SpButton`, `SpTextField`, `SpSelect`, `SpCheckbox`, `SpCard`, `SpTabs`, `SpBadge`, `SpAlert`
 - Theme switching (light, dark, follow the system)
 - Font loading
@@ -35,23 +36,23 @@ In scope:
 Out of scope:
 - Scaffolding the `ui` app itself (Vite, router, API client). It is part of the "Design the UI" backlog item.
 - Screen designs for the Public UI
-- Extracting Sponga47 into its own repository and package. See [Unresolved questions](#unresolved-questions).
-- Components that the design system does not define yet, such as a dialog, menu, or rating input.
-  Add them to the design system first, then to the Vue set.
-- A logo and an icon set. The design system has neither yet.
+- Moving Sponga47 into its own repository and package. See [Unresolved questions](#unresolved-questions).
+- Components that Sponga47 does not define yet, such as a dialog, menu, or rating input.
+  Add them to `specs/design-system/` first, then to the Vue set.
+- A logo and an icon set. Sponga47 has neither yet.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
 
 New concepts:
 - **Sponga47**: the design system shared by all self-hosted projects.
-  The design system artifact is the source of truth for tokens, rules, and component behavior.
+  `specs/design-system/` is its source of truth for tokens, rules, and component behavior.
+  Start with `specs/design-system/README.md`.
 - **Token**: a named design value, such as the `brand` color or the `space-4` spacing step.
   In CSS, each token is a custom property, for example `var(--brand)`.
-- **Sponga47 stylesheet**: the framework-agnostic CSS for the components.
-  Every class starts with `sp-`. The React and Vue components render the same classes.
-- **Vendored copy**: the Sponga47 files that the `ui` app copies into `ui/src/sponga47/`.
-  Nobody edits them in this repo. Changes go to the design system, then get synced.
+- **Sponga47 stylesheet**: `specs/design-system/components/bundle.css`.
+  It is framework-agnostic, and every class starts with `sp-`.
+  The React reference components and the Vue components render the same classes.
 
 Using a component in a Vue page:
 
@@ -89,25 +90,38 @@ Using tokens in an app's own styles:
 
 Apps never write raw hex values. They use tokens, so both themes work.
 
-Syncing after the design system changes:
-
-```bash
-make sync-sponga47
-```
-
-This copies `tokens.json` and the stylesheet from the design system into `ui/src/sponga47/`.
-It then makes `tokens.css` again. The diff shows exactly what changed.
+Changing a token:
+1. Edit the value and usage note in `specs/design-system/tokens.json`.
+2. Run `make design-tokens` to make `specs/design-system/tokens.css` again.
+3. Commit both files. The `ui` app picks up the change on its next build.
 
 # Implementation Details
 [implementation-details]: #implementation-details
 
-## File layout
+## Design system layout
+
+```text
+specs/design-system/
+  README.md            brand book and file guide
+  tokens.json          source of every token
+  tokens.css           made from tokens.json, committed
+  fonts.css            optional Google Fonts import
+  components/
+    bundle.css         sp- component styles
+    bundle.js          React 18 reference components
+    index.d.ts         component props
+    <Name>/README.md   usage guidelines
+    <Name>/preview.html reference example
+    Cover/preview.html  brand cover art
+```
+
+`tokens.css` is committed so that apps and previews can use it without a build step.
+A test fails when `tokens.css` does not match `tokens.json`.
+
+## UI layout
 
 ```text
 ui/src/sponga47/
-  tokens.json        copied from the design system
-  tokens.css         made from tokens.json by the sync script
-  sponga47.css       copied from the design system's components/bundle.css
   theme.ts           theme state and the system-preference listener
   index.ts           exports the components and theme helpers
   components/
@@ -121,33 +135,27 @@ ui/src/sponga47/
     SpAlert.vue
 ```
 
-`ui/src/main.ts` imports `tokens.css` first, then `sponga47.css`, then app styles.
-
-## Why vendor instead of a shared package
-
-Only one app uses Sponga47 today.
-A shared package needs its own repository, versioning, and a registry or git dependency.
-That cost pays off only once a second app uses Sponga47.
-Vendoring keeps the files in one folder, so moving them to a package later is a copy and an import change.
+The `ui` app imports the stylesheets straight from `specs/design-system/`. It keeps no copy.
+A Vite alias `@design-system` points at `../specs/design-system`.
+`server.fs.allow` includes that folder so the dev server can serve it.
+`ui/src/main.ts` imports `@design-system/tokens.css` first, then `@design-system/components/bundle.css`, then app styles.
 
 ## Tokens
 
-The design system stores tokens as `tokens.json`.
-The sync script changes it into `tokens.css` in the same layout the design system page uses:
+`make design-tokens` changes `tokens.json` into `tokens.css` in this layout:
 
 ```css
 :root, [data-theme="light"] { --surface: #f4f6f8; --brand: #1d5fd1; /* ... */ }
 [data-theme="dark"] { --surface: #0f1318; --brand: #5b9cf5; /* ... */ }
 :root { --space-1: 4px; --radius-md: 8px; --font-sans: "Instrument Sans", system-ui, sans-serif; /* ... */ }
-.body { font-size: 16px; line-height: 24px; /* ... */ }
+.body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; /* ... */ }
 ```
 
-Making `tokens.css` from `tokens.json` in this repo keeps the token list as the only source.
-It also removes the need for the design system page to save a `tokens.css` first.
+The first line of `tokens.css` is `/* Sponga47 — generated from tokens.json */`.
 
 ## Components
 
-Each Vue component renders the same element structure and `sp-` classes as its React version.
+Each Vue component renders the same element structure and `sp-` classes as its React reference.
 The shared stylesheet then gives both the same look.
 Component names use the `Sp` prefix.
 This avoids clashes with HTML elements and follows the Vue multi-word component name rule.
@@ -163,7 +171,7 @@ This avoids clashes with HTML elements and follows the Vue multi-word component 
 | `variant`, `size`, `tone` | props of the same name and values |
 | `React.useId()` | Vue `useId()`, available from Vue 3.5 |
 
-Behavior that must match the design system:
+Behavior that must match the reference:
 - Every interactive element shows a solid 2px `accent` focus ring on `:focus-visible`.
 - TextField and Select connect hint and error text with `aria-describedby`. They set `aria-invalid` when `error` is set.
 - Tabs use `role="tablist"`, `role="tab"`, and `role="tabpanel"`. Arrow keys, Home, and End move the selection. Only the selected tab is in the tab order.
@@ -183,14 +191,15 @@ This prevents a flash of the light theme when the page loads in dark mode.
 
 ## Fonts
 
-The design system stylesheet loads Bricolage Grotesque, Instrument Sans, and JetBrains Mono from Google Fonts.
+Font loading is separate from the component styles, in `specs/design-system/fonts.css`.
 Self-hosted apps should not depend on a third-party font service.
 They should also work on a network with no internet access.
-The sync script removes the Google Fonts `@import` from `sponga47.css`.
-The `ui` app installs the three fonts from `@fontsource` packages and imports them in `main.ts`.
+So the `ui` app does not import `fonts.css`.
+It installs the three fonts from `@fontsource` packages and imports them in `main.ts`.
 
 ## Tests
 
+- A test checks that `tokens.css` matches `tokens.json`.
 - Vitest and Vue Test Utils cover each component.
 - Each component has tests for its variants, `v-model`, and ARIA attributes.
 - SpTabs has keyboard tests for ArrowLeft, ArrowRight, Home, and End.
@@ -198,19 +207,18 @@ The `ui` app installs the three fonts from `@fontsource` packages and imports th
 
 ## Order of work
 
-1. Scaffold `ui` with Vite, Vue 3.5 or later, and TypeScript. This belongs to the "Design the UI" backlog item.
-2. Add the sync script and the `make sync-sponga47` target. Commit the first vendored copy.
-3. Add `theme.ts`, the inline theme script, and the font packages.
+1. Add `make design-tokens` and the `tokens.css` check.
+2. Scaffold `ui` with Vite, Vue 3.5 or later, and TypeScript. This belongs to the "Design the UI" backlog item.
+3. Add the `@design-system` alias, `theme.ts`, the inline theme script, and the font packages.
 4. Write the eight components and their tests.
-5. Add a dev-only page that shows every component in both themes. Compare it with the design system previews.
+5. Add a dev-only page that shows every component in both themes. Compare it with the reference previews.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- When a second app uses Sponga47, should it move to its own repository as a package (for example `@sponga47/vue`)?
-  If yes, should apps install it as a git dependency or from a private registry?
-- Should the design system keep the React components as the reference, or should it document the Vue API too?
-  Its previews need React, so React stays there in either case.
-- How does the sync script get files from the design system artifact?
-  Options: download them by hand from the page's Files view, or use a script with an access token.
-- Should the design system stylesheet drop the Google Fonts `@import` at the source, so no app needs to remove it?
+- Other self-hosted projects need Sponga47 too.
+  Until it has its own repository, do they copy `specs/design-system/` from this repo?
+- When Sponga47 moves to its own repository, should apps install it as a git dependency or from a private registry?
+- Should the React reference components stay, or should the Vue components become the reference?
+- How can someone view the reference previews locally?
+  They expect the stylesheets, React, and `bundle.js` to be loaded already.

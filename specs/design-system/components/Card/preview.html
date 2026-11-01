@@ -1,0 +1,21 @@
+<!-- @dsCard group="Layout" height=260 subtitle="Title, actions, body, footer" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Card preview</title>
+<style>body{margin:0;padding:16px;background:var(--surface)} .meta{margin:0 0 8px;color:var(--ink-muted);font-size:14px;line-height:20px} p{margin:0}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var S = window.Sponga47, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(S.Card, {
+    title: 'The Left Hand of Darkness',
+    actions: h(S.Badge, { tone: 'brand' }, '4 of 5'),
+    footer: h(React.Fragment, null, h(S.Button, { variant: 'ghost', size: 'sm' }, 'Edit'), h(S.Button, { size: 'sm' }, 'Share'))
+  },
+    h('p', { className: 'meta' }, 'Book · Reviewed 12 Oct 2026'),
+    h('p', null, 'Slow to start, then impossible to put down. The ice crossing is the best part.')
+  ));
+</script>
+</body>
+</html>

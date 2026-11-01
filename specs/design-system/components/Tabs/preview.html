@@ -1,0 +1,21 @@
+<!-- @dsCard group="Layout" height=150 subtitle="Click or use arrow keys" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Tabs preview</title>
+<style>body{margin:0;padding:16px;background:var(--surface)} p{margin:0}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var S = window.Sponga47, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(S.Tabs, {
+    label: 'Review sections',
+    tabs: [
+      { id: 'all', label: 'All reviews', content: h('p', null, '128 reviews across 4 categories.') },
+      { id: 'mine', label: 'My reviews', content: h('p', null, 'You have written 12 reviews.') },
+      { id: 'drafts', label: 'Drafts', content: h('p', null, 'No drafts.') }
+    ]
+  }));
+</script>
+</body>
+</html>

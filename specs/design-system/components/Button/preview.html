@@ -1,0 +1,27 @@
+<!-- @dsCard group="Actions" height=120 subtitle="Primary, secondary, ghost, danger" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Button preview</title>
+<style>body{margin:0;padding:16px;background:var(--surface)} .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center} .row+.row{margin-top:16px}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var S = window.Sponga47, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('div', { className: 'row' },
+      h(S.Button, { variant: 'primary' }, 'Add review'),
+      h(S.Button, null, 'Cancel'),
+      h(S.Button, { variant: 'ghost' }, 'Skip'),
+      h(S.Button, { variant: 'danger' }, 'Delete review'),
+      h(S.Button, { variant: 'primary', disabled: true }, 'Saving')
+    ),
+    h('div', { className: 'row' },
+      h(S.Button, { variant: 'primary', size: 'sm' }, 'Save'),
+      h(S.Button, { size: 'sm' }, 'Edit'),
+      h(S.Button, { variant: 'ghost', size: 'sm' }, 'Show more')
+    )
+  ));
+</script>
+</body>
+</html>

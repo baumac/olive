@@ -1,0 +1,18 @@
+<!-- @dsCard group="Forms" height=140 subtitle="Native select with label and hint" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Select preview</title>
+<style>body{margin:0;padding:16px;background:var(--surface)} .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var S = window.Sponga47, h = React.createElement;
+  var kinds = [{ value: 'book', label: 'Book' }, { value: 'film', label: 'Film' }, { value: 'place', label: 'Place' }];
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'grid' },
+    h(S.Select, { label: 'Category', options: kinds, defaultValue: '', placeholder: 'Choose a category' }),
+    h(S.Select, { label: 'Sort by', options: [{ value: 'new', label: 'Newest first' }, { value: 'top', label: 'Highest rated' }], defaultValue: 'new', hint: 'Applies to this list only.' })
+  ));
+</script>
+</body>
+</html>
