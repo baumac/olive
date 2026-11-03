@@ -3,7 +3,7 @@ info:
   title: Reviews Public API
   version: 1.0.0
   description: |
-    The Public API lets users review subjects, such as books, movies, and restaurants.
+    The Public API lets users review restaurants.
 
     Read operations do not require authentication.
     Create, update, and delete operations require a PocketBase auth token for a record in the `users` collection.
@@ -19,37 +19,38 @@ servers:
   - url: /v1
 
 tags:
-  - name: subjects
-    description: Things that can be reviewed.
+  - name: restaurants
+    description: Restaurants that can be reviewed.
   - name: reviews
-    description: Ratings and feedback for a single subject.
+    description: Scores and feedback for a single restaurant.
 
 paths:
-  /subjects:
+  /restaurants:
     post:
-      operationId: createSubject
-      summary: Create a subject
-      tags: [subjects]
+      operationId: createRestaurant
+      summary: Create a restaurant
+      tags: [restaurants]
       security:
         - bearerAuth: []
       requestBody:
+        description: The restaurant to create.
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SubjectCreate'
+              $ref: '#/components/schemas/RestaurantCreate'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
         '201':
-          description: The subject was created.
+          description: The restaurant was created.
           headers:
             Location:
               $ref: '#/components/headers/Location'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subject'
+                $ref: '#/components/schemas/Restaurant'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -59,18 +60,16 @@ paths:
         '422':
           $ref: '#/components/responses/UnprocessableContent'
     get:
-      operationId: listSubjects
-      summary: List subjects
-      tags: [subjects]
+      operationId: listRestaurants
+      summary: List restaurants
+      tags: [restaurants]
       security:
         - {}
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/SubjectSort'
-        - $ref: '#/components/parameters/KindEq'
-        - $ref: '#/components/parameters/KindIn'
+        - $ref: '#/components/parameters/RestaurantSort'
         - $ref: '#/components/parameters/TagsHas'
         - $ref: '#/components/parameters/TagsHasAny'
         - $ref: '#/components/parameters/TagsHasAll'
@@ -90,23 +89,23 @@ paths:
         default:
           $ref: '#/components/responses/UnexpectedError'
         '200':
-          description: A page of subjects.
+          description: A page of restaurants.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SubjectList'
+                $ref: '#/components/schemas/RestaurantList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /subjects/{subjectId}:
+  /restaurants/{restaurantId}:
     parameters:
-      - $ref: '#/components/parameters/SubjectId'
+      - $ref: '#/components/parameters/RestaurantId'
     get:
-      operationId: getSubject
-      summary: Get a subject
-      tags: [subjects]
+      operationId: getRestaurant
+      summary: Get a restaurant
+      tags: [restaurants]
       security:
         - {}
         - bearerAuth: []
@@ -114,11 +113,11 @@ paths:
         default:
           $ref: '#/components/responses/UnexpectedError'
         '200':
-          description: The subject.
+          description: The restaurant.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subject'
+                $ref: '#/components/schemas/Restaurant'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -126,30 +125,31 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      operationId: updateSubject
-      summary: Update a subject
+      operationId: updateRestaurant
+      summary: Update a restaurant
       description: |
-        Only the creator of the subject can update it.
-        `title` and `kind` can change only while the subject has no reviews.
+        Only the creator of the restaurant can update it.
+        `name` can change only while the restaurant has no reviews.
         A value that is equal to the stored value is not a change.
-      tags: [subjects]
+      tags: [restaurants]
       security:
         - bearerAuth: []
       requestBody:
+        description: The restaurant properties to change.
         required: true
         content:
           application/merge-patch+json:
             schema:
-              $ref: '#/components/schemas/SubjectPatch'
+              $ref: '#/components/schemas/RestaurantPatch'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
         '200':
-          description: The updated subject.
+          description: The updated restaurant.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subject'
+                $ref: '#/components/schemas/Restaurant'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -165,19 +165,19 @@ paths:
         '422':
           $ref: '#/components/responses/UnprocessableContent'
     delete:
-      operationId: deleteSubject
-      summary: Delete a subject
+      operationId: deleteRestaurant
+      summary: Delete a restaurant
       description: |
-        Only the creator of the subject can delete it.
-        A subject that has reviews cannot be deleted.
-      tags: [subjects]
+        Only the creator of the restaurant can delete it.
+        A restaurant that has reviews cannot be deleted.
+      tags: [restaurants]
       security:
         - bearerAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
         '204':
-          description: The subject was deleted.
+          description: The restaurant was deleted.
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -189,17 +189,18 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /subjects/{subjectId}/reviews:
+  /restaurants/{restaurantId}/reviews:
     parameters:
-      - $ref: '#/components/parameters/SubjectId'
+      - $ref: '#/components/parameters/RestaurantId'
     post:
       operationId: createReview
-      summary: Create a review for a subject
-      description: A user can have at most one review per subject.
+      summary: Create a review for a restaurant
+      description: A user can have at most one review per restaurant.
       tags: [reviews]
       security:
         - bearerAuth: []
       requestBody:
+        description: The review to create.
         required: true
         content:
           application/json:
@@ -231,7 +232,7 @@ paths:
           $ref: '#/components/responses/UnprocessableContent'
     get:
       operationId: listReviews
-      summary: List the reviews of a subject
+      summary: List the reviews of a restaurant
       tags: [reviews]
       security:
         - {}
@@ -240,11 +241,33 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/ReviewSort'
+        - $ref: '#/components/parameters/KindEq'
+        - $ref: '#/components/parameters/KindIn'
         - $ref: '#/components/parameters/RatingLt'
         - $ref: '#/components/parameters/RatingLte'
         - $ref: '#/components/parameters/RatingEq'
         - $ref: '#/components/parameters/RatingGte'
         - $ref: '#/components/parameters/RatingGt'
+        - $ref: '#/components/parameters/SpaceLt'
+        - $ref: '#/components/parameters/SpaceLte'
+        - $ref: '#/components/parameters/SpaceEq'
+        - $ref: '#/components/parameters/SpaceGte'
+        - $ref: '#/components/parameters/SpaceGt'
+        - $ref: '#/components/parameters/ServiceLt'
+        - $ref: '#/components/parameters/ServiceLte'
+        - $ref: '#/components/parameters/ServiceEq'
+        - $ref: '#/components/parameters/ServiceGte'
+        - $ref: '#/components/parameters/ServiceGt'
+        - $ref: '#/components/parameters/FoodLt'
+        - $ref: '#/components/parameters/FoodLte'
+        - $ref: '#/components/parameters/FoodEq'
+        - $ref: '#/components/parameters/FoodGte'
+        - $ref: '#/components/parameters/FoodGt'
+        - $ref: '#/components/parameters/PriceLt'
+        - $ref: '#/components/parameters/PriceLte'
+        - $ref: '#/components/parameters/PriceEq'
+        - $ref: '#/components/parameters/PriceGte'
+        - $ref: '#/components/parameters/PriceGt'
         - $ref: '#/components/parameters/TagsHas'
         - $ref: '#/components/parameters/TagsHasAny'
         - $ref: '#/components/parameters/TagsHasAll'
@@ -276,9 +299,9 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /subjects/{subjectId}/reviews/{reviewId}:
+  /restaurants/{restaurantId}/reviews/{reviewId}:
     parameters:
-      - $ref: '#/components/parameters/SubjectId'
+      - $ref: '#/components/parameters/RestaurantId'
       - $ref: '#/components/parameters/ReviewId'
     get:
       operationId: getReview
@@ -305,11 +328,15 @@ paths:
     patch:
       operationId: updateReview
       summary: Update a review
-      description: Only the creator of the review can update it.
+      description: |
+        Only the creator of the review can update it.
+        The body must contain the stored `kind`.
+        A different `kind` causes `422 Unprocessable Content`.
       tags: [reviews]
       security:
         - bearerAuth: []
       requestBody:
+        description: The review properties to change.
         required: true
         content:
           application/merge-patch+json:
@@ -372,15 +399,17 @@ components:
         format: uri-reference
 
   parameters:
-    SubjectId:
-      name: subjectId
+    RestaurantId:
+      name: restaurantId
       in: path
+      description: The ID of the restaurant.
       required: true
       schema:
         $ref: '#/components/schemas/RecordId'
     ReviewId:
       name: reviewId
       in: path
+      description: The ID of the review.
       required: true
       schema:
         $ref: '#/components/schemas/RecordId'
@@ -405,20 +434,20 @@ components:
         type: string
         minLength: 1
 
-    SubjectSort:
+    RestaurantSort:
       name: sort
       in: query
       description: |
         A comma-separated list of properties.
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
-        The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+        The `name` sort ignores case only for the ASCII letters `A` to `Z`.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(title|created|updated)(,-?(title|created|updated))*$'
+        pattern: '^-?(name|created|updated)(,-?(name|created|updated))*$'
         default: '-created'
-      example: 'title,-created'
+      example: 'name,-created'
     ReviewSort:
       name: sort
       in: query
@@ -427,23 +456,24 @@ components:
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+        A sort on a kind-specific property puts reviews of other kinds last in both directions.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(rating|title|created|updated)(,-?(rating|title|created|updated))*$'
+        pattern: '^-?(rating|space|service|food|price|title|created|updated)(,-?(rating|space|service|food|price|title|created|updated))*$'
         default: '-created'
       example: '-rating,title'
 
     KindEq:
       name: kind[eq]
       in: query
-      description: The subject `kind` is equal to the value.
+      description: The review `kind` is equal to the value.
       schema:
         type: string
     KindIn:
       name: kind[in]
       in: query
-      description: The subject `kind` is equal to any of the values.
+      description: The review `kind` is equal to any of the values.
       style: form
       explode: true
       schema:
@@ -451,6 +481,7 @@ components:
         minItems: 1
         items:
           type: string
+        examples: [[basic, joc_de_cartes]]
 
     TagsHas:
       name: tags[has]
@@ -469,6 +500,7 @@ components:
         minItems: 1
         items:
           $ref: '#/components/schemas/Tag'
+        examples: [[italian, pasta]]
     TagsHasAll:
       name: tags[has_all]
       in: query
@@ -480,82 +512,222 @@ components:
         minItems: 1
         items:
           $ref: '#/components/schemas/Tag'
+        examples: [[italian, pasta]]
 
     RatingLt:
       name: rating[lt]
       in: query
+      description: Matches only `basic` reviews.
       schema:
         $ref: '#/components/schemas/Rating'
     RatingLte:
       name: rating[lte]
       in: query
+      description: Matches only `basic` reviews.
       schema:
         $ref: '#/components/schemas/Rating'
     RatingEq:
       name: rating[eq]
       in: query
+      description: Matches only `basic` reviews.
       schema:
         $ref: '#/components/schemas/Rating'
     RatingGte:
       name: rating[gte]
       in: query
+      description: Matches only `basic` reviews.
       schema:
         $ref: '#/components/schemas/Rating'
     RatingGt:
       name: rating[gt]
       in: query
+      description: Matches only `basic` reviews.
       schema:
         $ref: '#/components/schemas/Rating'
+
+    SpaceLt:
+      name: space[lt]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    SpaceLte:
+      name: space[lte]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    SpaceEq:
+      name: space[eq]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    SpaceGte:
+      name: space[gte]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    SpaceGt:
+      name: space[gt]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+
+    ServiceLt:
+      name: service[lt]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    ServiceLte:
+      name: service[lte]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    ServiceEq:
+      name: service[eq]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    ServiceGte:
+      name: service[gte]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    ServiceGt:
+      name: service[gt]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+
+    FoodLt:
+      name: food[lt]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    FoodLte:
+      name: food[lte]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    FoodEq:
+      name: food[eq]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    FoodGte:
+      name: food[gte]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    FoodGt:
+      name: food[gt]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+
+    PriceLt:
+      name: price[lt]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    PriceLte:
+      name: price[lte]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    PriceEq:
+      name: price[eq]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    PriceGte:
+      name: price[gte]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
+    PriceGt:
+      name: price[gt]
+      in: query
+      description: Matches only `joc_de_cartes` reviews.
+      schema:
+        $ref: '#/components/schemas/JocDeCartesScore'
 
     CreatedLt:
       name: created[lt]
       in: query
+      description: The `created` timestamp is before the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
     CreatedLte:
       name: created[lte]
       in: query
+      description: The `created` timestamp is at or before the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
     CreatedEq:
       name: created[eq]
       in: query
+      description: The `created` timestamp is at the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
     CreatedGte:
       name: created[gte]
       in: query
+      description: The `created` timestamp is at or after the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
     CreatedGt:
       name: created[gt]
       in: query
+      description: The `created` timestamp is after the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
 
     UpdatedLt:
       name: updated[lt]
       in: query
+      description: The `updated` timestamp is before the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
     UpdatedLte:
       name: updated[lte]
       in: query
+      description: The `updated` timestamp is at or before the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
     UpdatedEq:
       name: updated[eq]
       in: query
+      description: The `updated` timestamp is at the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
     UpdatedGte:
       name: updated[gte]
       in: query
+      description: The `updated` timestamp is at or after the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
     UpdatedGt:
       name: updated[gt]
       in: query
+      description: The `updated` timestamp is after the value.
       schema:
         $ref: '#/components/schemas/Timestamp'
 
@@ -576,10 +748,13 @@ components:
         minItems: 1
         items:
           $ref: '#/components/schemas/RecordId'
+        examples: [[u5n1c8r3t6y0b2e, u2g6k0m4o8q1s5w]]
 
   responses:
     BadRequest:
-      description: The request is malformed, has invalid query parameters, or has unknown or read-only properties in the body.
+      description: |
+        The request is malformed, has invalid query parameters, or has unknown or read-only properties in the body.
+        A property of a different review kind is an unknown property.
       content:
         application/problem+json:
           schema:
@@ -604,7 +779,7 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     NotFound:
-      description: The resource or the subject in the path does not exist, or the review belongs to a different subject.
+      description: The resource or the restaurant in the path does not exist, or the review belongs to a different restaurant.
       content:
         application/problem+json:
           schema:
@@ -612,8 +787,8 @@ components:
     Conflict:
       description: |
         The request conflicts with the current state.
-        Examples are a duplicate review for a subject, a delete of a subject that has reviews,
-        or a change of `title` or `kind` on a subject that has reviews.
+        Examples are a duplicate review for a restaurant, a delete of a restaurant that has reviews,
+        or a change of `name` on a restaurant that has reviews.
       content:
         application/problem+json:
           schema:
@@ -625,7 +800,7 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     UnprocessableContent:
-      description: The request body has invalid property values.
+      description: The request body has invalid property values, or it changes the `kind` of a review.
       content:
         application/problem+json:
           schema:
@@ -648,6 +823,12 @@ components:
       type: string
       pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}Z$'
       examples: ['2024-11-04 01:26:55.002Z']
+    Name:
+      description: A name with at least one character that is not ASCII whitespace.
+      type: string
+      minLength: 1
+      maxLength: 255
+      pattern: '[^\t\n\v\f\r ]'
     Title:
       description: A title with at least one character that is not ASCII whitespace.
       type: string
@@ -655,27 +836,33 @@ components:
       maxLength: 255
       pattern: '[^\t\n\v\f\r ]'
     LongText:
+      description: A text of at most 10,000 characters.
       type: string
       maxLength: 10000
     Rating:
+      description: The overall score of a `basic` review.
       type: integer
       minimum: 1
       maximum: 5
+    JocDeCartesScore:
+      description: The score of one category of a `joc_de_cartes` review.
+      type: integer
+      minimum: 1
+      maximum: 10
     Tag:
+      description: A lowercase tag. Words are separated by single hyphens.
       type: string
       minLength: 1
       maxLength: 63
       pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
     Tags:
+      description: Unique tags.
       type: array
       maxItems: 20
       uniqueItems: true
       items:
         $ref: '#/components/schemas/Tag'
-    SubjectKind:
-      description: The kinds of subject that clients can create.
-      type: string
-      enum: [book, movie, restaurant]
+      examples: [[italian, pasta]]
     Creator:
       description: The public fields of a user.
       type: object
@@ -687,28 +874,21 @@ components:
           description: The name of the user. It can be an empty string.
           type: string
 
-    Subject:
+    Restaurant:
+      description: A restaurant that can be reviewed.
       type: object
-      required: [id, title, kind, creator, created, updated]
+      required: [id, name, creator, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
-        title:
-          $ref: '#/components/schemas/Title'
-        kind:
-          description: |
-            The kind of the subject.
-            Later releases of `/v1` can add values.
-            Clients must handle unknown values without failing.
-          anyOf:
-            - $ref: '#/components/schemas/SubjectKind'
-            - type: string
+        name:
+          $ref: '#/components/schemas/Name'
         description:
           $ref: '#/components/schemas/LongText'
         tags:
           $ref: '#/components/schemas/Tags'
         creator:
-          description: The user who created the subject. It is `null` after that user is deleted.
+          description: The user who created the restaurant. It is `null` after that user is deleted.
           oneOf:
             - $ref: '#/components/schemas/Creator'
             - type: 'null'
@@ -718,37 +898,37 @@ components:
           $ref: '#/components/schemas/Timestamp'
       examples:
         - id: k3x9m2p7q1w8z4a
-          title: The Great Gatsby
-          kind: book
-          description: A novel by F. Scott Fitzgerald
-          tags: [classic, fiction]
+          name: Luigi's Trattoria
+          description: A family-run Italian restaurant
+          tags: [italian, pasta]
           creator:
             id: u5n1c8r3t6y0b2e
             name: Ana
           created: '2024-11-04 01:26:55.002Z'
           updated: '2024-11-04 01:26:55.002Z'
-    SubjectCreate:
+    RestaurantCreate:
+      description: The properties of a new restaurant.
       type: object
       additionalProperties: false
-      required: [title, kind]
+      required: [name]
       properties:
-        title:
-          $ref: '#/components/schemas/Title'
-        kind:
-          $ref: '#/components/schemas/SubjectKind'
+        name:
+          $ref: '#/components/schemas/Name'
         description:
           $ref: '#/components/schemas/LongText'
         tags:
           $ref: '#/components/schemas/Tags'
-    SubjectPatch:
+      examples:
+        - name: Luigi's Trattoria
+          description: A family-run Italian restaurant
+          tags: [italian, pasta]
+    RestaurantPatch:
       description: A JSON Merge Patch. `null` clears an optional property.
       type: object
       additionalProperties: false
       properties:
-        title:
-          $ref: '#/components/schemas/Title'
-        kind:
-          $ref: '#/components/schemas/SubjectKind'
+        name:
+          $ref: '#/components/schemas/Name'
         description:
           oneOf:
             - $ref: '#/components/schemas/LongText'
@@ -757,27 +937,70 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Tags'
             - type: 'null'
-    SubjectList:
+      examples:
+        - description: A family-run Italian restaurant since 1987
+          tags: null
+    RestaurantList:
+      description: A page of restaurants.
       type: object
       required: [items, next_cursor]
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Subject'
+            $ref: '#/components/schemas/Restaurant'
         next_cursor:
           $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: k3x9m2p7q1w8z4a
+              name: Luigi's Trattoria
+              description: A family-run Italian restaurant
+              tags: [italian, pasta]
+              creator:
+                id: u5n1c8r3t6y0b2e
+                name: Ana
+              created: '2024-11-04 01:26:55.002Z'
+              updated: '2024-11-04 01:26:55.002Z'
+          next_cursor: c2Fk9xQe7LmT2vBn
 
     Review:
+      description: |
+        A review of a restaurant. `kind` selects the score properties.
+        Later releases of `/v1` can add kinds.
+        Clients must handle unknown kinds without failing.
+      oneOf:
+        - $ref: '#/components/schemas/BasicReview'
+        - $ref: '#/components/schemas/JocDeCartesReview'
+      discriminator:
+        propertyName: kind
+        mapping:
+          basic: '#/components/schemas/BasicReview'
+          joc_de_cartes: '#/components/schemas/JocDeCartesReview'
+      examples:
+        - id: r7d4f0h2j9l5s3v
+          restaurant: k3x9m2p7q1w8z4a
+          kind: basic
+          rating: 5
+          title: Best carbonara in town
+          feedback: Friendly staff and great pasta
+          tags: [favorites]
+          creator:
+            id: u2g6k0m4o8q1s5w
+            name: Joe
+          created: '2024-11-04 01:38:00.431Z'
+          updated: '2024-11-05 09:12:00.000Z'
+    ReviewBase:
+      description: The properties that all review kinds have.
       type: object
-      required: [id, subject, rating, title, creator, created, updated]
+      required: [id, restaurant, kind, title, creator, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
-        subject:
+        restaurant:
           $ref: '#/components/schemas/RecordId'
-        rating:
-          $ref: '#/components/schemas/Rating'
+        kind:
+          type: string
         title:
           $ref: '#/components/schemas/Title'
         feedback:
@@ -790,23 +1013,103 @@ components:
           $ref: '#/components/schemas/Timestamp'
         updated:
           $ref: '#/components/schemas/Timestamp'
+    BasicReview:
+      description: A review with one overall score.
+      allOf:
+        - $ref: '#/components/schemas/ReviewBase'
+        - type: object
+          required: [kind, rating]
+          properties:
+            kind:
+              const: basic
+            rating:
+              $ref: '#/components/schemas/Rating'
       examples:
         - id: r7d4f0h2j9l5s3v
-          subject: k3x9m2p7q1w8z4a
+          restaurant: k3x9m2p7q1w8z4a
+          kind: basic
           rating: 5
-          title: Joe's Great Gatsby Review
-          feedback: Great novel
+          title: Best carbonara in town
+          feedback: Friendly staff and great pasta
           tags: [favorites]
           creator:
             id: u2g6k0m4o8q1s5w
             name: Joe
           created: '2024-11-04 01:38:00.431Z'
           updated: '2024-11-05 09:12:00.000Z'
+    JocDeCartesReview:
+      description: A review that scores the space, service, food, and price.
+      allOf:
+        - $ref: '#/components/schemas/ReviewBase'
+        - type: object
+          required: [kind, space, service, food, price]
+          properties:
+            kind:
+              const: joc_de_cartes
+            space:
+              $ref: '#/components/schemas/SpaceScore'
+            service:
+              $ref: '#/components/schemas/ServiceScore'
+            food:
+              $ref: '#/components/schemas/FoodScore'
+            price:
+              $ref: '#/components/schemas/PriceScore'
+      examples:
+        - id: r1b8c5e2g9i6k3m
+          restaurant: k3x9m2p7q1w8z4a
+          kind: joc_de_cartes
+          space: 7
+          service: 9
+          food: 8
+          price: 6
+          title: Great food, a bit expensive
+          tags: [date-night]
+          creator:
+            id: u5n1c8r3t6y0b2e
+            name: Ana
+          created: '2024-11-06 19:02:11.120Z'
+          updated: '2024-11-06 19:02:11.120Z'
+    SpaceScore:
+      description: Decoration, cleanliness, comfort, atmosphere, and kitchen setup.
+      $ref: '#/components/schemas/JocDeCartesScore'
+    ServiceScore:
+      description: Professionalism, speed, friendliness, and attentiveness of the waitstaff.
+      $ref: '#/components/schemas/JocDeCartesScore'
+    FoodScore:
+      description: Presentation, flavor, ingredient quality, and culinary execution.
+      $ref: '#/components/schemas/JocDeCartesScore'
+    PriceScore:
+      description: Value for money, and whether the final bill matches the quality provided.
+      $ref: '#/components/schemas/JocDeCartesScore'
+
     ReviewCreate:
+      description: The properties of a new review. `kind` selects the score properties.
+      oneOf:
+        - $ref: '#/components/schemas/BasicReviewCreate'
+        - $ref: '#/components/schemas/JocDeCartesReviewCreate'
+      discriminator:
+        propertyName: kind
+        mapping:
+          basic: '#/components/schemas/BasicReviewCreate'
+          joc_de_cartes: '#/components/schemas/JocDeCartesReviewCreate'
+      examples:
+        - kind: basic
+          rating: 5
+          title: Best carbonara in town
+        - kind: joc_de_cartes
+          space: 7
+          service: 9
+          food: 8
+          price: 6
+          title: Great food, a bit expensive
+    BasicReviewCreate:
+      description: The properties of a new `basic` review.
       type: object
       additionalProperties: false
-      required: [rating, title]
+      required: [kind, rating, title]
       properties:
+        kind:
+          const: basic
         rating:
           $ref: '#/components/schemas/Rating'
         title:
@@ -815,11 +1118,55 @@ components:
           $ref: '#/components/schemas/LongText'
         tags:
           $ref: '#/components/schemas/Tags'
-    ReviewPatch:
-      description: A JSON Merge Patch. `null` clears an optional property.
+    JocDeCartesReviewCreate:
+      description: The properties of a new `joc_de_cartes` review.
       type: object
       additionalProperties: false
+      required: [kind, space, service, food, price, title]
       properties:
+        kind:
+          const: joc_de_cartes
+        space:
+          $ref: '#/components/schemas/SpaceScore'
+        service:
+          $ref: '#/components/schemas/ServiceScore'
+        food:
+          $ref: '#/components/schemas/FoodScore'
+        price:
+          $ref: '#/components/schemas/PriceScore'
+        title:
+          $ref: '#/components/schemas/Title'
+        feedback:
+          $ref: '#/components/schemas/LongText'
+        tags:
+          $ref: '#/components/schemas/Tags'
+
+    ReviewPatch:
+      description: |
+        A JSON Merge Patch. `null` clears an optional property.
+        `kind` must be equal to the stored kind.
+      oneOf:
+        - $ref: '#/components/schemas/BasicReviewPatch'
+        - $ref: '#/components/schemas/JocDeCartesReviewPatch'
+      discriminator:
+        propertyName: kind
+        mapping:
+          basic: '#/components/schemas/BasicReviewPatch'
+          joc_de_cartes: '#/components/schemas/JocDeCartesReviewPatch'
+      examples:
+        - kind: basic
+          rating: 4
+          feedback: null
+        - kind: joc_de_cartes
+          price: 7
+    BasicReviewPatch:
+      description: A JSON Merge Patch for a `basic` review.
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:
+          const: basic
         rating:
           $ref: '#/components/schemas/Rating'
         title:
@@ -832,7 +1179,35 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Tags'
             - type: 'null'
+    JocDeCartesReviewPatch:
+      description: A JSON Merge Patch for a `joc_de_cartes` review.
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:
+          const: joc_de_cartes
+        space:
+          $ref: '#/components/schemas/SpaceScore'
+        service:
+          $ref: '#/components/schemas/ServiceScore'
+        food:
+          $ref: '#/components/schemas/FoodScore'
+        price:
+          $ref: '#/components/schemas/PriceScore'
+        title:
+          $ref: '#/components/schemas/Title'
+        feedback:
+          oneOf:
+            - $ref: '#/components/schemas/LongText'
+            - type: 'null'
+        tags:
+          oneOf:
+            - $ref: '#/components/schemas/Tags'
+            - type: 'null'
+
     ReviewList:
+      description: A page of reviews. It can contain reviews of all kinds.
       type: object
       required: [items, next_cursor]
       properties:
@@ -842,6 +1217,32 @@ components:
             $ref: '#/components/schemas/Review'
         next_cursor:
           $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: r7d4f0h2j9l5s3v
+              restaurant: k3x9m2p7q1w8z4a
+              kind: basic
+              rating: 5
+              title: Best carbonara in town
+              creator:
+                id: u2g6k0m4o8q1s5w
+                name: Joe
+              created: '2024-11-04 01:38:00.431Z'
+              updated: '2024-11-05 09:12:00.000Z'
+            - id: r1b8c5e2g9i6k3m
+              restaurant: k3x9m2p7q1w8z4a
+              kind: joc_de_cartes
+              space: 7
+              service: 9
+              food: 8
+              price: 6
+              title: Great food, a bit expensive
+              creator:
+                id: u5n1c8r3t6y0b2e
+                name: Ana
+              created: '2024-11-06 19:02:11.120Z'
+              updated: '2024-11-06 19:02:11.120Z'
+          next_cursor: null
 
     NextCursor:
       description: The cursor for the next page. It is `null` on the last page.
@@ -881,6 +1282,7 @@ components:
             - property: rating
               message: must be between 1 and 5
     ValidationError:
+      description: One invalid property of a request body.
       type: object
       required: [property, message]
       properties:

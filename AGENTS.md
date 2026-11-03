@@ -17,13 +17,16 @@ This project allows users to review a variety of things. It is composed of the f
 ## Commands
 
 ```bash
-TODO update this once commands exist.
+make install-tools    # Install dev tools to ./bin/. Needs Go.
+make lint             # Run all linters
+make lint-spec        # Lint specs/api/openapi.yaml with vacuum
+```
 
-Some example commands are:
-make lint             # Run linter
+TODO update this as more commands exist. Some example commands are:
+
+```bash
 make test-api         # Run all API tests
 make test-ui          # Run all UI tests
-make install-tools    # Install dev tools (golangci-lint, mockery, etc.) to ./bin/
 make build            # Build binary to ./bin/gw-admin
 make generate         # Generate code and mocks
 make run              # Run server (starts Postgres + migrations automatically)
@@ -34,13 +37,14 @@ make run-local        # Run with -tags=local for local development mocks
 
 - **`makefile`** - the Makefile for building, developing, and testing the project
 - **`specs`** - the directory containing API specifications
-  - **`specs/public-openapi.yaml`** - the OpenAPI specification for the Public API
+  - **`specs/api/openapi.yaml`** - the OpenAPI specification for the Public API
+  - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
 - **`api`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
-  - Implements the OpenAPI specification for the Public API defined in `specs/public-openapi.yaml`
+  - Implements the OpenAPI specification for the Public API defined in `specs/api/openapi.yaml`
   - Written in the Go programming language
   - Built using the Pocketbase framework
 - **`ui`** - the directory containing the app that serves the Public UI
-  - Implemented against the OpenAPI specification defined in `specs/public-openapi.yaml`
+  - Implemented against the OpenAPI specification defined in `specs/api/openapi.yaml`
   - Written in the TypeScript programming language
   - Built using the Vue framework
 

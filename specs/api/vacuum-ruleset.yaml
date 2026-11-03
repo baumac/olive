@@ -1,0 +1,6 @@
+extends: [[vacuum:oas, recommended]]
+rules:
+  # Decision 00001 uses snake_case for `next_cursor`.
+  camel-case-properties: off
+  # Filter parameters of the same property share one description.
+  description-duplication: off

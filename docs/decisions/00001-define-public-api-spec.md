@@ -12,67 +12,63 @@ To allow the UI and API to be developed independently, we need to define the Ope
 [scope]: #scope
 
 In scope:
-- defining the Public API OAS specification in `specs/public-openapi.yaml`
-- APIs for review subjects
+- defining the Public API OAS specification in `specs/api/openapi.yaml`
+- APIs for restaurants
 - APIs for reviews
 
 Out of scope:
 - APIs provided by PocketBase, including the endpoints that issue auth tokens
 - Generating client libraries and documentation for the Public API
 - Implementation of the API spec
-- Rating aggregates on subjects, such as average rating and review count. These can be added later without a breaking change.
-- Search, such as matching part of a `title`. Filters compare whole values only.
-- Preventing or merging duplicate subjects. Two subjects can have the same `title` and `kind`. PocketBase superusers clean up duplicates.
+- Reviews of things that are not restaurants, such as books or movies
+- Rating aggregates on restaurants, such as average rating and review count. These can be added later without a breaking change.
+- Search, such as matching part of a `name`. Filters compare whole values only.
+- Preventing or merging duplicate restaurants. Two restaurants can have the same `name`. PocketBase superusers clean up duplicates.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
 
 New Concepts:
 - **Public API**: the public-facing API that allows users to interact with the review system
-- **Review**: rating and feedback for a single subject
-  - a review must have exactly one subject
-  - a user can have at most one review per subject
-- **Subject**: a thing that can be reviewed
-  - a subject has zero to many reviews
+- **Review**: scores and feedback for a single restaurant
+  - a review must have exactly one restaurant
+  - a user can have at most one review per restaurant
+  - a review has exactly one kind. The kind sets which score properties the review has.
+- **Restaurant**: a restaurant that can be reviewed
+  - a restaurant has zero to many reviews
 
-The file `specs/public-openapi.yaml` contains the OpenAPI Specification (OAS) for the Public API. In the OAS file,
+The file `specs/api/openapi.yaml` contains the OpenAPI Specification (OAS) for the Public API. In the OAS file,
 the endpoints, request/response schemas, and authentication mechanisms are defined.
 
 All paths in this document are relative to the versioned base path `/v1`.
-Paths use the OAS path template syntax, for example `{subjectId}`.
+Paths use the OAS path template syntax, for example `{restaurantId}`.
 
-## Subjects API
+## Restaurants API
 
-A subject is a thing that can be reviewed and has zero to many reviews.
-This can be anything ranging from books to movies to restaurants.
-The subjects API exists on the base path `/subjects`.
+A restaurant can be reviewed and has zero to many reviews.
+The restaurants API exists on the base path `/restaurants`.
 
 ### Properties
 
-The properties of a subject are as follows:
+The properties of a restaurant are as follows:
 - required properties:
-    - `title`: string with a length of 1 to 255 characters. It must contain at least one character that is not ASCII whitespace.
-    - `kind`: enum of "book", "movie", or "restaurant"
+    - `name`: string with a length of 1 to 255 characters. It must contain at least one character that is not ASCII whitespace.
 - optional properties:
     - `description`: string with a maximum length of 10,000 characters
     - `tags`: see [Tags](#tags)
 - read-only properties maintained by the API:
     - `created`: timestamp
     - `updated`: timestamp
-    - `creator`: the user who created the subject, see [Creator](#creator). It is `null` after that user is deleted. See [User Deletion](#user-deletion).
+    - `creator`: the user who created the restaurant, see [Creator](#creator). It is `null` after that user is deleted. See [User Deletion](#user-deletion).
     - `id`: PocketBase record ID
-
-New `kind` values can be added in a later release of `/v1`. Clients must handle unknown `kind` values without failing,
-for example by showing them as "other". Adding a `kind` value is not a breaking change.
 
 Example:
 ```json
 {
   "id": "k3x9m2p7q1w8z4a",
-  "title": "The Great Gatsby",
-  "kind": "book",
-  "description": "A novel by F. Scott Fitzgerald",
-  "tags": ["classic", "fiction"],
+  "name": "Luigi's Trattoria",
+  "description": "A family-run Italian restaurant",
+  "tags": ["italian", "pasta"],
   "creator": {
     "id": "u5n1c8r3t6y0b2e",
     "name": "Ana"
@@ -84,63 +80,81 @@ Example:
 
 ### Operations
 
-The operations of the subjects API are as follows:
-- `POST /subjects` to create a single subject
-- `GET /subjects` to list subjects
+The operations of the restaurants API are as follows:
+- `POST /restaurants` to create a single restaurant
+- `GET /restaurants` to list restaurants
     - results are paginated, see [Pagination](#pagination)
     - results are sortable by the following properties ascending and descending, see [Sorting](#sorting):
-      - `title`
+      - `name`
       - `created`
       - `updated`
     - the default sort is `-created`
     - results are not filterable by the following properties:
-        - `title`
+        - `name`
         - `description`
     - results are filterable by the following properties and operators, see [Filtering](#filtering):
-        - `kind`: `eq`, `in`
         - `tags`: `has`, `has_any`, `has_all`
         - `created`: `lt`, `lte`, `eq`, `gte`, `gt`
         - `updated`: `lt`, `lte`, `eq`, `gte`, `gt`
         - `creator`: `eq`, `in`
-- `GET /subjects/{subjectId}` to retrieve a single subject
-- `PATCH /subjects/{subjectId}` to update a single subject
+- `GET /restaurants/{restaurantId}` to retrieve a single restaurant
+- `PATCH /restaurants/{restaurantId}` to update a single restaurant
     - `description` and `tags` can always be changed
-    - `title` and `kind` can be changed only while the subject has no reviews. Otherwise the API returns `409 Conflict`.
-    - a `title` or `kind` value that is equal to the stored value is not a change. It does not cause `409 Conflict`.
+    - `name` can be changed only while the restaurant has no reviews. Otherwise the API returns `409 Conflict`.
+    - a `name` value that is equal to the stored value is not a change. It does not cause `409 Conflict`.
     - this prevents one user from changing what the reviews of other users are about
-- `DELETE /subjects/{subjectId}` to delete a single subject
-    - a subject that has reviews cannot be deleted. The API returns `409 Conflict`.
+- `DELETE /restaurants/{restaurantId}` to delete a single restaurant
+    - a restaurant that has reviews cannot be deleted. The API returns `409 Conflict`.
     - this prevents one user from deleting the reviews of other users
 
 ## Reviews API
 
-A review is a rating and associated feedback for a single subject.
-The reviews API exists on the base path `/subjects/{subjectId}/reviews`.
+A review is a set of scores and associated feedback for a single restaurant.
+The reviews API exists on the base path `/restaurants/{restaurantId}/reviews`.
+
+A review is a discriminated union.
+The `kind` property is the discriminator.
+It selects which score properties the review has.
 
 ### Properties
 
-The properties of a review are as follows:
+All kinds of review have these common properties:
 - required properties:
-    - `rating`: integer with a minimum value of 1 and a maximum value of 5
+    - `kind`: enum of "basic" or "joc_de_cartes", see [Review Kinds](#review-kinds)
     - `title`: string with a length of 1 to 255 characters. It must contain at least one character that is not ASCII whitespace.
 - optional properties:
     - `feedback`: string with a maximum length of 10,000 characters
     - `tags`: see [Tags](#tags)
 - read-only properties maintained by the API:
-    - `subject`: id of the reviewed subject. The API sets it from the request path.
+    - `restaurant`: id of the reviewed restaurant. The API sets it from the request path.
     - `created`: timestamp
     - `updated`: timestamp
     - `creator`: the user who created the review, see [Creator](#creator)
     - `id`: PocketBase record ID
 
+`kind` is set when the review is created and cannot change.
+To change the kind, the user deletes the review and creates a new one.
+
+New `kind` values can be added in a later release of `/v1`. Clients must handle unknown `kind` values without failing,
+for example by showing only the common properties. Adding a `kind` value is not a breaking change.
+
+### Review Kinds
+
+#### `basic`
+
+A basic review has one overall score.
+It has this additional required property:
+- `rating`: integer with a minimum value of 1 and a maximum value of 5
+
 Example:
 ```json
 {
   "id": "r7d4f0h2j9l5s3v",
-  "subject": "k3x9m2p7q1w8z4a",
+  "restaurant": "k3x9m2p7q1w8z4a",
+  "kind": "basic",
   "rating": 5,
-  "title": "Joe's Great Gatsby Review",
-  "feedback": "Great novel",
+  "title": "Best carbonara in town",
+  "feedback": "Friendly staff and great pasta",
   "tags": ["favorites"],
   "creator": {
     "id": "u2g6k0m4o8q1s5w",
@@ -151,15 +165,59 @@ Example:
 }
 ```
 
+#### `joc_de_cartes`
+
+A joc_de_cartes review scores four categories.
+It has these additional required properties.
+Each one is an integer with a minimum value of 1 and a maximum value of 10.
+- `space`: decoration, cleanliness, comfort, atmosphere, and kitchen setup
+- `service`: professionalism, speed, friendliness, and attentiveness of the waitstaff
+- `food`: presentation, flavor, ingredient quality, and culinary execution
+- `price`: value for money, and whether the final bill matches the quality provided
+
+The API does not calculate a total score.
+A total can be added later without a breaking change.
+
+Example:
+```json
+{
+  "id": "r1b8c5e2g9i6k3m",
+  "restaurant": "k3x9m2p7q1w8z4a",
+  "kind": "joc_de_cartes",
+  "space": 7,
+  "service": 9,
+  "food": 8,
+  "price": 6,
+  "title": "Great food, a bit expensive",
+  "tags": ["date-night"],
+  "creator": {
+    "id": "u5n1c8r3t6y0b2e",
+    "name": "Ana"
+  },
+  "created": "2024-11-06 19:02:11.120Z",
+  "updated": "2024-11-06 19:02:11.120Z"
+}
+```
+
+#### Kind-specific properties
+
+- a request body that has a property of a different kind causes `400 Bad Request`. For example, a `basic` review with `space`.
+- a review of one kind does not have the properties of other kinds in responses. They are not present, not `null`.
+
 ### Operations
 
 The operations of the reviews API are as follows:
-- `POST /subjects/{subjectId}/reviews` to create a single review for a subject
-  - if the user already has a review for the subject, the API returns `409 Conflict`
-- `GET /subjects/{subjectId}/reviews` to list reviews for a subject
+- `POST /restaurants/{restaurantId}/reviews` to create a single review for a restaurant
+  - if the user already has a review for the restaurant, the API returns `409 Conflict`
+- `GET /restaurants/{restaurantId}/reviews` to list reviews for a restaurant
   - results are paginated, see [Pagination](#pagination)
+  - results include reviews of all kinds
   - results are sortable by the following properties ascending and descending, see [Sorting](#sorting):
     - `rating`
+    - `space`
+    - `service`
+    - `food`
+    - `price`
     - `title`
     - `created`
     - `updated`
@@ -168,19 +226,27 @@ The operations of the reviews API are as follows:
     - `title`
     - `feedback`
   - results are filterable by the following properties and operators, see [Filtering](#filtering):
+    - `kind`: `eq`, `in`
     - `rating`: `lt`, `lte`, `eq`, `gte`, `gt`
+    - `space`: `lt`, `lte`, `eq`, `gte`, `gt`
+    - `service`: `lt`, `lte`, `eq`, `gte`, `gt`
+    - `food`: `lt`, `lte`, `eq`, `gte`, `gt`
+    - `price`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `tags`: `has`, `has_any`, `has_all`
     - `created`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `updated`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `creator`: `eq`, `in`
-- `GET /subjects/{subjectId}/reviews/{reviewId}` to retrieve a single review for a subject
-- `PATCH /subjects/{subjectId}/reviews/{reviewId}` to update a single review for a subject
-  - `rating`, `title`, `feedback`, and `tags` can be changed
-- `DELETE /subjects/{subjectId}/reviews/{reviewId}` to delete a single review for a subject
+- `GET /restaurants/{restaurantId}/reviews/{reviewId}` to retrieve a single review for a restaurant
+- `PATCH /restaurants/{restaurantId}/reviews/{reviewId}` to update a single review for a restaurant
+  - `title`, `feedback`, `tags`, and the properties of the review's kind can be changed
+  - the request body must contain `kind`. Without it, the API returns `422 Unprocessable Content`.
+  - `kind` cannot be changed. A `kind` value that is different from the stored value causes `422 Unprocessable Content`.
+  - a `kind` value that is equal to the stored value is not a change. It does not cause an error.
+- `DELETE /restaurants/{restaurantId}/reviews/{reviewId}` to delete a single review for a restaurant
 
-A review that exists but belongs to a different subject is treated as not found. The API returns `404 Not Found`.
+A review that exists but belongs to a different restaurant is treated as not found. The API returns `404 Not Found`.
 
-If the subject in the path does not exist, all reviews operations return `404 Not Found`.
+If the restaurant in the path does not exist, all reviews operations return `404 Not Found`.
 This includes the list operation. It does not return an empty list.
 
 # Implementation Details
@@ -192,24 +258,24 @@ The token is a PocketBase auth token for a record in the `users` auth collection
 Requests to these endpoints without a valid token get `401 Unauthorized`.
 
 Read endpoints (`GET`) do not require authentication.
-Anonymous users can read all subjects and reviews.
+Anonymous users can read all restaurants and reviews.
 A read request with an invalid token gets `401 Unauthorized`.
 The API does not treat it as an anonymous request.
 
 ## Authorization
-- anonymous and authenticated users can read all subjects and reviews
-- any authenticated user can create subjects and reviews
-- only the creator of a subject or review can update or delete it. Other users get `403 Forbidden`.
+- anonymous and authenticated users can read all restaurants and reviews
+- any authenticated user can create restaurants and reviews
+- only the creator of a restaurant or review can update or delete it. Other users get `403 Forbidden`.
 - PocketBase superusers manage all records through the PocketBase API, not the Public API
 
 ## User Deletion
 
 When a user is deleted:
 - the reviews of that user are deleted
-- the subjects of that user stay. Their `creator` becomes `null`.
-- a subject with a `null` creator can be changed or deleted only by PocketBase superusers
+- the restaurants of that user stay. Their `creator` becomes `null`.
+- a restaurant with a `null` creator can be changed or deleted only by PocketBase superusers
 
-Subjects stay because the reviews of other users can refer to them.
+Restaurants stay because the reviews of other users can refer to them.
 
 ## Common Formats
 
@@ -230,8 +296,8 @@ The `creator` property is an object with the public fields of a user:
 
 The API does not return other user fields, such as `email`.
 The `creator` filter compares the user `id`, for example `creator[eq]=u2g6k0m4o8q1s5w`.
-The `creator` filter cannot select subjects with a `null` creator.
-PocketBase superusers find these subjects through the PocketBase API.
+The `creator` filter cannot select restaurants with a `null` creator.
+PocketBase superusers find these restaurants through the PocketBase API.
 
 ### Tags
 
@@ -281,21 +347,24 @@ All filters in a request must match. They are combined with a logical AND.
 
 | Operator | Meaning | Example |
 | --- | --- | --- |
-| `eq` | equal to | `kind[eq]=book` |
+| `eq` | equal to | `rating[eq]=5` |
 | `lt` | less than | `rating[lt]=3` |
 | `lte` | less than or equal to | `created[lte]=2024-11-04%2000:00:00.000Z` |
 | `gt` | greater than | `rating[gt]=3` |
 | `gte` | greater than or equal to | `updated[gte]=2024-11-04%2000:00:00.000Z` |
-| `in` | equal to any of the values | `kind[in]=book&kind[in]=movie` |
-| `has` | the array contains the value | `tags[has]=classic` |
-| `has_any` | the array contains at least one of the values | `tags[has_any]=classic&tags[has_any]=fiction` |
-| `has_all` | the array contains all of the values | `tags[has_all]=classic&tags[has_all]=fiction` |
+| `in` | equal to any of the values | `creator[in]=u5n1c8r3t6y0b2e&creator[in]=u2g6k0m4o8q1s5w` |
+| `has` | the array contains the value | `tags[has]=italian` |
+| `has_any` | the array contains at least one of the values | `tags[has_any]=italian&tags[has_any]=pasta` |
+| `has_all` | the array contains all of the values | `tags[has_all]=italian&tags[has_all]=pasta` |
 
 Operators that take more than one value use a repeated query parameter.
 An unknown property, an unknown operator, or an operator that is not allowed for a property causes `400 Bad Request`.
 
 The tag operators compare whole tags.
-For example, `tags[has]=classic` does not match the tag `neo-classic`.
+For example, `tags[has]=italian` does not match the tag `south-italian`.
+
+A filter on a kind-specific property matches only reviews of that kind.
+For example, `rating[gte]=4` does not match `joc_de_cartes` reviews.
 
 ### Sorting
 
@@ -303,10 +372,14 @@ The `sort` query parameter is a comma-separated list of properties.
 A `-` prefix sorts a property in descending order.
 For example, `sort=-rating,title` sorts by rating from high to low, then by title from A to Z.
 
-The `title` sort ignores case for the ASCII letters `A` to `Z`.
+The `name` and `title` sorts ignore case for the ASCII letters `A` to `Z`.
 For example, "apple" comes before "Zebra".
-The sort does not ignore case for other letters, and it does not use language-specific rules.
+These sorts do not ignore case for other letters, and they do not use language-specific rules.
 For example, "Ärger" and "ärger" do not sort as equal.
+
+A sort on a kind-specific property puts reviews of other kinds last.
+This is true for ascending and descending order.
+For example, `sort=-rating` gives `basic` reviews from high to low, then all other reviews.
 
 The API always adds `id` as the last sort key.
 IDs are unique.
@@ -353,38 +426,52 @@ Example:
 
 | Status | Use |
 | --- | --- |
-| `400 Bad Request` | malformed request, invalid query parameters, unknown or read-only properties in the body |
+| `400 Bad Request` | malformed request, invalid query parameters, unknown or read-only properties in the body, or properties of a different review kind |
 | `401 Unauthorized` | missing bearer token on a create, update, or delete request, or an invalid bearer token on any request |
 | `403 Forbidden` | the user is not the creator of the resource |
-| `404 Not Found` | the resource or the subject in the path does not exist, or the review belongs to a different subject |
-| `409 Conflict` | duplicate review for a subject, delete of a subject that has reviews, or change of `title` or `kind` on a subject that has reviews |
+| `404 Not Found` | the resource or the restaurant in the path does not exist, or the review belongs to a different restaurant |
+| `409 Conflict` | duplicate review for a restaurant, delete of a restaurant that has reviews, or change of `name` on a restaurant that has reviews |
 | `415 Unsupported Media Type` | wrong request content type |
-| `422 Unprocessable Content` | the request body has invalid property values |
+| `422 Unprocessable Content` | the request body has invalid property values, or a change of `kind` on a review |
+
+## OAS Mapping
+
+The review schemas use `oneOf` with a `discriminator` on `kind`.
+Each kind has its own schema with the common properties and the properties of that kind.
+Each kind schema sets `additionalProperties: false`.
+The create and patch request bodies use the same pattern.
+`kind` is required in the patch body so that the API can select the kind schema.
 
 ## PocketBase Mapping
 
 The spec uses the default PocketBase `id`, `created`, and `updated` fields without changes.
-The `creator` and `subject` properties are PocketBase relation fields with the same names.
+The `creator` and `restaurant` properties are PocketBase relation fields with the same names.
 The API expands the `creator` relation and returns only the user `id` and `name`.
 
 The PocketBase collections need this additional setup:
-- the API rules of `subjects` and `reviews` are empty. Only superusers can use these collections through the PocketBase API.
+- the API rules of `restaurants` and `reviews` are empty. Only superusers can use these collections through the PocketBase API.
   - all user access goes through the Public API
   - without this, users can skip the Public API rules, such as creator-only changes and the `409 Conflict` checks
 - `tags` is a `json` field. PocketBase has no field type for a list of free-form strings.
   - the API validates the [Tags](#tags) rules
   - tag filters use SQLite `json_each` to compare whole items. The PocketBase `~` operator matches substrings of the JSON text, so tag filters do not use it.
-- the list operations order by `title COLLATE NOCASE` for the `title` sort
+- the list operations order by `name COLLATE NOCASE` for the restaurant `name` sort and by `title COLLATE NOCASE` for the review `title` sort
   - the sort direction and the `id` tie-breaker come from the list query
   - SQLite `NOCASE` ignores case only for ASCII letters
-  - each collection has an index on `(title COLLATE NOCASE, id)`. Without it, the `title` sort reads the full table.
-- the `subject` relation on reviews is required and does not cascade on delete
-  - the API checks for reviews before it deletes a subject and returns `409 Conflict`
+  - `restaurants` has an index on `(name COLLATE NOCASE, id)`. `reviews` has an index on `(title COLLATE NOCASE, id)`. Without them, these sorts read the full table.
+- all review kinds use one `reviews` collection
+  - `kind` is a required `select` field
+  - `rating`, `space`, `service`, `food`, and `price` are `number` fields
+  - PocketBase stores `0` in a `number` field that has no value. The API reads `0` as "not present".
+  - the minimum score of each kind is 1, so `0` is never a real score
+  - filters and sorts on these fields also compare `kind`. This keeps the stored `0` values of other kinds out of the results.
+- the `restaurant` relation on reviews is required and does not cascade on delete
+  - the API checks for reviews before it deletes a restaurant and returns `409 Conflict`
 - the `creator` relation on reviews is required and cascades on delete
-- the `creator` relation on subjects is optional and does not cascade on delete
-  - an `OnRecordDelete` hook on the `users` collection sets `creator` to `null` on the subjects of the user before the delete
+- the `creator` relation on restaurants is optional and does not cascade on delete
+  - an `OnRecordDelete` hook on the `users` collection sets `creator` to `null` on the restaurants of the user before the delete
   - the hook makes this behavior explicit. It does not depend on how PocketBase handles references to a deleted record.
-- the reviews collection has a unique index on the `subject` and `creator` fields
+- the reviews collection has a unique index on the `restaurant` and `creator` fields
   - two requests at the same time can both pass the duplicate check of the API
   - the API changes the unique index error to `409 Conflict`, not `500 Internal Server Error`
 - the API uses custom auth middleware for the [Authentication](#authentication) rules
