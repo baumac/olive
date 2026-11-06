@@ -36,9 +36,11 @@ make run-local        # Run with -tags=local for local development mocks
 ## Architecture
 
 - **`makefile`** - the Makefile for building, developing, and testing the project
-- **`specs`** - the directory containing API specifications
+- **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/openapi.yaml`** - the OpenAPI specification for the Public API
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
+  - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
+    - Start from `specs/design-system/README.md`
 - **`api`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification for the Public API defined in `specs/api/openapi.yaml`
   - Written in the Go programming language

@@ -1,0 +1,57 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sponga47 Reviews</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--background); color:var(--foreground); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .primary { fill:var(--primary); }
+  .mid { fill:var(--input); }
+  .soft { fill:var(--muted-foreground); }
+  .danger { fill:var(--destructive); }
+  .blk { rx:var(--radius); }
+  .sm { rx:var(--radius-sm); }
+  .pip { rx:var(--radius-md); }
+  .words { position:absolute; left:var(--space-6); bottom:var(--space-6); max-width:440px; }
+  .name { margin:0; font-size:88px; line-height:.95; font-weight:800; letter-spacing:-0.025em; color:var(--foreground); }
+  .tag { margin:var(--space-2) 0 0 4px; font-size:14px; line-height:20px; color:var(--muted-foreground); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      primary 144×232 slab bled off the top (the one main action) · input 128×128 · muted-foreground (olive grey) 176×176 bled off the right edge · destructive 48×24 once (it only means delete or error) — about a third of 960×288
+  arrangement one tall primary slab with satellites, bottoms on one line at y=216, space-4 gutters
+  pattern     a literal motif, the score: ten space-6 tiles at a space-8 pitch, seven in primary (olive green) and three in input, read as a 7 / 10 RatingInput
+  scales      gutters space-4; pitch space-8; tile side space-6; corners radius (blocks), radius-sm (destructive), radius-md (tiles)
+-->
+<rect class="primary blk" x="16" y="-16" width="144" height="232" rx="10"/>
+<rect class="danger sm" x="176" y="56" width="48" height="24" rx="6"/>
+<rect class="mid blk" x="176" y="88" width="128" height="128" rx="10"/>
+<rect class="soft blk" x="320" y="40" width="176" height="176" rx="10"/>
+<rect class="primary pip" x="16"  y="240" width="24" height="24" rx="8"/>
+<rect class="primary pip" x="48"  y="240" width="24" height="24" rx="8"/>
+<rect class="primary pip" x="80"  y="240" width="24" height="24" rx="8"/>
+<rect class="primary pip" x="112" y="240" width="24" height="24" rx="8"/>
+<rect class="primary pip" x="144" y="240" width="24" height="24" rx="8"/>
+<rect class="primary pip" x="176" y="240" width="24" height="24" rx="8"/>
+<rect class="primary pip" x="208" y="240" width="24" height="24" rx="8"/>
+<rect class="mid pip"     x="240" y="240" width="24" height="24" rx="8"/>
+<rect class="mid pip"     x="272" y="240" width="24" height="24" rx="8"/>
+<rect class="mid pip"     x="304" y="240" width="24" height="24" rx="8"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Sponga47<br>Reviews</h1>
+<p class="tag">Find a restaurant. Score it. Say why.</p>
+</div>
+</div>
+</body>
+</html>
