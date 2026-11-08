@@ -133,6 +133,10 @@ var (
 	}}
 )
 
+// maxBodyBytes is far above the largest valid body, which is about 100 KB.
+// A larger body gets 413 before the decoders use memory for it.
+const maxBodyBytes = 256 << 10
+
 // readBody checks the body against schema. The strict handler then reads
 // the same bytes from r.Body.
 func readBody(r *http.Request, schema *bodySchema) (map[string]json.RawMessage, *reviewsapi.Problem) {
@@ -142,7 +146,7 @@ func readBody(r *http.Request, schema *bodySchema) (map[string]json.RawMessage, 
 		return nil, &p
 	}
 
-	raw, err := io.ReadAll(r.Body)
+	raw, err := io.ReadAll(http.MaxBytesReader(nil, r.Body, maxBodyBytes))
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
@@ -226,7 +230,9 @@ func decodeObject(raw []byte) (map[string]json.RawMessage, error) {
 	return props, nil
 }
 
-var integerLiteral = regexp.MustCompile(`^-?(0|[1-9][0-9]{0,17})$`)
+// integerLiteral allows at most 9 digits. The value then fits a Go int on
+// all platforms. The range check then gives 422.
+var integerLiteral = regexp.MustCompile(`^-?(0|[1-9][0-9]{0,8})$`)
 
 func checkType(errs *fieldErrors, name string, pr prop, value json.RawMessage) bool {
 	n := len(*errs)

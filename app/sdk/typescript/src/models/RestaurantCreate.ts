@@ -21,10 +21,14 @@ import { mapValues } from '../runtime.js';
 export interface RestaurantCreate {
     /**
      * A name with at least one character that is not ASCII whitespace.
+     * Control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * 
      */
     name: string;
     /**
      * A text of at most 10,000 characters.
+     * Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * 
      */
     description?: string;
     /**

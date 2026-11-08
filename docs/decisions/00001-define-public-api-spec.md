@@ -352,6 +352,21 @@ Sign up and sign in ignore the `Authorization` header.
 - only the creator of a restaurant or review can update or delete it. Other users get `403 Forbidden`.
 - PocketBase superusers manage all records through the PocketBase API, not the Public API
 
+## Text that hides characters
+
+Control characters, direction marks and overrides (such as U+202E), and zero-width spaces cause `422` in `name` and `title`.
+A name with them can look like the name of another record.
+`description` and `feedback` allow line breaks and tabs, but not the other characters.
+The zero-width joiners stay allowed, because emoji and some scripts use them.
+
+## Token lifetime
+
+Tokens are valid until they expire. The API cannot revoke them. This is an accepted risk.
+- each sign in and each refresh makes a new token. The tokens before it stay valid.
+- sign out deletes the token only in the client
+- a token that leaks works until it expires, at most the token duration of the `users` collection
+- a server-side sign out that changes the PocketBase `tokenKey` of the user can remove this risk later
+
 ## Account Enumeration
 
 Sign up shows whether an email address has an account.

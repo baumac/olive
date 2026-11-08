@@ -127,6 +127,8 @@ The app has these routes:
 
 - Vite puts a content hash in the names of the files in `assets/`. These files get `Cache-Control: public, max-age=31536000, immutable`.
 - `index.html` gets `Cache-Control: no-cache`. A new deploy then loads the new asset names.
+- the UI route hides files whose names start with a dot, such as `.gitkeep`
+- the theme script is the file `public/theme.js`, not an inline script. A Content Security Policy can then allow it with `'self'`.
 - the UI route sets these headers. A missing file in `assets/` gets `index.html` with `no-cache`, so a wrong file is never cached.
 
 ## Auth token

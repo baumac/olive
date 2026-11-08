@@ -34,7 +34,23 @@ func Files() fs.FS {
 	if _, err := fs.Stat(files, "index.html"); err != nil {
 		return placeholder
 	}
-	return files
+	return noDotFiles{files}
+}
+
+// noDotFiles hides files and folders whose names start with a dot, such as
+// .gitkeep. The embed needs all: for .gitkeep. all: also takes other
+// dotfiles.
+type noDotFiles struct {
+	fs.FS
+}
+
+func (f noDotFiles) Open(name string) (fs.File, error) {
+	for part := range strings.SplitSeq(name, "/") {
+		if strings.HasPrefix(part, ".") && part != "." {
+			return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+		}
+	}
+	return f.FS.Open(name)
 }
 
 // Register serves the UI on all paths that no other route has. A path that

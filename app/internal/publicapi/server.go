@@ -49,6 +49,7 @@ func Register(app core.App, opts Options) {
 			return err
 		}
 		h := s.Handler()
+		se.Router.BindFunc(closeUserAccountRoutes)
 		se.Router.Any(basePath+"/{path...}", func(e *core.RequestEvent) error {
 			ctx := context.WithValue(e.Request.Context(), clientIPKey{}, e.RealIP())
 			// The loadAuthToken middleware of PocketBase already checked the
@@ -187,8 +188,16 @@ func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// A panic gets Problem Details. The PocketBase recovery would answer
 		// with its own JSON format.
+		tw := &trackingWriter{ResponseWriter: w}
+		w = tw
 		defer func() {
 			if v := recover(); v != nil {
+				if tw.wrote {
+					// A second response would mix with the first one. The
+					// connection closes instead.
+					s.app.Logger().Error("Public API panic after the response started", "error", v)
+					panic(http.ErrAbortHandler)
+				}
 				s.serverError(w, r, fmt.Errorf("panic: %v", v))
 			}
 		}()
@@ -310,4 +319,25 @@ func paramErrorDetail(err error) string {
 		return "The query parameter " + many.ParamName + " can occur only one time."
 	}
 	return "The request has a parameter that is not valid."
+}
+
+// trackingWriter records if the response has started.
+type trackingWriter struct {
+	http.ResponseWriter
+	wrote bool
+}
+
+func (t *trackingWriter) WriteHeader(status int) {
+	t.wrote = true
+	t.ResponseWriter.WriteHeader(status)
+}
+
+func (t *trackingWriter) Write(b []byte) (int, error) {
+	t.wrote = true
+	return t.ResponseWriter.Write(b)
+}
+
+// Unwrap lets http.ResponseController reach the PocketBase writer.
+func (t *trackingWriter) Unwrap() http.ResponseWriter {
+	return t.ResponseWriter
 }

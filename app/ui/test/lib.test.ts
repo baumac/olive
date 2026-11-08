@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fieldErrors } from '@/lib/api'
 import { formatCount, formatDate, initials, parseTimestamp } from '@/lib/format'
-import { checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
+import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 
 describe('format', () => {
   const now = new Date('2024-11-10T12:00:00.000Z')
@@ -40,6 +40,14 @@ describe('validation', () => {
     expect(checkTag('pasta', ['pasta'])).toContain('already')
     expect(checkTag('x', Array.from({ length: 20 }, (_, i) => `t${i}`))).toContain('at most 20')
     expect(suggestTag('  Date Night!! ')).toBe('date-night')
+  })
+
+  it('refuses hidden characters like the API', () => {
+    expect(checkName('Luigi\u202es', 'empty')).toContain('hidden')
+    expect(checkName('Luigi\u200b', 'empty')).toContain('hidden')
+    expect(checkName('Family \u{1F468}\u200d\u{1F469}', 'empty')).toBe('')
+    expect(checkLongText('Line one\nLine two')).toBe('')
+    expect(checkLongText('Bad\u2066')).toContain('hidden')
   })
 
   it('checks the password length in characters and bytes', () => {

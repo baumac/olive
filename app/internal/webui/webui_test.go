@@ -26,6 +26,18 @@ func TestCacheControl(t *testing.T) {
 	}
 }
 
+func TestNoDotFiles(t *testing.T) {
+	files := noDotFiles{fstest.MapFS{"index.html": {}, ".gitkeep": {}, "assets/.env": {}}}
+	for _, name := range []string{".gitkeep", "assets/.env"} {
+		if _, err := files.Open(name); err == nil {
+			t.Errorf("%s is served", name)
+		}
+	}
+	if _, err := files.Open("index.html"); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestRoutes(t *testing.T) {
 	app, err := tests.NewTestApp(t.TempDir())
 	if err != nil {

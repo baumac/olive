@@ -11,6 +11,11 @@ function length(v: string): number {
   return Array.from(v).length
 }
 
+// hidden matches the characters that the API refuses: control characters,
+// direction marks and overrides, and zero-width spaces.
+const hidden = /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/
+const hiddenText = 'Remove the hidden characters, such as direction marks or zero-width spaces.'
+
 export function checkName(v: string, empty: string): string {
   if (space.test(v)) {
     return empty
@@ -18,11 +23,14 @@ export function checkName(v: string, empty: string): string {
   if (length(v) > 255) {
     return 'Use at most 255 characters.'
   }
-  return ''
+  return hidden.test(v) ? hiddenText : ''
 }
 
 export function checkLongText(v: string): string {
-  return length(v) > 10000 ? 'Use at most 10,000 characters.' : ''
+  if (length(v) > 10000) {
+    return 'Use at most 10,000 characters.'
+  }
+  return hidden.test(v.replace(/[\t\n\r]/g, '')) ? hiddenText : ''
 }
 
 export function checkEmail(v: string): string {

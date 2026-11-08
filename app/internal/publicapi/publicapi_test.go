@@ -254,6 +254,22 @@ func TestUsers(t *testing.T) {
 		}
 	})
 
+	t.Run("the PocketBase account routes of users are closed", func(t *testing.T) {
+		for _, path := range []string{
+			"/api/collections/users/request-password-reset",
+			"/api/collections/_pb_users_auth_/request-password-reset",
+			"/api/collections/users/request-email-change",
+			"/api/collections/users/confirm-password-reset",
+		} {
+			for _, email := range []string{"ana@example.com", "nobody@example.com"} {
+				res := e.do(request{method: "POST", path: path, body: `{"email":"` + email + `","newEmail":"x@example.com"}`, token: ana.Token})
+				if res.status != http.StatusNotFound {
+					t.Errorf("%s with %s: status %d", path, email, res.status)
+				}
+			}
+		}
+	})
+
 	t.Run("the PocketBase auth endpoint is off", func(t *testing.T) {
 		res := e.do(request{method: "POST", path: "/api/collections/users/auth-with-password",
 			body: `{"identity":"ana@example.com","password":"correct-horse-battery"}`})
@@ -275,6 +291,7 @@ func TestSignUpBody(t *testing.T) {
 		{"invalid values", `{"email":"not-an-email","password":"short","name":"   "}`, "", 422, []string{"email", "name", "password"}},
 		{"password over 72 bytes", `{"email":"b@example.com","password":"` + strings.Repeat("é", 40) + `","name":"B"}`, "", 422, []string{"password"}},
 		{"missing properties", `{}`, "", 422, []string{"email", "name", "password"}},
+		{"hidden characters in the name", `{"email":"b@example.com","password":"correct-horse","name":"Ana\u202eb"}`, "", 422, []string{"name"}},
 		{"wrong types", `{"email":"b@example.com","password":12345678,"name":null}`, "", 422, []string{"name", "password"}},
 		{"unknown property", `{"email":"b@example.com","password":"correct-horse","name":"B","admin":true}`, "", 400, nil},
 		{"repeated property", `{"email":"b@example.com","password":"correct-horse","name":5,"name":"B"}`, "", 400, nil},
@@ -282,6 +299,7 @@ func TestSignUpBody(t *testing.T) {
 		{"two JSON values", `{"email":"b@example.com"} {}`, "", 400, nil},
 		{"not an object", `["a"]`, "", 400, nil},
 		{"wrong content type", `{"email":"b@example.com","password":"correct-horse","name":"B"}`, "text/plain", 415, nil},
+		{"too large", `{"email":"` + strings.Repeat("a", 300<<10) + `@example.com"}`, "", 413, nil},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -338,6 +356,11 @@ func TestRestaurants(t *testing.T) {
 		res := e.expect(request{method: "POST", path: "/v1/restaurants",
 			body: `{"description":null,"tags":["ok","Bad","ok"]}`, token: ana.Token}, http.StatusUnprocessableEntity)
 		if got := strings.Join(errorProperties(t, res), ","); got != "description,name,tags[1],tags[2]" {
+			t.Errorf("properties %q", got)
+		}
+		many := `["` + strings.Repeat(`Bad","`, 999) + `Bad"]`
+		res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","tags":` + many + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
+		if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
 			t.Errorf("properties %q", got)
 		}
 	})
@@ -435,6 +458,10 @@ func TestReviews(t *testing.T) {
 			t.Errorf("properties %q", got)
 		}
 		e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"basic","rating":"x","rating":4,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
+		res = e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"basic","rating":9999999999,"title":"X"}`, token: joe.Token}, http.StatusUnprocessableEntity)
+		if got := strings.Join(errorProperties(t, res), ","); got != "rating" {
+			t.Errorf("properties %q", got)
+		}
 		res = e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"basic","rating":2.5,"title":"X"}`, token: joe.Token}, http.StatusUnprocessableEntity)
 		if got := strings.Join(errorProperties(t, res), ","); got != "rating" {
 			t.Errorf("properties %q", got)

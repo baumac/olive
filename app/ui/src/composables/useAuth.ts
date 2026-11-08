@@ -2,6 +2,7 @@ import type { Router } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { apiFailure, endSession, usersApi } from '@/lib/api'
 import { clearSession, saveSession, sessionExpires, signedIn } from '@/lib/session'
+import { clearAllDrafts } from '@/lib/drafts'
 import { parseTimestamp } from '@/lib/format'
 
 const day = 24 * 60 * 60 * 1000
@@ -39,6 +40,7 @@ export function signInPath(redirect: string, reason?: 'session-ended') {
 
 export function signOut(router: Router) {
   clearSession()
+  clearAllDrafts()
   toast('Signed out')
   void router.push('/')
 }

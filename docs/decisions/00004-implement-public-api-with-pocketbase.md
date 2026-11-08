@@ -96,13 +96,17 @@ The checks run in this order:
 - checks 1 to 6 are in `prepare`. Checks 7 to 11 are in the operation handlers.
 - check 6 gives all invalid properties in one response
 - the review body schemas have the properties of all kinds. The handler then rejects the scores of other kinds with `400`.
-- a JSON number for an integer property must be an integer literal. `5.0` gets `422`.
+- a JSON number for an integer property must be an integer literal of at most 9 digits. `5.0` gets `422`. The value then fits a Go `int` on all platforms.
+- a body larger than 256 KB gets `413`. The largest valid body is about 100 KB.
+- more than 20 tags give one `tags` error, without an error for each item. The size of the response then does not grow with the request.
 - the strict handler decodes the body after `prepare`. Its decode errors therefore do not occur for client input.
 - the decoders after `prepare` read the first copy of a repeated property. `prepare` therefore rejects repeated properties.
 - an email must be a bare address. `mail.ParseAddress` also accepts `Ana <ana@example.com>`, so `prepare` rejects a display name.
 - a parameter that is not an array has one value. `tags[has_any]` and `tags[has_all]` have at most 20 values. `creator[in]` and `kind[in]` have at most 100 values. Each value is one SQL parameter.
 
 ## Authentication
+
+- a router middleware returns `404` for the PocketBase account routes of `users`: password reset, verification, email change, and one-time passwords. Decision 00001 does not have these flows. The middleware runs before PocketBase looks up a record, so the response is the same for all email addresses.
 
 - the `loadAuthToken` middleware of PocketBase checks the token with `FindAuthRecordByToken`. The route passes its result in the request context. The record must be in the `users` collection.
 - a superuser token is therefore not valid for the Public API

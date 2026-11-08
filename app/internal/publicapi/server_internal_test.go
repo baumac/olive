@@ -31,3 +31,29 @@ func TestPanicGetsProblemDetails(t *testing.T) {
 		t.Errorf("body %s", w.Body)
 	}
 }
+
+func TestPanicAfterWriteDoesNotWriteAgain(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+
+	s := &Server{app: app}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET "+basePath+"/restaurants", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		panic("boom")
+	})
+
+	w := httptest.NewRecorder()
+	defer func() {
+		if v := recover(); v != http.ErrAbortHandler {
+			t.Errorf("recover %v, want http.ErrAbortHandler", v)
+		}
+		if w.Code != http.StatusOK || w.Body.Len() != 0 {
+			t.Errorf("status %d, body %q", w.Code, w.Body)
+		}
+	}()
+	s.prepare(mux).ServeHTTP(w, httptest.NewRequest("GET", basePath+"/restaurants", nil))
+}

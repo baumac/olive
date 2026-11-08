@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { refreshSession } from '@/composables/useAuth'
 import { handleSessionEnded, restaurantsApi } from '@/lib/api'
+import { saveDraft, takeDraft } from '@/lib/drafts'
 import { clearSession, saveSession, signedIn } from '@/lib/session'
 
 const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '', updated: '' }
@@ -51,6 +52,17 @@ describe('session', () => {
     await refreshSession()
     expect(signedIn.value).toBe(false)
     expect(ended).toHaveBeenCalledOnce()
+  })
+
+  it('gives a draft only to the user who saved it', () => {
+    saveSession({ token: 't', expires: '2099-01-01 00:00:00.000Z', user })
+    saveDraft('review:x:new', { title: 'Mine' })
+    saveSession({ token: 't2', expires: '2099-01-01 00:00:00.000Z', user: { ...user, id: 'joe0000000000000' } })
+    expect(takeDraft('review:x:new')).toBeNull()
+
+    saveSession({ token: 't', expires: '2099-01-01 00:00:00.000Z', user })
+    saveDraft('review:x:new', { title: 'Mine' })
+    expect(takeDraft('review:x:new')).toEqual({ title: 'Mine' })
   })
 
   it('keeps the session in localStorage', () => {

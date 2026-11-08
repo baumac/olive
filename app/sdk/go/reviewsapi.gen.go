@@ -145,6 +145,7 @@ type BasicReview struct {
 	Creator Creator `json:"creator"`
 
 	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Feedback *LongText `json:"feedback,omitempty"`
 
 	// Id A record ID of 15 characters.
@@ -167,6 +168,7 @@ type BasicReview struct {
 	Tags *Tags `json:"tags,omitempty"`
 
 	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Title Title `json:"title"`
 
 	// Updated A UTC timestamp with millisecond precision. This format is not RFC 3339.
@@ -181,6 +183,7 @@ type BasicReviewKind string
 // BasicReviewCreate The properties of a new `basic` review.
 type BasicReviewCreate struct {
 	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Feedback *LongText             `json:"feedback,omitempty"`
 	Kind     BasicReviewCreateKind `json:"kind"`
 
@@ -193,6 +196,7 @@ type BasicReviewCreate struct {
 	Tags *Tags `json:"tags,omitempty"`
 
 	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Title Title `json:"title"`
 }
 
@@ -209,6 +213,7 @@ type BasicReviewPatch struct {
 	Tags   nullable.Nullable[Tags] `json:"tags,omitempty"`
 
 	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Title *Title `json:"title,omitempty"`
 }
 
@@ -223,6 +228,7 @@ type Creator struct {
 	Id RecordId `json:"id"`
 
 	// Name A name with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Name Name `json:"name"`
 }
 
@@ -256,6 +262,7 @@ type JocDeCartesReview struct {
 	Creator Creator `json:"creator"`
 
 	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Feedback *LongText `json:"feedback,omitempty"`
 
 	// Food Presentation, flavor, ingredient quality, and culinary execution.
@@ -287,6 +294,7 @@ type JocDeCartesReview struct {
 	Tags *Tags `json:"tags,omitempty"`
 
 	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Title Title `json:"title"`
 
 	// Updated A UTC timestamp with millisecond precision. This format is not RFC 3339.
@@ -301,6 +309,7 @@ type JocDeCartesReviewKind string
 // JocDeCartesReviewCreate The properties of a new `joc_de_cartes` review.
 type JocDeCartesReviewCreate struct {
 	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Feedback *LongText `json:"feedback,omitempty"`
 
 	// Food Presentation, flavor, ingredient quality, and culinary execution.
@@ -322,6 +331,7 @@ type JocDeCartesReviewCreate struct {
 	Tags *Tags `json:"tags,omitempty"`
 
 	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Title Title `json:"title"`
 }
 
@@ -347,6 +357,7 @@ type JocDeCartesReviewPatch struct {
 	Tags  nullable.Nullable[Tags] `json:"tags,omitempty"`
 
 	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Title *Title `json:"title,omitempty"`
 }
 
@@ -357,9 +368,11 @@ type JocDeCartesReviewPatchKind string
 type JocDeCartesScore = int
 
 // LongText A text of at most 10,000 characters.
+// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 type LongText = string
 
 // Name A name with at least one character that is not ASCII whitespace.
+// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 type Name = string
 
 // NextCursor The cursor for the next page. It is `null` on the last page.
@@ -376,6 +389,7 @@ type OtherReview struct {
 	Creator Creator `json:"creator"`
 
 	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Feedback *LongText `json:"feedback,omitempty"`
 
 	// Id A record ID of 15 characters.
@@ -395,6 +409,7 @@ type OtherReview struct {
 	Tags *Tags `json:"tags,omitempty"`
 
 	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Title Title `json:"title"`
 
 	// Updated A UTC timestamp with millisecond precision. This format is not RFC 3339.
@@ -466,6 +481,7 @@ type Restaurant struct {
 	Creator nullable.Nullable[Creator] `json:"creator"`
 
 	// Description A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Description *LongText `json:"description,omitempty"`
 
 	// Id A record ID of 15 characters.
@@ -474,6 +490,7 @@ type Restaurant struct {
 	Id RecordId `json:"id"`
 
 	// Name A name with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Name Name `json:"name"`
 
 	// Tags Unique tags.
@@ -492,9 +509,11 @@ type Restaurant struct {
 // Examples: {"description":"A family-run Italian restaurant","name":"Luigi's Trattoria","tags":["italian","pasta"]}
 type RestaurantCreate struct {
 	// Description A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Description *LongText `json:"description,omitempty"`
 
 	// Name A name with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Name Name `json:"name"`
 
 	// Tags Unique tags.
@@ -520,6 +539,7 @@ type RestaurantPatch struct {
 	Description nullable.Nullable[LongText] `json:"description,omitempty"`
 
 	// Name A name with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Name *Name                   `json:"name,omitempty"`
 	Tags nullable.Nullable[Tags] `json:"tags,omitempty"`
 }
@@ -544,6 +564,7 @@ type ReviewBase struct {
 	Creator Creator `json:"creator"`
 
 	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Feedback *LongText `json:"feedback,omitempty"`
 
 	// Id A record ID of 15 characters.
@@ -563,6 +584,7 @@ type ReviewBase struct {
 	Tags *Tags `json:"tags,omitempty"`
 
 	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Title Title `json:"title"`
 
 	// Updated A UTC timestamp with millisecond precision. This format is not RFC 3339.
@@ -662,6 +684,7 @@ type TimestampRange struct {
 }
 
 // Title A title with at least one character that is not ASCII whitespace.
+// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 type Title = string
 
 // User The signed in user.
@@ -686,6 +709,7 @@ type User struct {
 	Id RecordId `json:"id"`
 
 	// Name A name with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Name Name `json:"name"`
 
 	// Updated A UTC timestamp with millisecond precision. This format is not RFC 3339.
@@ -704,6 +728,7 @@ type UserCreate struct {
 	Email Email `json:"email"`
 
 	// Name A name with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Name Name `json:"name"`
 
 	// Password A password of 8 to 71 characters.

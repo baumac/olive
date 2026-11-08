@@ -20,18 +20,8 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Sponga47 Reviews logo with the tagline Find a restaurant. Score it. Say why." />
     <meta name="twitter:card" content="summary_large_image" />
-    <script>
-      // Sets the theme class before the first paint. useColorMode uses the
-      // same localStorage key.
-      ;(function () {
-        var mode = 'auto'
-        try {
-          mode = localStorage.getItem('vueuse-color-scheme') || 'auto'
-        } catch (e) {}
-        var dark = mode === 'dark' || (mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.classList.toggle('dark', dark)
-      })()
-    </script>
+    <!-- The theme script is a file. A Content Security Policy can then allow it with self. -->
+    <script src="/theme.js"></script>
   </head>
   <body>
     <div id="app"></div>

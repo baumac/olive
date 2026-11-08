@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
@@ -23,24 +24,53 @@ var (
 	timestampPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}Z$`)
 )
 
+const hiddenMessage = "must not have control, direction, or zero-width characters"
+
 // checkName checks the Name and Title schemas.
 func checkName(errs *fieldErrors, property, v string) {
-	if n := utf8.RuneCountInString(v); n < 1 || n > 255 {
+	switch n := utf8.RuneCountInString(v); {
+	case n < 1 || n > 255:
 		errs.add(property, "must have 1 to 255 characters")
-	} else if strings.Trim(v, asciiSpace) == "" {
+	case strings.Trim(v, asciiSpace) == "":
 		errs.add(property, "must have a character that is not whitespace")
+	case hasHiddenChar(v, false):
+		errs.add(property, hiddenMessage)
 	}
 }
 
 func checkLongText(errs *fieldErrors, property, v string) {
 	if utf8.RuneCountInString(v) > 10000 {
 		errs.add(property, "must have at most 10000 characters")
+	} else if hasHiddenChar(v, true) {
+		errs.add(property, hiddenMessage)
 	}
 }
 
+// hasHiddenChar finds characters that change or hide the shown text, such
+// as U+202E. A name with them can look like the name of another record.
+// The zero-width joiners stay allowed. Emoji and some scripts use them.
+func hasHiddenChar(v string, lineBreaks bool) bool {
+	for _, r := range v {
+		switch {
+		case r == '\t' || r == '\n' || r == '\r':
+			if !lineBreaks {
+				return true
+			}
+		case unicode.IsControl(r),
+			r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069,
+			r == 0x200B, r == 0x200E, r == 0x200F, r == 0x2060, r == 0xFEFF:
+			return true
+		}
+	}
+	return false
+}
+
 func checkTags(errs *fieldErrors, property string, tags []string) {
+	// The item errors stop here. The response size then does not grow with
+	// the request.
 	if len(tags) > 20 {
 		errs.add(property, "must have at most 20 items")
+		return
 	}
 	seen := make(map[string]bool, len(tags))
 	for i, tag := range tags {
