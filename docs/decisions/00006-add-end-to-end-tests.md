@@ -1,5 +1,5 @@
 ---
-description: Add end-to-end tests in the test directory that run the UI in real browsers against the built app.
+description: Add end-to-end tests in the tests directory that run the UI in real browsers against the built app.
 status: implemented
 ---
 
@@ -26,7 +26,7 @@ Expected outcome:
 [scope]: #scope
 
 In scope:
-- the test tool and the layout of the `test` directory
+- the test tool and the layout of the `tests` directory
 - how the tests start the app and make test data
 - the flows that the first set of tests covers
 - accessibility checks in the browser
@@ -91,7 +91,7 @@ A test that cannot find an element by its role and name shows an accessibility p
 ## Layout
 
 ```
-test/
+tests/
   package.json          # npm workspace @reviews/tests
   playwright.config.ts  # browsers, base URL, and the app server
   global-setup.ts       # starts the app for the run and stops it after
@@ -106,10 +106,10 @@ test/
     accessibility.spec.ts
 ```
 
-- the root `package.json` adds `test` to its workspaces
+- the root `package.json` adds `tests` to its workspaces
 - the versions are pinned: `@playwright/test` 1.64.1 and `@axe-core/playwright` 4.14.0
-- `test/package.json` also pins `playwright-core` 1.64.1. `@axe-core/playwright` has it as a peer dependency. Without the pin, npm installs a newer `playwright-core`, and the `Page` types do not match.
-- `test` uses TypeScript 6.0.3, like the SDK and the UI
+- `tests/package.json` also pins `playwright-core` 1.64.1. `@axe-core/playwright` has it as a peer dependency. Without the pin, npm installs a newer `playwright-core`, and the `Page` types do not match.
+- `tests` uses TypeScript 6.0.3, like the SDK and the UI
 
 ## The app under test
 
@@ -175,9 +175,9 @@ test/
 
 ## Failures
 
-- Playwright keeps a trace, a screenshot, and a video of a failed test in `test/test-results`
+- Playwright keeps a trace, a screenshot, and a video of a failed test in `tests/test-results`
 - `make test-e2e` prints the path of the HTML report
-- `.gitignore` ignores `test/test-results` and `test/playwright-report`
+- `.gitignore` ignores `tests/test-results` and `tests/playwright-report`
 - a failed test runs again one time. A test that passes only on the retry shows as flaky in the report.
 
 ## CI

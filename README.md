@@ -37,7 +37,7 @@ make test       # Go, SDK, and UI unit tests
 make test-e2e   # Playwright tests in Chromium, Firefox, and WebKit
 ```
 
-Before the first `make test-e2e`, run `cd test && npx playwright install`.
+Before the first `make test-e2e`, run `cd tests && npx playwright install`.
 CI runs the same commands. See `.github/workflows/ci.yml`.
 
 ## Layout
@@ -49,7 +49,7 @@ CI runs the same commands. See `.github/workflows/ci.yml`.
 | `app` | the PocketBase app, the Public API, and the migrations |
 | `app/sdk` | the TypeScript and Go SDKs, generated from the spec |
 | `app/ui` | the Public UI |
-| `test` | the end-to-end tests |
+| `tests` | the end-to-end tests |
 | `docs/decisions` | the design decisions. Start with `00000-backlog.md`. |
 
 `AGENTS.md` has all commands and the rules for code comments.

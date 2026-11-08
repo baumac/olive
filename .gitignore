@@ -10,8 +10,8 @@
 /app/pb_data
 
 # Results of make test-e2e
-/test/test-results
-/test/playwright-report
+/tests/test-results
+/tests/playwright-report
 
 # The UI build of make build-ui
 /app/internal/webui/dist/*

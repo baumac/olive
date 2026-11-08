@@ -32,7 +32,7 @@ make build-ui         # Build the UI into app/internal/webui/dist. Needs Node.js
 make build-app        # Build the UI, then the app server to ./bin/reviews-app
 make run-app          # Run the app server on 127.0.0.1:8090 with data in app/pb_data
 make dev-ui           # Run the Vite dev server. It sends /v1 to make run-app.
-make test-e2e         # Build the app, then run the end-to-end tests in test/
+make test-e2e         # Build the app, then run the end-to-end tests in tests/
 make test-e2e-ui      # Open the Playwright UI mode for the end-to-end tests
 ```
 
@@ -43,9 +43,9 @@ To make the first superuser, run `go run ./app superuser create EMAIL PASSWORD -
 `make run-app` serves the UI build that `make build-ui` made last.
 For UI work, run `make run-app` and `make dev-ui` at the same time, and open the Vite URL.
 
-Before the first `make test-e2e`, install the browsers with `cd test && npx playwright install`.
+Before the first `make test-e2e`, install the browsers with `cd tests && npx playwright install`.
 WebKit also needs system packages: `sudo npx playwright install-deps`.
-Run one browser with `cd test && npx playwright test --project=chromium`.
+Run one browser with `cd tests && npx playwright test --project=chromium`.
 
 `.github/workflows/ci.yml` runs `make lint`, `make test`, and `make test-e2e` on each push to `main` and on each pull request.
 
@@ -81,8 +81,8 @@ Run one browser with `cd test && npx playwright test --project=chromium`.
   - Written in TypeScript with Vue, Vue Router, and shadcn-vue on Tailwind CSS. See decision 00002.
   - Follows `specs/design-system`. Components live in `app/ui/src/components/ui`, route-aware components in `app/ui/src/components/app`, and screens in `app/ui/src/pages`.
   - `app/ui/go.mod` is an empty Go module. The Go tools of `app` then skip `app/ui/node_modules`.
-- **`test`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
-  - Playwright runs the specs in `test/e2e` against `./bin/reviews-app` with a new database
+- **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
+  - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name
 
 ## Code Comment Style (Mandatory)

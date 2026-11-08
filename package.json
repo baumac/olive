@@ -4,6 +4,6 @@
   "workspaces": [
     "app/ui",
     "app/sdk/typescript",
-    "test"
+    "tests"
   ]
 }
