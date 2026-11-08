@@ -118,6 +118,8 @@ The checks run in this order:
 - at 10,000 windows, the limiter removes the expired windows. It does this at most one time per window.
 - `Retry-After` is the number of seconds until the window ends, at least 1
 - a restart clears the counts. Each server has its own counts.
+- the IP address comes from `RequestEvent.RealIP`. Behind a reverse proxy, the PocketBase setting `trustedProxy.headers` must name the header that the proxy sets, such as `X-Real-IP`. Without it, `RealIP` is the address of the proxy for all clients, and the limit counts all clients together.
+- a second migration turns on the PocketBase rate limits. Their default rules limit the auth routes of `/api`, which include the superuser sign in. They do not apply to `/v1`.
 
 ## Transactions
 

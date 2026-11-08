@@ -17,6 +17,8 @@ describe('format', () => {
     expect(formatDate('2024-11-09 10:00:00.000Z', now)).toBe('yesterday')
     expect(formatDate('2024-11-06 10:00:00.000Z', now)).toBe('4 days ago')
     expect(formatDate('2024-11-01 10:00:00.000Z', now)).toBe('1 Nov 2024')
+    expect(formatDate('2024-11-10 12:00:03.000Z', now)).toBe('just now')
+    expect(formatDate('2024-11-20 12:00:00.000Z', now)).toBe('20 Nov 2024')
   })
 
   it('formats counts with plurals', () => {

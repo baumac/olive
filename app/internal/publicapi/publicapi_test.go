@@ -668,6 +668,13 @@ func TestListRestaurants(t *testing.T) {
 		}
 	})
 
+	t.Run("a binder error names the parameter", func(t *testing.T) {
+		res := e.expect(request{method: "GET", path: "/v1/restaurants?limit=x"}, http.StatusBadRequest)
+		if got := res.object(t)["detail"]; got != "The parameter limit is not valid." {
+			t.Errorf("detail %q", got)
+		}
+	})
+
 	t.Run("invalid query parameters", func(t *testing.T) {
 		for _, query := range []string{
 			"limit=0", "limit=101", "limit=x", "sort=name,name", "sort=title",

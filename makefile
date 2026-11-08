@@ -55,9 +55,21 @@ generate-sdk-ts:
 		--global-property apiDocs=false,modelDocs=false \
 		--additional-properties supportsES6=true,importFileExtension=.js,useSingleRequestParameter=true,withInterfaces=true,legacyDiscriminatorBehavior=false
 
-check-generate: generate
-	git diff --exit-code -- app/sdk
-	@test -z "$$(git ls-files --others --exclude-standard -- app/sdk)" || { git ls-files --others --exclude-standard -- app/sdk; echo "New generated files are not in git. Run make generate and add them."; exit 1; }
+GENERATED := app/sdk/go/reviewsapi.gen.go app/sdk/typescript/src
+CHECK_DIR := .check-generate
+
+# check-generate keeps a copy of the generated files, generates them again,
+# and compares. Edits to the hand-written SDK files do not change the result.
+check-generate:
+	rm -rf $(CHECK_DIR)
+	mkdir -p $(CHECK_DIR)
+	tar -cf - $(GENERATED) | tar -xf - -C $(CHECK_DIR)
+	$(MAKE) --no-print-directory generate
+	@diff -r $(CHECK_DIR)/app/sdk/go/reviewsapi.gen.go app/sdk/go/reviewsapi.gen.go && \
+		diff -r $(CHECK_DIR)/app/sdk/typescript/src app/sdk/typescript/src || \
+		{ echo "The generated SDKs do not match the spec. Run make generate."; exit 1; }
+	rm -rf $(CHECK_DIR)
+	@test -z "$$(git ls-files --others --exclude-standard -- $(GENERATED))" || { git ls-files --others --exclude-standard -- $(GENERATED); echo "New generated files are not in git. Run make generate and add them."; exit 1; }
 
 test: test-sdk test-app test-ui
 

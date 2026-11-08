@@ -6,7 +6,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 # Backlog
 
-- Add a README.md file to the project for newcomers to understand and get started with the project.
 - Add review lists that are not per restaurant to the Public API
   - the `AppHeader` design has a "Reviews" link, and the `UserMenu` design has "My reviews"
   - the Public API lists reviews only for one restaurant. The UI does not show these items until the API can list them.

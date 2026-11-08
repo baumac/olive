@@ -33,7 +33,6 @@ In scope:
 - the `make` target
 
 Out of scope:
-- running the tests in CI. A later decision chooses the CI system.
 - visual comparison with screenshots
 - load tests and performance budgets
 - tests of the PocketBase dashboard
@@ -181,7 +180,14 @@ test/
 - `.gitignore` ignores `test/test-results` and `test/playwright-report`
 - a failed test runs again one time. A test that passes only on the retry shows as flaky in the report.
 
+## CI
+
+- `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. The repository is on GitHub, so GitHub Actions needs no other service.
+- the `lint-and-test` job runs `make lint` and `make test`. The runner has Docker for OpenAPI Generator.
+- the `e2e` job installs the browsers with `npx playwright install --with-deps`, then runs `make test-e2e`. WebKit gets its system packages there.
+- a failed `e2e` job uploads the Playwright report and the traces for 7 days
+
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- The CI system that runs `make test-e2e`. The browsers need system packages, which `npx playwright install --with-deps` installs.
+None.

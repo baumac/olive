@@ -1,6 +1,6 @@
 ---
 description: Add a design system to the Vue Public UI.
-status: proposed
+status: implemented
 ---
 
 # Motivation
@@ -22,9 +22,9 @@ Expected outcome:
 [scope]: #scope
 
 In scope:
-- The choice of design system for the `ui` app
-- The design tokens and how the `ui` app defines them
-- The first component set and where it lives in the `ui` app
+- The choice of design system for the UI in `app/ui`
+- The design tokens and how the UI in `app/ui` defines them
+- The first component set and where it lives in the UI in `app/ui`
 - Theme switching
 - The brand: the name, the palette, the logo, the app icons, and the share image
 - Rules for dates, numbers, and text from the API
@@ -32,7 +32,7 @@ In scope:
 - Tests for the components
 
 Out of scope:
-- Scaffolding the `ui` app itself, such as Vite, the router, and the API client. This is part of the "Design the UI" backlog item.
+- Scaffolding the UI in `app/ui` itself, such as Vite, the router, and the API client. Decision 00005 covers it.
 - Screen designs for the Public UI
 - An icon set of our own. The UI uses Lucide.
 - Languages other than English. The UI supports only English.
@@ -46,12 +46,12 @@ New concepts:
 - **Design system**: the tokens, components, and rules that all screens of the Public UI use.
 - **Token**: a named design value, such as the `primary` color or the `radius` value.
   In CSS, each token is a custom property, for example `var(--primary)`.
-- **Component**: a Vue component in `ui/src/components/ui/`, such as `Button` or `RatingInput`.
+- **Component**: a Vue component in `app/ui/src/components/ui/`, such as `Button` or `RatingInput`.
   Screens use these components. They do not style native form controls directly.
 
 The design system uses [shadcn-vue](https://www.shadcn-vue.com/) with [Tailwind CSS](https://tailwindcss.com/).
 shadcn-vue is not a package dependency.
-Its CLI copies the source of each component into `ui/src/components/ui/`.
+Its CLI copies the source of each component into `app/ui/src/components/ui/`.
 The project owns this code and can change it.
 The components use [Reka UI](https://reka-ui.com/) for accessible behavior, such as focus, keyboard control, and ARIA attributes.
 
@@ -101,7 +101,7 @@ Project components that shadcn-vue does not have:
 - `FilterBar`: sets the filters and the sort order of a list. It shows each active filter as a chip.
 - `EmptyState`: fills the place of a list with no items.
 
-App components that know the routes. They live in `ui/src/components/app/`:
+App components that know the routes. They live in `app/ui/src/components/app/`:
 - `AppHeader`: the logo, the main navigation, `ThemeToggle`, and `UserMenu`
 - `ErrorPage`: the full page for `404`, `403`, and `500` errors
 
@@ -130,7 +130,7 @@ We compared these options:
 
 ## Tokens
 
-- tokens are CSS custom properties in `ui/src/assets/main.css`
+- tokens are CSS custom properties in `app/ui/src/assets/main.css`
 - the light theme defines tokens on `:root`. The dark theme defines the same tokens on `.dark`.
 - Tailwind CSS uses the tokens through its `@theme` configuration
 - components use Tailwind classes that refer to tokens, such as `bg-primary`. They do not use fixed color values.
@@ -180,7 +180,8 @@ We compared these options:
 ## Tests
 
 - component tests use Vitest and Vue Test Utils
-- accessibility tests use `vitest-axe` on each component in both themes
+- accessibility tests run `axe-core` directly on the components. `vitest-axe` has no release since 2022. Decision 00005 has the details.
+- jsdom does not render, so these tests cannot check color contrast. The end-to-end tests of decision 00006 check contrast in real browsers in both themes.
 - the tests run with `make test-ui`
 
 # Unresolved questions

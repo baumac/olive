@@ -39,3 +39,14 @@ func TestDownRestoresUsers(t *testing.T) {
 		t.Errorf("down: email index %+v", idx)
 	}
 }
+
+func TestRateLimitsAreOn(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	if !app.Settings().RateLimits.Enabled {
+		t.Error("the PocketBase rate limits are off")
+	}
+}

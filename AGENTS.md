@@ -18,7 +18,7 @@ This project allows users to review a variety of things. It is composed of the f
 
 ```bash
 make install-tools    # Install dev tools to ./bin/. Needs Go.
-make lint             # Run all linters. Needs Docker.
+make lint             # Run all linters. Needs Docker and Node.js.
 make lint-spec        # Lint the API specs in specs/api with vacuum
 make generate         # Generate the SDKs in app/sdk/ from the API spec. Needs Docker.
 make lint-go          # Run go vet and gofmt on the Go modules
@@ -47,6 +47,14 @@ Before the first `make test-e2e`, install the browsers with `cd test && npx play
 WebKit also needs system packages: `sudo npx playwright install-deps`.
 Run one browser with `cd test && npx playwright test --project=chromium`.
 
+`.github/workflows/ci.yml` runs `make lint`, `make test`, and `make test-e2e` on each push to `main` and on each pull request.
+
+## Production
+
+- Behind a reverse proxy, set the trusted proxy header in the PocketBase settings, such as `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign up and sign in rate limit counts all of them together. See decision 00004.
+- Set the superuser IP allow-list in the PocketBase settings, so only admin networks can open the dashboard at `/_/`.
+- A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
+
 ## Architecture
 
 - **`makefile`** - the Makefile for building, developing, and testing the project
@@ -60,7 +68,7 @@ Run one browser with `cd test && npx playwright test --project=chromium`.
 - **`app/sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00003.
   - **`app/sdk/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
   - **`app/sdk/go`** - the Go module with the server interface and the types that the API uses
-- **`app`** - the directory containining the app that serves the Public UI, Public API, Pocketbase API, and Pocketbase UI
+- **`app`** - the directory containing the app that serves the Public UI, Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.

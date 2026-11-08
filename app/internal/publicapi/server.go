@@ -94,7 +94,7 @@ func (s *Server) Handler() http.Handler {
 		BaseURL:    basePath,
 		BaseRouter: mux,
 		ErrorHandlerFunc: func(w http.ResponseWriter, _ *http.Request, err error) {
-			writeProblem(w, newProblem(http.StatusBadRequest, err.Error()))
+			writeProblem(w, newProblem(http.StatusBadRequest, paramErrorDetail(err)))
 		},
 	})
 	mux.HandleFunc(basePath+"/", noRoute(mux))
@@ -185,6 +185,13 @@ func stateFrom(ctx context.Context) *state {
 // 00004 lists them in order.
 func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A panic gets Problem Details. The PocketBase recovery would answer
+		// with its own JSON format.
+		defer func() {
+			if v := recover(); v != nil {
+				s.serverError(w, r, fmt.Errorf("panic: %v", v))
+			}
+		}()
 		_, pattern := mux.Handler(r)
 		rt, ok := routes[pattern]
 		if !ok {
@@ -289,4 +296,18 @@ func checkQueryNames(query map[string][]string, allowed map[string]int) string {
 		}
 	}
 	return ""
+}
+
+// paramErrorDetail names the parameter of a binder error. The binder text
+// names Go parser details. These are not for people.
+func paramErrorDetail(err error) string {
+	var format *reviewsapi.InvalidParamFormatError
+	if errors.As(err, &format) {
+		return "The parameter " + format.ParamName + " is not valid."
+	}
+	var many *reviewsapi.TooManyValuesForParamError
+	if errors.As(err, &many) {
+		return "The query parameter " + many.ParamName + " can occur only one time."
+	}
+	return "The request has a parameter that is not valid."
 }

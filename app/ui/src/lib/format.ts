@@ -15,9 +15,16 @@ const short = new Intl.DateTimeFormat(dateLocale, { day: 'numeric', month: 'shor
 const fullDay = new Intl.DateTimeFormat(dateLocale, { day: 'numeric', month: 'long', year: 'numeric' })
 const fullTime = new Intl.DateTimeFormat(dateLocale, { hour: '2-digit', minute: '2-digit' })
 
+// maxSkew is how far the browser clock can be behind the server. A time
+// that is this close in the future shows as "just now".
+const maxSkew = 5 * 60 * 1000
+
 export function formatDate(value: string, now: Date = new Date()): string {
   const date = parseTimestamp(value)
-  const ms = now.getTime() - date.getTime()
+  let ms = now.getTime() - date.getTime()
+  if (ms < 0 && ms > -maxSkew) {
+    ms = 0
+  }
   if (ms < 0 || ms >= 7 * day) {
     return short.format(date)
   }
