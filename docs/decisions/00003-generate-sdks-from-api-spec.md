@@ -119,7 +119,7 @@ It also fails when a handler returns a status or a body that the spec does not d
 | --- | --- |
 | OpenAPI Generator `typescript-fetch` for the UI | Selected. It uses the browser `fetch` and has no runtime dependencies. It makes a TypeScript interface and `FromJSON` and `ToJSON` functions for each model. |
 | oapi-codegen for the API | Selected. It makes idiomatic Go types and a strict server for `net/http`. It supports OpenAPI 3.1. |
-| OpenAPI Generator `go-server` for the API | Not selected. It makes a full server project with its own router. It does not fit inside the PocketBase app. |
+| OpenAPI Generator `go-server` for the API | Not selected. Handlers return an untyped status and body, so the compiler does not check responses against the spec. It does not support `oneOf`, `allOf`, `not`, `null`, or `deepObject`, which the review kinds, merge patches, and filters need. It also adds a second router to the PocketBase app. |
 | Hand-written types and clients | Not selected. They drift from the spec. |
 
 ## Layout
@@ -210,4 +210,3 @@ We do not change the spec to work around a generator without a new decision.
 [unresolved-questions]: #unresolved-questions
 
 - OpenAPI Generator marks its OpenAPI 3.1 support as beta. If `typescript-fetch` cannot handle the spec, we compare other TypeScript generators in a new decision.
-- The tests in [Difficult parts of the spec](#difficult-parts-of-the-spec) can show that a generator does not support a part. We record each workaround here when it is found.
