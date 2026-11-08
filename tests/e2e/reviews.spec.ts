@@ -1,3 +1,4 @@
+import { uniqueTag } from '../api'
 import { expect, test } from '../fixtures'
 
 test('a signed in user writes a basic review', async ({ page, api, user }) => {
@@ -97,4 +98,42 @@ test('the creator edits and deletes a review', async ({ page, api, user }) => {
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete review' }).click()
   await expect(page.getByText('Review deleted')).toBeVisible()
   await expect(page.getByText('No reviews yet')).toBeVisible()
+})
+
+test('my reviews lists the reviews of the user at all restaurants', async ({ page, api, user }) => {
+  const owner = await api.signUp('Joe')
+  const first = await api.createRestaurant(owner, { name: 'First Place' })
+  const second = await api.createRestaurant(owner, { name: 'Second Place' })
+  await api.createReview(user, first.id, { kind: 'basic', rating: 4, title: 'Mine at first' })
+  await api.createReview(user, second.id, { kind: 'basic', rating: 2, title: 'Mine at second' })
+  await api.createReview(owner, first.id, { kind: 'basic', rating: 5, title: 'Not mine' })
+
+  await page.goto('/restaurants')
+  await page.getByRole('button', { name: `AN, account menu for ${user.name}` }).click()
+  await page.getByRole('menuitem', { name: 'My reviews' }).click()
+
+  await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
+  await expect(page.getByText('Written by: you')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 3 })).toHaveText(['Mine at second', 'Mine at first'])
+  await page.getByRole('link', { name: 'First Place' }).click()
+  await expect(page.getByRole('heading', { name: 'First Place', level: 1 })).toBeVisible()
+})
+
+test('the reviews link lists reviews of all restaurants', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const restaurant = await api.createRestaurant(owner, { name: 'Any Place' })
+  const tag = uniqueTag('all')
+  await api.createReview(owner, restaurant.id, { kind: 'basic', rating: 3, title: 'Seen on all reviews', tags: [tag] })
+
+  await page.goto('/restaurants')
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Reviews' }).click()
+  await expect(page.getByRole('heading', { name: 'Reviews', level: 1 })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Reviews', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+
+  await page.goto(`/reviews?tags=${tag}`)
+  const card = page.getByRole('listitem').filter({ hasText: 'Seen on all reviews' })
+  await expect(card.getByRole('link', { name: 'Any Place' })).toBeVisible()
 })

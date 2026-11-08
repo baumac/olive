@@ -134,6 +134,11 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 
 ## Lists
 
+- `listReviews` and `listAllReviews` use one function. `listReviews` sets `restaurant[eq]` from the path and checks first that the restaurant exists.
+- review responses get `restaurant_name` from one query for the restaurants of the page, like `creator`. `listReviews` already has its restaurant, so it needs no query.
+- the cursor of `listReviews` keeps the fingerprint of its first version. Pages that were open before a deploy can still load more.
+- a review without its restaurant gets `500`, like a review without its creator. `restaurant_name` is never empty.
+
 - pagination uses a keyset. The cursor is base64url JSON with the sort values of the last item and a fingerprint.
 - the fingerprint is a hash of the filters, the sort, and the restaurant ID. `limit` is not in it, so a client can change `limit` between pages.
 - a sort on a score has two keys. The first key is `0` for reviews of the kind of the score and `1` for other reviews. This puts the other kinds last in both directions.
@@ -150,7 +155,7 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 - an update saves only when a value changes. A merge patch without changes keeps `updated`.
 - the unique `email` index of `users` uses `COLLATE NOCASE`. The down migration restores the PocketBase defaults of `users`.
 - PocketBase removes the user ID from `restaurants.creator` in the delete transaction of the user. The API has no hook for it.
-- `restaurants` has indexes on `creator` and on `(created, id)`. `reviews` has indexes on `creator` and on `(restaurant, created, id)`.
+- `restaurants` has indexes on `creator` and on `(created, id)`. `reviews` has indexes on `creator`, on `(restaurant, created, id)`, and on `(created, id)`. The last one serves `GET /v1/reviews`, which sorts the reviews of all restaurants.
 
 ## Go modules
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fieldErrors } from '@/lib/api'
+import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, initials, parseTimestamp } from '@/lib/format'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 
@@ -77,5 +78,20 @@ describe('fieldErrors', () => {
       ],
     })
     expect(errors).toEqual({ tags: 'Must be unique.', name: 'Must have 1 to 255 characters.' })
+  })
+})
+
+describe('reviewFilterParams', () => {
+  it('changes the filters to SDK parameters', () => {
+    expect(reviewFilterParams({ tags: ['pasta'], kind: 'basic', rating: '4', creator: 'u5n1c8r3t6y0b2e' })).toEqual({
+      tagsHasAny: ['pasta'],
+      kindIn: ['basic'],
+      rating: { gte: 4 },
+      food: undefined,
+      service: undefined,
+      space: undefined,
+      price: undefined,
+      creatorEq: 'u5n1c8r3t6y0b2e',
+    })
   })
 })

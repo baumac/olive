@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { User } from '@reviews/sdk'
-import { LogOutIcon } from 'lucide-vue-next'
+import { LogOutIcon, MessageSquareIcon } from 'lucide-vue-next'
 import { initials } from '@/lib/format'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ defineProps<{
   // signInPath is the sign in page with the current path as redirect.
   signInPath: string
   signInCurrent?: boolean
+  myReviewsPath: string
 }>()
 
 defineEmits<{ signOut: [] }>()
@@ -39,6 +40,13 @@ defineEmits<{ signOut: [] }>()
         <span class="truncate">{{ user.name }}</span>
         <span class="text-muted-foreground truncate text-xs font-normal">{{ user.email }}</span>
       </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem as-child>
+        <RouterLink :to="myReviewsPath">
+          <MessageSquareIcon aria-hidden="true" />
+          My reviews
+        </RouterLink>
+      </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem @select="$emit('signOut')">
         <LogOutIcon aria-hidden="true" />

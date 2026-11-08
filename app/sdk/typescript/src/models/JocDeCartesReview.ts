@@ -36,6 +36,12 @@ export interface JocDeCartesReview {
      */
     restaurant: string;
     /**
+     * The `name` of the reviewed restaurant.
+     * The name of a restaurant with reviews cannot change, so this value stays correct.
+     * 
+     */
+    restaurantName: string;
+    /**
      * 
      */
     kind: JocDeCartesReviewKindEnum;
@@ -101,6 +107,7 @@ export type JocDeCartesReviewKindEnum = typeof JocDeCartesReviewKindEnum[keyof t
 export function instanceOfJocDeCartesReview(value: object): value is JocDeCartesReview {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('restaurant' in value) || value['restaurant'] === undefined) return false;
+    if ((!('restaurantName' in (value as Record<string, any>)) && !('restaurant_name' in (value as Record<string, any>))) || ((value as Record<string, any>)['restaurantName'] === undefined && (value as Record<string, any>)['restaurant_name'] === undefined)) return false;
     if (!('kind' in value) || value['kind'] === undefined) return false;
     if (value['kind'] !== 'joc_de_cartes') return false;
     
@@ -127,6 +134,7 @@ export function JocDeCartesReviewFromJSONTyped(json: any, ignoreDiscriminator: b
         
         'id': json['id'],
         'restaurant': json['restaurant'],
+        'restaurantName': json['restaurant_name'],
         'kind': json['kind'],
         'title': json['title'],
         'feedback': json['feedback'] == null ? undefined : json['feedback'],
@@ -154,6 +162,7 @@ export function JocDeCartesReviewToJSONTyped(value?: JocDeCartesReview | null, i
         
         'id': value['id'],
         'restaurant': value['restaurant'],
+        'restaurant_name': value['restaurantName'],
         'kind': value['kind'],
         'title': value['title'],
         'feedback': value['feedback'],

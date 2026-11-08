@@ -162,6 +162,10 @@ type BasicReview struct {
 	// Examples: k3x9m2p7q1w8z4a
 	Restaurant RecordId `json:"restaurant"`
 
+	// RestaurantName The `name` of the reviewed restaurant.
+	// The name of a restaurant with reviews cannot change, so this value stays correct.
+	RestaurantName Name `json:"restaurant_name"`
+
 	// Tags Unique tags.
 	//
 	// Examples: ["italian","pasta"]
@@ -281,6 +285,10 @@ type JocDeCartesReview struct {
 	//
 	// Examples: k3x9m2p7q1w8z4a
 	Restaurant RecordId `json:"restaurant"`
+
+	// RestaurantName The `name` of the reviewed restaurant.
+	// The name of a restaurant with reviews cannot change, so this value stays correct.
+	RestaurantName Name `json:"restaurant_name"`
 
 	// Service Professionalism, speed, friendliness, and attentiveness of the waitstaff.
 	Service ServiceScore `json:"service"`
@@ -402,6 +410,10 @@ type OtherReview struct {
 	//
 	// Examples: k3x9m2p7q1w8z4a
 	Restaurant RecordId `json:"restaurant"`
+
+	// RestaurantName The `name` of the reviewed restaurant.
+	// The name of a restaurant with reviews cannot change, so this value stays correct.
+	RestaurantName Name `json:"restaurant_name"`
 
 	// Tags Unique tags.
 	//
@@ -548,7 +560,7 @@ type RestaurantPatch struct {
 // Later releases of `/v1` can add kinds.
 // Clients must handle unknown kinds without failing.
 //
-// Examples: {"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"feedback":"Friendly staff and great pasta","id":"r7d4f0h2j9l5s3v","kind":"basic","rating":5,"restaurant":"k3x9m2p7q1w8z4a","tags":["favorites"],"title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"}
+// Examples: {"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"feedback":"Friendly staff and great pasta","id":"r7d4f0h2j9l5s3v","kind":"basic","rating":5,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","tags":["favorites"],"title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"}
 type Review struct {
 	union json.RawMessage
 }
@@ -578,6 +590,10 @@ type ReviewBase struct {
 	// Examples: k3x9m2p7q1w8z4a
 	Restaurant RecordId `json:"restaurant"`
 
+	// RestaurantName The `name` of the reviewed restaurant.
+	// The name of a restaurant with reviews cannot change, so this value stays correct.
+	RestaurantName Name `json:"restaurant_name"`
+
 	// Tags Unique tags.
 	//
 	// Examples: ["italian","pasta"]
@@ -602,7 +618,7 @@ type ReviewCreate struct {
 
 // ReviewList A page of reviews. It can contain reviews of all kinds.
 //
-// Examples: {"items":[{"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"id":"r7d4f0h2j9l5s3v","kind":"basic","rating":5,"restaurant":"k3x9m2p7q1w8z4a","title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"},{"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"food":8,"id":"r1b8c5e2g9i6k3m","kind":"joc_de_cartes","price":6,"restaurant":"k3x9m2p7q1w8z4a","service":9,"space":7,"title":"Great food, a bit expensive","updated":"2024-11-06 19:02:11.120Z"}],"next_cursor":null}
+// Examples: {"items":[{"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"id":"r7d4f0h2j9l5s3v","kind":"basic","rating":5,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"},{"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"food":8,"id":"r1b8c5e2g9i6k3m","kind":"joc_de_cartes","price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"title":"Great food, a bit expensive","updated":"2024-11-06 19:02:11.120Z"}],"next_cursor":null}
 type ReviewList struct {
 	Items []Review `json:"items"`
 
@@ -780,10 +796,18 @@ type PriceFilter = ScoreRange
 // RatingFilter Comparisons for a `basic` rating. All comparisons must match.
 type RatingFilter = RatingRange
 
+// RestaurantEq A record ID of 15 characters.
+//
+// Examples: k3x9m2p7q1w8z4a
+type RestaurantEq = RecordId
+
 // RestaurantId A record ID of 15 characters.
 //
 // Examples: k3x9m2p7q1w8z4a
 type RestaurantId = RecordId
+
+// RestaurantIn Examples: ["k3x9m2p7q1w8z4a","x7b2n9m4q1w8z3c"]
+type RestaurantIn = []RecordId
 
 // RestaurantSort defines model for RestaurantSort.
 type RestaurantSort = string
@@ -920,6 +944,73 @@ type ListReviewsParams struct {
 	// A sort on a kind-specific property puts reviews of other kinds last in both directions.
 	// The API always adds `id` as the last sort key.
 	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// KindEq The review `kind` is equal to the value.
+	KindEq *KindEq `form:"kind[eq],omitempty" json:"kind[eq],omitempty"`
+
+	// KindIn The review `kind` is equal to any of the values.
+	KindIn *KindIn `form:"kind[in],omitempty" json:"kind[in],omitempty"`
+
+	// Rating Matches only `basic` reviews. Each key is an operator, for example `rating[gte]=`.
+	Rating *RatingFilter `json:"rating,omitempty"`
+
+	// Space Matches only `joc_de_cartes` reviews. Each key is an operator, for example `space[gte]=`.
+	Space *SpaceFilter `json:"space,omitempty"`
+
+	// Service Matches only `joc_de_cartes` reviews. Each key is an operator, for example `service[gte]=`.
+	Service *ServiceFilter `json:"service,omitempty"`
+
+	// Food Matches only `joc_de_cartes` reviews. Each key is an operator, for example `food[gte]=`.
+	Food *FoodFilter `json:"food,omitempty"`
+
+	// Price Matches only `joc_de_cartes` reviews. Each key is an operator, for example `price[gte]=`.
+	Price *PriceFilter `json:"price,omitempty"`
+
+	// TagsHas The `tags` contain the tag.
+	TagsHas *TagsHas `form:"tags[has],omitempty" json:"tags[has],omitempty"`
+
+	// TagsHasAny The `tags` contain at least one of the tags.
+	TagsHasAny *TagsHasAny `form:"tags[has_any],omitempty" json:"tags[has_any],omitempty"`
+
+	// TagsHasAll The `tags` contain all of the tags.
+	TagsHasAll *TagsHasAll `form:"tags[has_all],omitempty" json:"tags[has_all],omitempty"`
+
+	// Created Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+	Created *CreatedFilter `json:"created,omitempty"`
+
+	// Updated Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+	Updated *UpdatedFilter `json:"updated,omitempty"`
+
+	// CreatorEq The `creator.id` is equal to the value.
+	CreatorEq *CreatorEq `form:"creator[eq],omitempty" json:"creator[eq],omitempty"`
+
+	// CreatorIn The `creator.id` is equal to any of the values.
+	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
+}
+
+// ListAllReviewsParams defines parameters for ListAllReviews.
+type ListAllReviewsParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Sort A comma-separated list of properties.
+	// A `-` prefix sorts a property in descending order.
+	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
+	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+	// A sort on a kind-specific property puts reviews of other kinds last in both directions.
+	// The API always adds `id` as the last sort key.
+	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// RestaurantEq The `restaurant` of the review is equal to the value.
+	RestaurantEq *RestaurantEq `form:"restaurant[eq],omitempty" json:"restaurant[eq],omitempty"`
+
+	// RestaurantIn The `restaurant` of the review is equal to any of the values.
+	RestaurantIn *RestaurantIn `form:"restaurant[in],omitempty" json:"restaurant[in],omitempty"`
 
 	// KindEq The review `kind` is equal to the value.
 	KindEq *KindEq `form:"kind[eq],omitempty" json:"kind[eq],omitempty"`
@@ -1353,6 +1444,9 @@ type ServerInterface interface {
 	// UpdateReview Update a review
 	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId})
 	UpdateReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
+	// ListAllReviews List the reviews of all restaurants
+	// (GET /reviews)
+	ListAllReviews(w http.ResponseWriter, r *http.Request, params ListAllReviewsParams)
 	// SignUp Sign up a user
 	// (POST /users)
 	SignUp(w http.ResponseWriter, r *http.Request)
@@ -1996,6 +2090,273 @@ func (siw *ServerInterfaceWrapper) UpdateReview(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListAllReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListAllReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAllReviewsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "restaurant[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "restaurant[eq]", r.URL.Query(), &params.RestaurantEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "restaurant[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurant[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "restaurant[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "restaurant[in]", r.URL.Query(), &params.RestaurantIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "restaurant[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurant[in]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "kind[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind[eq]", r.URL.Query(), &params.KindEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "kind[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind[in]", r.URL.Query(), &params.KindIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind[in]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "rating" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "rating", r.URL.Query(), &params.Rating, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "rating"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rating", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "space" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "space", r.URL.Query(), &params.Space, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "space"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "space", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "service" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "service", r.URL.Query(), &params.Service, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "service"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "service", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "food" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "food", r.URL.Query(), &params.Food, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "food"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "food", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "price" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "price", r.URL.Query(), &params.Price, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "price"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "price", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tags[has]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tags[has]", r.URL.Query(), &params.TagsHas, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tags[has]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tags[has]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tags[has_any]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tags[has_any]", r.URL.Query(), &params.TagsHasAny, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tags[has_any]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tags[has_any]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tags[has_all]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tags[has_all]", r.URL.Query(), &params.TagsHasAll, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tags[has_all]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tags[has_all]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "created" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "created", r.URL.Query(), &params.Created, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "updated" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "updated", r.URL.Query(), &params.Updated, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "updated"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "updated", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[eq]", r.URL.Query(), &params.CreatorEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[in]", r.URL.Query(), &params.CreatorIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[in]", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAllReviews(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SignUp operation middleware
 func (siw *ServerInterfaceWrapper) SignUp(w http.ResponseWriter, r *http.Request) {
 
@@ -2168,6 +2529,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}", wrapper.UpdateRestaurant)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews", wrapper.ListReviews)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews", wrapper.CreateReview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviews", wrapper.ListAllReviews)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.DeleteReview)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.GetReview)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.UpdateReview)
@@ -3335,6 +3697,78 @@ func (response UpdateReviewdefaultApplicationProblemPlusJSONResponse) VisitUpdat
 	return err
 }
 
+type ListAllReviewsRequestObject struct {
+	Params ListAllReviewsParams
+}
+
+type ListAllReviewsResponseObject interface {
+	VisitListAllReviewsResponse(w http.ResponseWriter) error
+}
+
+type ListAllReviews200JSONResponse ReviewList
+
+func (response ListAllReviews200JSONResponse) VisitListAllReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllReviews400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListAllReviews400ApplicationProblemPlusJSONResponse) VisitListAllReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllReviews401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListAllReviews401ApplicationProblemPlusJSONResponse) VisitListAllReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllReviewsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListAllReviewsdefaultApplicationProblemPlusJSONResponse) VisitListAllReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SignUpRequestObject struct {
 	Body *SignUpJSONRequestBody
 }
@@ -3663,6 +4097,9 @@ type StrictServerInterface interface {
 	// UpdateReview Update a review
 	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId})
 	UpdateReview(ctx context.Context, request UpdateReviewRequestObject) (UpdateReviewResponseObject, error)
+	// ListAllReviews List the reviews of all restaurants
+	// (GET /reviews)
+	ListAllReviews(ctx context.Context, request ListAllReviewsRequestObject) (ListAllReviewsResponseObject, error)
 	// SignUp Sign up a user
 	// (POST /users)
 	SignUp(ctx context.Context, request SignUpRequestObject) (SignUpResponseObject, error)
@@ -3996,6 +4433,32 @@ func (sh *strictHandler) UpdateReview(w http.ResponseWriter, r *http.Request, re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateReviewResponseObject); ok {
 		if err := validResponse.VisitUpdateReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAllReviews operation middleware
+func (sh *strictHandler) ListAllReviews(w http.ResponseWriter, r *http.Request, params ListAllReviewsParams) {
+	var request ListAllReviewsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAllReviews(ctx, request.(ListAllReviewsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAllReviews")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAllReviewsResponseObject); ok {
+		if err := validResponse.VisitListAllReviewsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -54,34 +55,93 @@ var reviewSorts = map[string]sortField{
 // ListReviews returns 404 when the restaurant does not exist. It does not
 // return an empty list.
 func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsRequestObject) (reviewsapi.ListReviewsResponseObject, error) {
-	bad := func(detail string) (reviewsapi.ListReviewsResponseObject, error) {
-		return reviewsapi.ListReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
-	}
 	if !recordIDPattern.MatchString(req.RestaurantId) {
-		return bad(invalidRestaurantID)
+		return reviewsapi.ListReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(invalidRestaurantID)}, nil
 	}
-
 	p := req.Params
-	limit, detail := parseLimit(p.Limit)
-	if detail != "" {
-		return bad(detail)
+	all := reviewsapi.ListAllReviewsParams{
+		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, RestaurantEq: &req.RestaurantId,
+		KindEq: p.KindEq, KindIn: p.KindIn,
+		Rating: p.Rating, Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price,
+		TagsHas: p.TagsHas, TagsHasAny: p.TagsHasAny, TagsHasAll: p.TagsHasAll,
+		Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
 	}
-	keys, sort, detail := parseSort(p.Sort, "reviews", reviewSorts)
-	if detail != "" {
-		return bad(detail)
+	// The cursor keeps the fingerprint of the first version of this
+	// operation. Open pages can then still load more after a deploy.
+	fingerprintOf := func(sort string) []any {
+		q := req.Params
+		q.Limit, q.Cursor, q.Sort = nil, nil, &sort
+		return []any{"reviews", req.RestaurantId, q}
 	}
-	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
-	query, err := fingerprint("reviews", req.RestaurantId, p)
+	page, err := s.reviewPage(all, fingerprintOf, func() (*core.Record, error) {
+		r, err := s.findRestaurant(s.app, req.RestaurantId)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return r, err
+	})
+	switch {
+	case err != nil:
+		return nil, err
+	case page.bad != "":
+		return reviewsapi.ListReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(page.bad)}, nil
+	case page.notFound:
+		return reviewsapi.ListReviews404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}, nil
+	}
+	return reviewsapi.ListReviews200JSONResponse(page.list), nil
+}
+
+// ListAllReviews lists the reviews of all restaurants. An unknown
+// restaurant in restaurant[eq] gives an empty list, not 404.
+func (s *Server) ListAllReviews(_ context.Context, req reviewsapi.ListAllReviewsRequestObject) (reviewsapi.ListAllReviewsResponseObject, error) {
+	page, err := s.reviewPage(req.Params, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	after, detail := decodeCursor(req.Params.Cursor, query, len(keys))
+	if page.bad != "" {
+		return reviewsapi.ListAllReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(page.bad)}, nil
+	}
+	return reviewsapi.ListAllReviews200JSONResponse(page.list), nil
+}
+
+type reviewPageResult struct {
+	list     reviewsapi.ReviewList
+	bad      string
+	notFound bool
+}
+
+// reviewPage checks the parameters, then calls restaurant, then gets the
+// page. A nil restaurant skips the check. This order gives 400 before 404.
+// A nil fingerprintOf uses the parameters of listAllReviews.
+func (s *Server) reviewPage(
+	p reviewsapi.ListAllReviewsParams,
+	fingerprintOf func(sort string) []any,
+	restaurant func() (*core.Record, error),
+) (reviewPageResult, error) {
+	limit, detail := parseLimit(p.Limit)
 	if detail != "" {
-		return bad(detail)
+		return reviewPageResult{bad: detail}, nil
+	}
+	keys, sort, detail := parseSort(p.Sort, "reviews", reviewSorts)
+	if detail != "" {
+		return reviewPageResult{bad: detail}, nil
+	}
+	cursor := p.Cursor
+	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
+	parts := []any{"reviews", p}
+	if fingerprintOf != nil {
+		parts = fingerprintOf(sort)
+	}
+	query, err := fingerprint(parts...)
+	if err != nil {
+		return reviewPageResult{}, err
+	}
+	after, detail := decodeCursor(cursor, query, len(keys))
+	if detail != "" {
+		return reviewPageResult{bad: detail}, nil
 	}
 
 	w := newWhere()
-	w.compare(column("reviews", "restaurant"), []comparison{{"=", req.RestaurantId}})
 	if p.KindEq != nil {
 		w.compare(column("reviews", "kind"), []comparison{{"=", *p.KindEq}})
 	}
@@ -89,6 +149,7 @@ func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsReques
 		w.in(column("reviews", "kind"), *p.KindIn)
 	}
 	for _, detail := range []string{
+		w.restaurantFilters(p.RestaurantEq, p.RestaurantIn),
 		w.scoreFilter(kindBasic, "rating", 5, ratingComparisons(p.Rating)),
 		w.scoreFilter(kindJocDeCartes, "space", 10, scoreComparisons(p.Space)),
 		w.scoreFilter(kindJocDeCartes, "service", 10, scoreComparisons(p.Service)),
@@ -100,34 +161,89 @@ func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsReques
 		w.timestampFilter("reviews", "updated", timestampComparisons(p.Updated)),
 	} {
 		if detail != "" {
-			return bad(detail)
+			return reviewPageResult{bad: detail}, nil
 		}
 	}
 	if after != nil {
 		w.keyset(keys, after)
 	}
 
-	if _, err := s.findRestaurant(s.app, req.RestaurantId); errors.Is(err, sql.ErrNoRows) {
-		return reviewsapi.ListReviews404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}, nil
-	} else if err != nil {
-		return nil, err
+	known := map[string]string{}
+	if restaurant != nil {
+		r, err := restaurant()
+		if err != nil {
+			return reviewPageResult{}, err
+		}
+		if r == nil {
+			return reviewPageResult{notFound: true}, nil
+		}
+		known[r.Id] = r.GetString("name")
 	}
 
 	records, next, err := s.page("reviews", w, keys, limit, query)
 	if err != nil {
-		return nil, err
+		return reviewPageResult{}, err
 	}
 	users, err := s.creators(records...)
 	if err != nil {
-		return nil, err
+		return reviewPageResult{}, err
+	}
+	names, err := s.restaurantNames(known, records...)
+	if err != nil {
+		return reviewPageResult{}, err
 	}
 	items := make([]reviewsapi.Review, len(records))
 	for i, r := range records {
-		if items[i], err = toReview(r, users[r.GetString("creator")]); err != nil {
-			return nil, err
+		if items[i], err = toReview(r, users[r.GetString("creator")], names[r.GetString("restaurant")]); err != nil {
+			return reviewPageResult{}, err
 		}
 	}
-	return reviewsapi.ListReviews200JSONResponse{Items: items, NextCursor: next}, nil
+	return reviewPageResult{list: reviewsapi.ReviewList{Items: items, NextCursor: next}}, nil
+}
+
+func (w *where) restaurantFilters(eq *string, in *[]string) string {
+	ids := []string{}
+	if eq != nil {
+		ids = append(ids, *eq)
+	}
+	if in != nil {
+		ids = append(ids, *in...)
+	}
+	for _, id := range ids {
+		if !recordIDPattern.MatchString(id) {
+			return fmt.Sprintf("The restaurant ID %q is not valid.", id)
+		}
+	}
+	if eq != nil {
+		w.compare(column("reviews", "restaurant"), []comparison{{"=", *eq}})
+	}
+	if in != nil {
+		w.in(column("reviews", "restaurant"), *in)
+	}
+	return ""
+}
+
+// restaurantNames reads only the restaurants that are not in known. The
+// per-restaurant list then needs no extra query.
+func (s *Server) restaurantNames(known map[string]string, reviews ...*core.Record) (map[string]string, error) {
+	out := maps.Clone(known)
+	ids := map[string]bool{}
+	for _, r := range reviews {
+		if _, ok := out[r.GetString("restaurant")]; !ok {
+			ids[r.GetString("restaurant")] = true
+		}
+	}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	restaurants, err := s.app.FindRecordsByIds("restaurants", slices.Collect(maps.Keys(ids)))
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range restaurants {
+		out[r.Id] = r.GetString("name")
+	}
+	return out, nil
 }
 
 // CreateReview runs the duplicate check and the save in one transaction.
@@ -140,9 +256,10 @@ func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRe
 	duplicate := reviewsapi.CreateReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The user already has a review for this restaurant.")}
 
 	var response reviewsapi.CreateReviewResponseObject
-	var saved *core.Record
+	var saved, restaurant *core.Record
 	err := s.app.RunInTransaction(func(tx core.App) error {
-		if _, err := s.findRestaurant(tx, req.RestaurantId); errors.Is(err, sql.ErrNoRows) {
+		var err error
+		if restaurant, err = s.findRestaurant(tx, req.RestaurantId); errors.Is(err, sql.ErrNoRows) {
 			response = reviewsapi.CreateReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}
 			return nil
 		} else if err != nil {
@@ -194,7 +311,7 @@ func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRe
 		return response, nil
 	}
 
-	out, err := toReview(saved, st.user)
+	out, err := toReview(saved, st.user, restaurant.GetString("name"))
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +327,7 @@ func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObj
 	if detail := checkReviewIDs(req.RestaurantId, req.ReviewId); detail != "" {
 		return reviewsapi.GetReview400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
 	}
-	r, detail, err := s.findReview(s.app, req.RestaurantId, req.ReviewId)
+	restaurant, r, detail, err := s.findReview(s.app, req.RestaurantId, req.ReviewId)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +338,7 @@ func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObj
 	if err != nil {
 		return nil, err
 	}
-	out, err := toReview(r, users[r.GetString("creator")])
+	out, err := toReview(r, users[r.GetString("creator")], restaurant.GetString("name"))
 	if err != nil {
 		return nil, err
 	}
@@ -237,9 +354,12 @@ func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRe
 	st := stateFrom(ctx)
 
 	var response reviewsapi.UpdateReviewResponseObject
-	var saved *core.Record
+	var saved, restaurant *core.Record
 	err := s.app.RunInTransaction(func(tx core.App) error {
-		r, detail, err := s.findReview(tx, req.RestaurantId, req.ReviewId)
+		var r *core.Record
+		var detail string
+		var err error
+		restaurant, r, detail, err = s.findReview(tx, req.RestaurantId, req.ReviewId)
 		if err != nil {
 			return err
 		}
@@ -281,7 +401,7 @@ func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRe
 		return response, nil
 	}
 
-	out, err := toReview(saved, st.user)
+	out, err := toReview(saved, st.user, restaurant.GetString("name"))
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +417,7 @@ func (s *Server) DeleteReview(ctx context.Context, req reviewsapi.DeleteReviewRe
 
 	var response reviewsapi.DeleteReviewResponseObject = reviewsapi.DeleteReview204Response{}
 	err := s.app.RunInTransaction(func(tx core.App) error {
-		r, detail, err := s.findReview(tx, req.RestaurantId, req.ReviewId)
+		_, r, detail, err := s.findReview(tx, req.RestaurantId, req.ReviewId)
 		if err != nil {
 			return err
 		}
@@ -329,20 +449,21 @@ func checkReviewIDs(restaurantID, reviewID string) string {
 
 // findReview returns a detail for the 404 response if the restaurant or the
 // review does not exist. A review of a different restaurant does not exist.
-func (s *Server) findReview(app core.App, restaurantID, reviewID string) (*core.Record, string, error) {
-	if _, err := s.findRestaurant(app, restaurantID); errors.Is(err, sql.ErrNoRows) {
-		return nil, restaurantNotFound, nil
+func (s *Server) findReview(app core.App, restaurantID, reviewID string) (restaurant, review *core.Record, detail string, err error) {
+	restaurant, err = s.findRestaurant(app, restaurantID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, restaurantNotFound, nil
 	} else if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	r, err := app.FindRecordById("reviews", reviewID)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && r.GetString("restaurant") != restaurantID) {
-		return nil, "The review does not exist.", nil
+	review, err = app.FindRecordById("reviews", reviewID)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && review.GetString("restaurant") != restaurantID) {
+		return nil, nil, "The review does not exist.", nil
 	}
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	return r, "", nil
+	return restaurant, review, "", nil
 }
 
 // checkKind returns the field errors for an unknown kind. It also returns a
@@ -461,9 +582,12 @@ func (in reviewInput) apply(r *core.Record) bool {
 	return ch.changed
 }
 
-func toReview(r *core.Record, creator *core.Record) (reviewsapi.Review, error) {
+func toReview(r *core.Record, creator *core.Record, restaurantName string) (reviewsapi.Review, error) {
 	if creator == nil {
 		return reviewsapi.Review{}, fmt.Errorf("review %s has no creator", r.Id)
+	}
+	if restaurantName == "" {
+		return reviewsapi.Review{}, fmt.Errorf("review %s has no restaurant", r.Id)
 	}
 	var (
 		out      reviewsapi.Review
@@ -478,21 +602,21 @@ func toReview(r *core.Record, creator *core.Record) (reviewsapi.Review, error) {
 	switch kind {
 	case kindBasic:
 		err = out.FromBasicReview(reviewsapi.BasicReview{
-			Id: r.Id, Restaurant: r.GetString("restaurant"), Kind: kindBasic,
+			Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName, Kind: kindBasic,
 			Rating: r.GetInt("rating"),
 			Title:  r.GetString("title"), Feedback: feedback, Tags: tags,
 			Creator: c, Created: created, Updated: updated,
 		})
 	case kindJocDeCartes:
 		err = out.FromJocDeCartesReview(reviewsapi.JocDeCartesReview{
-			Id: r.Id, Restaurant: r.GetString("restaurant"), Kind: kindJocDeCartes,
+			Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName, Kind: kindJocDeCartes,
 			Space: r.GetInt("space"), Service: r.GetInt("service"), Food: r.GetInt("food"), Price: r.GetInt("price"),
 			Title: r.GetString("title"), Feedback: feedback, Tags: tags,
 			Creator: c, Created: created, Updated: updated,
 		})
 	default:
 		err = out.FromOtherReview(reviewsapi.OtherReview{
-			Id: r.Id, Restaurant: r.GetString("restaurant"), Kind: kind,
+			Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName, Kind: kind,
 			Title: r.GetString("title"), Feedback: feedback, Tags: tags,
 			Creator: c, Created: created, Updated: updated,
 		})

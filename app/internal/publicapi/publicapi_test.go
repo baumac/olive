@@ -484,6 +484,9 @@ func TestReviews(t *testing.T) {
 
 	t.Run("get", func(t *testing.T) {
 		got := e.expect(request{method: "GET", path: basicPath}, http.StatusOK).object(t)
+		if got["restaurant_name"] != "Luigi's" {
+			t.Errorf("get: restaurant_name %v", got["restaurant_name"])
+		}
 		if got["kind"] != "basic" || got["rating"] != float64(4) {
 			t.Errorf("get: %v", got)
 		}
@@ -504,6 +507,9 @@ func TestReviews(t *testing.T) {
 		e.expect(request{method: "PATCH", path: basicPath, body: `{"kind":"basic","title":null}`, token: joe.Token}, http.StatusUnprocessableEntity)
 
 		got := e.expect(request{method: "PATCH", path: basicPath, body: `{"kind":"basic","rating":2,"feedback":null}`, token: joe.Token}, http.StatusOK).object(t)
+		if got["restaurant_name"] != "Luigi's" {
+			t.Errorf("patch: restaurant_name %v", got["restaurant_name"])
+		}
 		if got["rating"] != float64(2) || got["title"] != "Good" {
 			t.Errorf("patch: %v", got)
 		}
@@ -720,5 +726,71 @@ func TestUnknownRoutes(t *testing.T) {
 	res := e.expect(request{method: "PUT", path: "/v1/restaurants"}, http.StatusMethodNotAllowed)
 	if got := res.header.Get("Allow"); got != "GET, POST" {
 		t.Errorf("Allow %q", got)
+	}
+}
+
+func TestListAllReviews(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+	luigi := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
+	sole := e.createRestaurant(joe.Token, `{"name":"Can Sole"}`)["id"].(string)
+	e.createReview(ana.Token, luigi, `{"kind":"basic","rating":4,"title":"Ana at Luigi"}`)
+	time.Sleep(2 * time.Millisecond)
+	e.createReview(joe.Token, luigi, `{"kind":"basic","rating":2,"title":"Joe at Luigi"}`)
+	time.Sleep(2 * time.Millisecond)
+	created := e.createReview(ana.Token, sole, `{"kind":"joc_de_cartes","space":7,"service":9,"food":8,"price":6,"title":"Ana at Sole"}`)
+
+	if created["restaurant_name"] != "Can Sole" {
+		t.Errorf("create: restaurant_name %v", created["restaurant_name"])
+	}
+
+	type page struct {
+		Items []struct {
+			Title          string `json:"title"`
+			RestaurantName string `json:"restaurant_name"`
+		} `json:"items"`
+		NextCursor *string `json:"next_cursor"`
+	}
+	list := func(query string) page {
+		t.Helper()
+		var p page
+		e.expect(request{method: "GET", path: "/v1/reviews?" + query}, http.StatusOK).decode(t, &p)
+		return p
+	}
+	titles := func(p page) string {
+		var out []string
+		for _, it := range p.Items {
+			out = append(out, it.Title+"@"+it.RestaurantName)
+		}
+		return strings.Join(out, ",")
+	}
+
+	for query, want := range map[string]string{
+		"":                               "Ana at Sole@Can Sole,Joe at Luigi@Luigi's,Ana at Luigi@Luigi's",
+		"creator[eq]=" + ana.User.ID:     "Ana at Sole@Can Sole,Ana at Luigi@Luigi's",
+		"restaurant[eq]=" + luigi:        "Joe at Luigi@Luigi's,Ana at Luigi@Luigi's",
+		"restaurant[in]=" + sole:         "Ana at Sole@Can Sole",
+		"sort=-rating":                   "Ana at Luigi@Luigi's,Joe at Luigi@Luigi's,Ana at Sole@Can Sole",
+		"restaurant[eq]=aaaaaaaaaaaaaaa": "",
+	} {
+		if got := titles(list(query)); got != want {
+			t.Errorf("%q: %q, want %q", query, got, want)
+		}
+	}
+
+	first := list("limit=2")
+	second := list("limit=2&cursor=" + url.QueryEscape(*first.NextCursor))
+	if got := titles(first) + "|" + titles(second); got != "Ana at Sole@Can Sole,Joe at Luigi@Luigi's|Ana at Luigi@Luigi's" {
+		t.Errorf("pages %q", got)
+	}
+
+	for _, query := range []string{"restaurant[eq]=BAD", "restaurant[in]=x", "restaurantId=" + luigi} {
+		e.expect(request{method: "GET", path: "/v1/reviews?" + query}, http.StatusBadRequest)
+	}
+
+	got := e.expect(request{method: "GET", path: "/v1/restaurants/" + luigi + "/reviews"}, http.StatusOK).object(t)
+	if items := got["items"].([]any); items[0].(map[string]any)["restaurant_name"] != "Luigi's" {
+		t.Errorf("per-restaurant list: %v", items[0])
 	}
 }

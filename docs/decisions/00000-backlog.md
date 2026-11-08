@@ -11,9 +11,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## Low Priority
 
-- Add review lists that are not per restaurant to the Public API
-  - the `AppHeader` design has a "Reviews" link, and the `UserMenu` design has "My reviews"
-  - the Public API lists reviews only for one restaurant. The UI does not show these items until the API can list them.
 - Adding rating aggregate field to restaurants
 - Adding search
 - Adding email verification to sign up

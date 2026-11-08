@@ -128,6 +128,94 @@ export interface GetReviewRequest {
     reviewId: string;
 }
 
+export interface ListAllReviewsRequest {
+    /**
+     * The page size.
+     */
+    limit?: number;
+    /**
+     * The `next_cursor` value of the previous page.
+     * Clients must not parse or build cursor values.
+     * A cursor is valid only with the same filters and sort that made it.
+     * 
+     */
+    cursor?: string;
+    /**
+     * A comma-separated list of properties.
+     * A `-` prefix sorts a property in descending order.
+     * Each property can occur only one time. A repeated property causes `400 Bad Request`.
+     * The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+     * A sort on a kind-specific property puts reviews of other kinds last in both directions.
+     * The API always adds `id` as the last sort key.
+     * 
+     */
+    sort?: string;
+    /**
+     * The `restaurant` of the review is equal to the value.
+     */
+    restaurantEq?: string;
+    /**
+     * The `restaurant` of the review is equal to any of the values.
+     */
+    restaurantIn?: Array<string>;
+    /**
+     * The review `kind` is equal to the value.
+     */
+    kindEq?: string;
+    /**
+     * The review `kind` is equal to any of the values.
+     */
+    kindIn?: Array<string>;
+    /**
+     * Matches only `basic` reviews. Each key is an operator, for example `rating[gte]=`.
+     */
+    rating?: RatingRange;
+    /**
+     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `space[gte]=`.
+     */
+    space?: ScoreRange;
+    /**
+     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `service[gte]=`.
+     */
+    service?: ScoreRange;
+    /**
+     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `food[gte]=`.
+     */
+    food?: ScoreRange;
+    /**
+     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `price[gte]=`.
+     */
+    price?: ScoreRange;
+    /**
+     * The `tags` contain the tag.
+     */
+    tagsHas?: string;
+    /**
+     * The `tags` contain at least one of the tags.
+     */
+    tagsHasAny?: Array<string>;
+    /**
+     * The `tags` contain all of the tags.
+     */
+    tagsHasAll?: Array<string>;
+    /**
+     * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+     */
+    created?: TimestampRange;
+    /**
+     * Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+     */
+    updated?: TimestampRange;
+    /**
+     * The `creator.id` is equal to the value.
+     */
+    creatorEq?: string;
+    /**
+     * The `creator.id` is equal to any of the values.
+     */
+    creatorIn?: Array<string>;
+}
+
 export interface ListRestaurantsRequest {
     /**
      * The page size.
@@ -442,6 +530,66 @@ export interface RestaurantsApiInterface {
      * Get a review
      */
     getReview(requestParameters: GetReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review>;
+
+    /**
+     * Creates request options for listAllReviews without sending the request
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. A sort on a kind-specific property puts reviews of other kinds last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [restaurantEq] The &#x60;restaurant&#x60; of the review is equal to the value.
+     * @param {Array<string>} [restaurantIn] The &#x60;restaurant&#x60; of the review is equal to any of the values.
+     * @param {string} [kindEq] The review &#x60;kind&#x60; is equal to the value.
+     * @param {Array<string>} [kindIn] The review &#x60;kind&#x60; is equal to any of the values.
+     * @param {RatingRange} [rating] Matches only &#x60;basic&#x60; reviews. Each key is an operator, for example &#x60;rating[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [space] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [service] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [food] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [price] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
+     * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
+     * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
+     * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
+     * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
+     * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    listAllReviewsRequestOpts(requestParameters: ListAllReviewsRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. 
+     * @summary List the reviews of all restaurants
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. A sort on a kind-specific property puts reviews of other kinds last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [restaurantEq] The &#x60;restaurant&#x60; of the review is equal to the value.
+     * @param {Array<string>} [restaurantIn] The &#x60;restaurant&#x60; of the review is equal to any of the values.
+     * @param {string} [kindEq] The review &#x60;kind&#x60; is equal to the value.
+     * @param {Array<string>} [kindIn] The review &#x60;kind&#x60; is equal to any of the values.
+     * @param {RatingRange} [rating] Matches only &#x60;basic&#x60; reviews. Each key is an operator, for example &#x60;rating[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [space] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [service] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [food] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [price] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
+     * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
+     * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
+     * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
+     * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
+     * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    listAllReviewsRaw(requestParameters: ListAllReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReviewList>>;
+
+    /**
+     * The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. 
+     * List the reviews of all restaurants
+     */
+    listAllReviews(requestParameters: ListAllReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReviewList>;
 
     /**
      * Creates request options for listRestaurants without sending the request
@@ -949,6 +1097,129 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      */
     async getReview(requestParameters: GetReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review> {
         const response = await this.getReviewRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listAllReviews without sending the request
+     */
+    async listAllReviewsRequestOpts(requestParameters: ListAllReviewsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        if (requestParameters['sort'] != null) {
+            queryParameters['sort'] = requestParameters['sort'];
+        }
+
+        if (requestParameters['restaurantEq'] != null) {
+            queryParameters['restaurant[eq]'] = requestParameters['restaurantEq'];
+        }
+
+        if (requestParameters['restaurantIn'] != null) {
+            queryParameters['restaurant[in]'] = requestParameters['restaurantIn'];
+        }
+
+        if (requestParameters['kindEq'] != null) {
+            queryParameters['kind[eq]'] = requestParameters['kindEq'];
+        }
+
+        if (requestParameters['kindIn'] != null) {
+            queryParameters['kind[in]'] = requestParameters['kindIn'];
+        }
+
+        if (requestParameters['rating'] != null) {
+            queryParameters['rating'] = requestParameters['rating'];
+        }
+
+        if (requestParameters['space'] != null) {
+            queryParameters['space'] = requestParameters['space'];
+        }
+
+        if (requestParameters['service'] != null) {
+            queryParameters['service'] = requestParameters['service'];
+        }
+
+        if (requestParameters['food'] != null) {
+            queryParameters['food'] = requestParameters['food'];
+        }
+
+        if (requestParameters['price'] != null) {
+            queryParameters['price'] = requestParameters['price'];
+        }
+
+        if (requestParameters['tagsHas'] != null) {
+            queryParameters['tags[has]'] = requestParameters['tagsHas'];
+        }
+
+        if (requestParameters['tagsHasAny'] != null) {
+            queryParameters['tags[has_any]'] = requestParameters['tagsHasAny'];
+        }
+
+        if (requestParameters['tagsHasAll'] != null) {
+            queryParameters['tags[has_all]'] = requestParameters['tagsHasAll'];
+        }
+
+        if (requestParameters['created'] != null) {
+            queryParameters['created'] = requestParameters['created'];
+        }
+
+        if (requestParameters['updated'] != null) {
+            queryParameters['updated'] = requestParameters['updated'];
+        }
+
+        if (requestParameters['creatorEq'] != null) {
+            queryParameters['creator[eq]'] = requestParameters['creatorEq'];
+        }
+
+        if (requestParameters['creatorIn'] != null) {
+            queryParameters['creator[in]'] = requestParameters['creatorIn'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/reviews`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. 
+     * List the reviews of all restaurants
+     */
+    async listAllReviewsRaw(requestParameters: ListAllReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReviewList>> {
+        const requestOptions = await this.listAllReviewsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ReviewListFromJSON(jsonValue));
+    }
+
+    /**
+     * The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. 
+     * List the reviews of all restaurants
+     */
+    async listAllReviews(requestParameters: ListAllReviewsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReviewList> {
+        const response = await this.listAllReviewsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

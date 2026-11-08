@@ -123,6 +123,7 @@ The operations of the restaurants API are as follows:
 
 A review is a set of scores and associated feedback for a single restaurant.
 The reviews API exists on the base path `/restaurants/{restaurantId}/reviews`.
+`GET /reviews` lists the reviews of all restaurants.
 
 A review is a discriminated union.
 The `kind` property is the discriminator.
@@ -139,6 +140,7 @@ All kinds of review have these common properties:
     - `tags`: see [Tags](#tags)
 - read-only properties maintained by the API:
     - `restaurant`: id of the reviewed restaurant. The API sets it from the request path.
+    - `restaurant_name`: the `name` of the reviewed restaurant. The name of a restaurant with reviews cannot change, so the value stays correct. A list of reviews from many restaurants can then show the restaurant without more requests.
     - `created`: timestamp
     - `updated`: timestamp
     - `creator`: the user who created the review, see [Creator](#creator)
@@ -255,6 +257,13 @@ The operations of the reviews API are as follows:
   - `kind` cannot be changed. A `kind` value that is different from the stored value causes `422 Unprocessable Content`.
   - a `kind` value that is equal to the stored value is not a change. It does not cause an error.
 - `DELETE /restaurants/{restaurantId}/reviews/{reviewId}` to delete a single review for a restaurant
+
+- `GET /reviews` to list the reviews of all restaurants
+  - it has the pages, the sorts, and the filters of `GET /restaurants/{restaurantId}/reviews`
+  - it also has these filters, see [Filtering](#filtering):
+    - `restaurant`: `eq`, `in`
+  - `creator[eq]` gives the reviews of one user, such as "My reviews" in the UI
+  - an unknown restaurant in `restaurant[eq]` gives an empty list, not `404 Not Found`
 
 A review that exists but belongs to a different restaurant is treated as not found. The API returns `404 Not Found`.
 

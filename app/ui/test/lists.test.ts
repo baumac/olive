@@ -1,7 +1,7 @@
 import type { FilterDef, Option } from '@/components/ui/filter-bar'
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import PagedList from '@/components/app/PagedList.vue'
 import { useListQuery } from '@/composables/useListQuery'
@@ -13,14 +13,14 @@ const defs: FilterDef[] = [
 ]
 const sortOptions: Option[] = [{ value: '-created', label: 'Newest' }]
 
-async function queryAt(url: string) {
+async function queryAt(url: string, filterDefs: FilterDef[] | (() => FilterDef[]) = defs) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
   await router.push(url)
   let result!: ReturnType<typeof useListQuery>
   mount(
     defineComponent({
       setup() {
-        result = useListQuery(defs, sortOptions, '-created')
+        result = useListQuery(filterDefs, sortOptions, '-created')
         return () => null
       },
     }),
@@ -40,6 +40,17 @@ describe('useListQuery', () => {
     const q = await queryAt('/r?rating=4')
     expect(q.filters.value).toEqual({ rating: '4' })
     expect(q.active.value).toBe(true)
+  })
+})
+
+describe('useListQuery with changing defs', () => {
+  it('drops a filter when its definition goes away', async () => {
+    const creator: FilterDef = { key: 'creator', label: 'Written by', type: 'select', options: [{ value: 'u1', label: 'You' }], chip: () => 'you' }
+    const current = ref<FilterDef[]>([creator, ...defs])
+    const q = await queryAt('/r?creator=u1', () => current.value)
+    expect(q.filters.value).toEqual({ creator: 'u1' })
+    current.value = defs
+    expect(q.filters.value).toEqual({})
   })
 })
 

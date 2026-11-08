@@ -3,13 +3,17 @@ import type { Review } from '@reviews/sdk'
 import { computed } from 'vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { kindOf, scoresOf, tagList } from '@/lib/reviews'
 import DateText from './DateText.vue'
 import KindName from './KindName.vue'
 
-const props = defineProps<{ review: Review }>()
+const props = defineProps<{
+  review: Review
+  // showRestaurant names the restaurant. Lists of many restaurants need it.
+  showRestaurant?: boolean
+}>()
 
 const scores = computed(() => scoresOf(props.review))
 const tags = computed(() => tagList(props.review.tags))
@@ -23,6 +27,9 @@ const tags = computed(() => tagList(props.review.tags))
             {{ review.title }}
           </RouterLink>
         </CardTitle>
+      <CardDescription v-if="showRestaurant">
+        <RouterLink :to="`/restaurants/${review.restaurant}`" class="hover:underline">{{ review.restaurantName }}</RouterLink>
+      </CardDescription>
       <CardAction>
         <Badge variant="outline"><KindName :kind="kindOf(review)" /></Badge>
       </CardAction>

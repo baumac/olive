@@ -361,6 +361,51 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /reviews:
+    get:
+      operationId: listAllReviews
+      summary: List the reviews of all restaurants
+      description: |
+        The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants.
+        `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user.
+      tags: [restaurants]
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/ReviewSort'
+        - $ref: '#/components/parameters/RestaurantEq'
+        - $ref: '#/components/parameters/RestaurantIn'
+        - $ref: '#/components/parameters/KindEq'
+        - $ref: '#/components/parameters/KindIn'
+        - $ref: '#/components/parameters/RatingFilter'
+        - $ref: '#/components/parameters/SpaceFilter'
+        - $ref: '#/components/parameters/ServiceFilter'
+        - $ref: '#/components/parameters/FoodFilter'
+        - $ref: '#/components/parameters/PriceFilter'
+        - $ref: '#/components/parameters/TagsHas'
+        - $ref: '#/components/parameters/TagsHasAny'
+        - $ref: '#/components/parameters/TagsHasAll'
+        - $ref: '#/components/parameters/CreatedFilter'
+        - $ref: '#/components/parameters/UpdatedFilter'
+        - $ref: '#/components/parameters/CreatorEq'
+        - $ref: '#/components/parameters/CreatorIn'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of reviews.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /restaurants/{restaurantId}/reviews/{reviewId}:
     parameters:
       - $ref: '#/components/parameters/RestaurantId'
@@ -668,6 +713,25 @@ components:
         items:
           $ref: '#/components/schemas/RecordId'
         examples: [[u5n1c8r3t6y0b2e, u2g6k0m4o8q1s5w]]
+    RestaurantEq:
+      name: restaurant[eq]
+      in: query
+      description: The `restaurant` of the review is equal to the value.
+      schema:
+        $ref: '#/components/schemas/RecordId'
+    RestaurantIn:
+      name: restaurant[in]
+      in: query
+      description: The `restaurant` of the review is equal to any of the values.
+      style: form
+      explode: true
+      schema:
+        type: array
+        minItems: 1
+        maxItems: 100
+        items:
+          $ref: '#/components/schemas/RecordId'
+        examples: [[k3x9m2p7q1w8z4a, x7b2n9m4q1w8z3c]]
 
   responses:
     BadRequest:
@@ -986,6 +1050,7 @@ components:
       examples:
         - id: r7d4f0h2j9l5s3v
           restaurant: k3x9m2p7q1w8z4a
+          restaurant_name: Luigi's Trattoria
           kind: basic
           rating: 5
           title: Best carbonara in town
@@ -999,12 +1064,18 @@ components:
     ReviewBase:
       description: The properties that all review kinds have.
       type: object
-      required: [id, restaurant, kind, title, creator, created, updated]
+      required: [id, restaurant, restaurant_name, kind, title, creator, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
         restaurant:
           $ref: '#/components/schemas/RecordId'
+        restaurant_name:
+          description: |
+            The `name` of the reviewed restaurant.
+            The name of a restaurant with reviews cannot change, so this value stays correct.
+          type: string
+          $ref: '#/components/schemas/Name'
         kind:
           type: string
         title:
@@ -1034,6 +1105,7 @@ components:
       examples:
         - id: r7d4f0h2j9l5s3v
           restaurant: k3x9m2p7q1w8z4a
+          restaurant_name: Luigi's Trattoria
           kind: basic
           rating: 5
           title: Best carbonara in town
@@ -1065,6 +1137,7 @@ components:
       examples:
         - id: r1b8c5e2g9i6k3m
           restaurant: k3x9m2p7q1w8z4a
+          restaurant_name: Luigi's Trattoria
           kind: joc_de_cartes
           space: 7
           service: 9
@@ -1243,6 +1316,7 @@ components:
         - items:
             - id: r7d4f0h2j9l5s3v
               restaurant: k3x9m2p7q1w8z4a
+              restaurant_name: Luigi's Trattoria
               kind: basic
               rating: 5
               title: Best carbonara in town
@@ -1253,6 +1327,7 @@ components:
               updated: '2024-11-05 09:12:00.000Z'
             - id: r1b8c5e2g9i6k3m
               restaurant: k3x9m2p7q1w8z4a
+              restaurant_name: Luigi's Trattoria
               kind: joc_de_cartes
               space: 7
               service: 9

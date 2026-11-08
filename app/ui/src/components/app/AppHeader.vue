@@ -14,7 +14,11 @@ import { cn } from '@/lib/utils'
 const route = useRoute()
 const router = useRouter()
 
-const onRestaurants = computed(() => route.path.startsWith('/restaurants'))
+const links = computed(() => [
+  { to: '/restaurants', label: 'Restaurants', current: route.path.startsWith('/restaurants') },
+  { to: '/reviews', label: 'Reviews', current: route.path === '/reviews' },
+])
+const myReviews = computed(() => (currentUser.value ? `/reviews?creator=${currentUser.value.id}` : '/reviews'))
 const onAuthPage = computed(() => route.path === '/sign-in' || route.path === '/sign-up')
 const signIn = computed(() => {
   if (onAuthPage.value) {
@@ -42,24 +46,24 @@ const signIn = computed(() => {
       </RouterLink>
       <nav aria-label="Main" class="flex-1">
         <ul class="flex gap-1">
-          <li>
+          <li v-for="link in links" :key="link.to">
             <RouterLink
-              to="/restaurants"
-              :aria-current="onRestaurants ? 'page' : undefined"
+              :to="link.to"
+              :aria-current="link.current ? 'page' : undefined"
               :class="
                 cn(
                   'hover:bg-accent hover:text-accent-foreground inline-flex h-9 items-center rounded-md px-3 text-sm font-medium',
-                  onRestaurants && 'bg-accent text-accent-foreground',
+                  link.current && 'bg-accent text-accent-foreground',
                 )
               "
             >
-              Restaurants
+              {{ link.label }}
             </RouterLink>
           </li>
         </ul>
       </nav>
       <ThemeToggle />
-      <UserMenu :user="currentUser" :sign-in-path="signIn" :sign-in-current="route.path === '/sign-in'" @sign-out="signOut(router)" />
+      <UserMenu :user="currentUser" :sign-in-path="signIn" :my-reviews-path="myReviews" :sign-in-current="route.path === '/sign-in'" @sign-out="signOut(router)" />
     </div>
   </header>
 </template>

@@ -49,9 +49,16 @@ var restaurantQuery = withRanges(map[string]int{
 
 var reviewQuery = withRanges(maps.Clone(restaurantQuery), "rating", "space", "service", "food", "price")
 
+// allReviewQuery adds the restaurant filters of GET /v1/reviews.
+var allReviewQuery = maps.Clone(reviewQuery)
+
 func init() {
-	reviewQuery["kind[eq]"] = 1
-	reviewQuery["kind[in]"] = maxOtherValues
+	for _, q := range []map[string]int{reviewQuery, allReviewQuery} {
+		q["kind[eq]"] = 1
+		q["kind[in]"] = maxOtherValues
+	}
+	allReviewQuery["restaurant[eq]"] = 1
+	allReviewQuery["restaurant[in]"] = maxOtherValues
 }
 
 // sortKey is one ORDER BY term. value gets the value of the term from a

@@ -19,6 +19,7 @@ export const router = createRouter({
   routes: [
     { path: '/', redirect: '/restaurants' },
     { path: '/restaurants', component: () => import('@/pages/RestaurantsPage.vue') },
+    { path: '/reviews', component: () => import('@/pages/ReviewsPage.vue') },
     {
       path: '/restaurants/new',
       component: () => import('@/pages/RestaurantFormPage.vue'),

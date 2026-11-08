@@ -1,13 +1,13 @@
 import type { FilterDef, FilterValue, Option } from '@/components/ui/filter-bar'
-import { computed } from 'vue'
+import type { MaybeRefOrGetter } from 'vue'
+import { computed, toValue } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { isTag } from '@/lib/validation'
 
 // useListQuery keeps the filters and the sort of a list in the URL query.
-// A filtered list can then be shared. The back button also works. Values
-// that the filter definitions do not allow are ignored, so a bad link
-// shows the list without them.
-export function useListQuery(defs: FilterDef[], sortOptions: Option[], defaultSort: string) {
+// It ignores values that defs do not allow. defs can change, for example
+// when the signed in user changes.
+export function useListQuery(defs: MaybeRefOrGetter<FilterDef[]>, sortOptions: Option[], defaultSort: string) {
   const route = useRoute()
   const router = useRouter()
 
@@ -27,7 +27,7 @@ export function useListQuery(defs: FilterDef[], sortOptions: Option[], defaultSo
   const filters = computed<Record<string, FilterValue>>({
     get() {
       const out: Record<string, FilterValue> = {}
-      for (const def of defs) {
+      for (const def of toValue(defs)) {
         const raw = first(route.query[def.key])
         const value = raw === undefined ? undefined : parse(def, raw)
         if (value !== undefined) {

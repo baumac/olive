@@ -156,6 +156,7 @@ var routes = map[string]route{
 	"GET " + basePath + "/restaurants/{restaurantId}":                       {},
 	"PATCH " + basePath + "/restaurants/{restaurantId}":                     {auth: authRequired, body: &restaurantPatchSchema},
 	"DELETE " + basePath + "/restaurants/{restaurantId}":                    {auth: authRequired},
+	"GET " + basePath + "/reviews":                                          {query: allReviewQuery},
 	"GET " + basePath + "/restaurants/{restaurantId}/reviews":               {query: reviewQuery},
 	"POST " + basePath + "/restaurants/{restaurantId}/reviews":              {auth: authRequired, body: &reviewCreateSchema},
 	"GET " + basePath + "/restaurants/{restaurantId}/reviews/{reviewId}":    {},
