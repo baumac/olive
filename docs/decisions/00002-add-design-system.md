@@ -14,7 +14,7 @@ The UI then looks inconsistent, and accessibility problems repeat in many places
 Expected outcome:
 - All screens use the same tokens for color, type, spacing, and radius.
 - All screens use the same accessible components for forms, feedback, and layout.
-- The components cover the needs of the Public API, such as the two review kinds.
+- The components cover the needs of the Public API, such as the five review scores.
 - Light and dark themes both work. The default follows the operating system.
 - The Public UI has one brand: a name, a logo, a palette, and app icons.
 
@@ -62,11 +62,11 @@ Using a component in a Vue page:
 import { Button } from '@/components/ui/button'
 import { RatingInput } from '@/components/ui/rating-input'
 
-const rating = defineModel<number>({ required: true })
+const food = defineModel<number>({ required: true })
 </script>
 
 <template>
-  <RatingInput v-model="rating" :max="5" label="Rating" />
+  <RatingInput v-model="food" :max="10" label="Food" />
   <Button type="submit">Save review</Button>
 </template>
 ```
@@ -80,7 +80,6 @@ From shadcn-vue:
 - `Input` and `Textarea`, for `name`, `title`, `description`, and `feedback`
 - `Label` and `Form`, for labels, help text, and validation messages
 - `Select`, for sort order and filters
-- `Tabs`, to select the review kind on the create review screen
 - `Card`, for restaurants and reviews in lists
 - `Badge`, for tags
 - `Alert`, for errors from the API
@@ -91,7 +90,7 @@ From shadcn-vue:
 - `DropdownMenu`, for the theme menu and the account menu
 
 Project components that shadcn-vue does not have:
-- `RatingInput`: an integer score from 1 to a maximum. `basic` reviews use a maximum of 5. `joc_de_cartes` reviews use a maximum of 10.
+- `RatingInput`: an integer score from 1 to a maximum. Reviews use five of them with a maximum of 10.
 - `RatingDisplay`: a read-only score from 1 to a maximum
 - `TagInput`: adds and removes tags. It checks the [Tags](00001-define-public-api-spec.md#tags) rules before the API does.
 - `LoadMore`: gets the next page of a list with the `next_cursor` value. See [Pagination](00001-define-public-api-spec.md#pagination).
@@ -166,7 +165,7 @@ We compared these options:
 - dates in the last 7 days show relative time, for example "3 hours ago". Older dates show "4 Nov 2024".
 - scores show the maximum, for example "8 / 10"
 - the UI uses `Intl` to format dates, numbers, and plurals
-- the UI supports only English. Pages set `lang="en"`. Review kind names stay as the product names them, such as "Joc de cartes".
+- the UI supports only English. Pages set `lang="en"`.
 
 ## Accessibility
 

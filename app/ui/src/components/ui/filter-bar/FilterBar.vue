@@ -20,7 +20,7 @@ export interface FilterDef {
   type: 'tags' | 'select'
   options?: Option[]
   help?: string
-  // chip gives the chip text for one value, such as "Rating: 4 or more".
+  // chip gives the chip text for one value, such as "Food: 8 or more".
   chip: (value: string) => string
 }
 

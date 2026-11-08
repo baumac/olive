@@ -331,13 +331,11 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/ReviewSort'
-        - $ref: '#/components/parameters/KindEq'
-        - $ref: '#/components/parameters/KindIn'
-        - $ref: '#/components/parameters/RatingFilter'
         - $ref: '#/components/parameters/SpaceFilter'
         - $ref: '#/components/parameters/ServiceFilter'
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
+        - $ref: '#/components/parameters/CleanlinessFilter'
         - $ref: '#/components/parameters/TagsHas'
         - $ref: '#/components/parameters/TagsHasAny'
         - $ref: '#/components/parameters/TagsHasAll'
@@ -378,13 +376,11 @@ paths:
         - $ref: '#/components/parameters/ReviewSort'
         - $ref: '#/components/parameters/RestaurantEq'
         - $ref: '#/components/parameters/RestaurantIn'
-        - $ref: '#/components/parameters/KindEq'
-        - $ref: '#/components/parameters/KindIn'
-        - $ref: '#/components/parameters/RatingFilter'
         - $ref: '#/components/parameters/SpaceFilter'
         - $ref: '#/components/parameters/ServiceFilter'
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
+        - $ref: '#/components/parameters/CleanlinessFilter'
         - $ref: '#/components/parameters/TagsHas'
         - $ref: '#/components/parameters/TagsHasAny'
         - $ref: '#/components/parameters/TagsHasAll'
@@ -437,8 +433,6 @@ paths:
       summary: Update a review
       description: |
         Only the creator of the review can update it.
-        The body must contain the stored `kind`.
-        A different `kind` causes `422 Unprocessable Content`.
       tags: [restaurants]
       security:
         - bearerAuth: []
@@ -563,33 +557,12 @@ components:
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `title` sort ignores case only for the ASCII letters `A` to `Z`.
-        A sort on a kind-specific property puts reviews of other kinds last in both directions.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(rating|space|service|food|price|title|created|updated)(,-?(rating|space|service|food|price|title|created|updated))*$'
+        pattern: '^-?(space|service|food|price|cleanliness|title|created|updated)(,-?(space|service|food|price|cleanliness|title|created|updated))*$'
         default: '-created'
-      example: '-rating,title'
-
-    KindEq:
-      name: kind[eq]
-      in: query
-      description: The review `kind` is equal to the value.
-      schema:
-        type: string
-    KindIn:
-      name: kind[in]
-      in: query
-      description: The review `kind` is equal to any of the values.
-      style: form
-      explode: true
-      schema:
-        type: array
-        minItems: 1
-        maxItems: 100
-        items:
-          type: string
-        examples: [[basic, joc_de_cartes]]
+      example: '-food,title'
 
     TagsHas:
       name: tags[has]
@@ -624,20 +597,10 @@ components:
           $ref: '#/components/schemas/Tag'
         examples: [[italian, pasta]]
 
-    RatingFilter:
-      name: rating
-      in: query
-      description: Matches only `basic` reviews. Each key is an operator, for example `rating[gte]=`.
-      style: deepObject
-      explode: true
-      schema:
-        $ref: '#/components/schemas/RatingRange'
-      example: {gte: 4}
-
     SpaceFilter:
       name: space
       in: query
-      description: Matches only `joc_de_cartes` reviews. Each key is an operator, for example `space[gte]=`.
+      description: Compares the `space` score. Each key is an operator, for example `space[gte]=`.
       style: deepObject
       explode: true
       schema:
@@ -647,7 +610,7 @@ components:
     ServiceFilter:
       name: service
       in: query
-      description: Matches only `joc_de_cartes` reviews. Each key is an operator, for example `service[gte]=`.
+      description: Compares the `service` score. Each key is an operator, for example `service[gte]=`.
       style: deepObject
       explode: true
       schema:
@@ -657,7 +620,7 @@ components:
     FoodFilter:
       name: food
       in: query
-      description: Matches only `joc_de_cartes` reviews. Each key is an operator, for example `food[gte]=`.
+      description: Compares the `food` score. Each key is an operator, for example `food[gte]=`.
       style: deepObject
       explode: true
       schema:
@@ -667,7 +630,17 @@ components:
     PriceFilter:
       name: price
       in: query
-      description: Matches only `joc_de_cartes` reviews. Each key is an operator, for example `price[gte]=`.
+      description: Compares the `price` score. Each key is an operator, for example `price[gte]=`.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/ScoreRange'
+      example: {gte: 7}
+
+    CleanlinessFilter:
+      name: cleanliness
+      in: query
+      description: Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
       style: deepObject
       explode: true
       schema:
@@ -737,7 +710,6 @@ components:
     BadRequest:
       description: |
         The request is malformed, has invalid query parameters, or has unknown or read-only properties in the body.
-        A property of a different review kind is an unknown property.
       content:
         application/problem+json:
           schema:
@@ -785,7 +757,7 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     UnprocessableContent:
-      description: The request body has invalid property values, or it changes the `kind` of a review.
+      description: The request body has invalid property values.
       content:
         application/problem+json:
           schema:
@@ -863,13 +835,8 @@ components:
         Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
       type: string
       maxLength: 10000
-    Rating:
-      description: The overall score of a `basic` review.
-      type: integer
-      minimum: 1
-      maximum: 5
-    JocDeCartesScore:
-      description: The score of one category of a `joc_de_cartes` review.
+    Score:
+      description: The score of one category of a review.
       type: integer
       minimum: 1
       maximum: 10
@@ -897,36 +864,21 @@ components:
         name:
           $ref: '#/components/schemas/Name'
 
-    RatingRange:
-      description: Comparisons for a `basic` rating. All comparisons must match.
-      type: object
-      additionalProperties: false
-      properties:
-        lt:
-          $ref: '#/components/schemas/Rating'
-        lte:
-          $ref: '#/components/schemas/Rating'
-        eq:
-          $ref: '#/components/schemas/Rating'
-        gte:
-          $ref: '#/components/schemas/Rating'
-        gt:
-          $ref: '#/components/schemas/Rating'
     ScoreRange:
-      description: Comparisons for a `joc_de_cartes` score. All comparisons must match.
+      description: Comparisons for a score. All comparisons must match.
       type: object
       additionalProperties: false
       properties:
         lt:
-          $ref: '#/components/schemas/JocDeCartesScore'
+          $ref: '#/components/schemas/Score'
         lte:
-          $ref: '#/components/schemas/JocDeCartesScore'
+          $ref: '#/components/schemas/Score'
         eq:
-          $ref: '#/components/schemas/JocDeCartesScore'
+          $ref: '#/components/schemas/Score'
         gte:
-          $ref: '#/components/schemas/JocDeCartesScore'
+          $ref: '#/components/schemas/Score'
         gt:
-          $ref: '#/components/schemas/JocDeCartesScore'
+          $ref: '#/components/schemas/Score'
     TimestampRange:
       description: Comparisons for a timestamp. All comparisons must match.
       type: object
@@ -992,7 +944,7 @@ components:
           description: A family-run Italian restaurant
           tags: [italian, pasta]
     RestaurantPatch:
-      description: A JSON Merge Patch. `null` clears an optional property.
+      description: A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
       type: object
       additionalProperties: false
       properties:
@@ -1034,37 +986,9 @@ components:
           next_cursor: c2Fk9xQe7LmT2vBn
 
     Review:
-      description: |
-        A review of a restaurant. `kind` selects the score properties.
-        Later releases of `/v1` can add kinds.
-        Clients must handle unknown kinds without failing.
-      oneOf:
-        - $ref: '#/components/schemas/BasicReview'
-        - $ref: '#/components/schemas/JocDeCartesReview'
-        - $ref: '#/components/schemas/OtherReview'
-      discriminator:
-        propertyName: kind
-        mapping:
-          basic: '#/components/schemas/BasicReview'
-          joc_de_cartes: '#/components/schemas/JocDeCartesReview'
-      examples:
-        - id: r7d4f0h2j9l5s3v
-          restaurant: k3x9m2p7q1w8z4a
-          restaurant_name: Luigi's Trattoria
-          kind: basic
-          rating: 5
-          title: Best carbonara in town
-          feedback: Friendly staff and great pasta
-          tags: [favorites]
-          creator:
-            id: u2g6k0m4o8q1s5w
-            name: Joe
-          created: '2024-11-04 01:38:00.431Z'
-          updated: '2024-11-05 09:12:00.000Z'
-    ReviewBase:
-      description: The properties that all review kinds have.
+      description: A review of a restaurant. It scores the space, service, food, price, and cleanliness.
       type: object
-      required: [id, restaurant, restaurant_name, kind, title, creator, created, updated]
+      required: [id, restaurant, restaurant_name, space, service, food, price, cleanliness, title, creator, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -1076,8 +1000,16 @@ components:
             The name of a restaurant with reviews cannot change, so this value stays correct.
           type: string
           $ref: '#/components/schemas/Name'
-        kind:
-          type: string
+        space:
+          $ref: '#/components/schemas/SpaceScore'
+        service:
+          $ref: '#/components/schemas/ServiceScore'
+        food:
+          $ref: '#/components/schemas/FoodScore'
+        price:
+          $ref: '#/components/schemas/PriceScore'
+        cleanliness:
+          $ref: '#/components/schemas/CleanlinessScore'
         title:
           $ref: '#/components/schemas/Title'
         feedback:
@@ -1090,198 +1022,74 @@ components:
           $ref: '#/components/schemas/Timestamp'
         updated:
           $ref: '#/components/schemas/Timestamp'
-    BasicReview:
-      description: A review with one overall score.
-      allOf:
-        - $ref: '#/components/schemas/ReviewBase'
-        - type: object
-          required: [kind, rating]
-          properties:
-            kind:
-              type: string
-              const: basic
-            rating:
-              $ref: '#/components/schemas/Rating'
-      examples:
-        - id: r7d4f0h2j9l5s3v
-          restaurant: k3x9m2p7q1w8z4a
-          restaurant_name: Luigi's Trattoria
-          kind: basic
-          rating: 5
-          title: Best carbonara in town
-          feedback: Friendly staff and great pasta
-          tags: [favorites]
-          creator:
-            id: u2g6k0m4o8q1s5w
-            name: Joe
-          created: '2024-11-04 01:38:00.431Z'
-          updated: '2024-11-05 09:12:00.000Z'
-    JocDeCartesReview:
-      description: A review that scores the space, service, food, and price.
-      allOf:
-        - $ref: '#/components/schemas/ReviewBase'
-        - type: object
-          required: [kind, space, service, food, price]
-          properties:
-            kind:
-              type: string
-              const: joc_de_cartes
-            space:
-              $ref: '#/components/schemas/SpaceScore'
-            service:
-              $ref: '#/components/schemas/ServiceScore'
-            food:
-              $ref: '#/components/schemas/FoodScore'
-            price:
-              $ref: '#/components/schemas/PriceScore'
       examples:
         - id: r1b8c5e2g9i6k3m
           restaurant: k3x9m2p7q1w8z4a
           restaurant_name: Luigi's Trattoria
-          kind: joc_de_cartes
           space: 7
           service: 9
           food: 8
           price: 6
+          cleanliness: 8
           title: Great food, a bit expensive
+          feedback: Friendly staff and great pasta
           tags: [date-night]
           creator:
             id: u5n1c8r3t6y0b2e
             name: Ana
           created: '2024-11-06 19:02:11.120Z'
-          updated: '2024-11-06 19:02:11.120Z'
-    OtherReview:
-      description: A review of a kind that a later release adds. Clients can show the common properties.
-      allOf:
-        - $ref: '#/components/schemas/ReviewBase'
-        - type: object
-          properties:
-            kind:
-              type: string
-              not:
-                enum: [basic, joc_de_cartes]
+          updated: '2024-11-07 09:12:00.000Z'
     SpaceScore:
-      description: Decoration, cleanliness, comfort, atmosphere, and kitchen setup.
-      $ref: '#/components/schemas/JocDeCartesScore'
+      description: Decoration, comfort, atmosphere, and kitchen setup.
+      $ref: '#/components/schemas/Score'
     ServiceScore:
       description: Professionalism, speed, friendliness, and attentiveness of the waitstaff.
-      $ref: '#/components/schemas/JocDeCartesScore'
+      $ref: '#/components/schemas/Score'
     FoodScore:
       description: Presentation, flavor, ingredient quality, and culinary execution.
-      $ref: '#/components/schemas/JocDeCartesScore'
+      $ref: '#/components/schemas/Score'
     PriceScore:
       description: Value for money, and whether the final bill matches the quality provided.
-      $ref: '#/components/schemas/JocDeCartesScore'
+      $ref: '#/components/schemas/Score'
+    CleanlinessScore:
+      description: Cleanliness of the dining room, the tableware, and the restrooms.
+      $ref: '#/components/schemas/Score'
 
     ReviewCreate:
-      description: The properties of a new review. `kind` selects the score properties.
-      oneOf:
-        - $ref: '#/components/schemas/BasicReviewCreate'
-        - $ref: '#/components/schemas/JocDeCartesReviewCreate'
-      discriminator:
-        propertyName: kind
-        mapping:
-          basic: '#/components/schemas/BasicReviewCreate'
-          joc_de_cartes: '#/components/schemas/JocDeCartesReviewCreate'
+      description: The properties of a new review.
+      type: object
+      additionalProperties: false
+      required: [space, service, food, price, cleanliness, title]
+      properties:
+        space:
+          $ref: '#/components/schemas/SpaceScore'
+        service:
+          $ref: '#/components/schemas/ServiceScore'
+        food:
+          $ref: '#/components/schemas/FoodScore'
+        price:
+          $ref: '#/components/schemas/PriceScore'
+        cleanliness:
+          $ref: '#/components/schemas/CleanlinessScore'
+        title:
+          $ref: '#/components/schemas/Title'
+        feedback:
+          $ref: '#/components/schemas/LongText'
+        tags:
+          $ref: '#/components/schemas/Tags'
       examples:
-        - kind: basic
-          rating: 5
-          title: Best carbonara in town
-        - kind: joc_de_cartes
-          space: 7
+        - space: 7
           service: 9
           food: 8
           price: 6
+          cleanliness: 8
           title: Great food, a bit expensive
-    BasicReviewCreate:
-      description: The properties of a new `basic` review.
-      type: object
-      additionalProperties: false
-      required: [kind, rating, title]
-      properties:
-        kind:
-          type: string
-          const: basic
-        rating:
-          $ref: '#/components/schemas/Rating'
-        title:
-          $ref: '#/components/schemas/Title'
-        feedback:
-          $ref: '#/components/schemas/LongText'
-        tags:
-          $ref: '#/components/schemas/Tags'
-    JocDeCartesReviewCreate:
-      description: The properties of a new `joc_de_cartes` review.
-      type: object
-      additionalProperties: false
-      required: [kind, space, service, food, price, title]
-      properties:
-        kind:
-          type: string
-          const: joc_de_cartes
-        space:
-          $ref: '#/components/schemas/SpaceScore'
-        service:
-          $ref: '#/components/schemas/ServiceScore'
-        food:
-          $ref: '#/components/schemas/FoodScore'
-        price:
-          $ref: '#/components/schemas/PriceScore'
-        title:
-          $ref: '#/components/schemas/Title'
-        feedback:
-          $ref: '#/components/schemas/LongText'
-        tags:
-          $ref: '#/components/schemas/Tags'
 
     ReviewPatch:
-      description: |
-        A JSON Merge Patch. `null` clears an optional property.
-        `kind` must be equal to the stored kind.
-      oneOf:
-        - $ref: '#/components/schemas/BasicReviewPatch'
-        - $ref: '#/components/schemas/JocDeCartesReviewPatch'
-      discriminator:
-        propertyName: kind
-        mapping:
-          basic: '#/components/schemas/BasicReviewPatch'
-          joc_de_cartes: '#/components/schemas/JocDeCartesReviewPatch'
-      examples:
-        - kind: basic
-          rating: 4
-          feedback: null
-        - kind: joc_de_cartes
-          price: 7
-    BasicReviewPatch:
-      description: A JSON Merge Patch for a `basic` review.
+      description: A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
       type: object
       additionalProperties: false
-      required: [kind]
       properties:
-        kind:
-          type: string
-          const: basic
-        rating:
-          $ref: '#/components/schemas/Rating'
-        title:
-          $ref: '#/components/schemas/Title'
-        feedback:
-          oneOf:
-            - $ref: '#/components/schemas/LongText'
-            - type: 'null'
-        tags:
-          oneOf:
-            - $ref: '#/components/schemas/Tags'
-            - type: 'null'
-    JocDeCartesReviewPatch:
-      description: A JSON Merge Patch for a `joc_de_cartes` review.
-      type: object
-      additionalProperties: false
-      required: [kind]
-      properties:
-        kind:
-          type: string
-          const: joc_de_cartes
         space:
           $ref: '#/components/schemas/SpaceScore'
         service:
@@ -1290,6 +1098,8 @@ components:
           $ref: '#/components/schemas/FoodScore'
         price:
           $ref: '#/components/schemas/PriceScore'
+        cleanliness:
+          $ref: '#/components/schemas/CleanlinessScore'
         title:
           $ref: '#/components/schemas/Title'
         feedback:
@@ -1300,9 +1110,12 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Tags'
             - type: 'null'
+      examples:
+        - price: 7
+          feedback: null
 
     ReviewList:
-      description: A page of reviews. It can contain reviews of all kinds.
+      description: A page of reviews.
       type: object
       required: [items, next_cursor]
       properties:
@@ -1317,8 +1130,11 @@ components:
             - id: r7d4f0h2j9l5s3v
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
-              kind: basic
-              rating: 5
+              space: 8
+              service: 10
+              food: 10
+              price: 9
+              cleanliness: 8
               title: Best carbonara in town
               creator:
                 id: u2g6k0m4o8q1s5w
@@ -1328,11 +1144,11 @@ components:
             - id: r1b8c5e2g9i6k3m
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
-              kind: joc_de_cartes
               space: 7
               service: 9
               food: 8
               price: 6
+              cleanliness: 8
               title: Great food, a bit expensive
               creator:
                 id: u5n1c8r3t6y0b2e
@@ -1376,8 +1192,8 @@ components:
           status: 422
           detail: The request body has invalid properties.
           errors:
-            - property: rating
-              message: must be between 1 and 5
+            - property: food
+              message: must be between 1 and 10
     ValidationError:
       description: One invalid property of a request body.
       type: object

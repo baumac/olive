@@ -46,13 +46,6 @@ body { margin: 0; font-family: var(--font-sans); background: var(--background); 
 .rv-select-item { display: flex; align-items: center; justify-content: space-between; padding: 6px var(--space-2); border-radius: var(--radius-sm); font-size: 14px; }
 .rv-select-item.is-active { background: var(--accent); color: var(--accent-foreground); }
 
-/* Tabs */
-.rv-tabs-list { display: inline-flex; align-self: flex-start; align-items: center; height: 36px; padding: 3px; border-radius: var(--radius); background: var(--muted); color: var(--muted-foreground); }
-.rv-tab { display: inline-flex; align-items: center; justify-content: center; height: 100%; padding: 4px var(--space-2); border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: inherit; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
-.rv-tab[aria-selected="true"] { background: var(--background); color: var(--foreground); box-shadow: var(--shadow-sm); }
-[data-theme="dark"] .rv-tab[aria-selected="true"] { background: color-mix(in oklab, var(--input) 30%, var(--muted)); border-color: var(--input); }
-.rv-tab-panel { padding-top: var(--space-2); }
-
 /* Card */
 .rv-card { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-6) 0; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--card); color: var(--card-foreground); box-shadow: var(--shadow-sm); }
 .rv-card-header { display: grid; gap: var(--space-1\.5); padding: 0 var(--space-6); }

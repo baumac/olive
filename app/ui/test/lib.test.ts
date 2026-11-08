@@ -83,14 +83,13 @@ describe('fieldErrors', () => {
 
 describe('reviewFilterParams', () => {
   it('changes the filters to SDK parameters', () => {
-    expect(reviewFilterParams({ tags: ['pasta'], kind: 'basic', rating: '4', creator: 'u5n1c8r3t6y0b2e' })).toEqual({
+    expect(reviewFilterParams({ tags: ['pasta'], food: '4', creator: 'u5n1c8r3t6y0b2e' })).toEqual({
       tagsHasAny: ['pasta'],
-      kindIn: ['basic'],
-      rating: { gte: 4 },
-      food: undefined,
+      food: { gte: 4 },
       service: undefined,
       space: undefined,
       price: undefined,
+      cleanliness: undefined,
       creatorEq: 'u5n1c8r3t6y0b2e',
     })
   })

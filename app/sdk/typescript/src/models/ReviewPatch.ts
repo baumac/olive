@@ -12,30 +12,57 @@
  * Do not edit the class manually.
  */
 
-import { parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime.js';
-import type { BasicReviewPatch } from './BasicReviewPatch.js';
-import {
-    instanceOfBasicReviewPatch,
-    BasicReviewPatchFromJSON,
-    BasicReviewPatchFromJSONTyped,
-    BasicReviewPatchToJSON,
-} from './BasicReviewPatch.js';
-import type { JocDeCartesReviewPatch } from './JocDeCartesReviewPatch.js';
-import {
-    instanceOfJocDeCartesReviewPatch,
-    JocDeCartesReviewPatchFromJSON,
-    JocDeCartesReviewPatchFromJSONTyped,
-    JocDeCartesReviewPatchToJSON,
-} from './JocDeCartesReviewPatch.js';
+import { mapValues } from '../runtime.js';
+/**
+ * A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+ * @export
+ * @interface ReviewPatch
+ */
+export interface ReviewPatch {
+    /**
+     * 
+     */
+    space?: any;
+    /**
+     * 
+     */
+    service?: any;
+    /**
+     * 
+     */
+    food?: any;
+    /**
+     * 
+     */
+    price?: any;
+    /**
+     * 
+     */
+    cleanliness?: any;
+    /**
+     * A title with at least one character that is not ASCII whitespace.
+     * Control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * 
+     */
+    title?: string;
+    /**
+     * A text of at most 10,000 characters.
+     * Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * 
+     */
+    feedback?: string | null;
+    /**
+     * Unique tags.
+     */
+    tags?: Set<string> | null;
+}
 
 /**
- * @type ReviewPatch
- * A JSON Merge Patch. `null` clears an optional property.
- * `kind` must be equal to the stored kind.
- * 
- * @export
+ * Check if a given object implements the ReviewPatch interface.
  */
-export type ReviewPatch = { kind: 'basic' } & BasicReviewPatch | { kind: 'joc_de_cartes' } & JocDeCartesReviewPatch;
+export function instanceOfReviewPatch(value: object): value is ReviewPatch {
+    return true;
+}
 
 export function ReviewPatchFromJSON(json: any): ReviewPatch {
     return ReviewPatchFromJSONTyped(json, false);
@@ -45,17 +72,20 @@ export function ReviewPatchFromJSONTyped(json: any, ignoreDiscriminator: boolean
     if (json == null) {
         return json;
     }
-    switch (json['kind']) {
-        case 'basic':
-            return Object.assign({}, BasicReviewPatchFromJSONTyped(json, true), { kind: 'basic' } as const);
-        case 'joc_de_cartes':
-            return Object.assign({}, JocDeCartesReviewPatchFromJSONTyped(json, true), { kind: 'joc_de_cartes' } as const);
-        default:
-            return json;
-    }
+    return {
+        
+        'space': json['space'] == null ? undefined : json['space'],
+        'service': json['service'] == null ? undefined : json['service'],
+        'food': json['food'] == null ? undefined : json['food'],
+        'price': json['price'] == null ? undefined : json['price'],
+        'cleanliness': json['cleanliness'] == null ? undefined : json['cleanliness'],
+        'title': json['title'] == null ? undefined : json['title'],
+        'feedback': json['feedback'] === undefined ? undefined : json['feedback'] === null ? null : json['feedback'],
+        'tags': json['tags'] === undefined ? undefined : json['tags'] === null ? null : new Set(json['tags']),
+    };
 }
 
-export function ReviewPatchToJSON(json: any): any {
+export function ReviewPatchToJSON(json: any): ReviewPatch {
     return ReviewPatchToJSONTyped(json, false);
 }
 
@@ -63,13 +93,17 @@ export function ReviewPatchToJSONTyped(value?: ReviewPatch | null, ignoreDiscrim
     if (value == null) {
         return value;
     }
-    switch (value['kind']) {
-        case 'basic':
-            return Object.assign({}, BasicReviewPatchToJSON(value), { 'kind': 'basic' } as const);
-        case 'joc_de_cartes':
-            return Object.assign({}, JocDeCartesReviewPatchToJSON(value), { 'kind': 'joc_de_cartes' } as const);
-        default:
-            return value;
-    }
+
+    return {
+        
+        'space': value['space'],
+        'service': value['service'],
+        'food': value['food'],
+        'price': value['price'],
+        'cleanliness': value['cleanliness'],
+        'title': value['title'],
+        'feedback': value['feedback'],
+        'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
+    };
 }
 

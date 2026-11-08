@@ -146,9 +146,9 @@ tests/
 - a restaurant with reviews cannot change its name or be deleted. The UI shows the error.
 
 `reviews.spec.ts`:
-- a signed in user writes a `basic` review and a `joc_de_cartes` review
+- a signed in user writes a review with the five scores
 - "Write a review" opens the edit form when the user already has a review
-- the kind and score filters select reviews. The sort puts other kinds last.
+- the score filters select reviews. The score sorts order them.
 - the creator edits and deletes a review
 
 `auth.spec.ts`:

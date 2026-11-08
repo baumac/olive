@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime.js';
 /**
- * A JSON Merge Patch. `null` clears an optional property.
+ * A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
  * @export
  * @interface RestaurantPatch
  */

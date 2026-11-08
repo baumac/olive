@@ -22,7 +22,7 @@ import {
 } from './Review.js';
 
 /**
- * A page of reviews. It can contain reviews of all kinds.
+ * A page of reviews.
  * @export
  * @interface ReviewList
  */

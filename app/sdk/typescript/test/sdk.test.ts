@@ -33,11 +33,15 @@ function fakeFetch(status: number, body: unknown, headers: Record<string, string
   return { sent, config }
 }
 
-const basicReview = {
+const review = {
   id: 'r7d4f0h2j9l5s3v',
   restaurant: 'k3x9m2p7q1w8z4a',
-  kind: 'basic',
-  rating: 5,
+  restaurant_name: "Luigi's Trattoria",
+  space: 7,
+  service: 9,
+  food: 8,
+  price: 6,
+  cleanliness: 5,
   title: 'Best carbonara in town',
   creator: { id: 'u2g6k0m4o8q1s5w', name: 'Joe' },
   created: '2024-11-04 01:38:00.431Z',
@@ -58,15 +62,15 @@ describe('query parameters', () => {
     const { sent, config } = fakeFetch(200, { items: [], next_cursor: null })
     await new RestaurantsApi(config).listReviews({
       restaurantId: 'k3x9m2p7q1w8z4a',
-      rating: { gte: 4, lt: 5 },
+      food: { gte: 4, lt: 5 },
       tagsHasAny: ['italian', 'pasta'],
       created: { gte: '2024-11-01 00:00:00.000Z' },
     })
     const q = sent[0].url.searchParams
     expect(sent[0].url.pathname).toBe('/v1/restaurants/k3x9m2p7q1w8z4a/reviews')
-    expect(q.get('rating[gte]')).toBe('4')
-    expect(q.get('rating[lt]')).toBe('5')
-    expect(q.has('rating[eq]')).toBe(false)
+    expect(q.get('food[gte]')).toBe('4')
+    expect(q.get('food[lt]')).toBe('5')
+    expect(q.has('food[eq]')).toBe(false)
     expect(q.getAll('tags[has_any]')).toEqual(['italian', 'pasta'])
     expect(q.get('created[gte]')).toBe('2024-11-01 00:00:00.000Z')
   })
@@ -84,41 +88,33 @@ describe('merge patch bodies', () => {
     expect(sent[0].body).toEqual({ description: null, tags: null })
   })
 
-  it('sends the kind of a review patch', async () => {
-    const { sent, config } = fakeFetch(200, basicReview)
+  it('sends only the given scores of a review patch', async () => {
+    const { sent, config } = fakeFetch(200, review)
     await new RestaurantsApi(config).updateReview({
       restaurantId: 'k3x9m2p7q1w8z4a',
       reviewId: 'r7d4f0h2j9l5s3v',
-      reviewPatch: { kind: 'basic', rating: 4, feedback: null },
+      reviewPatch: { price: 4, feedback: null },
     })
-    expect(sent[0].body).toEqual({ kind: 'basic', rating: 4, feedback: null })
+    expect(sent[0].body).toEqual({ price: 4, feedback: null })
   })
 })
 
-describe('review kinds', () => {
-  it('selects the model from kind and keeps unknown kinds', async () => {
-    const joc = { ...basicReview, id: 'r1b8c5e2g9i6k3m', kind: 'joc_de_cartes', space: 7, service: 9, food: 8, price: 6 }
-    const other = { ...basicReview, id: 'r0a0a0a0a0a0a0a', kind: 'tasting_menu', courses: 7 }
-    const { config } = fakeFetch(200, { items: [basicReview, joc, other], next_cursor: null })
+describe('reviews', () => {
+  it('reads the scores and the restaurant name', async () => {
+    const { config } = fakeFetch(200, { items: [review], next_cursor: null })
     const page = await new RestaurantsApi(config).listReviews({ restaurantId: 'k3x9m2p7q1w8z4a' })
 
-    const [first, second, third] = page.items
-    expect(first.kind).toBe('basic')
-    if (first.kind === 'basic') expect(first.rating).toBe(5)
-    expect(second.kind).toBe('joc_de_cartes')
-    if (second.kind === 'joc_de_cartes') expect(second.price).toBe(6)
-    expect(third.kind).toBe('tasting_menu')
-    expect(third.title).toBe('Best carbonara in town')
+    expect(page.items[0]).toMatchObject({ space: 7, service: 9, food: 8, price: 6, cleanliness: 5, restaurantName: "Luigi's Trattoria" })
     expect(page.nextCursor).toBeNull()
   })
 
   it('keeps timestamps as strings', async () => {
-    const { config } = fakeFetch(200, basicReview)
-    const review = await new RestaurantsApi(config).getReview({
+    const { config } = fakeFetch(200, review)
+    const got = await new RestaurantsApi(config).getReview({
       restaurantId: 'k3x9m2p7q1w8z4a',
       reviewId: 'r7d4f0h2j9l5s3v',
     })
-    expect(review.created).toBe('2024-11-04 01:38:00.431Z')
+    expect(got.created).toBe('2024-11-04 01:38:00.431Z')
   })
 })
 

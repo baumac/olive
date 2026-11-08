@@ -27,8 +27,7 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
 
   const restaurant = await api.createRestaurant(user, { name: 'Strict Place' })
   await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
-  await page.getByRole('tab', { name: 'Joc de cartes' }).click()
-  for (const label of ['Space', 'Service', 'Food', 'Price']) {
+  for (const label of ['Space', 'Service', 'Food', 'Price', 'Cleanliness']) {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: '7 out of 10' }).click()
   }
   await page.getByLabel('Title').fill('Fine')
@@ -36,9 +35,9 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
   await expect(page.getByText('Review saved')).toBeVisible()
 
   await page.getByRole('button', { name: 'Filters' }).click()
-  await page.getByRole('combobox', { name: 'Kind' }).click()
-  await page.getByRole('option', { name: 'Basic' }).click()
-  await expect(page.getByText('Kind: Basic')).toBeVisible()
+  await page.getByRole('combobox', { name: 'Food' }).click()
+  await page.getByRole('option', { name: '7 or more' }).click()
+  await expect(page.getByText('Food: 7 or more')).toBeVisible()
   await page.keyboard.press('Escape')
 
   // A restaurant with reviews cannot be deleted. The UI shows an error toast.

@@ -38,7 +38,7 @@ New Concepts:
 - **Review**: scores and feedback for a single restaurant
   - a review must have exactly one restaurant
   - a user can have at most one review per restaurant
-  - a review has exactly one kind. The kind sets which score properties the review has.
+  - a review scores five categories: space, service, food, price, and cleanliness
 - **Restaurant**: a restaurant that can be reviewed
   - a restaurant has zero to many reviews
 - **User**: a person who can sign in
@@ -125,15 +125,26 @@ A review is a set of scores and associated feedback for a single restaurant.
 The reviews API exists on the base path `/restaurants/{restaurantId}/reviews`.
 `GET /reviews` lists the reviews of all restaurants.
 
-A review is a discriminated union.
-The `kind` property is the discriminator.
-It selects which score properties the review has.
+A review has one schema.
+It scores the space, service, food, price, and cleanliness of the restaurant.
+
+The first version had two review kinds with a `kind` discriminator.
+A `basic` review had one `rating` from 1 to 5. A `joc_de_cartes` review had the four scores.
+One kind is simpler for clients, filters, and sorts, so the API dropped `kind`, `rating`, and `basic`.
+This change breaks `/v1` clients. The only client is the UI in this repository, and it changes with the API.
+The migration gives each old `basic` review two times its `rating` in each of the four scores.
+
+`cleanliness` came later as a fifth score.
+The `space` score covered cleanliness before, so the migration gives existing reviews their `space` value as `cleanliness`.
 
 ### Properties
 
-All kinds of review have these common properties:
 - required properties:
-    - `kind`: enum of "basic" or "joc_de_cartes", see [Review Kinds](#review-kinds)
+    - `space`: decoration, comfort, atmosphere, and kitchen setup
+    - `service`: professionalism, speed, friendliness, and attentiveness of the waitstaff
+    - `food`: presentation, flavor, ingredient quality, and culinary execution
+    - `price`: value for money, and whether the final bill matches the quality provided
+    - `cleanliness`: cleanliness of the dining room, the tableware, and the restrooms
     - `title`: string with a length of 1 to 255 characters. It must contain at least one character that is not ASCII whitespace.
 - optional properties:
     - `feedback`: string with a maximum length of 10,000 characters
@@ -146,49 +157,7 @@ All kinds of review have these common properties:
     - `creator`: the user who created the review, see [Creator](#creator)
     - `id`: PocketBase record ID
 
-`kind` is set when the review is created and cannot change.
-To change the kind, the user deletes the review and creates a new one.
-
-New `kind` values can be added in a later release of `/v1`. Clients must handle unknown `kind` values without failing,
-for example by showing only the common properties. Adding a `kind` value is not a breaking change.
-
-### Review Kinds
-
-#### `basic`
-
-A basic review has one overall score.
-It has this additional required property:
-- `rating`: integer with a minimum value of 1 and a maximum value of 5
-
-Example:
-```json
-{
-  "id": "r7d4f0h2j9l5s3v",
-  "restaurant": "k3x9m2p7q1w8z4a",
-  "kind": "basic",
-  "rating": 5,
-  "title": "Best carbonara in town",
-  "feedback": "Friendly staff and great pasta",
-  "tags": ["favorites"],
-  "creator": {
-    "id": "u2g6k0m4o8q1s5w",
-    "name": "Joe"
-  },
-  "created": "2024-11-04 01:38:00.431Z",
-  "updated": "2024-11-05 09:12:00.000Z"
-}
-```
-
-#### `joc_de_cartes`
-
-A joc_de_cartes review scores four categories.
-It has these additional required properties.
-Each one is an integer with a minimum value of 1 and a maximum value of 10.
-- `space`: decoration, cleanliness, comfort, atmosphere, and kitchen setup
-- `service`: professionalism, speed, friendliness, and attentiveness of the waitstaff
-- `food`: presentation, flavor, ingredient quality, and culinary execution
-- `price`: value for money, and whether the final bill matches the quality provided
-
+Each score is an integer with a minimum value of 1 and a maximum value of 10.
 The API does not calculate a total score.
 A total can be added later without a breaking change.
 
@@ -197,11 +166,12 @@ Example:
 {
   "id": "r1b8c5e2g9i6k3m",
   "restaurant": "k3x9m2p7q1w8z4a",
-  "kind": "joc_de_cartes",
+  "restaurant_name": "Luigi's Trattoria",
   "space": 7,
   "service": 9,
   "food": 8,
   "price": 6,
+  "cleanliness": 8,
   "title": "Great food, a bit expensive",
   "tags": ["date-night"],
   "creator": {
@@ -213,11 +183,6 @@ Example:
 }
 ```
 
-#### Kind-specific properties
-
-- a request body that has a property of a different kind causes `400 Bad Request`. For example, a `basic` review with `space`.
-- a review of one kind does not have the properties of other kinds in responses. They are not present, not `null`.
-
 ### Operations
 
 The operations of the reviews API are as follows:
@@ -225,13 +190,12 @@ The operations of the reviews API are as follows:
   - if the user already has a review for the restaurant, the API returns `409 Conflict`
 - `GET /restaurants/{restaurantId}/reviews` to list reviews for a restaurant
   - results are paginated, see [Pagination](#pagination)
-  - results include reviews of all kinds
   - results are sortable by the following properties ascending and descending, see [Sorting](#sorting):
-    - `rating`
     - `space`
     - `service`
     - `food`
     - `price`
+    - `cleanliness`
     - `title`
     - `created`
     - `updated`
@@ -240,22 +204,18 @@ The operations of the reviews API are as follows:
     - `title`
     - `feedback`
   - results are filterable by the following properties and operators, see [Filtering](#filtering):
-    - `kind`: `eq`, `in`
-    - `rating`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `space`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `service`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `food`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `price`: `lt`, `lte`, `eq`, `gte`, `gt`
+    - `cleanliness`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `tags`: `has`, `has_any`, `has_all`
     - `created`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `updated`: `lt`, `lte`, `eq`, `gte`, `gt`
     - `creator`: `eq`, `in`
 - `GET /restaurants/{restaurantId}/reviews/{reviewId}` to retrieve a single review for a restaurant
 - `PATCH /restaurants/{restaurantId}/reviews/{reviewId}` to update a single review for a restaurant
-  - `title`, `feedback`, `tags`, and the properties of the review's kind can be changed
-  - the request body must contain `kind`. Without it, the API returns `422 Unprocessable Content`.
-  - `kind` cannot be changed. A `kind` value that is different from the stored value causes `422 Unprocessable Content`.
-  - a `kind` value that is equal to the stored value is not a change. It does not cause an error.
+  - the scores, `title`, `feedback`, and `tags` can be changed
 - `DELETE /restaurants/{restaurantId}/reviews/{reviewId}` to delete a single review for a restaurant
 
 - `GET /reviews` to list the reviews of all restaurants
@@ -452,6 +412,7 @@ Other content types cause `415 Unsupported Media Type`.
 - properties not in the request body stay unchanged
 - `null` clears an optional property
 - `null` on a required property causes `422 Unprocessable Content`
+- an empty body `{}` is a valid patch. It changes nothing and keeps `updated`.
 - the response is `200 OK` with the updated resource in the body
 
 ## Delete operations
@@ -471,10 +432,10 @@ All filters in a request must match. They are combined with a logical AND.
 
 | Operator | Meaning | Example |
 | --- | --- | --- |
-| `eq` | equal to | `rating[eq]=5` |
-| `lt` | less than | `rating[lt]=3` |
+| `eq` | equal to | `food[eq]=5` |
+| `lt` | less than | `food[lt]=3` |
 | `lte` | less than or equal to | `created[lte]=2024-11-04%2000:00:00.000Z` |
-| `gt` | greater than | `rating[gt]=3` |
+| `gt` | greater than | `food[gt]=3` |
 | `gte` | greater than or equal to | `updated[gte]=2024-11-04%2000:00:00.000Z` |
 | `in` | equal to any of the values | `creator[in]=u5n1c8r3t6y0b2e&creator[in]=u2g6k0m4o8q1s5w` |
 | `has` | the array contains the value | `tags[has]=italian` |
@@ -487,23 +448,16 @@ An unknown property, an unknown operator, or an operator that is not allowed for
 The tag operators compare whole tags.
 For example, `tags[has]=italian` does not match the tag `south-italian`.
 
-A filter on a kind-specific property matches only reviews of that kind.
-For example, `rating[gte]=4` does not match `joc_de_cartes` reviews.
-
 ### Sorting
 
 The `sort` query parameter is a comma-separated list of properties.
 A `-` prefix sorts a property in descending order.
-For example, `sort=-rating,title` sorts by rating from high to low, then by title from A to Z.
+For example, `sort=-food,title` sorts by food from high to low, then by title from A to Z.
 
 The `name` and `title` sorts ignore case for the ASCII letters `A` to `Z`.
 For example, "apple" comes before "Zebra".
 These sorts do not ignore case for other letters, and they do not use language-specific rules.
 For example, "Ärger" and "ärger" do not sort as equal.
-
-A sort on a kind-specific property puts reviews of other kinds last.
-This is true for ascending and descending order.
-For example, `sort=-rating` gives `basic` reviews from high to low, then all other reviews.
 
 The API always adds `id` as the last sort key.
 IDs are unique.
@@ -543,30 +497,26 @@ Example:
   "status": 422,
   "detail": "The request body has invalid properties.",
   "errors": [
-    { "property": "rating", "message": "must be between 1 and 5" }
+    { "property": "food", "message": "must be between 1 and 10" }
   ]
 }
 ```
 
 | Status | Use |
 | --- | --- |
-| `400 Bad Request` | malformed request, invalid query parameters, unknown or read-only properties in the body, or properties of a different review kind |
+| `400 Bad Request` | malformed request, invalid query parameters, or unknown or read-only properties in the body |
 | `401 Unauthorized` | missing bearer token on a create, update, delete, or token refresh request, an invalid bearer token on any request, or a wrong email or password on sign in |
 | `403 Forbidden` | the user is not the creator of the resource |
 | `404 Not Found` | the resource or the restaurant in the path does not exist, or the review belongs to a different restaurant |
 | `409 Conflict` | sign up with an email that another user has, duplicate review for a restaurant, delete of a restaurant that has reviews, or change of `name` on a restaurant that has reviews |
 | `415 Unsupported Media Type` | wrong request content type |
-| `422 Unprocessable Content` | the request body has invalid property values, or a change of `kind` on a review |
+| `422 Unprocessable Content` | the request body has invalid property values |
 | `429 Too Many Requests` | too many sign up or sign in requests in a short time |
 
 ## OAS Mapping
 
-The review schemas use `oneOf` with a `discriminator` on `kind`.
-Each kind has its own schema with the common properties and the properties of that kind.
-Each kind schema sets `additionalProperties: false`.
-The create and patch request bodies use the same pattern.
-The `Review` response also has an `OtherReview` schema for kinds that a later release adds.
-`kind` is required in the patch body so that the API can select the kind schema.
+`Review`, `ReviewCreate`, and `ReviewPatch` are plain object schemas.
+The create and patch schemas set `additionalProperties: false`.
 
 The `users` and `restaurants` operations share the security scheme, the error responses, and the common schemas.
 The sign in `401` uses its own `InvalidCredentials` response.
@@ -589,12 +539,7 @@ The PocketBase collections need this additional setup:
   - the sort direction and the `id` tie-breaker come from the list query
   - SQLite `NOCASE` ignores case only for ASCII letters
   - `restaurants` has an index on `(name COLLATE NOCASE, id)`. `reviews` has an index on `(title COLLATE NOCASE, id)`. Without them, these sorts read the full table.
-- all review kinds use one `reviews` collection
-  - `kind` is a required `select` field
-  - `rating`, `space`, `service`, `food`, and `price` are `number` fields
-  - PocketBase stores `0` in a `number` field that has no value. The API reads `0` as "not present".
-  - the minimum score of each kind is 1, so `0` is never a real score
-  - filters and sorts on these fields also compare `kind`. This keeps the stored `0` values of other kinds out of the results.
+- `space`, `service`, `food`, `price`, and `cleanliness` are required `number` fields from 1 to 10
 - the `restaurant` relation on reviews is required and does not cascade on delete
   - the API checks for reviews before it deletes a restaurant and returns `409 Conflict`
 - the `creator` relation on reviews is required and cascades on delete

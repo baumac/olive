@@ -237,7 +237,7 @@ Other options:
   - it listens to `securitypolicyviolation` events and to console messages about the policy
   - a test with a violation fails and shows the text of the violation
 - the fixture ignores other policy messages in the console, such as an ignored source. Only a refused or blocked load fails a test.
-- `tests/e2e/csp.spec.ts` opens the parts of the UI that change styles at runtime: the theme menu, Load more, the filter popover with the kind select, the sort select, the rating inputs, the success and error toasts, the delete dialog, and the account menu
+- `tests/e2e/csp.spec.ts` opens the parts of the UI that change styles at runtime: the theme menu, Load more, the filter popover with a score select, the sort select, the rating inputs, the success and error toasts, the delete dialog, and the account menu
 
 ### Rollout
 

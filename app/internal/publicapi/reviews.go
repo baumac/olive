@@ -3,12 +3,10 @@ package publicapi
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
@@ -17,24 +15,11 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-const (
-	kindBasic       = "basic"
-	kindJocDeCartes = "joc_de_cartes"
-)
+const maxScore = 10
 
-// kindScores has the score properties of each review kind. PocketBase
-// stores 0 in the score fields of the other kinds.
-var kindScores = map[string][]string{
-	kindBasic:       {"rating"},
-	kindJocDeCartes: {"space", "service", "food", "price"},
-}
-
-var allScores = []string{"rating", "space", "service", "food", "price"}
-
-// reviewInput is a create or patch body of a known kind. The body schema
-// checked the values before.
+// reviewInput is a create or patch body. The body schema checked the values
+// before.
 type reviewInput struct {
-	kind     string
 	scores   map[string]int
 	title    *string
 	feedback nullable.Nullable[string]
@@ -42,14 +27,14 @@ type reviewInput struct {
 }
 
 var reviewSorts = map[string]sortField{
-	"rating":  scoreSort("reviews", kindBasic, "rating"),
-	"space":   scoreSort("reviews", kindJocDeCartes, "space"),
-	"service": scoreSort("reviews", kindJocDeCartes, "service"),
-	"food":    scoreSort("reviews", kindJocDeCartes, "food"),
-	"price":   scoreSort("reviews", kindJocDeCartes, "price"),
-	"title":   textSort("reviews", "title"),
-	"created": timestampSort("reviews", "created"),
-	"updated": timestampSort("reviews", "updated"),
+	"space":       scoreSort("reviews", "space"),
+	"service":     scoreSort("reviews", "service"),
+	"food":        scoreSort("reviews", "food"),
+	"price":       scoreSort("reviews", "price"),
+	"cleanliness": scoreSort("reviews", "cleanliness"),
+	"title":       textSort("reviews", "title"),
+	"created":     timestampSort("reviews", "created"),
+	"updated":     timestampSort("reviews", "updated"),
 }
 
 // ListReviews returns 404 when the restaurant does not exist. It does not
@@ -61,8 +46,7 @@ func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsReques
 	p := req.Params
 	all := reviewsapi.ListAllReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, RestaurantEq: &req.RestaurantId,
-		KindEq: p.KindEq, KindIn: p.KindIn,
-		Rating: p.Rating, Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price,
+		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price, Cleanliness: p.Cleanliness,
 		TagsHas: p.TagsHas, TagsHasAny: p.TagsHasAny, TagsHasAll: p.TagsHasAll,
 		Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
 	}
@@ -142,19 +126,13 @@ func (s *Server) reviewPage(
 	}
 
 	w := newWhere()
-	if p.KindEq != nil {
-		w.compare(column("reviews", "kind"), []comparison{{"=", *p.KindEq}})
-	}
-	if p.KindIn != nil {
-		w.in(column("reviews", "kind"), *p.KindIn)
-	}
 	for _, detail := range []string{
 		w.restaurantFilters(p.RestaurantEq, p.RestaurantIn),
-		w.scoreFilter(kindBasic, "rating", 5, ratingComparisons(p.Rating)),
-		w.scoreFilter(kindJocDeCartes, "space", 10, scoreComparisons(p.Space)),
-		w.scoreFilter(kindJocDeCartes, "service", 10, scoreComparisons(p.Service)),
-		w.scoreFilter(kindJocDeCartes, "food", 10, scoreComparisons(p.Food)),
-		w.scoreFilter(kindJocDeCartes, "price", 10, scoreComparisons(p.Price)),
+		w.scoreFilter("space", scoreComparisons(p.Space)),
+		w.scoreFilter("service", scoreComparisons(p.Service)),
+		w.scoreFilter("food", scoreComparisons(p.Food)),
+		w.scoreFilter("price", scoreComparisons(p.Price)),
+		w.scoreFilter("cleanliness", scoreComparisons(p.Cleanliness)),
 		w.tagFilters("reviews", p.TagsHas, p.TagsHasAny, p.TagsHasAll),
 		w.creatorFilters("reviews", p.CreatorEq, p.CreatorIn),
 		w.timestampFilter("reviews", "created", timestampComparisons(p.Created)),
@@ -266,19 +244,6 @@ func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRe
 			return err
 		}
 
-		in, errs, foreign, err := createInput(req.Body, st.props)
-		if err != nil {
-			return err
-		}
-		if foreign != "" {
-			response = reviewsapi.CreateReview400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(foreign)}
-			return nil
-		}
-		if len(errs) > 0 {
-			response = reviewsapi.CreateReview422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: unprocessable(errs)}
-			return nil
-		}
-
 		n, err := tx.CountRecords("reviews", dbx.HashExp{"restaurant": req.RestaurantId, "creator": st.user.Id})
 		if err != nil {
 			return err
@@ -295,8 +260,7 @@ func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRe
 		r := core.NewRecord(collection)
 		r.Set("restaurant", req.RestaurantId)
 		r.Set("creator", st.user.Id)
-		r.Set("kind", in.kind)
-		in.apply(r)
+		createInput(req.Body).apply(r)
 		saved = r
 		return tx.Save(r)
 	})
@@ -345,8 +309,7 @@ func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObj
 	return reviewsapi.GetReview200JSONResponse(out), nil
 }
 
-// UpdateReview needs the stored kind in the body. A different kind causes
-// 422.
+// UpdateReview lets only the creator change a review.
 func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRequestObject) (reviewsapi.UpdateReviewResponseObject, error) {
 	if detail := checkReviewIDs(req.RestaurantId, req.ReviewId); detail != "" {
 		return reviewsapi.UpdateReview400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
@@ -372,24 +335,8 @@ func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRe
 			return nil
 		}
 
-		in, errs, foreign, err := patchInput(req.Body, st.props)
-		if err != nil {
-			return err
-		}
-		if foreign != "" {
-			response = reviewsapi.UpdateReview400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(foreign)}
-			return nil
-		}
-		if stored := r.GetString("kind"); in.kind != "" && in.kind != stored {
-			errs = append(fieldErrors{{Property: "kind", Message: "must be equal to the stored kind " + stored}}, errs...)
-		}
-		if len(errs) > 0 {
-			response = reviewsapi.UpdateReview422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: unprocessable(errs)}
-			return nil
-		}
-
 		saved = r
-		if !in.apply(r) {
+		if !patchInput(req.Body).apply(r) {
 			return nil
 		}
 		return tx.Save(r)
@@ -466,93 +413,21 @@ func (s *Server) findReview(app core.App, restaurantID, reviewID string) (restau
 	return restaurant, review, "", nil
 }
 
-// checkKind returns the field errors for an unknown kind. It also returns a
-// detail for the 400 response if the body has scores of other kinds.
-func checkKind(kind string, props map[string]json.RawMessage) (fieldErrors, string) {
-	scores, ok := kindScores[kind]
-	if !ok {
-		var errs fieldErrors
-		errs.add("kind", "must be one of "+kindBasic+", "+kindJocDeCartes)
-		return errs, ""
+func createInput(body *reviewsapi.ReviewCreate) reviewInput {
+	return reviewInput{
+		scores: map[string]int{"space": body.Space, "service": body.Service, "food": body.Food, "price": body.Price, "cleanliness": body.Cleanliness},
+		title:  &body.Title, feedback: optional(body.Feedback), tags: optional(body.Tags),
 	}
-	var foreign []string
-	for _, name := range allScores {
-		if _, inBody := props[name]; inBody && !slices.Contains(scores, name) {
-			foreign = append(foreign, name)
-		}
-	}
-	if len(foreign) > 0 {
-		return nil, fmt.Sprintf("A %s review does not have the properties: %s.", kind, strings.Join(foreign, ", "))
-	}
-	return nil, ""
 }
 
-func createInput(body *reviewsapi.ReviewCreate, props map[string]json.RawMessage) (reviewInput, fieldErrors, string, error) {
-	kind, err := body.Discriminator()
-	if err != nil {
-		return reviewInput{}, nil, "", err
-	}
-	if errs, foreign := checkKind(kind, props); errs != nil || foreign != "" {
-		return reviewInput{}, errs, foreign, nil
-	}
-
-	in := reviewInput{kind: kind}
-	switch kind {
-	case kindBasic:
-		v, err := body.AsBasicReviewCreate()
-		if err != nil {
-			return in, nil, "", err
-		}
-		in.scores = map[string]int{"rating": v.Rating}
-		in.title, in.feedback, in.tags = &v.Title, optional(v.Feedback), optional(v.Tags)
-	case kindJocDeCartes:
-		v, err := body.AsJocDeCartesReviewCreate()
-		if err != nil {
-			return in, nil, "", err
-		}
-		in.scores = map[string]int{"space": v.Space, "service": v.Service, "food": v.Food, "price": v.Price}
-		in.title, in.feedback, in.tags = &v.Title, optional(v.Feedback), optional(v.Tags)
-	}
-
-	var errs fieldErrors
-	for _, name := range kindScores[kind] {
-		if _, ok := props[name]; !ok {
-			errs.add(name, "is required")
-		}
-	}
-	return in, errs, "", nil
-}
-
-func patchInput(body *reviewsapi.ReviewPatch, props map[string]json.RawMessage) (reviewInput, fieldErrors, string, error) {
-	kind, err := body.Discriminator()
-	if err != nil {
-		return reviewInput{}, nil, "", err
-	}
-	if errs, foreign := checkKind(kind, props); errs != nil || foreign != "" {
-		return reviewInput{}, errs, foreign, nil
-	}
-
-	in := reviewInput{kind: kind, scores: map[string]int{}}
-	switch kind {
-	case kindBasic:
-		v, err := body.AsBasicReviewPatch()
-		if err != nil {
-			return in, nil, "", err
-		}
-		setScore(in.scores, "rating", v.Rating)
-		in.title, in.feedback, in.tags = v.Title, v.Feedback, v.Tags
-	case kindJocDeCartes:
-		v, err := body.AsJocDeCartesReviewPatch()
-		if err != nil {
-			return in, nil, "", err
-		}
-		setScore(in.scores, "space", v.Space)
-		setScore(in.scores, "service", v.Service)
-		setScore(in.scores, "food", v.Food)
-		setScore(in.scores, "price", v.Price)
-		in.title, in.feedback, in.tags = v.Title, v.Feedback, v.Tags
-	}
-	return in, nil, "", nil
+func patchInput(body *reviewsapi.ReviewPatch) reviewInput {
+	in := reviewInput{scores: map[string]int{}, title: body.Title, feedback: body.Feedback, tags: body.Tags}
+	setScore(in.scores, "space", body.Space)
+	setScore(in.scores, "service", body.Service)
+	setScore(in.scores, "food", body.Food)
+	setScore(in.scores, "price", body.Price)
+	setScore(in.scores, "cleanliness", body.Cleanliness)
+	return in
 }
 
 func setScore(scores map[string]int, name string, v *int) {
@@ -589,62 +464,26 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string) (revi
 	if restaurantName == "" {
 		return reviewsapi.Review{}, fmt.Errorf("review %s has no restaurant", r.Id)
 	}
-	var (
-		out      reviewsapi.Review
-		err      error
-		c        = toCreator(creator)
-		feedback = optionalText(r, "feedback")
-		tags     = tagsOf(r)
-		created  = r.GetDateTime("created").String()
-		updated  = r.GetDateTime("updated").String()
-		kind     = r.GetString("kind")
-	)
-	switch kind {
-	case kindBasic:
-		err = out.FromBasicReview(reviewsapi.BasicReview{
-			Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName, Kind: kindBasic,
-			Rating: r.GetInt("rating"),
-			Title:  r.GetString("title"), Feedback: feedback, Tags: tags,
-			Creator: c, Created: created, Updated: updated,
-		})
-	case kindJocDeCartes:
-		err = out.FromJocDeCartesReview(reviewsapi.JocDeCartesReview{
-			Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName, Kind: kindJocDeCartes,
-			Space: r.GetInt("space"), Service: r.GetInt("service"), Food: r.GetInt("food"), Price: r.GetInt("price"),
-			Title: r.GetString("title"), Feedback: feedback, Tags: tags,
-			Creator: c, Created: created, Updated: updated,
-		})
-	default:
-		err = out.FromOtherReview(reviewsapi.OtherReview{
-			Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName, Kind: kind,
-			Title: r.GetString("title"), Feedback: feedback, Tags: tags,
-			Creator: c, Created: created, Updated: updated,
-		})
-	}
-	return out, err
+	return reviewsapi.Review{
+		Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName,
+		Space: r.GetInt("space"), Service: r.GetInt("service"), Food: r.GetInt("food"), Price: r.GetInt("price"),
+		Cleanliness: r.GetInt("cleanliness"),
+		Title:       r.GetString("title"), Feedback: optionalText(r, "feedback"), Tags: tagsOf(r),
+		Creator: toCreator(creator), Created: r.GetDateTime("created").String(), Updated: r.GetDateTime("updated").String(),
+	}, nil
 }
 
-// scoreFilter also compares kind. The stored 0 of other kinds then does not
-// match.
-func (w *where) scoreFilter(kind, name string, maxValue int, cs []comparison) string {
+func (w *where) scoreFilter(name string, cs []comparison) string {
 	if len(cs) == 0 {
 		return ""
 	}
 	for _, c := range cs {
-		if v := c.value.(int); v < 1 || v > maxValue {
-			return fmt.Sprintf("The %s filter values must be between 1 and %d.", name, maxValue)
+		if v := c.value.(int); v < 1 || v > maxScore {
+			return fmt.Sprintf("The %s filter values must be between 1 and %d.", name, maxScore)
 		}
 	}
-	w.compare(column("reviews", "kind"), []comparison{{"=", kind}})
 	w.compare(column("reviews", name), cs)
 	return ""
-}
-
-func ratingComparisons(r *reviewsapi.RatingRange) []comparison {
-	if r == nil {
-		return nil
-	}
-	return comparisons(r.Lt, r.Lte, r.Eq, r.Gte, r.Gt)
 }
 
 func scoreComparisons(r *reviewsapi.ScoreRange) []comparison {

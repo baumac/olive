@@ -19,11 +19,6 @@ import {
     ProblemToJSON,
 } from '../models/Problem.js';
 import {
-    type RatingRange,
-    RatingRangeFromJSON,
-    RatingRangeToJSON,
-} from '../models/RatingRange.js';
-import {
     type Restaurant,
     RestaurantFromJSON,
     RestaurantToJSON,
@@ -145,7 +140,6 @@ export interface ListAllReviewsRequest {
      * A `-` prefix sorts a property in descending order.
      * Each property can occur only one time. A repeated property causes `400 Bad Request`.
      * The `title` sort ignores case only for the ASCII letters `A` to `Z`.
-     * A sort on a kind-specific property puts reviews of other kinds last in both directions.
      * The API always adds `id` as the last sort key.
      * 
      */
@@ -159,33 +153,25 @@ export interface ListAllReviewsRequest {
      */
     restaurantIn?: Array<string>;
     /**
-     * The review `kind` is equal to the value.
-     */
-    kindEq?: string;
-    /**
-     * The review `kind` is equal to any of the values.
-     */
-    kindIn?: Array<string>;
-    /**
-     * Matches only `basic` reviews. Each key is an operator, for example `rating[gte]=`.
-     */
-    rating?: RatingRange;
-    /**
-     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `space[gte]=`.
+     * Compares the `space` score. Each key is an operator, for example `space[gte]=`.
      */
     space?: ScoreRange;
     /**
-     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `service[gte]=`.
+     * Compares the `service` score. Each key is an operator, for example `service[gte]=`.
      */
     service?: ScoreRange;
     /**
-     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `food[gte]=`.
+     * Compares the `food` score. Each key is an operator, for example `food[gte]=`.
      */
     food?: ScoreRange;
     /**
-     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `price[gte]=`.
+     * Compares the `price` score. Each key is an operator, for example `price[gte]=`.
      */
     price?: ScoreRange;
+    /**
+     * Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
+     */
+    cleanliness?: ScoreRange;
     /**
      * The `tags` contain the tag.
      */
@@ -288,39 +274,30 @@ export interface ListReviewsRequest {
      * A `-` prefix sorts a property in descending order.
      * Each property can occur only one time. A repeated property causes `400 Bad Request`.
      * The `title` sort ignores case only for the ASCII letters `A` to `Z`.
-     * A sort on a kind-specific property puts reviews of other kinds last in both directions.
      * The API always adds `id` as the last sort key.
      * 
      */
     sort?: string;
     /**
-     * The review `kind` is equal to the value.
-     */
-    kindEq?: string;
-    /**
-     * The review `kind` is equal to any of the values.
-     */
-    kindIn?: Array<string>;
-    /**
-     * Matches only `basic` reviews. Each key is an operator, for example `rating[gte]=`.
-     */
-    rating?: RatingRange;
-    /**
-     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `space[gte]=`.
+     * Compares the `space` score. Each key is an operator, for example `space[gte]=`.
      */
     space?: ScoreRange;
     /**
-     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `service[gte]=`.
+     * Compares the `service` score. Each key is an operator, for example `service[gte]=`.
      */
     service?: ScoreRange;
     /**
-     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `food[gte]=`.
+     * Compares the `food` score. Each key is an operator, for example `food[gte]=`.
      */
     food?: ScoreRange;
     /**
-     * Matches only `joc_de_cartes` reviews. Each key is an operator, for example `price[gte]=`.
+     * Compares the `price` score. Each key is an operator, for example `price[gte]=`.
      */
     price?: ScoreRange;
+    /**
+     * Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
+     */
+    cleanliness?: ScoreRange;
     /**
      * The `tags` contain the tag.
      */
@@ -535,16 +512,14 @@ export interface RestaurantsApiInterface {
      * Creates request options for listAllReviews without sending the request
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. A sort on a kind-specific property puts reviews of other kinds last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
      * @param {string} [restaurantEq] The &#x60;restaurant&#x60; of the review is equal to the value.
      * @param {Array<string>} [restaurantIn] The &#x60;restaurant&#x60; of the review is equal to any of the values.
-     * @param {string} [kindEq] The review &#x60;kind&#x60; is equal to the value.
-     * @param {Array<string>} [kindIn] The review &#x60;kind&#x60; is equal to any of the values.
-     * @param {RatingRange} [rating] Matches only &#x60;basic&#x60; reviews. Each key is an operator, for example &#x60;rating[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [space] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [service] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [food] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [price] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -562,16 +537,14 @@ export interface RestaurantsApiInterface {
      * @summary List the reviews of all restaurants
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. A sort on a kind-specific property puts reviews of other kinds last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
      * @param {string} [restaurantEq] The &#x60;restaurant&#x60; of the review is equal to the value.
      * @param {Array<string>} [restaurantIn] The &#x60;restaurant&#x60; of the review is equal to any of the values.
-     * @param {string} [kindEq] The review &#x60;kind&#x60; is equal to the value.
-     * @param {Array<string>} [kindIn] The review &#x60;kind&#x60; is equal to any of the values.
-     * @param {RatingRange} [rating] Matches only &#x60;basic&#x60; reviews. Each key is an operator, for example &#x60;rating[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [space] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [service] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [food] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [price] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -637,14 +610,12 @@ export interface RestaurantsApiInterface {
      * @param {string} restaurantId The ID of the restaurant.
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. A sort on a kind-specific property puts reviews of other kinds last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [kindEq] The review &#x60;kind&#x60; is equal to the value.
-     * @param {Array<string>} [kindIn] The review &#x60;kind&#x60; is equal to any of the values.
-     * @param {RatingRange} [rating] Matches only &#x60;basic&#x60; reviews. Each key is an operator, for example &#x60;rating[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [space] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [service] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [food] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [price] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -663,14 +634,12 @@ export interface RestaurantsApiInterface {
      * @param {string} restaurantId The ID of the restaurant.
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. A sort on a kind-specific property puts reviews of other kinds last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [kindEq] The review &#x60;kind&#x60; is equal to the value.
-     * @param {Array<string>} [kindIn] The review &#x60;kind&#x60; is equal to any of the values.
-     * @param {RatingRange} [rating] Matches only &#x60;basic&#x60; reviews. Each key is an operator, for example &#x60;rating[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [space] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [service] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [food] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [price] Matches only &#x60;joc_de_cartes&#x60; reviews. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -726,7 +695,7 @@ export interface RestaurantsApiInterface {
     updateReviewRequestOpts(requestParameters: UpdateReviewRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Only the creator of the review can update it. The body must contain the stored `kind`. A different `kind` causes `422 Unprocessable Content`. 
+     * Only the creator of the review can update it. 
      * @summary Update a review
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
@@ -738,7 +707,7 @@ export interface RestaurantsApiInterface {
     updateReviewRaw(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Review>>;
 
     /**
-     * Only the creator of the review can update it. The body must contain the stored `kind`. A different `kind` causes `422 Unprocessable Content`. 
+     * Only the creator of the review can update it. 
      * Update a review
      */
     updateReview(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review>;
@@ -1126,18 +1095,6 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             queryParameters['restaurant[in]'] = requestParameters['restaurantIn'];
         }
 
-        if (requestParameters['kindEq'] != null) {
-            queryParameters['kind[eq]'] = requestParameters['kindEq'];
-        }
-
-        if (requestParameters['kindIn'] != null) {
-            queryParameters['kind[in]'] = requestParameters['kindIn'];
-        }
-
-        if (requestParameters['rating'] != null) {
-            queryParameters['rating'] = requestParameters['rating'];
-        }
-
         if (requestParameters['space'] != null) {
             queryParameters['space'] = requestParameters['space'];
         }
@@ -1152,6 +1109,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
 
         if (requestParameters['price'] != null) {
             queryParameters['price'] = requestParameters['price'];
+        }
+
+        if (requestParameters['cleanliness'] != null) {
+            queryParameters['cleanliness'] = requestParameters['cleanliness'];
         }
 
         if (requestParameters['tagsHas'] != null) {
@@ -1333,18 +1294,6 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             queryParameters['sort'] = requestParameters['sort'];
         }
 
-        if (requestParameters['kindEq'] != null) {
-            queryParameters['kind[eq]'] = requestParameters['kindEq'];
-        }
-
-        if (requestParameters['kindIn'] != null) {
-            queryParameters['kind[in]'] = requestParameters['kindIn'];
-        }
-
-        if (requestParameters['rating'] != null) {
-            queryParameters['rating'] = requestParameters['rating'];
-        }
-
         if (requestParameters['space'] != null) {
             queryParameters['space'] = requestParameters['space'];
         }
@@ -1359,6 +1308,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
 
         if (requestParameters['price'] != null) {
             queryParameters['price'] = requestParameters['price'];
+        }
+
+        if (requestParameters['cleanliness'] != null) {
+            queryParameters['cleanliness'] = requestParameters['cleanliness'];
         }
 
         if (requestParameters['tagsHas'] != null) {
@@ -1548,7 +1501,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the review can update it. The body must contain the stored `kind`. A different `kind` causes `422 Unprocessable Content`. 
+     * Only the creator of the review can update it. 
      * Update a review
      */
     async updateReviewRaw(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Review>> {
@@ -1559,7 +1512,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the review can update it. The body must contain the stored `kind`. A different `kind` causes `422 Unprocessable Content`. 
+     * Only the creator of the review can update it. 
      * Update a review
      */
     async updateReview(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review> {

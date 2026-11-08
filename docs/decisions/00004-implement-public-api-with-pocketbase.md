@@ -90,19 +90,17 @@ The checks run in this order:
 | 7 | the IDs in the path, and the values of the query parameters | `400` |
 | 8 | the restaurant and the review exist | `404` |
 | 9 | the user is the creator | `403` |
-| 10 | the review kind and the properties of other kinds | `422`, `400` |
-| 11 | duplicate reviews, and restaurants with reviews | `409` |
+| 10 | duplicate reviews, and restaurants with reviews | `409` |
 
-- checks 1 to 6 are in `prepare`. Checks 7 to 11 are in the operation handlers.
+- checks 1 to 6 are in `prepare`. Checks 7 to 10 are in the operation handlers.
 - check 6 gives all invalid properties in one response
-- the review body schemas have the properties of all kinds. The handler then rejects the scores of other kinds with `400`.
 - a JSON number for an integer property must be an integer literal of at most 9 digits. `5.0` gets `422`. The value then fits a Go `int` on all platforms.
 - a body larger than 256 KB gets `413`. The largest valid body is about 100 KB.
 - more than 20 tags give one `tags` error, without an error for each item. The size of the response then does not grow with the request.
 - the strict handler decodes the body after `prepare`. Its decode errors therefore do not occur for client input.
 - the decoders after `prepare` read the first copy of a repeated property. `prepare` therefore rejects repeated properties.
 - an email must be a bare address. `mail.ParseAddress` also accepts `Ana <ana@example.com>`, so `prepare` rejects a display name.
-- a parameter that is not an array has one value. `tags[has_any]` and `tags[has_all]` have at most 20 values. `creator[in]` and `kind[in]` have at most 100 values. Each value is one SQL parameter.
+- a parameter that is not an array has one value. `tags[has_any]` and `tags[has_all]` have at most 20 values. `creator[in]` and `restaurant[in]` have at most 100 values. Each value is one SQL parameter.
 
 ## Authentication
 
@@ -136,22 +134,21 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 
 - `listReviews` and `listAllReviews` use one function. `listReviews` sets `restaurant[eq]` from the path and checks first that the restaurant exists.
 - review responses get `restaurant_name` from one query for the restaurants of the page, like `creator`. `listReviews` already has its restaurant, so it needs no query.
-- the cursor of `listReviews` keeps the fingerprint of its first version. Pages that were open before a deploy can still load more.
+- the cursor of `listReviews` keeps the form of its first fingerprint. Pages that were open before a deploy can still load more. The removal of the review kinds changed the score sorts from two keys to one. Score-sort cursors from before it get `400`. Other cursors still work, because the parameters leave out empty filters.
 - a review without its restaurant gets `500`, like a review without its creator. `restaurant_name` is never empty.
 
 - pagination uses a keyset. The cursor is base64url JSON with the sort values of the last item and a fingerprint.
 - the fingerprint is a hash of the filters, the sort, and the restaurant ID. `limit` is not in it, so a client can change `limit` between pages.
-- a sort on a score has two keys. The first key is `0` for reviews of the kind of the score and `1` for other reviews. This puts the other kinds last in both directions.
 - the `name` and `title` sorts use `COLLATE NOCASE`
 - the `id` key has the direction of the key before it. When all keys have one direction, the cursor condition is a row value comparison, such as `(created, id) < (x, y)`. SQLite can then use the index. Mixed directions use an `OR` condition.
 - a cursor value must be a string or a number. Other values get `400`.
-- filters on a score also compare `kind`
 - tag filters use `json_each`. A value in `tags` that is not valid JSON matches no tag filter.
 
 ## PocketBase mapping
 
 - PocketBase stores an empty string for a text field that has no value. An empty `description` or `feedback` is therefore not in responses.
-- the score fields have the minimum 1 and the maximum of their kind. PocketBase does not check these limits for the stored `0`.
+- the five score fields are required, with the minimum 1 and the maximum 10. A migration removed the `kind` and `rating` fields. It gave each `basic` review two times its `rating` in each score.
+- a later migration added `cleanliness`. It gave each review its `space` value, then made the field required.
 - an update saves only when a value changes. A merge patch without changes keeps `updated`.
 - the unique `email` index of `users` uses `COLLATE NOCASE`. The down migration restores the PocketBase defaults of `users`.
 - PocketBase removes the user ID from `restaurants.creator` in the delete transaction of the user. The API has no hook for it.

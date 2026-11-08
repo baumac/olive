@@ -67,7 +67,7 @@ test('only the creator sees edit and delete', async ({ page, api }) => {
 test('a restaurant with reviews keeps its name and cannot be deleted', async ({ page, api, user }) => {
   const restaurant = await api.createRestaurant(user, { name: "Luigi's" })
   const reviewer = await api.signUp('Joe')
-  await api.createReview(reviewer, restaurant.id, { kind: 'basic', rating: 5, title: 'Great' })
+  await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
 
   await page.goto(`/restaurants/${restaurant.id}/edit`)
   await page.getByLabel('Name').fill("Luigi's Trattoria")

@@ -24,10 +24,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
         tags: ['italian'],
       })
       const reviewer = await api.signUp('Ana')
-      await api.createReview(reviewer, restaurant.id, { kind: 'basic', rating: 4, title: 'Good', tags: ['pasta'] })
-      await api.createReview(owner, restaurant.id, {
-        kind: 'joc_de_cartes', space: 7, service: 9, food: 8, price: 6, title: 'Joc',
-      })
+      await api.createReview(reviewer, restaurant.id, { space: 4, service: 4, food: 4, price: 4, cleanliness: 4, title: 'Good', tags: ['pasta'] })
+      await api.createReview(owner, restaurant.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 6, title: 'Great food' })
 
       await page.goto('/restaurants')
       await expect(page.getByRole('heading', { name: 'Restaurants', level: 1 })).toBeVisible()

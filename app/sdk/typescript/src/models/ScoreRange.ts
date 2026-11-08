@@ -14,29 +14,29 @@
 
 import { mapValues } from '../runtime.js';
 /**
- * Comparisons for a `joc_de_cartes` score. All comparisons must match.
+ * Comparisons for a score. All comparisons must match.
  * @export
  * @interface ScoreRange
  */
 export interface ScoreRange {
     /**
-     * The score of one category of a `joc_de_cartes` review.
+     * The score of one category of a review.
      */
     lt?: number;
     /**
-     * The score of one category of a `joc_de_cartes` review.
+     * The score of one category of a review.
      */
     lte?: number;
     /**
-     * The score of one category of a `joc_de_cartes` review.
+     * The score of one category of a review.
      */
     eq?: number;
     /**
-     * The score of one category of a `joc_de_cartes` review.
+     * The score of one category of a review.
      */
     gte?: number;
     /**
-     * The score of one category of a `joc_de_cartes` review.
+     * The score of one category of a review.
      */
     gt?: number;
 }

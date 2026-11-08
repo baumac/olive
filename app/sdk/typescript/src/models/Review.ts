@@ -12,38 +12,103 @@
  * Do not edit the class manually.
  */
 
-import { parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime.js';
-import type { BasicReview } from './BasicReview.js';
+import { mapValues } from '../runtime.js';
+import type { Creator } from './Creator.js';
 import {
-    instanceOfBasicReview,
-    BasicReviewFromJSON,
-    BasicReviewFromJSONTyped,
-    BasicReviewToJSON,
-} from './BasicReview.js';
-import type { JocDeCartesReview } from './JocDeCartesReview.js';
-import {
-    instanceOfJocDeCartesReview,
-    JocDeCartesReviewFromJSON,
-    JocDeCartesReviewFromJSONTyped,
-    JocDeCartesReviewToJSON,
-} from './JocDeCartesReview.js';
-import type { OtherReview } from './OtherReview.js';
-import {
-    instanceOfOtherReview,
-    OtherReviewFromJSON,
-    OtherReviewFromJSONTyped,
-    OtherReviewToJSON,
-} from './OtherReview.js';
+    CreatorFromJSON,
+    CreatorFromJSONTyped,
+    CreatorToJSON,
+    CreatorToJSONTyped,
+} from './Creator.js';
 
 /**
- * @type Review
- * A review of a restaurant. `kind` selects the score properties.
- * Later releases of `/v1` can add kinds.
- * Clients must handle unknown kinds without failing.
- * 
+ * A review of a restaurant. It scores the space, service, food, price, and cleanliness.
  * @export
+ * @interface Review
  */
-export type Review = { kind: 'basic' } & BasicReview | { kind: 'joc_de_cartes' } & JocDeCartesReview | { kind: 'OtherReview' } & OtherReview;
+export interface Review {
+    /**
+     * A record ID of 15 characters.
+     */
+    id: string;
+    /**
+     * A record ID of 15 characters.
+     */
+    restaurant: string;
+    /**
+     * The `name` of the reviewed restaurant.
+     * The name of a restaurant with reviews cannot change, so this value stays correct.
+     * 
+     */
+    restaurantName: string;
+    /**
+     * 
+     */
+    space: any;
+    /**
+     * 
+     */
+    service: any;
+    /**
+     * 
+     */
+    food: any;
+    /**
+     * 
+     */
+    price: any;
+    /**
+     * 
+     */
+    cleanliness: any;
+    /**
+     * A title with at least one character that is not ASCII whitespace.
+     * Control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * 
+     */
+    title: string;
+    /**
+     * A text of at most 10,000 characters.
+     * Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * 
+     */
+    feedback?: string;
+    /**
+     * Unique tags.
+     */
+    tags?: Set<string>;
+    /**
+     * 
+     */
+    creator: Creator;
+    /**
+     * A UTC timestamp with millisecond precision. This format is not RFC 3339.
+     */
+    created: string;
+    /**
+     * A UTC timestamp with millisecond precision. This format is not RFC 3339.
+     */
+    updated: string;
+}
+
+/**
+ * Check if a given object implements the Review interface.
+ */
+export function instanceOfReview(value: object): value is Review {
+    if (!('id' in value) || value['id'] === undefined) return false;
+    if (!('restaurant' in value) || value['restaurant'] === undefined) return false;
+    if ((!('restaurantName' in (value as Record<string, any>)) && !('restaurant_name' in (value as Record<string, any>))) || ((value as Record<string, any>)['restaurantName'] === undefined && (value as Record<string, any>)['restaurant_name'] === undefined)) return false;
+    if (!('space' in value) || value['space'] === undefined) return false;
+    if (!('service' in value) || value['service'] === undefined) return false;
+    if (!('food' in value) || value['food'] === undefined) return false;
+    if (!('price' in value) || value['price'] === undefined) return false;
+    if (!('cleanliness' in value) || value['cleanliness'] === undefined) return false;
+    if (!('title' in value) || value['title'] === undefined) return false;
+    if (!('creator' in value) || value['creator'] === undefined) return false;
+    if (!('created' in value) || value['created'] === undefined) return false;
+    if (!('updated' in value) || value['updated'] === undefined) return false;
+    return true;
+}
 
 export function ReviewFromJSON(json: any): Review {
     return ReviewFromJSONTyped(json, false);
@@ -53,19 +118,26 @@ export function ReviewFromJSONTyped(json: any, ignoreDiscriminator: boolean): Re
     if (json == null) {
         return json;
     }
-    switch (json['kind']) {
-        case 'basic':
-            return Object.assign({}, BasicReviewFromJSONTyped(json, true), { kind: 'basic' } as const);
-        case 'joc_de_cartes':
-            return Object.assign({}, JocDeCartesReviewFromJSONTyped(json, true), { kind: 'joc_de_cartes' } as const);
-        case 'OtherReview':
-            return Object.assign({}, OtherReviewFromJSONTyped(json, true), { kind: 'OtherReview' } as const);
-        default:
-            return json;
-    }
+    return {
+        
+        'id': json['id'],
+        'restaurant': json['restaurant'],
+        'restaurantName': json['restaurant_name'],
+        'space': json['space'],
+        'service': json['service'],
+        'food': json['food'],
+        'price': json['price'],
+        'cleanliness': json['cleanliness'],
+        'title': json['title'],
+        'feedback': json['feedback'] == null ? undefined : json['feedback'],
+        'tags': json['tags'] == null ? undefined : new Set(json['tags']),
+        'creator': CreatorFromJSON(json['creator']),
+        'created': json['created'],
+        'updated': json['updated'],
+    };
 }
 
-export function ReviewToJSON(json: any): any {
+export function ReviewToJSON(json: any): Review {
     return ReviewToJSONTyped(json, false);
 }
 
@@ -73,15 +145,23 @@ export function ReviewToJSONTyped(value?: Review | null, ignoreDiscriminator: bo
     if (value == null) {
         return value;
     }
-    switch (value['kind']) {
-        case 'basic':
-            return Object.assign({}, BasicReviewToJSON(value), { 'kind': 'basic' } as const);
-        case 'joc_de_cartes':
-            return Object.assign({}, JocDeCartesReviewToJSON(value), { 'kind': 'joc_de_cartes' } as const);
-        case 'OtherReview':
-            return Object.assign({}, OtherReviewToJSON(value), { 'kind': 'OtherReview' } as const);
-        default:
-            return value;
-    }
+
+    return {
+        
+        'id': value['id'],
+        'restaurant': value['restaurant'],
+        'restaurant_name': value['restaurantName'],
+        'space': value['space'],
+        'service': value['service'],
+        'food': value['food'],
+        'price': value['price'],
+        'cleanliness': value['cleanliness'],
+        'title': value['title'],
+        'feedback': value['feedback'],
+        'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
+        'creator': CreatorToJSON(value['creator']),
+        'created': value['created'],
+        'updated': value['updated'],
+    };
 }
 

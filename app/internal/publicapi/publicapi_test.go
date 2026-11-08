@@ -397,7 +397,7 @@ func TestRestaurants(t *testing.T) {
 		}
 	})
 
-	review := e.createReview(joe.Token, id, `{"kind":"basic","rating":5,"title":"Great"}`)
+	review := e.createReview(joe.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`)
 
 	t.Run("name cannot change with reviews", func(t *testing.T) {
 		e.expect(request{method: "PATCH", path: path, body: `{"name":"New name"}`, token: ana.Token}, http.StatusConflict)
@@ -424,48 +424,42 @@ func TestReviews(t *testing.T) {
 	other := e.createRestaurant(ana.Token, `{"name":"Other"}`)["id"].(string)
 	reviews := "/v1/restaurants/" + id + "/reviews"
 
-	basic := e.createReview(joe.Token, id, `{"kind":"basic","rating":4,"title":"Good","feedback":"Nice","tags":["pasta"]}`)
-	joc := e.createReview(ana.Token, id, `{"kind":"joc_de_cartes","space":7,"service":9,"food":8,"price":6,"title":"Great food"}`)
-	basicPath := reviews + "/" + basic["id"].(string)
+	good := e.createReview(joe.Token, id, `{"space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"Good","feedback":"Nice","tags":["pasta"]}`)
+	great := e.createReview(ana.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great food"}`)
+	goodPath := reviews + "/" + good["id"].(string)
+	otherReviews := "/v1/restaurants/" + other + "/reviews"
 
-	t.Run("responses have only the properties of the kind", func(t *testing.T) {
-		if _, ok := basic["space"]; ok {
-			t.Errorf("basic review has space: %v", basic)
+	t.Run("responses have the scores", func(t *testing.T) {
+		if good["space"] != float64(4) || good["price"] != float64(7) {
+			t.Errorf("scores: %v", good)
 		}
-		if _, ok := joc["rating"]; ok {
-			t.Errorf("joc_de_cartes review has rating: %v", joc)
+		if _, ok := good["kind"]; ok {
+			t.Errorf("review has kind: %v", good)
 		}
-		if basic["restaurant"] != id || basic["creator"].(map[string]any)["name"] != "Joe" {
-			t.Errorf("basic: %v", basic)
+		if good["restaurant"] != id || good["creator"].(map[string]any)["name"] != "Joe" {
+			t.Errorf("good: %v", good)
 		}
 	})
 
 	t.Run("create errors", func(t *testing.T) {
-		e.expect(request{method: "POST", path: reviews, body: `{"kind":"basic","rating":3,"title":"Again"}`, token: joe.Token}, http.StatusConflict)
-		e.expect(request{method: "POST", path: "/v1/restaurants/aaaaaaaaaaaaaaa/reviews", body: `{"kind":"basic","rating":3,"title":"X"}`, token: joe.Token}, http.StatusNotFound)
-		e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"basic","rating":3,"space":4,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
+		e.expect(request{method: "POST", path: reviews, body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Again"}`, token: joe.Token}, http.StatusConflict)
+		e.expect(request{method: "POST", path: "/v1/restaurants/aaaaaaaaaaaaaaa/reviews", body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusNotFound)
+		e.expect(request{method: "POST", path: otherReviews, body: `{"kind":"joc_de_cartes","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
+		e.expect(request{method: "POST", path: otherReviews, body: `{"rating":3,"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
 
-		res := e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"tasting_menu","title":"X"}`, token: joe.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "kind" {
-			t.Errorf("properties %q", got)
+		for body, want := range map[string]string{
+			`{"space":7,"service":9,"food":8,"price":6,"cleanliness":0,"title":"X"}`:          "cleanliness",
+			`{"space":11,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`:         "space",
+			`{"space":7,"service":9,"title":"X"}`:                                             "cleanliness,food,price",
+			`{"space":9999999999,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`: "space",
+			`{"space":7,"service":2.5,"food":8,"price":6,"cleanliness":8,"title":"X"}`:        "service",
+		} {
+			res := e.expect(request{method: "POST", path: otherReviews, body: body, token: joe.Token}, http.StatusUnprocessableEntity)
+			if got := strings.Join(errorProperties(t, res), ","); got != want {
+				t.Errorf("%s: properties %q, want %q", body, got, want)
+			}
 		}
-		res = e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"joc_de_cartes","space":11,"service":9,"food":8,"price":6,"title":"X"}`, token: joe.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "space" {
-			t.Errorf("properties %q", got)
-		}
-		res = e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"joc_de_cartes","space":7,"service":9,"title":"X"}`, token: joe.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "food,price" {
-			t.Errorf("properties %q", got)
-		}
-		e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"basic","rating":"x","rating":4,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
-		res = e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"basic","rating":9999999999,"title":"X"}`, token: joe.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "rating" {
-			t.Errorf("properties %q", got)
-		}
-		res = e.expect(request{method: "POST", path: "/v1/restaurants/" + other + "/reviews", body: `{"kind":"basic","rating":2.5,"title":"X"}`, token: joe.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "rating" {
-			t.Errorf("properties %q", got)
-		}
+		e.expect(request{method: "POST", path: otherReviews, body: `{"space":"x","space":4,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
 	})
 
 	t.Run("the unique index blocks a second review of a user", func(t *testing.T) {
@@ -474,7 +468,7 @@ func TestReviews(t *testing.T) {
 			t.Fatal(err)
 		}
 		r := core.NewRecord(collection)
-		r.Load(map[string]any{"restaurant": id, "creator": joe.User.ID, "kind": "basic", "rating": 1, "title": "Copy"})
+		r.Load(map[string]any{"restaurant": id, "creator": joe.User.ID, "space": 1, "service": 1, "food": 1, "price": 1, "cleanliness": 1, "title": "Copy"})
 		err = e.app.Save(r)
 		var invalid validation.Errors
 		if !errors.As(err, &invalid) || invalid["creator"] == nil {
@@ -483,34 +477,36 @@ func TestReviews(t *testing.T) {
 	})
 
 	t.Run("get", func(t *testing.T) {
-		got := e.expect(request{method: "GET", path: basicPath}, http.StatusOK).object(t)
+		got := e.expect(request{method: "GET", path: goodPath}, http.StatusOK).object(t)
 		if got["restaurant_name"] != "Luigi's" {
 			t.Errorf("get: restaurant_name %v", got["restaurant_name"])
 		}
-		if got["kind"] != "basic" || got["rating"] != float64(4) {
+		if got["food"] != float64(6) || got["title"] != "Good" {
 			t.Errorf("get: %v", got)
 		}
-		e.expect(request{method: "GET", path: "/v1/restaurants/" + other + "/reviews/" + basic["id"].(string)}, http.StatusNotFound)
+		e.expect(request{method: "GET", path: otherReviews + "/" + good["id"].(string)}, http.StatusNotFound)
 	})
 
 	t.Run("patch", func(t *testing.T) {
-		e.expect(request{method: "PATCH", path: basicPath, body: `{"kind":"basic","rating":1}`, token: ana.Token}, http.StatusForbidden)
-		res := e.expect(request{method: "PATCH", path: basicPath, body: `{"rating":1}`, token: joe.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "kind" {
+		e.expect(request{method: "PATCH", path: goodPath, body: `{"price":1}`, token: ana.Token}, http.StatusForbidden)
+		e.expect(request{method: "PATCH", path: goodPath, body: `{"kind":"joc_de_cartes","price":3}`, token: joe.Token}, http.StatusBadRequest)
+		e.expect(request{method: "PATCH", path: goodPath, body: `{"rating":3}`, token: joe.Token}, http.StatusBadRequest)
+		e.expect(request{method: "PATCH", path: goodPath, body: `{"title":null}`, token: joe.Token}, http.StatusUnprocessableEntity)
+		res := e.expect(request{method: "PATCH", path: goodPath, body: `{"food":0}`, token: joe.Token}, http.StatusUnprocessableEntity)
+		if got := strings.Join(errorProperties(t, res), ","); got != "food" {
 			t.Errorf("properties %q", got)
 		}
-		res = e.expect(request{method: "PATCH", path: basicPath, body: `{"kind":"joc_de_cartes","price":3}`, token: joe.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "kind" {
-			t.Errorf("properties %q", got)
-		}
-		e.expect(request{method: "PATCH", path: basicPath, body: `{"kind":"basic","price":3}`, token: joe.Token}, http.StatusBadRequest)
-		e.expect(request{method: "PATCH", path: basicPath, body: `{"kind":"basic","title":null}`, token: joe.Token}, http.StatusUnprocessableEntity)
 
-		got := e.expect(request{method: "PATCH", path: basicPath, body: `{"kind":"basic","rating":2,"feedback":null}`, token: joe.Token}, http.StatusOK).object(t)
+		same := e.expect(request{method: "PATCH", path: goodPath, body: `{}`, token: joe.Token}, http.StatusOK).object(t)
+		if same["updated"] != good["updated"] || same["price"] != float64(7) {
+			t.Errorf("empty patch: %v", same)
+		}
+
+		got := e.expect(request{method: "PATCH", path: goodPath, body: `{"price":2,"feedback":null}`, token: joe.Token}, http.StatusOK).object(t)
 		if got["restaurant_name"] != "Luigi's" {
 			t.Errorf("patch: restaurant_name %v", got["restaurant_name"])
 		}
-		if got["rating"] != float64(2) || got["title"] != "Good" {
+		if got["price"] != float64(2) || got["food"] != float64(6) || got["title"] != "Good" {
 			t.Errorf("patch: %v", got)
 		}
 		if _, ok := got["feedback"]; ok {
@@ -518,37 +514,42 @@ func TestReviews(t *testing.T) {
 		}
 	})
 
-	t.Run("list filters by kind-specific score", func(t *testing.T) {
+	t.Run("list filters by score", func(t *testing.T) {
 		var page struct {
 			Items []map[string]any `json:"items"`
 		}
-		e.expect(request{method: "GET", path: reviews + "?rating[gte]=1"}, http.StatusOK).decode(t, &page)
-		if len(page.Items) != 1 || page.Items[0]["kind"] != "basic" {
-			t.Errorf("rating filter: %v", page.Items)
+		e.expect(request{method: "GET", path: reviews + "?cleanliness[gte]=4"}, http.StatusOK).decode(t, &page)
+		if len(page.Items) != 1 || page.Items[0]["title"] != "Great food" {
+			t.Errorf("cleanliness filter: %v", page.Items)
+		}
+		e.expect(request{method: "GET", path: reviews + "?sort=cleanliness"}, http.StatusOK).decode(t, &page)
+		if len(page.Items) != 2 || page.Items[0]["cleanliness"] != float64(3) {
+			t.Errorf("cleanliness sort: %v", page.Items)
+		}
+		e.expect(request{method: "GET", path: reviews + "?food[gte]=7"}, http.StatusOK).decode(t, &page)
+		if len(page.Items) != 1 || page.Items[0]["title"] != "Great food" {
+			t.Errorf("food filter: %v", page.Items)
 		}
 		e.expect(request{method: "GET", path: reviews + "?sort=-price"}, http.StatusOK).decode(t, &page)
-		if len(page.Items) != 2 || page.Items[0]["kind"] != "joc_de_cartes" {
+		if len(page.Items) != 2 || page.Items[0]["price"] != float64(6) {
 			t.Errorf("price sort: %v", page.Items)
 		}
-		e.expect(request{method: "GET", path: reviews + "?sort=price"}, http.StatusOK).decode(t, &page)
-		if len(page.Items) != 2 || page.Items[0]["kind"] != "joc_de_cartes" {
-			t.Errorf("price sort ascending: %v", page.Items)
+		e.expect(request{method: "GET", path: reviews + "?sort=price&creator[eq]=" + joe.User.ID}, http.StatusOK).decode(t, &page)
+		if len(page.Items) != 1 || page.Items[0]["price"] != float64(2) {
+			t.Errorf("price sort with creator filter: %v", page.Items)
 		}
-		e.expect(request{method: "GET", path: reviews + "?kind[in]=basic&kind[in]=joc_de_cartes&creator[eq]=" + joe.User.ID}, http.StatusOK).decode(t, &page)
-		if len(page.Items) != 1 {
-			t.Errorf("kind and creator filters: %v", page.Items)
+		for _, query := range []string{"food[gte]=11", "kind[eq]=basic", "rating[gte]=1", "sort=rating"} {
+			e.expect(request{method: "GET", path: reviews + "?" + query}, http.StatusBadRequest)
 		}
-		e.expect(request{method: "GET", path: reviews + "?rating[gte]=6"}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/restaurants/aaaaaaaaaaaaaaa/reviews"}, http.StatusNotFound)
 	})
 
-	t.Run("pages of a score sort put other kinds last", func(t *testing.T) {
+	t.Run("pages of a score sort", func(t *testing.T) {
 		sam := e.signUp("sam@example.com", "Sam")
-		e.createReview(sam.Token, id, `{"kind":"basic","rating":5,"title":"Best"}`)
+		e.createReview(sam.Token, id, `{"space":1,"service":1,"food":1,"price":9,"cleanliness":8,"title":"Best"}`)
 		for sort, want := range map[string]string{
-			"-rating": "5,2,joc_de_cartes",
-			"rating":  "2,5,joc_de_cartes",
-			"-price":  "6,basic,basic",
+			"-price": "9,6,2",
+			"price":  "2,6,9",
 		} {
 			var got []string
 			query := reviews + "?limit=1&sort=" + sort
@@ -559,14 +560,7 @@ func TestReviews(t *testing.T) {
 				}
 				e.expect(request{method: "GET", path: query}, http.StatusOK).decode(t, &page)
 				for _, it := range page.Items {
-					switch {
-					case strings.HasPrefix(sort, "-price") && it["kind"] == "joc_de_cartes":
-						got = append(got, fmt.Sprint(it["price"]))
-					case strings.Contains(sort, "rating") && it["kind"] == "basic":
-						got = append(got, fmt.Sprint(it["rating"]))
-					default:
-						got = append(got, it["kind"].(string))
-					}
+					got = append(got, fmt.Sprint(it["price"]))
 				}
 				if page.NextCursor == nil {
 					break
@@ -591,7 +585,7 @@ func TestReviews(t *testing.T) {
 		if c, ok := r["creator"]; !ok || c != nil {
 			t.Errorf("creator %v, want null", c)
 		}
-		e.expect(request{method: "GET", path: reviews + "/" + joc["id"].(string)}, http.StatusNotFound)
+		e.expect(request{method: "GET", path: reviews + "/" + great["id"].(string)}, http.StatusNotFound)
 		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + id, body: `{"description":"x"}`, token: joe.Token}, http.StatusForbidden)
 	})
 }
@@ -735,11 +729,11 @@ func TestListAllReviews(t *testing.T) {
 	joe := e.signUp("joe@example.com", "Joe")
 	luigi := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
 	sole := e.createRestaurant(joe.Token, `{"name":"Can Sole"}`)["id"].(string)
-	e.createReview(ana.Token, luigi, `{"kind":"basic","rating":4,"title":"Ana at Luigi"}`)
+	e.createReview(ana.Token, luigi, `{"space":4,"service":4,"food":4,"price":4,"cleanliness":8,"title":"Ana at Luigi"}`)
 	time.Sleep(2 * time.Millisecond)
-	e.createReview(joe.Token, luigi, `{"kind":"basic","rating":2,"title":"Joe at Luigi"}`)
+	e.createReview(joe.Token, luigi, `{"space":2,"service":2,"food":2,"price":2,"cleanliness":8,"title":"Joe at Luigi"}`)
 	time.Sleep(2 * time.Millisecond)
-	created := e.createReview(ana.Token, sole, `{"kind":"joc_de_cartes","space":7,"service":9,"food":8,"price":6,"title":"Ana at Sole"}`)
+	created := e.createReview(ana.Token, sole, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Ana at Sole"}`)
 
 	if created["restaurant_name"] != "Can Sole" {
 		t.Errorf("create: restaurant_name %v", created["restaurant_name"])
@@ -771,7 +765,7 @@ func TestListAllReviews(t *testing.T) {
 		"creator[eq]=" + ana.User.ID:     "Ana at Sole@Can Sole,Ana at Luigi@Luigi's",
 		"restaurant[eq]=" + luigi:        "Joe at Luigi@Luigi's,Ana at Luigi@Luigi's",
 		"restaurant[in]=" + sole:         "Ana at Sole@Can Sole",
-		"sort=-rating":                   "Ana at Luigi@Luigi's,Joe at Luigi@Luigi's,Ana at Sole@Can Sole",
+		"sort=space":                     "Joe at Luigi@Luigi's,Ana at Luigi@Luigi's,Ana at Sole@Can Sole",
 		"restaurant[eq]=aaaaaaaaaaaaaaa": "",
 	} {
 		if got := titles(list(query)); got != want {

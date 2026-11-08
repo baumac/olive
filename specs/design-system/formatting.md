@@ -30,4 +30,3 @@ The API sends UTC timestamps in the PocketBase format, `2024-11-04 01:26:55.002Z
 
 - The UI supports only English, with `<html lang="en">`. Other languages are out of scope (ADR 00002). Do not add a language switcher or translation files.
 - Format numbers with the `en` locale and dates with `en-GB`, as in the examples above. The page language stays `en`.
-- Review kind names stay as the product names them: "Basic" and "Joc de cartes". "Joc de cartes" is Catalan. Mark it with `<span lang="ca">` so screen readers say it correctly.

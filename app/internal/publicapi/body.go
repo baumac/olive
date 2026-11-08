@@ -82,9 +82,7 @@ var (
 	nameProp     = prop{typ: typeString, check: textRule(checkName)}
 	longTextProp = prop{typ: typeString, check: textRule(checkLongText)}
 	tagsProp     = prop{typ: typeTags, check: tagsRule}
-	kindProp     = prop{typ: typeString, required: true}
-	ratingProp   = prop{typ: typeInteger, check: scoreRule(5)}
-	jocScoreProp = prop{typ: typeInteger, check: scoreRule(10)}
+	scoreProp    = prop{typ: typeInteger, check: scoreRule(maxScore)}
 )
 
 var (
@@ -107,29 +105,25 @@ var (
 		"description": longTextProp.isNullable(),
 		"tags":        tagsProp.isNullable(),
 	}}
-	// The review schemas have the properties of all kinds. The handlers
-	// reject the properties of other kinds.
 	reviewCreateSchema = bodySchema{mediaJSON, map[string]prop{
-		"kind":     kindProp,
-		"rating":   ratingProp,
-		"space":    jocScoreProp,
-		"service":  jocScoreProp,
-		"food":     jocScoreProp,
-		"price":    jocScoreProp,
-		"title":    nameProp.isRequired(),
-		"feedback": longTextProp,
-		"tags":     tagsProp,
+		"space":       scoreProp.isRequired(),
+		"service":     scoreProp.isRequired(),
+		"food":        scoreProp.isRequired(),
+		"price":       scoreProp.isRequired(),
+		"cleanliness": scoreProp.isRequired(),
+		"title":       nameProp.isRequired(),
+		"feedback":    longTextProp,
+		"tags":        tagsProp,
 	}}
 	reviewPatchSchema = bodySchema{mediaMergePatch, map[string]prop{
-		"kind":     kindProp,
-		"rating":   ratingProp,
-		"space":    jocScoreProp,
-		"service":  jocScoreProp,
-		"food":     jocScoreProp,
-		"price":    jocScoreProp,
-		"title":    nameProp,
-		"feedback": longTextProp.isNullable(),
-		"tags":     tagsProp.isNullable(),
+		"space":       scoreProp,
+		"service":     scoreProp,
+		"food":        scoreProp,
+		"price":       scoreProp,
+		"cleanliness": scoreProp,
+		"title":       nameProp,
+		"feedback":    longTextProp.isNullable(),
+		"tags":        tagsProp.isNullable(),
 	}}
 )
 

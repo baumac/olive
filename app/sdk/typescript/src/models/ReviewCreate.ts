@@ -12,28 +12,63 @@
  * Do not edit the class manually.
  */
 
-import { parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime.js';
-import type { BasicReviewCreate } from './BasicReviewCreate.js';
-import {
-    instanceOfBasicReviewCreate,
-    BasicReviewCreateFromJSON,
-    BasicReviewCreateFromJSONTyped,
-    BasicReviewCreateToJSON,
-} from './BasicReviewCreate.js';
-import type { JocDeCartesReviewCreate } from './JocDeCartesReviewCreate.js';
-import {
-    instanceOfJocDeCartesReviewCreate,
-    JocDeCartesReviewCreateFromJSON,
-    JocDeCartesReviewCreateFromJSONTyped,
-    JocDeCartesReviewCreateToJSON,
-} from './JocDeCartesReviewCreate.js';
+import { mapValues } from '../runtime.js';
+/**
+ * The properties of a new review.
+ * @export
+ * @interface ReviewCreate
+ */
+export interface ReviewCreate {
+    /**
+     * 
+     */
+    space: any;
+    /**
+     * 
+     */
+    service: any;
+    /**
+     * 
+     */
+    food: any;
+    /**
+     * 
+     */
+    price: any;
+    /**
+     * 
+     */
+    cleanliness: any;
+    /**
+     * A title with at least one character that is not ASCII whitespace.
+     * Control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * 
+     */
+    title: string;
+    /**
+     * A text of at most 10,000 characters.
+     * Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * 
+     */
+    feedback?: string;
+    /**
+     * Unique tags.
+     */
+    tags?: Set<string>;
+}
 
 /**
- * @type ReviewCreate
- * The properties of a new review. `kind` selects the score properties.
- * @export
+ * Check if a given object implements the ReviewCreate interface.
  */
-export type ReviewCreate = { kind: 'basic' } & BasicReviewCreate | { kind: 'joc_de_cartes' } & JocDeCartesReviewCreate;
+export function instanceOfReviewCreate(value: object): value is ReviewCreate {
+    if (!('space' in value) || value['space'] === undefined) return false;
+    if (!('service' in value) || value['service'] === undefined) return false;
+    if (!('food' in value) || value['food'] === undefined) return false;
+    if (!('price' in value) || value['price'] === undefined) return false;
+    if (!('cleanliness' in value) || value['cleanliness'] === undefined) return false;
+    if (!('title' in value) || value['title'] === undefined) return false;
+    return true;
+}
 
 export function ReviewCreateFromJSON(json: any): ReviewCreate {
     return ReviewCreateFromJSONTyped(json, false);
@@ -43,17 +78,20 @@ export function ReviewCreateFromJSONTyped(json: any, ignoreDiscriminator: boolea
     if (json == null) {
         return json;
     }
-    switch (json['kind']) {
-        case 'basic':
-            return Object.assign({}, BasicReviewCreateFromJSONTyped(json, true), { kind: 'basic' } as const);
-        case 'joc_de_cartes':
-            return Object.assign({}, JocDeCartesReviewCreateFromJSONTyped(json, true), { kind: 'joc_de_cartes' } as const);
-        default:
-            return json;
-    }
+    return {
+        
+        'space': json['space'],
+        'service': json['service'],
+        'food': json['food'],
+        'price': json['price'],
+        'cleanliness': json['cleanliness'],
+        'title': json['title'],
+        'feedback': json['feedback'] == null ? undefined : json['feedback'],
+        'tags': json['tags'] == null ? undefined : new Set(json['tags']),
+    };
 }
 
-export function ReviewCreateToJSON(json: any): any {
+export function ReviewCreateToJSON(json: any): ReviewCreate {
     return ReviewCreateToJSONTyped(json, false);
 }
 
@@ -61,13 +99,17 @@ export function ReviewCreateToJSONTyped(value?: ReviewCreate | null, ignoreDiscr
     if (value == null) {
         return value;
     }
-    switch (value['kind']) {
-        case 'basic':
-            return Object.assign({}, BasicReviewCreateToJSON(value), { 'kind': 'basic' } as const);
-        case 'joc_de_cartes':
-            return Object.assign({}, JocDeCartesReviewCreateToJSON(value), { 'kind': 'joc_de_cartes' } as const);
-        default:
-            return value;
-    }
+
+    return {
+        
+        'space': value['space'],
+        'service': value['service'],
+        'food': value['food'],
+        'price': value['price'],
+        'cleanliness': value['cleanliness'],
+        'title': value['title'],
+        'feedback': value['feedback'],
+        'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
+    };
 }
 

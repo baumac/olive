@@ -12,9 +12,9 @@ import (
 	"github.com/oapi-codegen/nullable"
 )
 
-const basicReviewJSON = `{
-	"id": "r7d4f0h2j9l5s3v", "restaurant": "k3x9m2p7q1w8z4a", "kind": "basic",
-	"rating": 5, "title": "Best carbonara in town",
+const reviewJSON = `{
+	"id": "r7d4f0h2j9l5s3v", "restaurant": "k3x9m2p7q1w8z4a", "restaurant_name": "Luigi's",
+	"space": 7, "service": 9, "food": 8, "price": 6, "cleanliness": 5, "title": "Best carbonara in town",
 	"creator": {"id": "u2g6k0m4o8q1s5w", "name": "Joe"},
 	"created": "2024-11-04 01:38:00.431Z", "updated": "2024-11-05 09:12:00.000Z"
 }`
@@ -65,56 +65,13 @@ func serve(t *testing.T, f *fakeServer, method, target, contentType, body string
 	return rec
 }
 
-func TestReviewUnionSelectsKind(t *testing.T) {
+func TestReviewReadsScores(t *testing.T) {
 	var r reviewsapi.Review
-	if err := json.Unmarshal([]byte(basicReviewJSON), &r); err != nil {
+	if err := json.Unmarshal([]byte(reviewJSON), &r); err != nil {
 		t.Fatal(err)
 	}
-	v, err := r.ValueByDiscriminator()
-	if err != nil {
-		t.Fatal(err)
-	}
-	basic, ok := v.(reviewsapi.BasicReview)
-	if !ok {
-		t.Fatalf("got %T, want BasicReview", v)
-	}
-	if basic.Rating != 5 || basic.Title != "Best carbonara in town" {
-		t.Errorf("got %+v", basic)
-	}
-}
-
-// ValueByDiscriminator returns an error for a kind that the spec does not
-// list. AsOtherReview still gets the common properties.
-func TestReviewUnionKeepsUnknownKind(t *testing.T) {
-	body := strings.Replace(basicReviewJSON, `"kind": "basic"`, `"kind": "tasting_menu"`, 1)
-	var r reviewsapi.Review
-	if err := json.Unmarshal([]byte(body), &r); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := r.ValueByDiscriminator(); err == nil {
-		t.Error("ValueByDiscriminator accepted an unknown kind")
-	}
-	other, err := r.AsOtherReview()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if other.Kind != "tasting_menu" || other.Title != "Best carbonara in town" {
-		t.Errorf("got %+v", other)
-	}
-}
-
-func TestReviewUnionSetsKindOnMarshal(t *testing.T) {
-	var r reviewsapi.Review
-	err := r.FromBasicReview(reviewsapi.BasicReview{Id: "r7d4f0h2j9l5s3v", Rating: 4, Title: "Good"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := json.Marshal(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(b), `"kind":"basic"`) {
-		t.Errorf("got %s", b)
+	if r.Space != 7 || r.Service != 9 || r.Food != 8 || r.Price != 6 || r.Cleanliness != 5 || r.RestaurantName != "Luigi's" {
+		t.Errorf("got %+v", r)
 	}
 }
 
@@ -149,14 +106,14 @@ func TestDeepObjectAndExplodedFilters(t *testing.T) {
 		return reviewsapi.ListReviews200JSONResponse{Items: []reviewsapi.Review{}}
 	}
 	rec := serve(t, f, http.MethodGet,
-		"/v1/restaurants/k3x9m2p7q1w8z4a/reviews?rating[gte]=4&rating[lt]=5"+
+		"/v1/restaurants/k3x9m2p7q1w8z4a/reviews?food[gte]=4&food[lt]=5"+
 			"&tags[has_any]=italian&tags[has_any]=pasta"+
 			"&created[gte]=2024-11-01%2000:00:00.000Z", "", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
-	if got.Rating == nil || *got.Rating.Gte != 4 || *got.Rating.Lt != 5 || got.Rating.Eq != nil {
-		t.Errorf("rating: got %+v", got.Rating)
+	if got.Food == nil || *got.Food.Gte != 4 || *got.Food.Lt != 5 || got.Food.Eq != nil {
+		t.Errorf("food: got %+v", got.Food)
 	}
 	if got.TagsHasAny == nil || strings.Join(*got.TagsHasAny, ",") != "italian,pasta" {
 		t.Errorf("tags[has_any]: got %v", got.TagsHasAny)

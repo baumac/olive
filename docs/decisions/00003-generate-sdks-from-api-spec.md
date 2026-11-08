@@ -77,8 +77,8 @@ const auth = await users.signIn({
 const restaurants = new RestaurantsApi(config)
 const page = await restaurants.listReviews({
   restaurantId: 'k3x9m2p7q1w8z4a',
-  rating: { gte: 4 },
-  sort: '-rating,title',
+  food: { gte: 7 },
+  sort: '-food,title',
 })
 ```
 
@@ -123,7 +123,7 @@ It also fails when a handler returns a status or a body that the spec does not d
 | --- | --- |
 | OpenAPI Generator `typescript-fetch` for the UI | Selected. It uses the browser `fetch` and has no runtime dependencies. It makes a TypeScript interface and `FromJSON` and `ToJSON` functions for each model. |
 | oapi-codegen for the API | Selected. It makes idiomatic Go types and a strict server for `net/http`. It supports OpenAPI 3.1. |
-| OpenAPI Generator `go-server` for the API | Not selected. Handlers return an untyped status and body, so the compiler does not check responses against the spec. It does not support `oneOf`, `allOf`, `not`, `null`, or `deepObject`, which the review kinds, merge patches, and filters need. It also adds a second router to the PocketBase app. |
+| OpenAPI Generator `go-server` for the API | Not selected. Handlers return an untyped status and body, so the compiler does not check responses against the spec. It does not support `oneOf`, `null`, or `deepObject`, which the merge patches and filters need. It also adds a second router to the PocketBase app. |
 | Hand-written types and clients | Not selected. They drift from the spec. |
 
 ## Layout
@@ -160,9 +160,8 @@ app/sdk/
   - `importFileExtension`: `.js`. The package is an ES module.
   - `useSingleRequestParameter`: `true`
   - `withInterfaces`: `true`. Tests in the UI can replace an API class with a fake.
-  - `legacyDiscriminatorBehavior`: `false`. The `Review`, `ReviewCreate`, and `ReviewPatch` unions then select the model from `kind`.
+  - `legacyDiscriminatorBehavior`: `false`. The spec has no discriminator now. The option stays for a later union.
   - `apiDocs` and `modelDocs`: `false`. The spec is the documentation.
-- `stringEnums` stays `false`. With `true`, the enum type of `kind` does not match the literal types of the union, and `tsc` fails.
 - the SDK and the UI use TypeScript 6.0.3. `vue-tsc` needs the JavaScript API of the compiler, and TypeScript 7 does not have it. One version for the npm workspace keeps one copy in `node_modules`.
 - `tsc` builds the package into `app/sdk/typescript/dist`. The UI imports the built package. `make build-ui` builds the SDK first.
 - `package.json` is hand-written. The package name is `@reviews/sdk`.
@@ -199,12 +198,10 @@ We do not change the meaning of the spec to work around a generator without a ne
 
 | Part of the spec | Result | Test |
 | --- | --- | --- |
-| `Review` is a `oneOf` with a `discriminator` on `kind` | TypeScript selects `BasicReview` or `JocDeCartesReview` from `kind`. Go makes a union type with `AsBasicReview`, `AsJocDeCartesReview`, and `ValueByDiscriminator` methods. | both SDKs |
-| `OtherReview` uses `not` for kinds that a later release adds | TypeScript returns the JSON object without changes. Go `ValueByDiscriminator` returns an error, but `AsOtherReview` gets the common properties. | both SDKs |
-| `const` values on `kind` | TypeScript and Go make an enum type with one value | both SDKs |
+| `Review` has the five scores and `restaurant_name` | TypeScript reads `restaurant_name` as `restaurantName`. Go makes one struct. | both SDKs |
 | Merge patch bodies with `application/merge-patch+json` | The client sends this content type. A `null` value stays in the body. A missing property is not in the body. | TypeScript |
 | Merge patch bodies on the server | The handler sees the difference between a missing property and `null` | Go |
-| `deepObject` filters, such as `rating` | The client sends `rating[gte]=4`. It encodes the brackets as `%5B` and `%5D`, which servers decode. The server reads the filter into a struct. | both SDKs |
+| `deepObject` filters, such as `food` | The client sends `food[gte]=4`. It encodes the brackets as `%5B` and `%5D`, which servers decode. The server reads the filter into a struct. | both SDKs |
 | Array filters with `explode: true`, such as `tags[has_any]` | The client repeats the parameter for each value | both SDKs |
 | `Timestamp` is a string with a `pattern`, not `date-time` | Both SDKs keep the value as a string. They do not parse it as a date. | both SDKs |
 | `next_cursor` is `null` on the last page | Go uses `nullable.Nullable` and sends `null`. TypeScript gives `null`. | both SDKs |
@@ -218,12 +215,8 @@ We do not change the meaning of the spec to work around a generator without a ne
   `app/sdk/typescript/templates/modelGeneric.mustache` is a copy of the generator template with a fix in the `ToJSON` part. It keeps `null`.
   Update this copy when the generator version changes.
 - `typescript-fetch` makes a `Set<string>` for `tags` because of `uniqueItems`. The UI changes it to an array where it needs one.
-- both generators add the schema name `OtherReview` as a discriminator value, because the mapping has no entry for it.
-  The TypeScript type of `kind` therefore lists `OtherReview`, not `string`.
-  The UI handles a `kind` that it does not know in the `default` branch of a `switch`.
 - the spec has these changes that do not change the API:
-  - each `kind` with `const` also has `type: string`. Without it, `typescript-fetch` cannot read the discriminator.
-  - the `deepObject` filters use the named schemas `RatingRange`, `ScoreRange`, and `TimestampRange`. Without them, the generated names come from the first operation that uses each filter.
+  - the `deepObject` filters use the named schemas `ScoreRange` and `TimestampRange`. Without them, the generated names come from the first operation that uses each filter.
 
 ## Out-of-date check
 

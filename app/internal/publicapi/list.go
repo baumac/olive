@@ -47,16 +47,12 @@ var restaurantQuery = withRanges(map[string]int{
 	"creator[eq]": 1, "creator[in]": maxOtherValues,
 }, "created", "updated")
 
-var reviewQuery = withRanges(maps.Clone(restaurantQuery), "rating", "space", "service", "food", "price")
+var reviewQuery = withRanges(maps.Clone(restaurantQuery), "space", "service", "food", "price", "cleanliness")
 
 // allReviewQuery adds the restaurant filters of GET /v1/reviews.
 var allReviewQuery = maps.Clone(reviewQuery)
 
 func init() {
-	for _, q := range []map[string]int{reviewQuery, allReviewQuery} {
-		q["kind[eq]"] = 1
-		q["kind[in]"] = maxOtherValues
-	}
 	allReviewQuery["restaurant[eq]"] = 1
 	allReviewQuery["restaurant[in]"] = maxOtherValues
 }
@@ -89,21 +85,9 @@ func timestampSort(table, name string) sortField {
 	}
 }
 
-// scoreSort puts the reviews of other kinds last in both directions. The
-// first key is 0 for reviews of kind and 1 for other reviews.
-func scoreSort(table, kind, name string) sortField {
+func scoreSort(table, name string) sortField {
 	return func(desc bool) []sortKey {
-		other := sortKey{
-			expr: fmt.Sprintf("(CASE WHEN %s = '%s' THEN 0 ELSE 1 END)", column(table, "kind"), kind),
-			value: func(r *core.Record) any {
-				if r.GetString("kind") == kind {
-					return 0
-				}
-				return 1
-			},
-		}
-		score := sortKey{column(table, name), desc, func(r *core.Record) any { return r.GetInt(name) }}
-		return []sortKey{other, score}
+		return []sortKey{{column(table, name), desc, func(r *core.Record) any { return r.GetInt(name) }}}
 	}
 }
 

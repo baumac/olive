@@ -18,96 +18,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Defines values for BasicReviewKind.
-const (
-	BasicReviewKindBasic BasicReviewKind = "basic"
-)
-
-// Valid indicates whether the value is a known member of the BasicReviewKind enum.
-func (e BasicReviewKind) Valid() bool {
-	switch e {
-	case BasicReviewKindBasic:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for BasicReviewCreateKind.
-const (
-	BasicReviewCreateKindBasic BasicReviewCreateKind = "basic"
-)
-
-// Valid indicates whether the value is a known member of the BasicReviewCreateKind enum.
-func (e BasicReviewCreateKind) Valid() bool {
-	switch e {
-	case BasicReviewCreateKindBasic:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for BasicReviewPatchKind.
-const (
-	BasicReviewPatchKindBasic BasicReviewPatchKind = "basic"
-)
-
-// Valid indicates whether the value is a known member of the BasicReviewPatchKind enum.
-func (e BasicReviewPatchKind) Valid() bool {
-	switch e {
-	case BasicReviewPatchKindBasic:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for JocDeCartesReviewKind.
-const (
-	JocDeCartesReviewKindJocDeCartes JocDeCartesReviewKind = "joc_de_cartes"
-)
-
-// Valid indicates whether the value is a known member of the JocDeCartesReviewKind enum.
-func (e JocDeCartesReviewKind) Valid() bool {
-	switch e {
-	case JocDeCartesReviewKindJocDeCartes:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for JocDeCartesReviewCreateKind.
-const (
-	JocDeCartesReviewCreateKindJocDeCartes JocDeCartesReviewCreateKind = "joc_de_cartes"
-)
-
-// Valid indicates whether the value is a known member of the JocDeCartesReviewCreateKind enum.
-func (e JocDeCartesReviewCreateKind) Valid() bool {
-	switch e {
-	case JocDeCartesReviewCreateKindJocDeCartes:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for JocDeCartesReviewPatchKind.
-const (
-	JocDeCartesReviewPatchKindJocDeCartes JocDeCartesReviewPatchKind = "joc_de_cartes"
-)
-
-// Valid indicates whether the value is a known member of the JocDeCartesReviewPatchKind enum.
-func (e JocDeCartesReviewPatchKind) Valid() bool {
-	switch e {
-	case JocDeCartesReviewPatchKindJocDeCartes:
-		return true
-	default:
-		return false
-	}
-}
-
 // AuthToken An auth token and the user that it belongs to.
 //
 // Examples: {"expires":"2024-11-08 08:12:40.517Z","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InU1bjFjOHIzdDZ5MGIyZSJ9.c2lnbmF0dXJl","user":{"created":"2024-11-01 08:12:40.517Z","email":"ana@example.com","id":"u5n1c8r3t6y0b2e","name":"Ana","updated":"2024-11-01 08:12:40.517Z"}}
@@ -134,95 +44,8 @@ type AuthToken struct {
 	User User `json:"user"`
 }
 
-// BasicReview A review with one overall score.
-type BasicReview struct {
-	// Created A UTC timestamp with millisecond precision. This format is not RFC 3339.
-	//
-	// Examples: 2024-11-04 01:26:55.002Z
-	Created Timestamp `json:"created"`
-
-	// Creator The public fields of a user.
-	Creator Creator `json:"creator"`
-
-	// Feedback A text of at most 10,000 characters.
-	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Feedback *LongText `json:"feedback,omitempty"`
-
-	// Id A record ID of 15 characters.
-	//
-	// Examples: k3x9m2p7q1w8z4a
-	Id   RecordId        `json:"id"`
-	Kind BasicReviewKind `json:"kind"`
-
-	// Rating The overall score of a `basic` review.
-	Rating Rating `json:"rating"`
-
-	// Restaurant A record ID of 15 characters.
-	//
-	// Examples: k3x9m2p7q1w8z4a
-	Restaurant RecordId `json:"restaurant"`
-
-	// RestaurantName The `name` of the reviewed restaurant.
-	// The name of a restaurant with reviews cannot change, so this value stays correct.
-	RestaurantName Name `json:"restaurant_name"`
-
-	// Tags Unique tags.
-	//
-	// Examples: ["italian","pasta"]
-	Tags *Tags `json:"tags,omitempty"`
-
-	// Title A title with at least one character that is not ASCII whitespace.
-	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Title Title `json:"title"`
-
-	// Updated A UTC timestamp with millisecond precision. This format is not RFC 3339.
-	//
-	// Examples: 2024-11-04 01:26:55.002Z
-	Updated Timestamp `json:"updated"`
-}
-
-// BasicReviewKind defines model for BasicReview.Kind.
-type BasicReviewKind string
-
-// BasicReviewCreate The properties of a new `basic` review.
-type BasicReviewCreate struct {
-	// Feedback A text of at most 10,000 characters.
-	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Feedback *LongText             `json:"feedback,omitempty"`
-	Kind     BasicReviewCreateKind `json:"kind"`
-
-	// Rating The overall score of a `basic` review.
-	Rating Rating `json:"rating"`
-
-	// Tags Unique tags.
-	//
-	// Examples: ["italian","pasta"]
-	Tags *Tags `json:"tags,omitempty"`
-
-	// Title A title with at least one character that is not ASCII whitespace.
-	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Title Title `json:"title"`
-}
-
-// BasicReviewCreateKind defines model for BasicReviewCreate.Kind.
-type BasicReviewCreateKind string
-
-// BasicReviewPatch A JSON Merge Patch for a `basic` review.
-type BasicReviewPatch struct {
-	Feedback nullable.Nullable[LongText] `json:"feedback,omitempty"`
-	Kind     BasicReviewPatchKind        `json:"kind"`
-
-	// Rating The overall score of a `basic` review.
-	Rating *Rating                 `json:"rating,omitempty"`
-	Tags   nullable.Nullable[Tags] `json:"tags,omitempty"`
-
-	// Title A title with at least one character that is not ASCII whitespace.
-	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Title *Title `json:"title,omitempty"`
-}
-
-// BasicReviewPatchKind defines model for BasicReviewPatch.Kind.
-type BasicReviewPatchKind string
+// CleanlinessScore Cleanliness of the dining room, the tableware, and the restrooms.
+type CleanlinessScore = Score
 
 // Creator The public fields of a user.
 type Creator struct {
@@ -253,127 +76,7 @@ type Credentials struct {
 type Email = openapi_types.Email
 
 // FoodScore Presentation, flavor, ingredient quality, and culinary execution.
-type FoodScore = JocDeCartesScore
-
-// JocDeCartesReview A review that scores the space, service, food, and price.
-type JocDeCartesReview struct {
-	// Created A UTC timestamp with millisecond precision. This format is not RFC 3339.
-	//
-	// Examples: 2024-11-04 01:26:55.002Z
-	Created Timestamp `json:"created"`
-
-	// Creator The public fields of a user.
-	Creator Creator `json:"creator"`
-
-	// Feedback A text of at most 10,000 characters.
-	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Feedback *LongText `json:"feedback,omitempty"`
-
-	// Food Presentation, flavor, ingredient quality, and culinary execution.
-	Food FoodScore `json:"food"`
-
-	// Id A record ID of 15 characters.
-	//
-	// Examples: k3x9m2p7q1w8z4a
-	Id   RecordId              `json:"id"`
-	Kind JocDeCartesReviewKind `json:"kind"`
-
-	// Price Value for money, and whether the final bill matches the quality provided.
-	Price PriceScore `json:"price"`
-
-	// Restaurant A record ID of 15 characters.
-	//
-	// Examples: k3x9m2p7q1w8z4a
-	Restaurant RecordId `json:"restaurant"`
-
-	// RestaurantName The `name` of the reviewed restaurant.
-	// The name of a restaurant with reviews cannot change, so this value stays correct.
-	RestaurantName Name `json:"restaurant_name"`
-
-	// Service Professionalism, speed, friendliness, and attentiveness of the waitstaff.
-	Service ServiceScore `json:"service"`
-
-	// Space Decoration, cleanliness, comfort, atmosphere, and kitchen setup.
-	Space SpaceScore `json:"space"`
-
-	// Tags Unique tags.
-	//
-	// Examples: ["italian","pasta"]
-	Tags *Tags `json:"tags,omitempty"`
-
-	// Title A title with at least one character that is not ASCII whitespace.
-	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Title Title `json:"title"`
-
-	// Updated A UTC timestamp with millisecond precision. This format is not RFC 3339.
-	//
-	// Examples: 2024-11-04 01:26:55.002Z
-	Updated Timestamp `json:"updated"`
-}
-
-// JocDeCartesReviewKind defines model for JocDeCartesReview.Kind.
-type JocDeCartesReviewKind string
-
-// JocDeCartesReviewCreate The properties of a new `joc_de_cartes` review.
-type JocDeCartesReviewCreate struct {
-	// Feedback A text of at most 10,000 characters.
-	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Feedback *LongText `json:"feedback,omitempty"`
-
-	// Food Presentation, flavor, ingredient quality, and culinary execution.
-	Food FoodScore                   `json:"food"`
-	Kind JocDeCartesReviewCreateKind `json:"kind"`
-
-	// Price Value for money, and whether the final bill matches the quality provided.
-	Price PriceScore `json:"price"`
-
-	// Service Professionalism, speed, friendliness, and attentiveness of the waitstaff.
-	Service ServiceScore `json:"service"`
-
-	// Space Decoration, cleanliness, comfort, atmosphere, and kitchen setup.
-	Space SpaceScore `json:"space"`
-
-	// Tags Unique tags.
-	//
-	// Examples: ["italian","pasta"]
-	Tags *Tags `json:"tags,omitempty"`
-
-	// Title A title with at least one character that is not ASCII whitespace.
-	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Title Title `json:"title"`
-}
-
-// JocDeCartesReviewCreateKind defines model for JocDeCartesReviewCreate.Kind.
-type JocDeCartesReviewCreateKind string
-
-// JocDeCartesReviewPatch A JSON Merge Patch for a `joc_de_cartes` review.
-type JocDeCartesReviewPatch struct {
-	Feedback nullable.Nullable[LongText] `json:"feedback,omitempty"`
-
-	// Food Presentation, flavor, ingredient quality, and culinary execution.
-	Food *FoodScore                 `json:"food,omitempty"`
-	Kind JocDeCartesReviewPatchKind `json:"kind"`
-
-	// Price Value for money, and whether the final bill matches the quality provided.
-	Price *PriceScore `json:"price,omitempty"`
-
-	// Service Professionalism, speed, friendliness, and attentiveness of the waitstaff.
-	Service *ServiceScore `json:"service,omitempty"`
-
-	// Space Decoration, cleanliness, comfort, atmosphere, and kitchen setup.
-	Space *SpaceScore             `json:"space,omitempty"`
-	Tags  nullable.Nullable[Tags] `json:"tags,omitempty"`
-
-	// Title A title with at least one character that is not ASCII whitespace.
-	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Title *Title `json:"title,omitempty"`
-}
-
-// JocDeCartesReviewPatchKind defines model for JocDeCartesReviewPatch.Kind.
-type JocDeCartesReviewPatchKind string
-
-// JocDeCartesScore The score of one category of a `joc_de_cartes` review.
-type JocDeCartesScore = int
+type FoodScore = Score
 
 // LongText A text of at most 10,000 characters.
 // Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
@@ -386,50 +89,6 @@ type Name = string
 // NextCursor The cursor for the next page. It is `null` on the last page.
 type NextCursor = string
 
-// OtherReview A review of a kind that a later release adds. Clients can show the common properties.
-type OtherReview struct {
-	// Created A UTC timestamp with millisecond precision. This format is not RFC 3339.
-	//
-	// Examples: 2024-11-04 01:26:55.002Z
-	Created Timestamp `json:"created"`
-
-	// Creator The public fields of a user.
-	Creator Creator `json:"creator"`
-
-	// Feedback A text of at most 10,000 characters.
-	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Feedback *LongText `json:"feedback,omitempty"`
-
-	// Id A record ID of 15 characters.
-	//
-	// Examples: k3x9m2p7q1w8z4a
-	Id   RecordId `json:"id"`
-	Kind string   `json:"kind"`
-
-	// Restaurant A record ID of 15 characters.
-	//
-	// Examples: k3x9m2p7q1w8z4a
-	Restaurant RecordId `json:"restaurant"`
-
-	// RestaurantName The `name` of the reviewed restaurant.
-	// The name of a restaurant with reviews cannot change, so this value stays correct.
-	RestaurantName Name `json:"restaurant_name"`
-
-	// Tags Unique tags.
-	//
-	// Examples: ["italian","pasta"]
-	Tags *Tags `json:"tags,omitempty"`
-
-	// Title A title with at least one character that is not ASCII whitespace.
-	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
-	Title Title `json:"title"`
-
-	// Updated A UTC timestamp with millisecond precision. This format is not RFC 3339.
-	//
-	// Examples: 2024-11-04 01:26:55.002Z
-	Updated Timestamp `json:"updated"`
-}
-
 // Password A password of 8 to 71 characters.
 // Its UTF-8 encoding must be at most 72 bytes.
 // A longer password causes `422 Unprocessable Content`.
@@ -438,11 +97,11 @@ type OtherReview struct {
 type Password = string
 
 // PriceScore Value for money, and whether the final bill matches the quality provided.
-type PriceScore = JocDeCartesScore
+type PriceScore = Score
 
 // Problem An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type Problem struct {
 	Detail *string `json:"detail,omitempty"`
 
@@ -452,27 +111,6 @@ type Problem struct {
 	Status   int                `json:"status"`
 	Title    string             `json:"title"`
 	Type     string             `json:"type"`
-}
-
-// Rating The overall score of a `basic` review.
-type Rating = int
-
-// RatingRange Comparisons for a `basic` rating. All comparisons must match.
-type RatingRange struct {
-	// Eq The overall score of a `basic` review.
-	Eq *Rating `json:"eq,omitempty"`
-
-	// Gt The overall score of a `basic` review.
-	Gt *Rating `json:"gt,omitempty"`
-
-	// Gte The overall score of a `basic` review.
-	Gte *Rating `json:"gte,omitempty"`
-
-	// Lt The overall score of a `basic` review.
-	Lt *Rating `json:"lt,omitempty"`
-
-	// Lte The overall score of a `basic` review.
-	Lte *Rating `json:"lte,omitempty"`
 }
 
 // RecordId A record ID of 15 characters.
@@ -544,7 +182,7 @@ type RestaurantList struct {
 	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
 }
 
-// RestaurantPatch A JSON Merge Patch. `null` clears an optional property.
+// RestaurantPatch A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
 //
 // Examples: {"description":"A family-run Italian restaurant since 1987","tags":null}
 type RestaurantPatch struct {
@@ -556,17 +194,13 @@ type RestaurantPatch struct {
 	Tags nullable.Nullable[Tags] `json:"tags,omitempty"`
 }
 
-// Review A review of a restaurant. `kind` selects the score properties.
-// Later releases of `/v1` can add kinds.
-// Clients must handle unknown kinds without failing.
+// Review A review of a restaurant. It scores the space, service, food, price, and cleanliness.
 //
-// Examples: {"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"feedback":"Friendly staff and great pasta","id":"r7d4f0h2j9l5s3v","kind":"basic","rating":5,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","tags":["favorites"],"title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"}
+// Examples: {"cleanliness":8,"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"feedback":"Friendly staff and great pasta","food":8,"id":"r1b8c5e2g9i6k3m","price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"tags":["date-night"],"title":"Great food, a bit expensive","updated":"2024-11-07 09:12:00.000Z"}
 type Review struct {
-	union json.RawMessage
-}
+	// Cleanliness Cleanliness of the dining room, the tableware, and the restrooms.
+	Cleanliness CleanlinessScore `json:"cleanliness"`
 
-// ReviewBase The properties that all review kinds have.
-type ReviewBase struct {
 	// Created A UTC timestamp with millisecond precision. This format is not RFC 3339.
 	//
 	// Examples: 2024-11-04 01:26:55.002Z
@@ -579,11 +213,16 @@ type ReviewBase struct {
 	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Feedback *LongText `json:"feedback,omitempty"`
 
+	// Food Presentation, flavor, ingredient quality, and culinary execution.
+	Food FoodScore `json:"food"`
+
 	// Id A record ID of 15 characters.
 	//
 	// Examples: k3x9m2p7q1w8z4a
-	Id   RecordId `json:"id"`
-	Kind string   `json:"kind"`
+	Id RecordId `json:"id"`
+
+	// Price Value for money, and whether the final bill matches the quality provided.
+	Price PriceScore `json:"price"`
 
 	// Restaurant A record ID of 15 characters.
 	//
@@ -593,6 +232,12 @@ type ReviewBase struct {
 	// RestaurantName The `name` of the reviewed restaurant.
 	// The name of a restaurant with reviews cannot change, so this value stays correct.
 	RestaurantName Name `json:"restaurant_name"`
+
+	// Service Professionalism, speed, friendliness, and attentiveness of the waitstaff.
+	Service ServiceScore `json:"service"`
+
+	// Space Decoration, comfort, atmosphere, and kitchen setup.
+	Space SpaceScore `json:"space"`
 
 	// Tags Unique tags.
 	//
@@ -609,16 +254,42 @@ type ReviewBase struct {
 	Updated Timestamp `json:"updated"`
 }
 
-// ReviewCreate The properties of a new review. `kind` selects the score properties.
+// ReviewCreate The properties of a new review.
 //
-// Examples: {"kind":"basic","rating":5,"title":"Best carbonara in town"}, {"food":8,"kind":"joc_de_cartes","price":6,"service":9,"space":7,"title":"Great food, a bit expensive"}
+// Examples: {"cleanliness":8,"food":8,"price":6,"service":9,"space":7,"title":"Great food, a bit expensive"}
 type ReviewCreate struct {
-	union json.RawMessage
+	// Cleanliness Cleanliness of the dining room, the tableware, and the restrooms.
+	Cleanliness CleanlinessScore `json:"cleanliness"`
+
+	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and zero-width spaces cause `422`.
+	Feedback *LongText `json:"feedback,omitempty"`
+
+	// Food Presentation, flavor, ingredient quality, and culinary execution.
+	Food FoodScore `json:"food"`
+
+	// Price Value for money, and whether the final bill matches the quality provided.
+	Price PriceScore `json:"price"`
+
+	// Service Professionalism, speed, friendliness, and attentiveness of the waitstaff.
+	Service ServiceScore `json:"service"`
+
+	// Space Decoration, comfort, atmosphere, and kitchen setup.
+	Space SpaceScore `json:"space"`
+
+	// Tags Unique tags.
+	//
+	// Examples: ["italian","pasta"]
+	Tags *Tags `json:"tags,omitempty"`
+
+	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
+	Title Title `json:"title"`
 }
 
-// ReviewList A page of reviews. It can contain reviews of all kinds.
+// ReviewList A page of reviews.
 //
-// Examples: {"items":[{"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"id":"r7d4f0h2j9l5s3v","kind":"basic","rating":5,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"},{"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"food":8,"id":"r1b8c5e2g9i6k3m","kind":"joc_de_cartes","price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"title":"Great food, a bit expensive","updated":"2024-11-06 19:02:11.120Z"}],"next_cursor":null}
+// Examples: {"items":[{"cleanliness":8,"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"food":10,"id":"r7d4f0h2j9l5s3v","price":9,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":10,"space":8,"title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"},{"cleanliness":8,"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"food":8,"id":"r1b8c5e2g9i6k3m","price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"title":"Great food, a bit expensive","updated":"2024-11-06 19:02:11.120Z"}],"next_cursor":null}
 type ReviewList struct {
 	Items []Review `json:"items"`
 
@@ -626,37 +297,58 @@ type ReviewList struct {
 	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
 }
 
-// ReviewPatch A JSON Merge Patch. `null` clears an optional property.
-// `kind` must be equal to the stored kind.
+// ReviewPatch A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
 //
-// Examples: {"feedback":null,"kind":"basic","rating":4}, {"kind":"joc_de_cartes","price":7}
+// Examples: {"feedback":null,"price":7}
 type ReviewPatch struct {
-	union json.RawMessage
+	// Cleanliness Cleanliness of the dining room, the tableware, and the restrooms.
+	Cleanliness *CleanlinessScore           `json:"cleanliness,omitempty"`
+	Feedback    nullable.Nullable[LongText] `json:"feedback,omitempty"`
+
+	// Food Presentation, flavor, ingredient quality, and culinary execution.
+	Food *FoodScore `json:"food,omitempty"`
+
+	// Price Value for money, and whether the final bill matches the quality provided.
+	Price *PriceScore `json:"price,omitempty"`
+
+	// Service Professionalism, speed, friendliness, and attentiveness of the waitstaff.
+	Service *ServiceScore `json:"service,omitempty"`
+
+	// Space Decoration, comfort, atmosphere, and kitchen setup.
+	Space *SpaceScore             `json:"space,omitempty"`
+	Tags  nullable.Nullable[Tags] `json:"tags,omitempty"`
+
+	// Title A title with at least one character that is not ASCII whitespace.
+	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
+	Title *Title `json:"title,omitempty"`
 }
 
-// ScoreRange Comparisons for a `joc_de_cartes` score. All comparisons must match.
+// Score The score of one category of a review.
+type Score = int
+
+// ScoreRange Comparisons for a score. All comparisons must match.
 type ScoreRange struct {
-	// Eq The score of one category of a `joc_de_cartes` review.
-	Eq *JocDeCartesScore `json:"eq,omitempty"`
+	// Eq The score of one category of a review.
+	Eq *Score `json:"eq,omitempty"`
 
-	// Gt The score of one category of a `joc_de_cartes` review.
-	Gt *JocDeCartesScore `json:"gt,omitempty"`
+	// Gt The score of one category of a review.
+	Gt *Score `json:"gt,omitempty"`
 
-	// Gte The score of one category of a `joc_de_cartes` review.
-	Gte *JocDeCartesScore `json:"gte,omitempty"`
+	// Gte The score of one category of a review.
+	Gte *Score `json:"gte,omitempty"`
 
-	// Lt The score of one category of a `joc_de_cartes` review.
-	Lt *JocDeCartesScore `json:"lt,omitempty"`
+	// Lt The score of one category of a review.
+	Lt *Score `json:"lt,omitempty"`
 
-	// Lte The score of one category of a `joc_de_cartes` review.
-	Lte *JocDeCartesScore `json:"lte,omitempty"`
+	// Lte The score of one category of a review.
+	Lte *Score `json:"lte,omitempty"`
 }
 
 // ServiceScore Professionalism, speed, friendliness, and attentiveness of the waitstaff.
-type ServiceScore = JocDeCartesScore
+type ServiceScore = Score
 
-// SpaceScore Decoration, cleanliness, comfort, atmosphere, and kitchen setup.
-type SpaceScore = JocDeCartesScore
+// SpaceScore Decoration, comfort, atmosphere, and kitchen setup.
+type SpaceScore = Score
 
 // Tag A lowercase tag. Words are separated by single hyphens.
 type Tag = string
@@ -764,6 +456,9 @@ type ValidationError struct {
 	Property string `json:"property"`
 }
 
+// CleanlinessFilter Comparisons for a score. All comparisons must match.
+type CleanlinessFilter = ScoreRange
+
 // CreatedFilter Comparisons for a timestamp. All comparisons must match.
 type CreatedFilter = TimestampRange
 
@@ -778,23 +473,14 @@ type CreatorIn = []RecordId
 // Cursor defines model for Cursor.
 type Cursor = string
 
-// FoodFilter Comparisons for a `joc_de_cartes` score. All comparisons must match.
+// FoodFilter Comparisons for a score. All comparisons must match.
 type FoodFilter = ScoreRange
-
-// KindEq defines model for KindEq.
-type KindEq = string
-
-// KindIn Examples: ["basic","joc_de_cartes"]
-type KindIn = []string
 
 // Limit defines model for Limit.
 type Limit = int
 
-// PriceFilter Comparisons for a `joc_de_cartes` score. All comparisons must match.
+// PriceFilter Comparisons for a score. All comparisons must match.
 type PriceFilter = ScoreRange
-
-// RatingFilter Comparisons for a `basic` rating. All comparisons must match.
-type RatingFilter = RatingRange
 
 // RestaurantEq A record ID of 15 characters.
 //
@@ -820,10 +506,10 @@ type ReviewId = RecordId
 // ReviewSort defines model for ReviewSort.
 type ReviewSort = string
 
-// ServiceFilter Comparisons for a `joc_de_cartes` score. All comparisons must match.
+// ServiceFilter Comparisons for a score. All comparisons must match.
 type ServiceFilter = ScoreRange
 
-// SpaceFilter Comparisons for a `joc_de_cartes` score. All comparisons must match.
+// SpaceFilter Comparisons for a score. All comparisons must match.
 type SpaceFilter = ScoreRange
 
 // TagsHas A lowercase tag. Words are separated by single hyphens.
@@ -840,52 +526,52 @@ type UpdatedFilter = TimestampRange
 
 // BadRequest An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type BadRequest = Problem
 
 // Conflict An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type Conflict = Problem
 
 // Forbidden An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type Forbidden = Problem
 
 // InvalidCredentials An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type InvalidCredentials = Problem
 
 // NotFound An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type NotFound = Problem
 
 // TooManyRequests An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type TooManyRequests = Problem
 
 // Unauthorized An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type Unauthorized = Problem
 
 // UnexpectedError An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type UnexpectedError = Problem
 
 // UnprocessableContent An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type UnprocessableContent = Problem
 
 // UnsupportedMediaType An RFC 9457 Problem Details object.
 //
-// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 5","property":"rating"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type UnsupportedMediaType = Problem
 
 // ListRestaurantsParams defines parameters for ListRestaurants.
@@ -941,30 +627,23 @@ type ListReviewsParams struct {
 	// A `-` prefix sorts a property in descending order.
 	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
 	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
-	// A sort on a kind-specific property puts reviews of other kinds last in both directions.
 	// The API always adds `id` as the last sort key.
 	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
 
-	// KindEq The review `kind` is equal to the value.
-	KindEq *KindEq `form:"kind[eq],omitempty" json:"kind[eq],omitempty"`
-
-	// KindIn The review `kind` is equal to any of the values.
-	KindIn *KindIn `form:"kind[in],omitempty" json:"kind[in],omitempty"`
-
-	// Rating Matches only `basic` reviews. Each key is an operator, for example `rating[gte]=`.
-	Rating *RatingFilter `json:"rating,omitempty"`
-
-	// Space Matches only `joc_de_cartes` reviews. Each key is an operator, for example `space[gte]=`.
+	// Space Compares the `space` score. Each key is an operator, for example `space[gte]=`.
 	Space *SpaceFilter `json:"space,omitempty"`
 
-	// Service Matches only `joc_de_cartes` reviews. Each key is an operator, for example `service[gte]=`.
+	// Service Compares the `service` score. Each key is an operator, for example `service[gte]=`.
 	Service *ServiceFilter `json:"service,omitempty"`
 
-	// Food Matches only `joc_de_cartes` reviews. Each key is an operator, for example `food[gte]=`.
+	// Food Compares the `food` score. Each key is an operator, for example `food[gte]=`.
 	Food *FoodFilter `json:"food,omitempty"`
 
-	// Price Matches only `joc_de_cartes` reviews. Each key is an operator, for example `price[gte]=`.
+	// Price Compares the `price` score. Each key is an operator, for example `price[gte]=`.
 	Price *PriceFilter `json:"price,omitempty"`
+
+	// Cleanliness Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
+	Cleanliness *CleanlinessFilter `json:"cleanliness,omitempty"`
 
 	// TagsHas The `tags` contain the tag.
 	TagsHas *TagsHas `form:"tags[has],omitempty" json:"tags[has],omitempty"`
@@ -1002,7 +681,6 @@ type ListAllReviewsParams struct {
 	// A `-` prefix sorts a property in descending order.
 	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
 	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
-	// A sort on a kind-specific property puts reviews of other kinds last in both directions.
 	// The API always adds `id` as the last sort key.
 	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
 
@@ -1012,26 +690,20 @@ type ListAllReviewsParams struct {
 	// RestaurantIn The `restaurant` of the review is equal to any of the values.
 	RestaurantIn *RestaurantIn `form:"restaurant[in],omitempty" json:"restaurant[in],omitempty"`
 
-	// KindEq The review `kind` is equal to the value.
-	KindEq *KindEq `form:"kind[eq],omitempty" json:"kind[eq],omitempty"`
-
-	// KindIn The review `kind` is equal to any of the values.
-	KindIn *KindIn `form:"kind[in],omitempty" json:"kind[in],omitempty"`
-
-	// Rating Matches only `basic` reviews. Each key is an operator, for example `rating[gte]=`.
-	Rating *RatingFilter `json:"rating,omitempty"`
-
-	// Space Matches only `joc_de_cartes` reviews. Each key is an operator, for example `space[gte]=`.
+	// Space Compares the `space` score. Each key is an operator, for example `space[gte]=`.
 	Space *SpaceFilter `json:"space,omitempty"`
 
-	// Service Matches only `joc_de_cartes` reviews. Each key is an operator, for example `service[gte]=`.
+	// Service Compares the `service` score. Each key is an operator, for example `service[gte]=`.
 	Service *ServiceFilter `json:"service,omitempty"`
 
-	// Food Matches only `joc_de_cartes` reviews. Each key is an operator, for example `food[gte]=`.
+	// Food Compares the `food` score. Each key is an operator, for example `food[gte]=`.
 	Food *FoodFilter `json:"food,omitempty"`
 
-	// Price Matches only `joc_de_cartes` reviews. Each key is an operator, for example `price[gte]=`.
+	// Price Compares the `price` score. Each key is an operator, for example `price[gte]=`.
 	Price *PriceFilter `json:"price,omitempty"`
+
+	// Cleanliness Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
+	Cleanliness *CleanlinessFilter `json:"cleanliness,omitempty"`
 
 	// TagsHas The `tags` contain the tag.
 	TagsHas *TagsHas `form:"tags[has],omitempty" json:"tags[has],omitempty"`
@@ -1072,345 +744,6 @@ type SignUpJSONRequestBody = UserCreate
 
 // SignInJSONRequestBody defines body for SignIn for application/json ContentType.
 type SignInJSONRequestBody = Credentials
-
-// AsBasicReview returns the union data inside the Review as a BasicReview
-func (t Review) AsBasicReview() (BasicReview, error) {
-	var body BasicReview
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromBasicReview overwrites any union data inside the Review as the provided BasicReview
-func (t *Review) FromBasicReview(v BasicReview) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"basic"}`))
-	t.union = b
-	return err
-}
-
-// MergeBasicReview performs a merge with any union data inside the Review, using the provided BasicReview
-func (t *Review) MergeBasicReview(v BasicReview) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"basic"}`))
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsJocDeCartesReview returns the union data inside the Review as a JocDeCartesReview
-func (t Review) AsJocDeCartesReview() (JocDeCartesReview, error) {
-	var body JocDeCartesReview
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromJocDeCartesReview overwrites any union data inside the Review as the provided JocDeCartesReview
-func (t *Review) FromJocDeCartesReview(v JocDeCartesReview) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"joc_de_cartes"}`))
-	t.union = b
-	return err
-}
-
-// MergeJocDeCartesReview performs a merge with any union data inside the Review, using the provided JocDeCartesReview
-func (t *Review) MergeJocDeCartesReview(v JocDeCartesReview) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"joc_de_cartes"}`))
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsOtherReview returns the union data inside the Review as a OtherReview
-func (t Review) AsOtherReview() (OtherReview, error) {
-	var body OtherReview
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromOtherReview overwrites any union data inside the Review as the provided OtherReview
-func (t *Review) FromOtherReview(v OtherReview) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"OtherReview"}`))
-	t.union = b
-	return err
-}
-
-// MergeOtherReview performs a merge with any union data inside the Review, using the provided OtherReview
-func (t *Review) MergeOtherReview(v OtherReview) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"OtherReview"}`))
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-func (t Review) Discriminator() (string, error) {
-	var discriminator struct {
-		Discriminator string `json:"kind"`
-	}
-	err := json.Unmarshal(t.union, &discriminator)
-	return discriminator.Discriminator, err
-}
-
-func (t Review) ValueByDiscriminator() (interface{}, error) {
-	discriminator, err := t.Discriminator()
-	if err != nil {
-		return nil, err
-	}
-	switch discriminator {
-	case "OtherReview":
-		return t.AsOtherReview()
-	case "basic":
-		return t.AsBasicReview()
-	case "joc_de_cartes":
-		return t.AsJocDeCartesReview()
-	default:
-		return nil, errors.New("unknown discriminator value: " + discriminator)
-	}
-}
-
-func (t Review) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	return b, err
-}
-
-func (t *Review) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	return err
-}
-
-// AsBasicReviewCreate returns the union data inside the ReviewCreate as a BasicReviewCreate
-func (t ReviewCreate) AsBasicReviewCreate() (BasicReviewCreate, error) {
-	var body BasicReviewCreate
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromBasicReviewCreate overwrites any union data inside the ReviewCreate as the provided BasicReviewCreate
-func (t *ReviewCreate) FromBasicReviewCreate(v BasicReviewCreate) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"basic"}`))
-	t.union = b
-	return err
-}
-
-// MergeBasicReviewCreate performs a merge with any union data inside the ReviewCreate, using the provided BasicReviewCreate
-func (t *ReviewCreate) MergeBasicReviewCreate(v BasicReviewCreate) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"basic"}`))
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsJocDeCartesReviewCreate returns the union data inside the ReviewCreate as a JocDeCartesReviewCreate
-func (t ReviewCreate) AsJocDeCartesReviewCreate() (JocDeCartesReviewCreate, error) {
-	var body JocDeCartesReviewCreate
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromJocDeCartesReviewCreate overwrites any union data inside the ReviewCreate as the provided JocDeCartesReviewCreate
-func (t *ReviewCreate) FromJocDeCartesReviewCreate(v JocDeCartesReviewCreate) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"joc_de_cartes"}`))
-	t.union = b
-	return err
-}
-
-// MergeJocDeCartesReviewCreate performs a merge with any union data inside the ReviewCreate, using the provided JocDeCartesReviewCreate
-func (t *ReviewCreate) MergeJocDeCartesReviewCreate(v JocDeCartesReviewCreate) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"joc_de_cartes"}`))
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-func (t ReviewCreate) Discriminator() (string, error) {
-	var discriminator struct {
-		Discriminator string `json:"kind"`
-	}
-	err := json.Unmarshal(t.union, &discriminator)
-	return discriminator.Discriminator, err
-}
-
-func (t ReviewCreate) ValueByDiscriminator() (interface{}, error) {
-	discriminator, err := t.Discriminator()
-	if err != nil {
-		return nil, err
-	}
-	switch discriminator {
-	case "basic":
-		return t.AsBasicReviewCreate()
-	case "joc_de_cartes":
-		return t.AsJocDeCartesReviewCreate()
-	default:
-		return nil, errors.New("unknown discriminator value: " + discriminator)
-	}
-}
-
-func (t ReviewCreate) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	return b, err
-}
-
-func (t *ReviewCreate) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	return err
-}
-
-// AsBasicReviewPatch returns the union data inside the ReviewPatch as a BasicReviewPatch
-func (t ReviewPatch) AsBasicReviewPatch() (BasicReviewPatch, error) {
-	var body BasicReviewPatch
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromBasicReviewPatch overwrites any union data inside the ReviewPatch as the provided BasicReviewPatch
-func (t *ReviewPatch) FromBasicReviewPatch(v BasicReviewPatch) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"basic"}`))
-	t.union = b
-	return err
-}
-
-// MergeBasicReviewPatch performs a merge with any union data inside the ReviewPatch, using the provided BasicReviewPatch
-func (t *ReviewPatch) MergeBasicReviewPatch(v BasicReviewPatch) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"basic"}`))
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsJocDeCartesReviewPatch returns the union data inside the ReviewPatch as a JocDeCartesReviewPatch
-func (t ReviewPatch) AsJocDeCartesReviewPatch() (JocDeCartesReviewPatch, error) {
-	var body JocDeCartesReviewPatch
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromJocDeCartesReviewPatch overwrites any union data inside the ReviewPatch as the provided JocDeCartesReviewPatch
-func (t *ReviewPatch) FromJocDeCartesReviewPatch(v JocDeCartesReviewPatch) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"joc_de_cartes"}`))
-	t.union = b
-	return err
-}
-
-// MergeJocDeCartesReviewPatch performs a merge with any union data inside the ReviewPatch, using the provided JocDeCartesReviewPatch
-func (t *ReviewPatch) MergeJocDeCartesReviewPatch(v JocDeCartesReviewPatch) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"kind":"joc_de_cartes"}`))
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-func (t ReviewPatch) Discriminator() (string, error) {
-	var discriminator struct {
-		Discriminator string `json:"kind"`
-	}
-	err := json.Unmarshal(t.union, &discriminator)
-	return discriminator.Discriminator, err
-}
-
-func (t ReviewPatch) ValueByDiscriminator() (interface{}, error) {
-	discriminator, err := t.Discriminator()
-	if err != nil {
-		return nil, err
-	}
-	switch discriminator {
-	case "basic":
-		return t.AsBasicReviewPatch()
-	case "joc_de_cartes":
-		return t.AsJocDeCartesReviewPatch()
-	default:
-		return nil, errors.New("unknown discriminator value: " + discriminator)
-	}
-}
-
-func (t ReviewPatch) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	return b, err
-}
-
-func (t *ReviewPatch) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	return err
-}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -1766,45 +1099,6 @@ func (siw *ServerInterfaceWrapper) ListReviews(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// ------------- Optional query parameter "kind[eq]" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind[eq]", r.URL.Query(), &params.KindEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind[eq]"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind[eq]", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "kind[in]" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind[in]", r.URL.Query(), &params.KindIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind[in]"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind[in]", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "rating" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "rating", r.URL.Query(), &params.Rating, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "rating"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rating", Err: err})
-		}
-		return
-	}
-
 	// ------------- Optional query parameter "space" -------------
 
 	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "space", r.URL.Query(), &params.Space, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
@@ -1853,6 +1147,19 @@ func (siw *ServerInterfaceWrapper) ListReviews(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "price"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "price", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cleanliness" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "cleanliness", r.URL.Query(), &params.Cleanliness, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cleanliness"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cleanliness", Err: err})
 		}
 		return
 	}
@@ -2164,45 +1471,6 @@ func (siw *ServerInterfaceWrapper) ListAllReviews(w http.ResponseWriter, r *http
 		return
 	}
 
-	// ------------- Optional query parameter "kind[eq]" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind[eq]", r.URL.Query(), &params.KindEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind[eq]"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind[eq]", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "kind[in]" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind[in]", r.URL.Query(), &params.KindIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind[in]"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind[in]", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "rating" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "rating", r.URL.Query(), &params.Rating, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "rating"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rating", Err: err})
-		}
-		return
-	}
-
 	// ------------- Optional query parameter "space" -------------
 
 	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "space", r.URL.Query(), &params.Space, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
@@ -2251,6 +1519,19 @@ func (siw *ServerInterfaceWrapper) ListAllReviews(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "price"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "price", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cleanliness" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "cleanliness", r.URL.Query(), &params.Cleanliness, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cleanliness"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cleanliness", Err: err})
 		}
 		return
 	}
@@ -3465,14 +2746,6 @@ type GetReviewResponseObject interface {
 
 type GetReview200JSONResponse Review
 
-func (t GetReview200JSONResponse) MarshalJSON() ([]byte, error) {
-	return Review(t).MarshalJSON()
-}
-
-func (t *GetReview200JSONResponse) UnmarshalJSON(b []byte) error {
-	return (*Review)(t).UnmarshalJSON(b)
-}
-
 func (response GetReview200JSONResponse) VisitGetReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
@@ -3562,14 +2835,6 @@ type UpdateReviewResponseObject interface {
 }
 
 type UpdateReview200JSONResponse Review
-
-func (t UpdateReview200JSONResponse) MarshalJSON() ([]byte, error) {
-	return Review(t).MarshalJSON()
-}
-
-func (t *UpdateReview200JSONResponse) UnmarshalJSON(b []byte) error {
-	return (*Review)(t).UnmarshalJSON(b)
-}
 
 func (response UpdateReview200JSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
 

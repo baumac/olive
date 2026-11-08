@@ -9,7 +9,7 @@ The system is shadcn-vue with Tailwind CSS v4, as ADR 00002 decides. The tokens 
 - Speak to the person as "you". Keep sentences short and in the present tense.
 - Error text says what to do next: "Enter a title with at least one character that is not a space."
 - Show data as the API stores it: tags in lowercase with hyphens (`wood-fired`), names and titles as typed.
-- Name review kinds in plain words: `basic` is "Basic", `joc_de_cartes` is "Joc de cartes".
+- Name the review scores in plain words: "Space", "Service", "Food", "Price", "Cleanliness".
 - No emoji and no exclamation marks.
 
 ## Visual foundations
@@ -45,7 +45,7 @@ The system is shadcn-vue with Tailwind CSS v4, as ADR 00002 decides. The tokens 
 
 ## Components
 
-The first set covers the Public API. From shadcn-vue: `Button`, `Input`, `Textarea`, `Label`, `Form`, `Select`, `Tabs`, `Card`, `Badge`, `Alert`, `Dialog`, `Skeleton`, `Avatar`, `Sonner` (our `Toast`) and `DropdownMenu`. Project components: `RatingInput`, `RatingDisplay`, `TagInput`, `LoadMore`, `ThemeToggle`, `UserMenu`, `SignInForm`, `SignUpForm`, `FilterBar` and `EmptyState`. They live in `app/ui/src/components/ui/`, one folder each. `AppHeader` and `ErrorPage` know the routes, so they live in `app/ui/src/components/app/`. The Pages group shows whole pages: `SignInPage` and `SignUpPage` live in `app/ui/src/pages/`. Screens use these components and never style native controls directly. A new component goes into the set only when a screen needs it.
+The first set covers the Public API. From shadcn-vue: `Button`, `Input`, `Textarea`, `Label`, `Form`, `Select`, `Card`, `Badge`, `Alert`, `Dialog`, `Skeleton`, `Avatar`, `Sonner` (our `Toast`) and `DropdownMenu`. Project components: `RatingInput`, `RatingDisplay`, `TagInput`, `LoadMore`, `ThemeToggle`, `UserMenu`, `SignInForm`, `SignUpForm`, `FilterBar` and `EmptyState`. They live in `app/ui/src/components/ui/`, one folder each. `AppHeader` and `ErrorPage` know the routes, so they live in `app/ui/src/components/app/`. The Pages group shows whole pages: `SignInPage` and `SignUpPage` live in `app/ui/src/pages/`. Screens use these components and never style native controls directly. A new component goes into the set only when a screen needs it.
 
 The previews here are static HTML renditions of the Vue components. They show the look and the states, not the behavior. The UI in `app/ui` now has the real components. Replace the previews with them with the real components: sync this system from the code with `/design-sync` in Claude Code, so the previews run the Vue components and stay in step with them.
 

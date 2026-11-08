@@ -7,7 +7,6 @@ import { toast } from 'vue-sonner'
 import ConfirmDelete from '@/components/app/ConfirmDelete.vue'
 import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
-import KindName from '@/components/app/KindName.vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
-import { kindOf, scoresOf, tagList } from '@/lib/reviews'
+import { scoresOf, tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string; reviewId: string }>()
@@ -63,14 +62,13 @@ async function remove() {
         <ArrowLeftIcon class="size-4" aria-hidden="true" />{{ page.data.value.restaurant.name }}
       </RouterLink>
       <div class="flex flex-col gap-3">
-        <Badge variant="outline"><KindName :kind="kindOf(review)" /></Badge>
         <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ review.title }}</h1>
         <p class="text-muted-foreground flex items-center gap-2 text-sm">
           <InitialsAvatar :name="review.creator.name" size="sm" />
           <span>{{ review.creator.name }} · <DateText :created="review.created" :updated="review.updated" /></span>
         </p>
       </div>
-      <div v-if="scoresOf(review).length" class="grid gap-2">
+      <div class="grid gap-2">
         <RatingDisplay v-for="s in scoresOf(review)" :key="s.name" :value="s.value" :max="s.max" :label="s.label" />
       </div>
       <p v-if="review.feedback" class="leading-7 whitespace-pre-line">{{ review.feedback }}</p>
