@@ -1,0 +1,327 @@
+openapi: 3.1.0
+info:
+  title: Reviews User Auth API
+  version: 1.0.0
+  description: |
+    The PocketBase APIs that let users sign up, sign in, and refresh their auth token.
+    PocketBase serves these APIs for the `users` auth collection without changes.
+
+    The auth token from these APIs authenticates requests to the Public API in `restaurants-openapi.yaml`.
+
+    Errors use the PocketBase error format, not RFC 9457 Problem Details.
+    Timestamps use the PocketBase format, for example `2024-11-04 01:26:55.002Z`.
+    This format is not RFC 3339.
+
+servers:
+  - url: /api
+
+tags:
+  - name: auth
+    description: Sign up, sign in, and refresh the auth token of a user.
+
+paths:
+  /collections/users/records:
+    post:
+      operationId: signUp
+      summary: Sign up a user
+      description: |
+        Creates a record in the PocketBase `users` collection.
+        The response does not contain an auth token.
+        To get a token, the client signs in after sign up.
+      tags: [auth]
+      security:
+        - {}
+      requestBody:
+        description: The new user.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The user was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /collections/users/auth-with-password:
+    post:
+      operationId: signIn
+      summary: Sign in a user with email and password
+      tags: [auth]
+      security:
+        - {}
+      requestBody:
+        description: The email and password of the user.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordAuth'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The user signed in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /collections/users/auth-refresh:
+    post:
+      operationId: refreshAuth
+      summary: Refresh the auth token of a user
+      description: |
+        Returns a new auth token for the user of the current token.
+        The current token must be valid and not expired.
+        Clients also use this operation to check a stored token.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The new auth token and the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: A PocketBase auth token for a record in the `users` collection.
+
+  responses:
+    BadRequest:
+      description: |
+        The request body is invalid, or the email and password do not match a user.
+        `data` has one item for each invalid property.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: The auth token is missing, invalid, or expired.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 401
+            message: The request requires valid record authorization token.
+            data: {}
+    Forbidden:
+      description: The auth token is valid, but it is not for a record in the `users` collection.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 403
+            message: The authorized record is not allowed to perform this action.
+            data: {}
+    UnexpectedError:
+      description: An error that no other response describes, such as `500 Internal Server Error`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 500
+            message: Something went wrong while processing your request.
+            data: {}
+
+  schemas:
+    RecordId:
+      description: A PocketBase record ID.
+      type: string
+      pattern: '^[a-z0-9]{15}$'
+      examples: [u5n1c8r3t6y0b2e]
+    Timestamp:
+      description: A UTC timestamp in the PocketBase format. This format is not RFC 3339.
+      type: string
+      pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}Z$'
+      examples: ['2024-11-01 08:12:40.517Z']
+    Email:
+      description: An email address.
+      type: string
+      format: email
+      maxLength: 255
+      examples: [ana@example.com]
+    Password:
+      description: A password of 8 to 71 characters.
+      type: string
+      format: password
+      minLength: 8
+      maxLength: 71
+      examples: [correct-horse-battery]
+    UserName:
+      description: The name of the user. Other users see it as the `creator` name. It can be an empty string.
+      type: string
+      maxLength: 255
+      examples: [Ana]
+
+    User:
+      description: |
+        A record in the PocketBase `users` collection.
+        `email` is present only for the user of the auth token, or when `emailVisibility` is `true`.
+      type: object
+      required: [id, collectionId, collectionName, emailVisibility, verified, name, avatar, created, updated]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        collectionId:
+          description: The ID of the `users` collection.
+          type: string
+          examples: [_pb_users_auth_]
+        collectionName:
+          const: users
+        email:
+          $ref: '#/components/schemas/Email'
+        emailVisibility:
+          description: Whether other users can see `email`.
+          type: boolean
+          examples: [false]
+        verified:
+          description: Whether the user confirmed the email address.
+          type: boolean
+          examples: [false]
+        name:
+          $ref: '#/components/schemas/UserName'
+        avatar:
+          description: The file name of the avatar. It is an empty string when the user has no avatar.
+          type: string
+          examples: ['']
+        created:
+          $ref: '#/components/schemas/Timestamp'
+        updated:
+          $ref: '#/components/schemas/Timestamp'
+      examples:
+        - id: u5n1c8r3t6y0b2e
+          collectionId: _pb_users_auth_
+          collectionName: users
+          email: ana@example.com
+          emailVisibility: false
+          verified: false
+          name: Ana
+          avatar: ''
+          created: '2024-11-01 08:12:40.517Z'
+          updated: '2024-11-01 08:12:40.517Z'
+    UserCreate:
+      description: The properties of a new user.
+      type: object
+      required: [email, password, passwordConfirm]
+      properties:
+        email:
+          $ref: '#/components/schemas/Email'
+        password:
+          $ref: '#/components/schemas/Password'
+        passwordConfirm:
+          description: The same value as `password`.
+          type: string
+          format: password
+        name:
+          $ref: '#/components/schemas/UserName'
+        emailVisibility:
+          description: Whether other users can see `email`.
+          type: boolean
+          default: false
+      examples:
+        - email: ana@example.com
+          password: correct-horse-battery
+          passwordConfirm: correct-horse-battery
+          name: Ana
+    PasswordAuth:
+      description: The credentials to sign in.
+      type: object
+      required: [identity, password]
+      properties:
+        identity:
+          description: The email address of the user.
+          type: string
+          format: email
+        password:
+          description: The password of the user.
+          type: string
+          format: password
+      examples:
+        - identity: ana@example.com
+          password: correct-horse-battery
+    AuthResponse:
+      description: An auth token and the user that it belongs to.
+      type: object
+      required: [token, record]
+      properties:
+        token:
+          description: |
+            A PocketBase auth token.
+            Send it in the `Authorization` header as a bearer token.
+            The token expires after the auth token duration of the `users` collection.
+          type: string
+        record:
+          $ref: '#/components/schemas/User'
+      examples:
+        - token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InU1bjFjOHIzdDZ5MGIyZSJ9.c2lnbmF0dXJl
+          record:
+            id: u5n1c8r3t6y0b2e
+            collectionId: _pb_users_auth_
+            collectionName: users
+            email: ana@example.com
+            emailVisibility: false
+            verified: false
+            name: Ana
+            avatar: ''
+            created: '2024-11-01 08:12:40.517Z'
+            updated: '2024-11-01 08:12:40.517Z'
+
+    Error:
+      description: The PocketBase error format.
+      type: object
+      required: [status, message, data]
+      properties:
+        status:
+          description: The HTTP status code.
+          type: integer
+        message:
+          description: A message for people. Clients must not parse it.
+          type: string
+        data:
+          description: The invalid properties. The key is the property name. It is empty for other errors.
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FieldError'
+      examples:
+        - status: 400
+          message: Failed to create record.
+          data:
+            email:
+              code: validation_not_unique
+              message: Value must be unique.
+    FieldError:
+      description: The error of one invalid property.
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          description: A stable error code, for example `validation_required`.
+          type: string
+        message:
+          description: A message for people.
+          type: string
