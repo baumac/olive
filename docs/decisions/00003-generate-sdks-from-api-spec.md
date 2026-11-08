@@ -148,7 +148,7 @@ sdk/
 
 - generated files are committed. The `api` and `ui` apps build without the generators.
 - `sdk/typescript/src` has only generated files. `make generate` deletes it before it runs the generator. The generator does not delete the files of removed schemas.
-- the root `go.work` file has `sdk/go`. The `api` app adds itself when it exists. It then uses the local Go SDK without a `replace` line.
+- the root `go.work` file has `sdk/go` and `api`. The `api` module also has a `replace` line for `sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
 - the root `package.json` is an npm workspace with `sdk/typescript`. The `ui` app adds itself when it exists.
 
 ## TypeScript SDK settings

@@ -575,14 +575,15 @@ The PocketBase collections need this additional setup:
   - the API checks for reviews before it deletes a restaurant and returns `409 Conflict`
 - the `creator` relation on reviews is required and cascades on delete
 - the `creator` relation on restaurants is optional and does not cascade on delete
-  - an `OnRecordDelete` hook on the `users` collection sets `creator` to `null` on the restaurants of the user before the delete
-  - the hook makes this behavior explicit. It does not depend on how PocketBase handles references to a deleted record.
+  - PocketBase removes the user ID from `creator` in the same transaction as the delete of the user
+  - a hook outside that transaction could clear `creator` and then fail to delete the user. A test checks the PocketBase behavior.
 - the reviews collection has a unique index on the `restaurant` and `creator` fields
   - two requests at the same time can both pass the duplicate check of the API
   - the API changes the unique index error to `409 Conflict`, not `500 Internal Server Error`
 - the [Users API](#users-api) wraps the PocketBase password auth of the `users` collection
   - password auth is on. `email` is the only identity field.
-  - sign up creates the record and then makes an auth token for it. The API sends `passwordConfirm` with the value of `password`.
+  - the unique index on `email` uses `COLLATE NOCASE`. Email uniqueness and sign in then ignore ASCII case.
+  - sign up creates the record and then makes an auth token for it. Decision 00004 has the details.
   - sign in uses the PocketBase password auth. A wrong email or password causes `401 Unauthorized`, not the PocketBase `400`.
   - refresh uses the PocketBase auth refresh
   - `expires` comes from the `exp` claim of the token

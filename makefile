@@ -9,7 +9,10 @@ OAPI_CODEGEN := $(BIN)/oapi-codegen
 
 OPENAPI_GENERATOR_IMAGE := openapitools/openapi-generator-cli:v7.27.0
 
-.PHONY: install-tools lint lint-spec generate generate-sdk-go generate-sdk-ts check-generate test-sdk test-sdk-go test-sdk-ts
+API_BIN := $(BIN)/reviews-api
+API_DATA := api/pb_data
+
+.PHONY: install-tools lint lint-spec lint-go generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-api build-api run-api
 
 install-tools: $(VACUUM) $(OAPI_CODEGEN)
 
@@ -19,10 +22,14 @@ $(VACUUM):
 $(OAPI_CODEGEN):
 	GOBIN=$(BIN) go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION)
 
-lint: lint-spec check-generate
+lint: lint-spec lint-go check-generate
 
 lint-spec: $(VACUUM)
 	$(VACUUM) lint --details --fail-severity warn --ruleset specs/api/vacuum-ruleset.yaml $(SPEC)
+
+lint-go:
+	go vet ./api/... ./sdk/go/...
+	@test -z "$$(gofmt -l api sdk/go)" || { gofmt -l api sdk/go; echo "Run gofmt -w on these files."; exit 1; }
 
 generate: generate-sdk-go generate-sdk-ts
 
@@ -44,6 +51,8 @@ check-generate: generate
 	git diff --exit-code -- sdk
 	@test -z "$$(git ls-files --others --exclude-standard -- sdk)" || { git ls-files --others --exclude-standard -- sdk; echo "New generated files are not in git. Run make generate and add them."; exit 1; }
 
+test: test-sdk test-api
+
 test-sdk: test-sdk-go test-sdk-ts
 
 test-sdk-go:
@@ -52,3 +61,12 @@ test-sdk-go:
 test-sdk-ts:
 	npm ci
 	npm test --workspace @reviews/sdk
+
+test-api:
+	cd api && go test ./...
+
+build-api:
+	go build -o $(API_BIN) ./api
+
+run-api:
+	go run ./api serve --dir $(API_DATA)

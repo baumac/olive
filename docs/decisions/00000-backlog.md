@@ -7,7 +7,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 - Add a README.md file to the project for newcomers to understand and get started with the project.
-- Implement the Public API OAS in `specs/api/public-openapi.yaml` in the `api` directory
 - Implement the UI based on the Public API Spec
 - Define end-to-end tests in the `tests` directory
 - Adding rating aggregate field to restaurants

@@ -21,19 +21,20 @@ make install-tools    # Install dev tools to ./bin/. Needs Go.
 make lint             # Run all linters. Needs Docker.
 make lint-spec        # Lint the API specs in specs/api with vacuum
 make generate         # Generate the SDKs in sdk/ from the API spec. Needs Docker.
+make lint-go          # Run go vet and gofmt on the Go modules
 make check-generate   # Fail if the generated SDKs do not match the API spec
+make test             # Run the tests of the SDKs and the API. Needs Node.js.
 make test-sdk         # Run the tests of both SDKs. Needs Node.js.
+make test-api         # Run the API tests
+make build-api        # Build the API server to ./bin/reviews-api
+make run-api          # Run the API server on 127.0.0.1:8090 with data in api/pb_data
 ```
 
-TODO update this as more commands exist. Some example commands are:
+The API server applies the migrations when it starts.
+The PocketBase dashboard is at `http://127.0.0.1:8090/_/`.
+To make the first superuser, run `go run ./api superuser create EMAIL PASSWORD --dir api/pb_data`.
 
-```bash
-make test-api         # Run all API tests
-make test-ui          # Run all UI tests
-make build            # Build binary to ./bin/gw-admin
-make run              # Run server (starts Postgres + migrations automatically)
-make run-local        # Run with -tags=local for local development mocks
-```
+TODO add the UI commands when the `ui` app exists.
 
 ## Architecture
 
@@ -51,7 +52,10 @@ make run-local        # Run with -tags=local for local development mocks
 - **`api`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the Go programming language
-  - Built using the Pocketbase framework
+  - Built using the Pocketbase framework. See decision 00004.
+  - **`api/main.go`** - the PocketBase app
+  - **`api/migrations`** - the Go migrations of the `users`, `restaurants`, and `reviews` collections
+  - **`api/internal/publicapi`** - the Public API. It implements the strict server interface of `sdk/go`.
 - **`ui`** - the directory containing the app that serves the Public UI
   - Implemented against the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the TypeScript programming language
