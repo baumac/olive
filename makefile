@@ -32,8 +32,8 @@ lint-spec: $(VACUUM)
 	$(VACUUM) lint --details --fail-severity warn --ruleset specs/api/vacuum-ruleset.yaml $(SPEC)
 
 lint-go:
-	go vet ./app/... ./sdk/go/...
-	@test -z "$$(gofmt -l app sdk/go)" || { gofmt -l app sdk/go; echo "Run gofmt -w on these files."; exit 1; }
+	go vet ./app/... ./app/sdk/go/...
+	@test -z "$$(gofmt -l app)" || { gofmt -l app; echo "Run gofmt -w on these files."; exit 1; }
 
 lint-ui: build-sdk-ts
 	npm run typecheck --workspace @reviews/ui
@@ -42,29 +42,29 @@ lint-ui: build-sdk-ts
 generate: generate-sdk-go generate-sdk-ts
 
 generate-sdk-go: $(OAPI_CODEGEN)
-	cd sdk/go && $(OAPI_CODEGEN) -config oapi-codegen.yaml $(CURDIR)/$(SPEC)
+	cd app/sdk/go && $(OAPI_CODEGEN) -config oapi-codegen.yaml $(CURDIR)/$(SPEC)
 
 # The generator does not delete the files of removed schemas.
 generate-sdk-ts:
-	rm -rf sdk/typescript/src
+	rm -rf app/sdk/typescript/src
 	docker run --rm -u "$$(id -u):$$(id -g)" -v "$(CURDIR):/local" -w /local $(OPENAPI_GENERATOR_IMAGE) generate \
 		--generator-name typescript-fetch \
 		--input-spec $(SPEC) \
-		--output sdk/typescript/src \
-		--template-dir sdk/typescript/templates \
+		--output app/sdk/typescript/src \
+		--template-dir app/sdk/typescript/templates \
 		--global-property apiDocs=false,modelDocs=false \
 		--additional-properties supportsES6=true,importFileExtension=.js,useSingleRequestParameter=true,withInterfaces=true,legacyDiscriminatorBehavior=false
 
 check-generate: generate
-	git diff --exit-code -- sdk
-	@test -z "$$(git ls-files --others --exclude-standard -- sdk)" || { git ls-files --others --exclude-standard -- sdk; echo "New generated files are not in git. Run make generate and add them."; exit 1; }
+	git diff --exit-code -- app/sdk
+	@test -z "$$(git ls-files --others --exclude-standard -- app/sdk)" || { git ls-files --others --exclude-standard -- app/sdk; echo "New generated files are not in git. Run make generate and add them."; exit 1; }
 
 test: test-sdk test-app test-ui
 
 test-sdk: test-sdk-go test-sdk-ts
 
 test-sdk-go:
-	cd sdk/go && go test ./...
+	cd app/sdk/go && go test ./...
 
 test-sdk-ts: $(NODE_MODULES)
 	npm test --workspace @reviews/sdk
@@ -85,7 +85,7 @@ test-e2e-ui: build-app
 $(NODE_MODULES): package-lock.json
 	npm ci
 
-# The UI imports the built SDK from sdk/typescript/dist.
+# The UI imports the built SDK from app/sdk/typescript/dist.
 build-sdk-ts: $(NODE_MODULES)
 	npm run build --workspace @reviews/sdk
 

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	reviewsapi "github.com/baumac/reviews-app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/pocketbase/pocketbase/core"
 	"golang.org/x/crypto/bcrypt"
 )

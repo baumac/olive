@@ -14,7 +14,7 @@ This decision records them.
 
 Expected outcome:
 - The PocketBase app in `app` serves the Public API under `/v1`, the PocketBase API under `/api`, and the PocketBase dashboard under `/_/`.
-- The Public API implements `reviewsapi.StrictServerInterface` from `sdk/go`.
+- The Public API implements `reviewsapi.StrictServerInterface` from `app/sdk/go`.
 - Migrations make the `restaurants` and `reviews` collections and change `users`.
 - Tests send requests through the PocketBase router to a new database.
 
@@ -149,7 +149,7 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 ## Go modules
 
 - PocketBase v0.40.6 needs Go 1.27. The `app` module and `go.work` therefore use Go 1.27.
-- `app/go.mod` has a `replace` line for `sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
+- `app/go.mod` has a `replace` line for `app/sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
 
 ## Tests
 

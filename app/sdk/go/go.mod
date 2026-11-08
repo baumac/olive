@@ -1,4 +1,4 @@
-module github.com/baumac/reviews-app/sdk/go
+module github.com/baumac/reviews-app/app/sdk/go
 
 go 1.26.8
 

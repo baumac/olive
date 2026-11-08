@@ -6,7 +6,7 @@ import (
 	"errors"
 	"slices"
 
-	reviewsapi "github.com/baumac/reviews-app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"

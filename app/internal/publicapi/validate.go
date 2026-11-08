@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	reviewsapi "github.com/baumac/reviews-app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 )
 
 type fieldErrors []reviewsapi.ValidationError

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	reviewsapi "github.com/baumac/reviews-app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 )
 
 type patternRecorder struct {

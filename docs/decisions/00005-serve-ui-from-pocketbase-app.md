@@ -119,7 +119,7 @@ The app has these routes:
 
 ## npm workspace
 
-- the root `package.json` lists `app/ui` and `sdk/typescript` as workspaces
+- the root `package.json` lists `app/ui` and `app/sdk/typescript` as workspaces
 - the UI depends on `@reviews/sdk` with `"@reviews/sdk": "*"`. npm links the local SDK.
 - `make build-ui` builds the SDK before the UI
 

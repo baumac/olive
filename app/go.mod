@@ -3,7 +3,7 @@ module github.com/baumac/reviews-app/app
 go 1.27
 
 require (
-	github.com/baumac/reviews-app/sdk/go v0.0.0-00010101000000-000000000000
+	github.com/baumac/reviews-app/app/sdk/go v0.0.0-00010101000000-000000000000
 	github.com/oapi-codegen/nullable v1.2.0
 	github.com/oapi-codegen/runtime v1.8.0
 	github.com/pocketbase/dbx v1.12.0
@@ -44,4 +44,4 @@ require (
 	modernc.org/sqlite v1.60.1 // indirect
 )
 
-replace github.com/baumac/reviews-app/sdk/go => ../sdk/go
+replace github.com/baumac/reviews-app/app/sdk/go => ./sdk/go

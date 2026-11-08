@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	reviewsapi "github.com/baumac/reviews-app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	validation "github.com/pocketbase/ozzo-validation/v4"

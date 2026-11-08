@@ -24,8 +24,8 @@ Expected outcome:
 [scope]: #scope
 
 In scope:
-- A TypeScript SDK in `sdk/typescript` with the client that the UI in `app/ui` uses. [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator) generates it.
-- A Go SDK in `sdk/go` with the server interface and the Go types. [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen) generates it.
+- A TypeScript SDK in `app/sdk/typescript` with the client that the UI in `app/ui` uses. [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator) generates it.
+- A Go SDK in `app/sdk/go` with the server interface and the Go types. [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen) generates it.
 - The generator settings, the `make` targets, and the check for out-of-date code
 - Tests that show the generated code handles the difficult parts of the spec
 
@@ -41,8 +41,8 @@ Out of scope:
 
 New concepts:
 - **SDK**: a package of code generated from `specs/api/public-openapi.yaml`. The project has two SDKs.
-- **TypeScript SDK**: the npm package `@reviews/sdk` in `sdk/typescript`. It has one API class per tag and one model per schema.
-- **Go SDK**: the Go module `github.com/baumac/reviews-app/sdk/go`. Its package `reviewsapi` has the Go types and the strict server interface.
+- **TypeScript SDK**: the npm package `@reviews/sdk` in `app/sdk/typescript`. It has one API class per tag and one model per schema.
+- **Go SDK**: the Go module `github.com/baumac/reviews-app/app/sdk/go`. Its package `reviewsapi` has the Go types and the strict server interface.
 - **Strict server interface**: a Go interface with one method per operation. Each method gets a typed request and returns a typed response.
 
 The spec is the only source.
@@ -131,7 +131,7 @@ It also fails when a handler returns a status or a body that the spec does not d
 ```
 go.work                       # hand-written
 package.json                  # hand-written npm workspace root
-sdk/
+app/sdk/
   typescript/
     package.json              # hand-written
     tsconfig.json             # hand-written
@@ -140,16 +140,16 @@ sdk/
     test/                     # hand-written tests
     src/                      # generated
   go/
-    go.mod                    # hand-written
+    go.mod                    # hand-written. A separate module inside app.
     oapi-codegen.yaml         # hand-written generator settings
     reviewsapi_test.go        # hand-written tests
     reviewsapi.gen.go         # generated
 ```
 
 - generated files are committed. The app and the UI build without the generators.
-- `sdk/typescript/src` has only generated files. `make generate` deletes it before it runs the generator. The generator does not delete the files of removed schemas.
-- the root `go.work` file has `sdk/go` and `app`. The `app` module also has a `replace` line for `sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
-- the root `package.json` is an npm workspace with `sdk/typescript` and `app/ui`
+- `app/sdk/typescript/src` has only generated files. `make generate` deletes it before it runs the generator. The generator does not delete the files of removed schemas.
+- the root `go.work` file has `app/sdk/go` and `app`. The `app` module also has a `replace` line for `./sdk/go`. `app/sdk/go` has its own `go.mod`, so the Go tools of the `app` module skip it. `go mod tidy` does not use `go.work`, and the SDK module is not published.
+- the root `package.json` is an npm workspace with `app/sdk/typescript` and `app/ui`
 
 ## TypeScript SDK settings
 
@@ -164,7 +164,7 @@ sdk/
   - `apiDocs` and `modelDocs`: `false`. The spec is the documentation.
 - `stringEnums` stays `false`. With `true`, the enum type of `kind` does not match the literal types of the union, and `tsc` fails.
 - the SDK and the UI use TypeScript 6.0.3. `vue-tsc` needs the JavaScript API of the compiler, and TypeScript 7 does not have it. One version for the npm workspace keeps one copy in `node_modules`.
-- `tsc` builds the package into `sdk/typescript/dist`. The UI imports the built package. `make build-ui` builds the SDK first.
+- `tsc` builds the package into `app/sdk/typescript/dist`. The UI imports the built package. `make build-ui` builds the SDK first.
 - `package.json` is hand-written. The package name is `@reviews/sdk`.
 
 ## Go SDK settings
@@ -215,7 +215,7 @@ We do not change the meaning of the spec to work around a generator without a ne
 ### Workarounds
 
 - `typescript-fetch` changes an optional `null` array with `uniqueItems` to `undefined`. A merge patch then cannot clear `tags`.
-  `sdk/typescript/templates/modelGeneric.mustache` is a copy of the generator template with a fix in the `ToJSON` part. It keeps `null`.
+  `app/sdk/typescript/templates/modelGeneric.mustache` is a copy of the generator template with a fix in the `ToJSON` part. It keeps `null`.
   Update this copy when the generator version changes.
 - `typescript-fetch` makes a `Set<string>` for `tags` because of `uniqueItems`. The UI changes it to an array where it needs one.
 - both generators add the schema name `OtherReview` as a discriminator value, because the mapping has no entry for it.
@@ -227,7 +227,7 @@ We do not change the meaning of the spec to work around a generator without a ne
 
 ## Out-of-date check
 
-- `make check-generate` runs `make generate`. Then it fails if `git diff` shows changes in `sdk` or if `sdk` has files that git does not track.
+- `make check-generate` runs `make generate`. Then it fails if `git diff` shows changes in `app/sdk` or if `app/sdk` has files that git does not track.
 - `make lint` runs `make check-generate` after `lint-spec`. The lint therefore needs Docker.
 - a change to the spec without new generated code then fails the lint
 

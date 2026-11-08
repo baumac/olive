@@ -20,7 +20,7 @@ This project allows users to review a variety of things. It is composed of the f
 make install-tools    # Install dev tools to ./bin/. Needs Go.
 make lint             # Run all linters. Needs Docker.
 make lint-spec        # Lint the API specs in specs/api with vacuum
-make generate         # Generate the SDKs in sdk/ from the API spec. Needs Docker.
+make generate         # Generate the SDKs in app/sdk/ from the API spec. Needs Docker.
 make lint-go          # Run go vet and gofmt on the Go modules
 make check-generate   # Fail if the generated SDKs do not match the API spec
 make lint-ui          # Type-check the UI. Needs Node.js.
@@ -57,16 +57,16 @@ Run one browser with `cd test && npx playwright test --project=chromium`.
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`
-- **`sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00003.
-  - **`sdk/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
-  - **`sdk/go`** - the Go module with the server interface and the types that the API uses
+- **`app/sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00003.
+  - **`app/sdk/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
+  - **`app/sdk/go`** - the Go module with the server interface and the types that the API uses
 - **`app`** - the directory containining the app that serves the Public UI, Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.
   - **`app/main.go`** - the PocketBase app
   - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, and `reviews` collections
-  - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `sdk/go`.
+  - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
   - Calls the Public API only through `@reviews/sdk`

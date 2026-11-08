@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	reviewsapi "github.com/baumac/reviews-app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 )
 
 const problemContentType = "application/problem+json"

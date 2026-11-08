@@ -6,7 +6,7 @@ import (
 	"errors"
 	"net/http"
 
-	reviewsapi "github.com/baumac/reviews-app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"
