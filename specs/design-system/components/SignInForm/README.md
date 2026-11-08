@@ -1,12 +1,17 @@
 # SignInForm
 
-The sign in form for the Public UI. People must sign in to write, edit and delete reviews and restaurants.
+Signs a person in with an email address and a password. People must sign in to add restaurants and to write, edit and delete reviews. Reading needs no account.
 
-Project component built from `Card`, `Form`, `Input`, `Button` and `Alert`. Lives in `@/components/ui/sign-in-form`. Props: `loading` (boolean), `error` (string or null). Event: `submit` with `{ email, password }`. The screen calls the API, stores the token and goes back to the page the person came from.
+Project component built from `Card`, `Form`, `Input`, `Button` and `Alert`. Lives in `@/components/ui/sign-in-form`. Props: `loading` (boolean), `error` (string or null), `notice` (`"session-ended"` or null). Event: `submit` with `{ identity, password }`. The screen calls `POST /api/collections/users/auth-with-password` (`signIn` in `users-openapi.yaml`), stores the token and goes back to the page in the `redirect` query. See the "User authentication" section for the whole flow.
 
-- Fields: "Email" (`type="email"`, `autocomplete="email"`) and "Password" (`type="password"`, `autocomplete="current-password"`). Both required.
+- Title "Sign in". Description: "Sign in to add restaurants and write reviews."
+- Fields: "Email" (`type="email"`, `autocomplete="username"`, sent as `identity`) and "Password" (`type="password"`, `autocomplete="current-password"`). Both required. Check before sending that both have a value.
+- The password field has a show/hide button inside it. It is a toggle: `aria-label="Show password"`, `aria-pressed` true while the text shows. It keeps focus in the field order after the input.
 - One `default` button "Sign in", full width. While the request runs, disable it and show "Signing in…".
-- A wrong email or password shows one destructive `Alert` above the fields: "The email or password is not correct". Do not say which one is wrong.
-- Center the card on the page, at most 384px wide.
+- `400` with an empty `data` means the email and password do not match a user. Show one destructive `Alert` above the fields: "The email or password is not correct" / "Check both and try again." Do not say which one is wrong. Keep the email, clear the password and move focus to the password field.
+- `400` with keys in `data` is a field problem. Show each message next to its field: `identity` goes to "Email".
+- Any other error shows the destructive `Alert` "Sign in did not work" / "Try again in a moment."
+- With `notice="session-ended"`, show a default `Alert` above the fields: "Your session has ended" / "Sign in again to continue."
+- Below the button: "New to Sponga47 Reviews? Create an account", linking to the sign up page with the same `redirect` query.
 - Let password managers fill the fields. Do not block paste.
-- Sign up and password reset are not in the Public API yet. Add links here when they exist.
+- Password reset is not in the User Auth API. Do not add a "Forgot password" link until it is.

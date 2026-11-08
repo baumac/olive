@@ -181,3 +181,18 @@ body { margin: 0; font-family: var(--font-sans); background: var(--background); 
 .rv-errorpage-code { font-size: 14px; font-weight: 600; color: var(--primary); font-variant-numeric: tabular-nums; }
 .rv-errorpage h1 { margin: 0; font-size: 36px; line-height: 40px; font-weight: 800; letter-spacing: -0.025em; }
 .rv-errorpage p { margin: 0; font-size: 20px; line-height: 28px; color: var(--muted-foreground); }
+
+/* Auth pages: SignInForm, SignUpForm, AuthPages */
+.rv-link { color: var(--primary); font-weight: 500; text-decoration: underline; text-underline-offset: 4px; }
+.rv-password { position: relative; }
+.rv-password .rv-input { padding-right: 40px; }
+.rv-password-toggle { position: absolute; top: 2px; right: 2px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--muted-foreground); cursor: pointer; }
+.rv-auth-footer { margin: 0; text-align: center; font-size: 14px; color: var(--muted-foreground); }
+.rv-optional { font-weight: 400; color: var(--muted-foreground); }
+.rv-authpage { min-height: 100%; background: var(--background); }
+.rv-authpage-main { display: flex; justify-content: center; padding: var(--space-8) var(--space-4); }
+.rv-authpage-main .rv-card { width: 100%; max-width: 384px; }
+.rv-steps { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.rv-steps li { display: grid; grid-template-columns: 24px 1fr; gap: var(--space-3); align-items: start; font-size: 14px; counter-increment: step; }
+.rv-steps li::before { content: counter(step); display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 9999px; background: var(--muted); color: var(--foreground); font-size: 12px; font-weight: 600; }
+a.rv-btn { text-decoration: none; }
