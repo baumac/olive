@@ -788,3 +788,110 @@ func TestListAllReviews(t *testing.T) {
 		t.Errorf("per-restaurant list: %v", items[0])
 	}
 }
+
+func TestRestaurantRating(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+	sam := e.signUp("sam@example.com", "Sam")
+	created := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)
+	id := created["id"].(string)
+	path := "/v1/restaurants/" + id
+
+	if created["review_count"] != float64(0) || created["rating"] != nil {
+		t.Errorf("create: %v", created)
+	}
+	if _, ok := created["rating"]; !ok {
+		t.Error("create: rating is missing, want null")
+	}
+
+	e.createReview(ana.Token, id, `{"space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"A"}`)
+	e.createReview(joe.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"B"}`)
+	e.createReview(sam.Token, id, `{"space":1,"service":1,"food":1,"price":1,"cleanliness":1,"title":"C"}`)
+	e.createRestaurant(ana.Token, `{"name":"Empty"}`)
+
+	want := map[string]any{"overall": 4.5, "space": 4.0, "service": 5.0, "food": 5.0, "price": 4.7, "cleanliness": 4.0}
+	check := func(name string, r map[string]any) {
+		t.Helper()
+		if r["review_count"] != float64(3) {
+			t.Errorf("%s: review_count %v", name, r["review_count"])
+		}
+		rating, _ := r["rating"].(map[string]any)
+		for k, v := range want {
+			if rating[k] != v {
+				t.Errorf("%s: rating.%s is %v, want %v", name, k, rating[k], v)
+			}
+		}
+	}
+	check("get", e.expect(request{method: "GET", path: path}, http.StatusOK).object(t))
+	check("patch", e.expect(request{method: "PATCH", path: path, body: `{"description":"x"}`, token: ana.Token}, http.StatusOK).object(t))
+
+	var page struct {
+		Items []map[string]any `json:"items"`
+	}
+	e.expect(request{method: "GET", path: "/v1/restaurants?sort=name"}, http.StatusOK).decode(t, &page)
+	if len(page.Items) != 2 {
+		t.Fatalf("list: %v", page.Items)
+	}
+	if page.Items[0]["name"] != "Empty" || page.Items[0]["review_count"] != float64(0) || page.Items[0]["rating"] != nil {
+		t.Errorf("list: empty restaurant %v", page.Items[0])
+	}
+	check("list", page.Items[1])
+}
+
+func TestListRestaurantsByOverall(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+	scores := func(n int) string {
+		return fmt.Sprintf(`{"space":%d,"service":%d,"food":%d,"price":%d,"cleanliness":%d,"title":"T"}`, n, n, n, n, n)
+	}
+	high := e.createRestaurant(ana.Token, `{"name":"High"}`)["id"].(string)
+	mid := e.createRestaurant(ana.Token, `{"name":"Mid"}`)["id"].(string)
+	low := e.createRestaurant(ana.Token, `{"name":"Low"}`)["id"].(string)
+	e.createRestaurant(ana.Token, `{"name":"None"}`)
+	e.createReview(ana.Token, high, scores(9))
+	e.createReview(joe.Token, high, scores(8))
+	e.createReview(ana.Token, mid, `{"space":7,"service":7,"food":7,"price":7,"cleanliness":6,"title":"T"}`)
+	e.createReview(ana.Token, low, scores(2))
+
+	names := func(query string) string {
+		t.Helper()
+		var out []string
+		for range 5 {
+			var page struct {
+				Items      []map[string]any `json:"items"`
+				NextCursor *string          `json:"next_cursor"`
+			}
+			e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusOK).decode(t, &page)
+			for _, it := range page.Items {
+				out = append(out, it["name"].(string))
+			}
+			if page.NextCursor == nil {
+				break
+			}
+			query = strings.Split(query, "&cursor=")[0] + "&cursor=" + url.QueryEscape(*page.NextCursor)
+		}
+		return strings.Join(out, ",")
+	}
+
+	for query, want := range map[string]string{
+		"sort=-overall":                 "High,Mid,Low,None",
+		"sort=overall":                  "Low,Mid,High,None",
+		"sort=-overall&limit=1":         "High,Mid,Low,None",
+		"sort=overall&limit=1":          "Low,Mid,High,None",
+		"sort=name&overall[gte]=6.8":    "High,Mid",
+		"sort=name&overall[gt]=6.8":     "High",
+		"sort=name&overall[eq]=8.5":     "High",
+		"sort=name&overall[lt]=5":       "Low",
+		"sort=-overall&overall[lte]=10": "High,Mid,Low",
+	} {
+		if got := names(query); got != want {
+			t.Errorf("%s: %s, want %s", query, got, want)
+		}
+	}
+	for _, query := range []string{"overall[gte]=0", "overall[gte]=11", "overall[gte]=x", "overall[gte]=NaN", "overall[lt]=Inf", "overall[gt]=-Inf", "sort=rating"} {
+		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
+	}
+	e.expect(request{method: "GET", path: "/v1/reviews?overall[gte]=5"}, http.StatusBadRequest)
+}

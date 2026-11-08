@@ -44,6 +44,39 @@ type AuthToken struct {
 	User User `json:"user"`
 }
 
+// AverageRange Comparisons for an average score. All comparisons must match.
+type AverageRange struct {
+	// Eq An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Eq *AverageScore `json:"eq,omitempty"`
+
+	// Gt An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Gt *AverageScore `json:"gt,omitempty"`
+
+	// Gte An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Gte *AverageScore `json:"gte,omitempty"`
+
+	// Lt An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Lt *AverageScore `json:"lt,omitempty"`
+
+	// Lte An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Lte *AverageScore `json:"lte,omitempty"`
+}
+
+// AverageScore An average score from 1 to 10 with one decimal.
+//
+// Examples: 7.6
+type AverageScore = float64
+
 // CleanlinessScore Cleanliness of the dining room, the tableware, and the restrooms.
 type CleanlinessScore = Score
 
@@ -120,7 +153,7 @@ type RecordId = string
 
 // Restaurant A restaurant that can be reviewed.
 //
-// Examples: {"created":"2024-11-04 01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"description":"A family-run Italian restaurant","id":"k3x9m2p7q1w8z4a","name":"Luigi's Trattoria","tags":["italian","pasta"],"updated":"2024-11-04 01:26:55.002Z"}
+// Examples: {"created":"2024-11-04 01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"description":"A family-run Italian restaurant","id":"k3x9m2p7q1w8z4a","name":"Luigi's Trattoria","rating":{"cleanliness":7.5,"food":9,"overall":7.6,"price":5.5,"service":8.5,"space":7.5},"review_count":2,"tags":["italian","pasta"],"updated":"2024-11-04 01:26:55.002Z"}
 type Restaurant struct {
 	// Created A UTC timestamp with millisecond precision. This format is not RFC 3339.
 	//
@@ -142,6 +175,12 @@ type Restaurant struct {
 	// Name A name with at least one character that is not ASCII whitespace.
 	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Name Name `json:"name"`
+
+	// Rating The average scores of the reviews. It is `null` for a restaurant without reviews.
+	Rating nullable.Nullable[RestaurantRating] `json:"rating"`
+
+	// ReviewCount The number of reviews of the restaurant.
+	ReviewCount int `json:"review_count"`
 
 	// Tags Unique tags.
 	//
@@ -174,7 +213,7 @@ type RestaurantCreate struct {
 
 // RestaurantList A page of restaurants.
 //
-// Examples: {"items":[{"created":"2024-11-04 01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"description":"A family-run Italian restaurant","id":"k3x9m2p7q1w8z4a","name":"Luigi's Trattoria","tags":["italian","pasta"],"updated":"2024-11-04 01:26:55.002Z"}],"next_cursor":"c2Fk9xQe7LmT2vBn"}
+// Examples: {"items":[{"created":"2024-11-04 01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"description":"A family-run Italian restaurant","id":"k3x9m2p7q1w8z4a","name":"Luigi's Trattoria","rating":null,"review_count":0,"tags":["italian","pasta"],"updated":"2024-11-04 01:26:55.002Z"}],"next_cursor":"c2Fk9xQe7LmT2vBn"}
 type RestaurantList struct {
 	Items []Restaurant `json:"items"`
 
@@ -192,6 +231,41 @@ type RestaurantPatch struct {
 	// Control characters, direction marks and overrides, and zero-width spaces cause `422`.
 	Name *Name                   `json:"name,omitempty"`
 	Tags nullable.Nullable[Tags] `json:"tags,omitempty"`
+}
+
+// RestaurantRating The average of each score over the reviews of a restaurant.
+// `overall` is the average of the five averages.
+// The API rounds each value to one decimal.
+type RestaurantRating struct {
+	// Cleanliness An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Cleanliness AverageScore `json:"cleanliness"`
+
+	// Food An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Food AverageScore `json:"food"`
+
+	// Overall An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Overall AverageScore `json:"overall"`
+
+	// Price An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Price AverageScore `json:"price"`
+
+	// Service An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Service AverageScore `json:"service"`
+
+	// Space An average score from 1 to 10 with one decimal.
+	//
+	// Examples: 7.6
+	Space AverageScore `json:"space"`
 }
 
 // Review A review of a restaurant. It scores the space, service, food, price, and cleanliness.
@@ -479,6 +553,9 @@ type FoodFilter = ScoreRange
 // Limit defines model for Limit.
 type Limit = int
 
+// OverallFilter Comparisons for an average score. All comparisons must match.
+type OverallFilter = AverageRange
+
 // PriceFilter Comparisons for a score. All comparisons must match.
 type PriceFilter = ScoreRange
 
@@ -588,8 +665,14 @@ type ListRestaurantsParams struct {
 	// A `-` prefix sorts a property in descending order.
 	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
 	// The `name` sort ignores case only for the ASCII letters `A` to `Z`.
+	// The `overall` sort uses `rating.overall`. It puts restaurants without reviews last in both directions.
 	// The API always adds `id` as the last sort key.
 	Sort *RestaurantSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Overall Compares `rating.overall`, the rounded value of the response.
+	// Each key is an operator, for example `overall[gte]=`.
+	// A restaurant without reviews matches no `overall` filter.
+	Overall *OverallFilter `json:"overall,omitempty"`
 
 	// TagsHas The `tags` contain the tag.
 	TagsHas *TagsHas `form:"tags[has],omitempty" json:"tags[has],omitempty"`
@@ -844,6 +927,19 @@ func (siw *ServerInterfaceWrapper) ListRestaurants(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "overall" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "overall", r.URL.Query(), &params.Overall, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overall"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overall", Err: err})
 		}
 		return
 	}

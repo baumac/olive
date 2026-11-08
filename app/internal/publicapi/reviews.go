@@ -158,7 +158,7 @@ func (s *Server) reviewPage(
 		known[r.Id] = r.GetString("name")
 	}
 
-	records, next, err := s.page("reviews", w, keys, limit, query)
+	records, next, err := s.page("reviews", w, keys, limit, query, nil)
 	if err != nil {
 		return reviewPageResult{}, err
 	}

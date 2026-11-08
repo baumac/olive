@@ -144,6 +144,17 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 - a cursor value must be a string or a number. Other values get `400`.
 - tag filters use `json_each`. A value in `tags` that is not valid JSON matches no tag filter.
 
+## Restaurant rating
+
+- the API computes `review_count` and `rating` on read. Nothing stores them, so they cannot be out of date.
+- one `GROUP BY restaurant` query gets the averages for all restaurants of a response, like `creator`. The index on `(restaurant, creator)` of `reviews` serves it.
+- a new restaurant has no reviews, so `createRestaurant` needs no query
+- SQLite rounds the averages. The `overall` filter and sort use the same SQL expression, so they compare the value that the response shows.
+- an `overall` filter or sort adds a `LEFT JOIN` on one grouped query over all reviews. SQLite computes each average one time, not one time for each use in the row. The join reads all reviews, so other lists do not add it. Stored averages that each review change updates can replace it later.
+- the `overall` sort has two keys. The first is `1` for restaurants without reviews and `0` for the others. The second is the average, or `0` without reviews. This puts restaurants without reviews last in both directions, and the cursor never has `null`.
+- the cursor of an `overall` sort needs the average of the last restaurant of the page. It comes from the ratings query of the page, so the sort adds no query.
+- an `overall` filter value of `NaN` gets `400`. The range check runs before the cursor fingerprint, which cannot hold `NaN`.
+
 ## PocketBase mapping
 
 - PocketBase stores an empty string for a text field that has no value. An empty `description` or `feedback` is therefore not in responses.

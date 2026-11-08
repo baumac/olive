@@ -55,6 +55,12 @@ export function isoDate(value: string): string {
 
 const plural = new Intl.PluralRules(locale)
 const number = new Intl.NumberFormat(locale)
+const score = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 })
+
+// formatScore keeps the one decimal of an average from the API.
+export function formatScore(n: number): string {
+  return score.format(n)
+}
 
 // formatCount gives "1 review" or "12 reviews".
 export function formatCount(n: number, one: string, other = `${one}s`): string {

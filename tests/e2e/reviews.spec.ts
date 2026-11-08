@@ -71,7 +71,7 @@ test('the creator edits and deletes a review', async ({ page, api, user }) => {
   await expect(page.getByRole('radiogroup', { name: 'Food' }).getByRole('radio', { name: '3 out of 10' })).toBeChecked()
   await page.getByRole('radiogroup', { name: 'Food' }).getByRole('radio', { name: '9 out of 10' }).click()
   await page.getByRole('button', { name: 'Save review' }).click()
-  await expect(page.getByRole('img', { name: 'Food: 9 out of 10' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Reviews' }).getByRole('img', { name: 'Food: 9 out of 10' })).toBeVisible()
   await expect(page.getByText('edited')).toBeVisible()
 
   await page.getByRole('link', { name: 'Okay' }).click()

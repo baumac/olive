@@ -20,6 +20,13 @@ import {
     CreatorToJSON,
     CreatorToJSONTyped,
 } from './Creator.js';
+import type { RestaurantRating } from './RestaurantRating.js';
+import {
+    RestaurantRatingFromJSON,
+    RestaurantRatingFromJSONTyped,
+    RestaurantRatingToJSON,
+    RestaurantRatingToJSONTyped,
+} from './RestaurantRating.js';
 
 /**
  * A restaurant that can be reviewed.
@@ -52,6 +59,14 @@ export interface Restaurant {
      */
     creator: Creator | null;
     /**
+     * The number of reviews of the restaurant.
+     */
+    reviewCount: number;
+    /**
+     * The average scores of the reviews. It is `null` for a restaurant without reviews.
+     */
+    rating: RestaurantRating | null;
+    /**
      * A UTC timestamp with millisecond precision. This format is not RFC 3339.
      */
     created: string;
@@ -68,6 +83,8 @@ export function instanceOfRestaurant(value: object): value is Restaurant {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('creator' in value) || value['creator'] === undefined) return false;
+    if ((!('reviewCount' in (value as Record<string, any>)) && !('review_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['reviewCount'] === undefined && (value as Record<string, any>)['review_count'] === undefined)) return false;
+    if (!('rating' in value) || value['rating'] === undefined) return false;
     if (!('created' in value) || value['created'] === undefined) return false;
     if (!('updated' in value) || value['updated'] === undefined) return false;
     return true;
@@ -88,6 +105,8 @@ export function RestaurantFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         'description': json['description'] == null ? undefined : json['description'],
         'tags': json['tags'] == null ? undefined : new Set(json['tags']),
         'creator': CreatorFromJSON(json['creator']),
+        'reviewCount': json['review_count'],
+        'rating': RestaurantRatingFromJSON(json['rating']),
         'created': json['created'],
         'updated': json['updated'],
     };
@@ -109,6 +128,8 @@ export function RestaurantToJSONTyped(value?: Restaurant | null, ignoreDiscrimin
         'description': value['description'],
         'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
         'creator': CreatorToJSON(value['creator']),
+        'review_count': value['reviewCount'],
+        'rating': RestaurantRatingToJSON(value['rating']),
         'created': value['created'],
         'updated': value['updated'],
     };

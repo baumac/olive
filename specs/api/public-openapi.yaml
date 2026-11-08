@@ -168,6 +168,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/RestaurantSort'
+        - $ref: '#/components/parameters/OverallFilter'
         - $ref: '#/components/parameters/TagsHas'
         - $ref: '#/components/parameters/TagsHasAny'
         - $ref: '#/components/parameters/TagsHasAll'
@@ -543,10 +544,11 @@ components:
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `name` sort ignores case only for the ASCII letters `A` to `Z`.
+        The `overall` sort uses `rating.overall`. It puts restaurants without reviews last in both directions.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(name|created|updated)(,-?(name|created|updated))*$'
+        pattern: '^-?(name|overall|created|updated)(,-?(name|overall|created|updated))*$'
         default: '-created'
       example: 'name,-created'
     ReviewSort:
@@ -646,6 +648,19 @@ components:
       schema:
         $ref: '#/components/schemas/ScoreRange'
       example: {gte: 7}
+
+    OverallFilter:
+      name: overall
+      in: query
+      description: |
+        Compares `rating.overall`, the rounded value of the response.
+        Each key is an operator, for example `overall[gte]=`.
+        A restaurant without reviews matches no `overall` filter.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/AverageRange'
+      example: {gte: 7.5}
 
     CreatedFilter:
       name: created
@@ -879,6 +894,21 @@ components:
           $ref: '#/components/schemas/Score'
         gt:
           $ref: '#/components/schemas/Score'
+    AverageRange:
+      description: Comparisons for an average score. All comparisons must match.
+      type: object
+      additionalProperties: false
+      properties:
+        lt:
+          $ref: '#/components/schemas/AverageScore'
+        lte:
+          $ref: '#/components/schemas/AverageScore'
+        eq:
+          $ref: '#/components/schemas/AverageScore'
+        gte:
+          $ref: '#/components/schemas/AverageScore'
+        gt:
+          $ref: '#/components/schemas/AverageScore'
     TimestampRange:
       description: Comparisons for a timestamp. All comparisons must match.
       type: object
@@ -898,7 +928,7 @@ components:
     Restaurant:
       description: A restaurant that can be reviewed.
       type: object
-      required: [id, name, creator, created, updated]
+      required: [id, name, creator, review_count, rating, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -913,6 +943,15 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Creator'
             - type: 'null'
+        review_count:
+          description: The number of reviews of the restaurant.
+          type: integer
+          minimum: 0
+        rating:
+          description: The average scores of the reviews. It is `null` for a restaurant without reviews.
+          oneOf:
+            - $ref: '#/components/schemas/RestaurantRating'
+            - type: 'null'
         created:
           $ref: '#/components/schemas/Timestamp'
         updated:
@@ -925,8 +964,43 @@ components:
           creator:
             id: u5n1c8r3t6y0b2e
             name: Ana
+          review_count: 2
+          rating:
+            overall: 7.6
+            space: 7.5
+            service: 8.5
+            food: 9
+            price: 5.5
+            cleanliness: 7.5
           created: '2024-11-04 01:26:55.002Z'
           updated: '2024-11-04 01:26:55.002Z'
+    RestaurantRating:
+      description: |
+        The average of each score over the reviews of a restaurant.
+        `overall` is the average of the five averages.
+        The API rounds each value to one decimal.
+      type: object
+      required: [overall, space, service, food, price, cleanliness]
+      properties:
+        overall:
+          $ref: '#/components/schemas/AverageScore'
+        space:
+          $ref: '#/components/schemas/AverageScore'
+        service:
+          $ref: '#/components/schemas/AverageScore'
+        food:
+          $ref: '#/components/schemas/AverageScore'
+        price:
+          $ref: '#/components/schemas/AverageScore'
+        cleanliness:
+          $ref: '#/components/schemas/AverageScore'
+    AverageScore:
+      description: An average score from 1 to 10 with one decimal.
+      type: number
+      format: double
+      minimum: 1
+      maximum: 10
+      examples: [7.6]
     RestaurantCreate:
       description: The properties of a new restaurant.
       type: object
@@ -981,6 +1055,8 @@ components:
               creator:
                 id: u5n1c8r3t6y0b2e
                 name: Ana
+              review_count: 0
+              rating: null
               created: '2024-11-04 01:26:55.002Z'
               updated: '2024-11-04 01:26:55.002Z'
           next_cursor: c2Fk9xQe7LmT2vBn

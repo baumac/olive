@@ -14,8 +14,9 @@ The API sends UTC timestamps in the PocketBase format, `2024-11-04 01:26:55.002Z
 
 ## Numbers and scores
 
-- Scores are integers. Show them with the maximum: "4 / 5", "8 / 10". Use `tabular-nums`.
-- Do not average or round scores in the UI. The API has no aggregate rating yet.
+- Review scores are integers. Show them with the maximum: "8 / 10". Use `tabular-nums`.
+- Restaurant averages come from the API with one decimal: "7.6 / 10". Show a whole average without a decimal: "9 / 10".
+- Do not average or round scores in the UI. Show the values of the API.
 - Counts use `Intl.NumberFormat` and the right plural: "1 review", "12 reviews", "1,204 reviews". Use `Intl.PluralRules` to pick the word.
 - Zero is a word in empty states ("No reviews yet") and a number in counts ("0 reviews").
 

@@ -147,6 +147,7 @@ tests/
 
 `reviews.spec.ts`:
 - a signed in user writes a review with the five scores
+- restaurants show the averages of their reviews, and filter and sort by the overall average
 - "Write a review" opens the edit form when the user already has a review
 - the score filters select reviews. The score sorts order them.
 - the creator edits and deletes a review

@@ -23,6 +23,12 @@ describe('RatingDisplay', () => {
     expect(w.text()).toContain('8 / 10')
     await expectAccessible(w.element)
   })
+
+  it('shows an average with its decimal', () => {
+    const w = mount(RatingDisplay, { props: { value: 7.6, max: 10, label: 'Overall' }, attachTo: attach() })
+    expect(w.get('[role=img]').attributes('aria-label')).toBe('Overall: 7.6 out of 10')
+    expect(w.text()).toContain('7.6 / 10')
+  })
 })
 
 describe('RatingInput', () => {

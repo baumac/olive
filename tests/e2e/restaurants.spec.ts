@@ -80,3 +80,47 @@ test('a restaurant with reviews keeps its name and cannot be deleted', async ({ 
   await expect(page.getByText('Restaurant not deleted')).toBeVisible()
   await expect(page.getByText('A restaurant with reviews cannot be deleted.', { exact: true })).toBeVisible()
 })
+
+test('restaurants show the average scores of their reviews', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const tag = uniqueTag('rated')
+  const rated = await api.createRestaurant(owner, { name: 'Rated Place', tags: [tag] })
+  await api.createRestaurant(owner, { name: 'New Place', tags: [tag] })
+  const ana = await api.signUp('Ana')
+  await api.createReview(owner, rated.id, { space: 7, service: 8, food: 9, price: 6, cleanliness: 8, title: 'Good' })
+  await api.createReview(ana, rated.id, { space: 8, service: 9, food: 10, price: 5, cleanliness: 7, title: 'Great' })
+
+  await page.goto(`/restaurants?tags=${tag}&sort=name`)
+  const ratedCard = page.getByRole('listitem').filter({ hasText: 'Rated Place' })
+  await expect(ratedCard.getByRole('img', { name: 'Overall: 7.7 out of 10' })).toBeVisible()
+  await expect(ratedCard).toContainText('2 reviews')
+  await expect(page.getByRole('listitem').filter({ hasText: 'New Place' })).toContainText('No reviews yet')
+
+  await page.getByRole('link', { name: 'Rated Place' }).click()
+  const averages = page.getByRole('region', { name: 'Average of 2 reviews' })
+  await expect(averages.getByRole('img', { name: 'Food: 9.5 out of 10' })).toBeVisible()
+  await expect(averages.getByRole('img', { name: 'Price: 5.5 out of 10' })).toBeVisible()
+})
+
+test('restaurants filter and sort by the overall rating', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const tag = uniqueTag('overall')
+  const top = await api.createRestaurant(owner, { name: 'Top Place', tags: [tag] })
+  const fine = await api.createRestaurant(owner, { name: 'Fine Place', tags: [tag] })
+  await api.createRestaurant(owner, { name: 'Unrated Place', tags: [tag] })
+  await api.createReview(owner, top.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Top' })
+  await api.createReview(owner, fine.id, { space: 6, service: 6, food: 6, price: 6, cleanliness: 6, title: 'Fine' })
+  const names = page.getByRole('heading', { level: 2, name: / Place$/ })
+
+  await page.goto(`/restaurants?tags=${tag}&sort=-overall`)
+  await expect(names).toHaveText(['Top Place', 'Fine Place', 'Unrated Place'])
+
+  await page.goto(`/restaurants?tags=${tag}&sort=overall`)
+  await expect(names).toHaveText(['Fine Place', 'Top Place', 'Unrated Place'])
+
+  await page.goto(`/restaurants?tags=${tag}&overall=8`)
+  await expect(names).toHaveText(['Top Place'])
+  await expect(page.getByText('Overall: 8 or more')).toBeVisible()
+  await page.getByRole('button', { name: 'Remove filter overall 8 or more' }).click()
+  await expect(names).toHaveCount(3)
+})

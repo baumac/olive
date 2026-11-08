@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"slices"
+	"strings"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
@@ -12,10 +13,13 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-var restaurantSorts = map[string]sortField{
-	"name":    textSort("restaurants", "name"),
-	"created": timestampSort("restaurants", "created"),
-	"updated": timestampSort("restaurants", "updated"),
+func restaurantSorts(rated *ratedPage) map[string]sortField {
+	return map[string]sortField{
+		"name":    textSort("restaurants", "name"),
+		"overall": rated.overallSort,
+		"created": timestampSort("restaurants", "created"),
+		"updated": timestampSort("restaurants", "updated"),
+	}
 }
 
 // ListRestaurants uses keyset pagination. The cursor has the sort values of
@@ -30,8 +34,13 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if detail != "" {
 		return bad(detail)
 	}
-	keys, sort, detail := parseSort(p.Sort, "restaurants", restaurantSorts)
+	rated := &ratedPage{s: s}
+	keys, sort, detail := parseSort(p.Sort, "restaurants", restaurantSorts(rated))
 	if detail != "" {
+		return bad(detail)
+	}
+	// fingerprint cannot marshal NaN. The check runs first.
+	if detail := checkAverages("overall", averageComparisons(p.Overall)); detail != "" {
 		return bad(detail)
 	}
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
@@ -45,6 +54,10 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	}
 
 	w := newWhere()
+	if p.Overall != nil || sortsBy(sort, "overall") {
+		w.joinOverall()
+	}
+	w.compare(overallColumn, averageComparisons(p.Overall))
 	for _, detail := range []string{
 		w.tagFilters("restaurants", p.TagsHas, p.TagsHasAny, p.TagsHasAll),
 		w.creatorFilters("restaurants", p.CreatorEq, p.CreatorIn),
@@ -59,7 +72,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		w.keyset(keys, after)
 	}
 
-	records, next, err := s.page("restaurants", w, keys, limit, query)
+	records, next, err := s.page("restaurants", w, keys, limit, query, rated.load)
 	if err != nil {
 		return nil, err
 	}
@@ -69,9 +82,13 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	}
 	items := make([]reviewsapi.Restaurant, len(records))
 	for i, r := range records {
-		items[i] = toRestaurant(r, users)
+		items[i] = toRestaurant(r, users, rated.ratings)
 	}
 	return reviewsapi.ListRestaurants200JSONResponse{Items: items, NextCursor: next}, nil
+}
+
+func sortsBy(sort, field string) bool {
+	return slices.ContainsFunc(strings.Split(sort, ","), func(f string) bool { return strings.TrimPrefix(f, "-") == field })
 }
 
 // CreateRestaurant sets the user of the bearer token as the creator.
@@ -97,7 +114,7 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 
 	location := basePath + "/restaurants/" + r.Id
 	return reviewsapi.CreateRestaurant201JSONResponse{
-		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}),
+		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}, nil),
 		Headers: reviewsapi.CreateRestaurant201ResponseHeaders{Location: &location},
 	}, nil
 }
@@ -233,21 +250,31 @@ func (s *Server) restaurantResponse(r *core.Record) (reviewsapi.Restaurant, erro
 	if err != nil {
 		return reviewsapi.Restaurant{}, err
 	}
-	return toRestaurant(r, users), nil
+	ratings, err := s.ratings(r)
+	if err != nil {
+		return reviewsapi.Restaurant{}, err
+	}
+	return toRestaurant(r, users, ratings), nil
 }
 
-func toRestaurant(r *core.Record, users map[string]*core.Record) reviewsapi.Restaurant {
+// toRestaurant gives a restaurant that ratings does not list no reviews.
+func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[string]restaurantRating) reviewsapi.Restaurant {
 	out := reviewsapi.Restaurant{
 		Id:          r.Id,
 		Name:        r.GetString("name"),
 		Description: optionalText(r, "description"),
 		Tags:        tagsOf(r),
 		Creator:     nullable.NewNullNullable[reviewsapi.Creator](),
+		Rating:      nullable.NewNullNullable[reviewsapi.RestaurantRating](),
 		Created:     r.GetDateTime("created").String(),
 		Updated:     r.GetDateTime("updated").String(),
 	}
 	if u, ok := users[r.GetString("creator")]; ok {
 		out.Creator = nullable.NewNullableWithValue(toCreator(u))
+	}
+	if rating, ok := ratings[r.Id]; ok {
+		out.ReviewCount = rating.Count
+		out.Rating = nullable.NewNullableWithValue(rating.toAPI())
 	}
 	return out
 }

@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime.js';
 import {
+    type AverageRange,
+    AverageRangeFromJSON,
+    AverageRangeToJSON,
+} from '../models/AverageRange.js';
+import {
     type Problem,
     ProblemFromJSON,
     ProblemToJSON,
@@ -219,10 +224,18 @@ export interface ListRestaurantsRequest {
      * A `-` prefix sorts a property in descending order.
      * Each property can occur only one time. A repeated property causes `400 Bad Request`.
      * The `name` sort ignores case only for the ASCII letters `A` to `Z`.
+     * The `overall` sort uses `rating.overall`. It puts restaurants without reviews last in both directions.
      * The API always adds `id` as the last sort key.
      * 
      */
     sort?: string;
+    /**
+     * Compares `rating.overall`, the rounded value of the response.
+     * Each key is an operator, for example `overall[gte]=`.
+     * A restaurant without reviews matches no `overall` filter.
+     * 
+     */
+    overall?: AverageRange;
     /**
      * The `tags` contain the tag.
      */
@@ -568,7 +581,8 @@ export interface RestaurantsApiInterface {
      * Creates request options for listRestaurants without sending the request
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. It puts restaurants without reviews last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant without reviews matches no &#x60;overall&#x60; filter. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -586,7 +600,8 @@ export interface RestaurantsApiInterface {
      * @summary List restaurants
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. It puts restaurants without reviews last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant without reviews matches no &#x60;overall&#x60; filter. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -1200,6 +1215,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
 
         if (requestParameters['sort'] != null) {
             queryParameters['sort'] = requestParameters['sort'];
+        }
+
+        if (requestParameters['overall'] != null) {
+            queryParameters['overall'] = requestParameters['overall'];
         }
 
         if (requestParameters['tagsHas'] != null) {

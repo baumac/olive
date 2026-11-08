@@ -26,7 +26,7 @@ Out of scope:
 - Generating client libraries and documentation for the Public API
 - Implementation of the API spec
 - Reviews of things that are not restaurants, such as books or movies
-- Rating aggregates on restaurants, such as average rating and review count. These can be added later without a breaking change.
+- Filters and sorts on the category averages and on `review_count` of restaurants. These can be added later without a breaking change.
 - Search, such as matching part of a `name`. Filters compare whole values only.
 - Preventing or merging duplicate restaurants. Two restaurants can have the same `name`. PocketBase superusers clean up duplicates.
 
@@ -72,6 +72,8 @@ The properties of a restaurant are as follows:
     - `created`: timestamp
     - `updated`: timestamp
     - `creator`: the user who created the restaurant, see [Creator](#creator). It is `null` after that user is deleted. See [User Deletion](#user-deletion).
+    - `review_count`: the number of reviews of the restaurant
+    - `rating`: the average scores of the reviews, see [Rating](#rating). It is `null` for a restaurant without reviews.
     - `id`: PocketBase record ID
 
 Example:
@@ -85,10 +87,26 @@ Example:
     "id": "u5n1c8r3t6y0b2e",
     "name": "Ana"
   },
+  "review_count": 2,
+  "rating": {
+    "overall": 7.6,
+    "space": 7.5,
+    "service": 8.5,
+    "food": 9,
+    "price": 5.5,
+    "cleanliness": 7.5
+  },
   "created": "2024-11-04 01:26:55.002Z",
   "updated": "2024-11-04 01:26:55.002Z"
 }
 ```
+
+### Rating
+
+`rating` has the average of each review score over all reviews of the restaurant.
+`overall` is the average of the five averages. Each review then counts the same in each category.
+The API computes the averages before it rounds. It rounds each value to one decimal.
+Every response has the current values. A new, changed, or deleted review changes them at once.
 
 ### Operations
 
@@ -98,6 +116,7 @@ The operations of the restaurants API are as follows:
     - results are paginated, see [Pagination](#pagination)
     - results are sortable by the following properties ascending and descending, see [Sorting](#sorting):
       - `name`
+      - `overall`: the `rating.overall` value. Restaurants without reviews come last in both directions.
       - `created`
       - `updated`
     - the default sort is `-created`
@@ -105,6 +124,7 @@ The operations of the restaurants API are as follows:
         - `name`
         - `description`
     - results are filterable by the following properties and operators, see [Filtering](#filtering):
+        - `overall`: `lt`, `lte`, `eq`, `gte`, `gt`. It compares the rounded `rating.overall` value. Restaurants without reviews match no `overall` filter.
         - `tags`: `has`, `has_any`, `has_all`
         - `created`: `lt`, `lte`, `eq`, `gte`, `gt`
         - `updated`: `lt`, `lte`, `eq`, `gte`, `gt`

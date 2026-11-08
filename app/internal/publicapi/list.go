@@ -53,6 +53,7 @@ var reviewQuery = withRanges(maps.Clone(restaurantQuery), "space", "service", "f
 var allReviewQuery = maps.Clone(reviewQuery)
 
 func init() {
+	withRanges(restaurantQuery, "overall")
 	allReviewQuery["restaurant[eq]"] = 1
 	allReviewQuery["restaurant[in]"] = maxOtherValues
 }
@@ -127,11 +128,17 @@ func parseLimit(raw *int) (int, string) {
 	return *raw, ""
 }
 
-// where collects the conditions of a list query. All conditions use one
-// set of parameters.
+// where collects the conditions and joins of a list query. All conditions
+// use one set of parameters.
 type where struct {
 	parts  []string
 	params dbx.Params
+	joins  []leftJoin
+}
+
+type leftJoin struct {
+	table string
+	on    dbx.Expression
 }
 
 func newWhere() *where {
@@ -335,9 +342,16 @@ func decodeCursor(raw *string, query string, n int) ([]any, string) {
 }
 
 // page gets one page of records. It gets one more record than limit to know
-// if a next page exists.
-func (s *Server) page(collection string, w *where, keys []sortKey, limit int, query string) ([]*core.Record, nullable.Nullable[string], error) {
+// if a next page exists. A load function runs on the page before the sort
+// keys give the cursor values.
+func (s *Server) page(
+	collection string, w *where, keys []sortKey, limit int, query string,
+	load func([]*core.Record) error,
+) ([]*core.Record, nullable.Nullable[string], error) {
 	q := s.app.RecordQuery(collection)
+	for _, j := range w.joins {
+		q.LeftJoin(j.table, j.on)
+	}
 	if e := w.expression(); e != nil {
 		q.AndWhere(e)
 	}
@@ -354,9 +368,17 @@ func (s *Server) page(collection string, w *where, keys []sortKey, limit int, qu
 	if err := q.All(&records); err != nil {
 		return nil, nil, err
 	}
-	next := nullable.NewNullNullable[string]()
-	if len(records) > limit {
+	more := len(records) > limit
+	if more {
 		records = records[:limit]
+	}
+	if load != nil {
+		if err := load(records); err != nil {
+			return nil, nil, err
+		}
+	}
+	next := nullable.NewNullNullable[string]()
+	if more {
 		last := records[limit-1]
 		values := make([]any, len(keys))
 		for i, k := range keys {

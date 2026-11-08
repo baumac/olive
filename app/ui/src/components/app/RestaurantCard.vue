@@ -3,6 +3,8 @@ import type { Restaurant } from '@reviews/sdk'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { RatingDisplay } from '@/components/ui/rating-display'
+import { formatCount } from '@/lib/format'
 import { tagList } from '@/lib/reviews'
 import DateText from './DateText.vue'
 
@@ -21,8 +23,16 @@ defineProps<{ restaurant: Restaurant }>()
         {{ restaurant.description }}
       </CardDescription>
     </CardHeader>
-    <CardContent v-if="tagList(restaurant.tags).length" class="flex flex-wrap gap-1.5">
-      <Badge v-for="tag in tagList(restaurant.tags)" :key="tag" variant="secondary">{{ tag }}</Badge>
+    <CardContent class="grid gap-3">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <RatingDisplay v-if="restaurant.rating" :value="restaurant.rating.overall" :max="10" label="Overall" />
+        <span class="text-muted-foreground text-sm">
+          {{ restaurant.reviewCount ? formatCount(restaurant.reviewCount, 'review') : 'No reviews yet' }}
+        </span>
+      </div>
+      <div v-if="tagList(restaurant.tags).length" class="flex flex-wrap gap-1.5">
+        <Badge v-for="tag in tagList(restaurant.tags)" :key="tag" variant="secondary">{{ tag }}</Badge>
+      </div>
     </CardContent>
     <CardFooter class="text-muted-foreground mt-auto gap-2 text-sm">
       <InitialsAvatar :name="restaurant.creator?.name ?? null" size="sm" />

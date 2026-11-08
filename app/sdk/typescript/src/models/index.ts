@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from './AuthToken.js';
+export * from './AverageRange.js';
 export * from './Creator.js';
 export * from './Credentials.js';
 export * from './Problem.js';
@@ -8,6 +9,7 @@ export * from './Restaurant.js';
 export * from './RestaurantCreate.js';
 export * from './RestaurantList.js';
 export * from './RestaurantPatch.js';
+export * from './RestaurantRating.js';
 export * from './Review.js';
 export * from './ReviewCreate.js';
 export * from './ReviewList.js';

@@ -4,6 +4,7 @@ apis/UsersApi.ts
 apis/index.ts
 index.ts
 models/AuthToken.ts
+models/AverageRange.ts
 models/Creator.ts
 models/Credentials.ts
 models/Problem.ts
@@ -11,6 +12,7 @@ models/Restaurant.ts
 models/RestaurantCreate.ts
 models/RestaurantList.ts
 models/RestaurantPatch.ts
+models/RestaurantRating.ts
 models/Review.ts
 models/ReviewCreate.ts
 models/ReviewList.ts

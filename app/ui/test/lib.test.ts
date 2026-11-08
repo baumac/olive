@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { fieldErrors } from '@/lib/api'
+import { restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
-import { formatCount, formatDate, initials, parseTimestamp } from '@/lib/format'
+import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
+import { ratingScores } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 
 describe('format', () => {
@@ -92,5 +94,25 @@ describe('reviewFilterParams', () => {
       cleanliness: undefined,
       creatorEq: 'u5n1c8r3t6y0b2e',
     })
+  })
+})
+
+describe('ratings', () => {
+  it('keeps one decimal of an average', () => {
+    expect([formatScore(7.6), formatScore(9), formatScore(10)]).toEqual(['7.6', '9', '10'])
+  })
+
+  it('puts overall first', () => {
+    const rating = { overall: 7.6, space: 7.5, service: 8.5, food: 9, price: 5.5, cleanliness: 7.5 }
+    expect(ratingScores(rating).map((s) => `${s.label} ${s.value}`)).toEqual([
+      'Overall 7.6', 'Space 7.5', 'Service 8.5', 'Food 9', 'Price 5.5', 'Cleanliness 7.5',
+    ])
+  })
+})
+
+describe('restaurantFilterParams', () => {
+  it('changes the filters to SDK parameters', () => {
+    expect(restaurantFilterParams({ tags: ['pasta'], overall: '8' })).toEqual({ tagsHasAny: ['pasta'], overall: { gte: 8 } })
+    expect(restaurantFilterParams({})).toEqual({ tagsHasAny: undefined, overall: undefined })
   })
 })

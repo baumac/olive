@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Restaurant } from '@reviews/sdk'
-import type { FilterDef, Option } from '@/components/ui/filter-bar'
 import { PlusIcon, UtensilsIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import PagedList from '@/components/app/PagedList.vue'
@@ -13,32 +12,20 @@ import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
+import { restaurantFilterDefs, restaurantFilterParams, restaurantSortOptions } from '@/lib/restaurantFilters'
 
 usePageTitle('Restaurants')
 
 const limit = 20
 
-const defs: FilterDef[] = [
-  { key: 'tags', label: 'Tags', type: 'tags', help: 'Shows restaurants with at least one of the tags.', chip: (v) => `Tag: ${v}` },
-]
-
-const sortOptions: Option[] = [
-  { value: '-created', label: 'Newest' },
-  { value: 'created', label: 'Oldest' },
-  { value: 'name', label: 'Name, A to Z' },
-  { value: '-name', label: 'Name, Z to A' },
-  { value: '-updated', label: 'Recently updated' },
-]
-
-const { filters, sort, active } = useListQuery(defs, sortOptions, '-created')
+const { filters, sort, active } = useListQuery(restaurantFilterDefs, restaurantSortOptions, '-created')
 
 const list = usePagedList<Restaurant>(async (cursor) => {
-  const tags = filters.value.tags as string[] | undefined
   const page = await restaurantsApi.listRestaurants({
     limit,
     cursor,
     sort: sort.value,
-    tagsHasAny: tags?.length ? tags : undefined,
+    ...restaurantFilterParams(filters.value),
   })
   return { items: page.items, nextCursor: page.nextCursor }
 })
@@ -66,8 +53,8 @@ const status = computed(() => {
     <FilterBar
       v-model:filters="filters"
       v-model:sort="sort"
-      :defs="defs"
-      :sort-options="sortOptions"
+      :defs="restaurantFilterDefs"
+      :sort-options="restaurantSortOptions"
       sort-label="Sort by"
       :status="status"
     />

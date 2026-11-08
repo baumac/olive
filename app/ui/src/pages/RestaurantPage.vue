@@ -11,11 +11,13 @@ import ReviewList from '@/components/app/ReviewList.vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { RatingDisplay } from '@/components/ui/rating-display'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
-import { tagList } from '@/lib/reviews'
+import { formatCount } from '@/lib/format'
+import { ratingScores, tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string }>()
@@ -105,6 +107,18 @@ async function remove() {
         <ul v-if="tagList(restaurant.data.value.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
           <li v-for="tag in tagList(restaurant.data.value.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
         </ul>
+        <section v-if="restaurant.data.value.rating" class="grid gap-2" aria-labelledby="rating-heading">
+          <h2 id="rating-heading" class="text-sm font-medium">
+            Average of {{ formatCount(restaurant.data.value.reviewCount, 'review') }}
+          </h2>
+          <RatingDisplay
+            v-for="s in ratingScores(restaurant.data.value.rating)"
+            :key="s.name"
+            :value="s.value"
+            :max="s.max"
+            :label="s.label"
+          />
+        </section>
         <p class="text-muted-foreground flex items-center gap-2 text-sm">
           <InitialsAvatar :name="restaurant.data.value.creator?.name ?? null" size="sm" />
           <span>
