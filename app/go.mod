@@ -1,4 +1,4 @@
-module github.com/baumac/reviews-app/api
+module github.com/baumac/reviews-app/app
 
 go 1.27
 

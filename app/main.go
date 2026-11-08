@@ -5,8 +5,8 @@ package main
 import (
 	"log"
 
-	"github.com/baumac/reviews-app/api/internal/publicapi"
-	_ "github.com/baumac/reviews-app/api/migrations"
+	"github.com/baumac/reviews-app/app/internal/publicapi"
+	_ "github.com/baumac/reviews-app/app/migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 )

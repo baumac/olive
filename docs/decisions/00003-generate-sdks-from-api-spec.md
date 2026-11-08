@@ -6,7 +6,7 @@ status: implemented
 # Motivation
 [motivation]: #motivation
 
-The Public API spec in `specs/api/public-openapi.yaml` is the contract between the `ui` app and the `api` app.
+The Public API spec in `specs/api/public-openapi.yaml` is the contract between the `ui` app and the PocketBase app in `app`.
 If each app writes its own types and HTTP code by hand, the apps can drift from the spec without notice.
 A change to the spec then breaks the other app only at runtime.
 
@@ -16,7 +16,7 @@ The compiler of each app finds the code that does not match the spec.
 
 Expected outcome:
 - The `ui` app calls the Public API only through a generated TypeScript client.
-- The `api` app implements a generated Go server interface and uses generated Go types.
+- The PocketBase app in `app` implements a generated Go server interface and uses generated Go types.
 - One `make` command generates both SDKs from the spec.
 - A check finds generated code that does not match the spec.
 
@@ -31,9 +31,9 @@ In scope:
 
 Out of scope:
 - Publishing the SDKs to npm or to other package registries. Only this repository uses them.
-- A Go client. The `api` app is the only Go user, and it needs only the server code.
+- A Go client. The PocketBase app in `app` is the only Go user, and it needs only the server code.
 - API documentation from the spec. This stays in the backlog.
-- Implementing the `api` and `ui` apps. Each SDK gives only the code that the spec defines.
+- Implementing the `app` and `ui` apps. Each SDK gives only the code that the spec defines.
 - Request validation middleware that reads the spec at runtime
 
 # Guide-level explanation
@@ -88,7 +88,7 @@ Each method also has a `Raw` form, such as `createRestaurantRaw`, that gives the
 
 ## Go SDK
 
-The `api` app implements `reviewsapi.StrictServerInterface` and mounts the generated handler on the PocketBase router.
+The PocketBase app in `app` implements `reviewsapi.StrictServerInterface` and mounts the generated handler on the PocketBase router.
 
 ```go
 type Server struct {
@@ -111,7 +111,7 @@ func (s *Server) GetRestaurant(
 }
 ```
 
-The compiler fails when the `api` app does not implement an operation of the spec.
+The compiler fails when the PocketBase app in `app` does not implement an operation of the spec.
 It also fails when a handler returns a status or a body that the spec does not define for the operation.
 
 # Implementation Details
@@ -146,9 +146,9 @@ sdk/
     reviewsapi.gen.go         # generated
 ```
 
-- generated files are committed. The `api` and `ui` apps build without the generators.
+- generated files are committed. The `app` and `ui` apps build without the generators.
 - `sdk/typescript/src` has only generated files. `make generate` deletes it before it runs the generator. The generator does not delete the files of removed schemas.
-- the root `go.work` file has `sdk/go` and `api`. The `api` module also has a `replace` line for `sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
+- the root `go.work` file has `sdk/go` and `app`. The `app` module also has a `replace` line for `sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
 - the root `package.json` is an npm workspace with `sdk/typescript`. The `ui` app adds itself when it exists.
 
 ## TypeScript SDK settings
@@ -184,7 +184,7 @@ output-options:
 ```
 
 - the server uses `net/http` because the PocketBase router uses `net/http` handlers
-- the `api` app mounts the generated handler under `/v1` with `StdHTTPServerOptions.BaseURL`. PocketBase keeps its own routes under `/api` and `/_`.
+- the PocketBase app in `app` mounts the generated handler under `/v1` with `StdHTTPServerOptions.BaseURL`. PocketBase keeps its own routes under `/api` and `/_`.
 - `nullable-type: true` makes `nullable.Nullable[T]` for nullable properties. A merge patch body then shows the difference between a missing property and `null`.
 - the strict server calls hand-written error handlers for request decode errors and handler errors. These handlers return Problem Details, so all errors keep one format.
 

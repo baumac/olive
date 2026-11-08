@@ -6,8 +6,8 @@
 # Dev tools
 /bin
 
-# PocketBase data of make run-api
-/api/pb_data
+# PocketBase data of make run-app
+/app/pb_data
 
 # Node
 node_modules/

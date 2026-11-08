@@ -1,5 +1,5 @@
 ---
-description: Implement the Public API in the api app with PocketBase and the Go SDK.
+description: Implement the Public API in the app with PocketBase and the Go SDK.
 status: implemented
 ---
 
@@ -8,12 +8,12 @@ status: implemented
 
 Decision 00001 defines the Public API and its PocketBase mapping.
 Decision 00003 generates a Go server interface from the spec.
-The `api` app must implement the spec on PocketBase.
+The PocketBase app in `app` must implement the spec on PocketBase.
 Some choices of the implementation are not in these decisions.
 This decision records them.
 
 Expected outcome:
-- The `api` app serves the Public API under `/v1`, the PocketBase API under `/api`, and the PocketBase dashboard under `/_/`.
+- The PocketBase app in `app` serves the Public API under `/v1`, the PocketBase API under `/api`, and the PocketBase dashboard under `/_/`.
 - The Public API implements `reviewsapi.StrictServerInterface` from `sdk/go`.
 - Migrations make the `restaurants` and `reviews` collections and change `users`.
 - Tests send requests through the PocketBase router to a new database.
@@ -22,7 +22,7 @@ Expected outcome:
 [scope]: #scope
 
 In scope:
-- The layout of the `api` app
+- The layout of the PocketBase app in `app`
 - How the Public API mounts on the PocketBase router
 - The order of the request checks
 - The rate limit, the cursor format, and the PocketBase details that decision 00001 does not give
@@ -36,16 +36,16 @@ Out of scope:
 [guide-level-explanation]: #guide-level-explanation
 
 ```bash
-make run-api    # Serve on 127.0.0.1:8090 with data in api/pb_data
-make test-api   # Run the API tests
-make build-api  # Build ./bin/reviews-api
+make run-app    # Serve on 127.0.0.1:8090 with data in app/pb_data
+make test-app   # Run the tests of the app
+make build-app  # Build ./bin/reviews-app
 ```
 
 The server applies the migrations when it starts.
 
 ```
-api/
-  go.mod                       # module github.com/baumac/reviews-app/api
+app/
+  go.mod                       # module github.com/baumac/reviews-app/app
   main.go                      # the PocketBase app
   migrations/                  # Go migrations of the collections
   internal/publicapi/
@@ -148,8 +148,8 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 
 ## Go modules
 
-- PocketBase v0.40.6 needs Go 1.27. The `api` module and `go.work` therefore use Go 1.27.
-- `api/go.mod` has a `replace` line for `sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
+- PocketBase v0.40.6 needs Go 1.27. The `app` module and `go.work` therefore use Go 1.27.
+- `app/go.mod` has a `replace` line for `sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
 
 ## Tests
 
