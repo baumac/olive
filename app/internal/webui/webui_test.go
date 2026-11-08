@@ -73,6 +73,7 @@ func TestRoutes(t *testing.T) {
 		{"GET", "/restaurants/k3x9m2p7q1w8z4a", 200, "<html"},
 		{"GET", "/v1/restaurants", http.StatusTeapot, "api"},
 		{"POST", "/restaurants", http.StatusMethodNotAllowed, ""},
+		{"POST", "/csp-report", http.StatusNoContent, ""},
 		{"GET", "/api/does-not-exist", http.StatusNotFound, `"status":404`},
 		{"POST", "/_/unknown", http.StatusNotFound, `"status":404`},
 	} {
@@ -83,6 +84,15 @@ func TestRoutes(t *testing.T) {
 		}
 		if tc.status == 200 && w.Header().Get("Cache-Control") != "no-cache" {
 			t.Errorf("%s: Cache-Control %q", tc.path, w.Header().Get("Cache-Control"))
+		}
+		if tc.status == 200 && w.Header().Get("Reporting-Endpoints") != `csp="/csp-report"` {
+			t.Errorf("%s: Reporting-Endpoints %q", tc.path, w.Header().Get("Reporting-Endpoints"))
+		}
+		if tc.status == 200 && w.Header().Get("Content-Security-Policy") != contentSecurityPolicy {
+			t.Errorf("%s: Content-Security-Policy %q", tc.path, w.Header().Get("Content-Security-Policy"))
+		}
+		if strings.HasPrefix(tc.path, "/v1") && w.Header().Get("Content-Security-Policy") != "" {
+			t.Errorf("%s: the API has the UI policy", tc.path)
 		}
 	}
 }

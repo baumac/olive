@@ -13,11 +13,19 @@ A different origin needs CORS settings and a second deployment.
 
 We put the UI in `app/ui` and serve its built files from the PocketBase app.
 
+The UI keeps the auth token in `localStorage`.
+A script that an attacker injects into the page can read the token and act as the user until the token expires.
+Decision 00001 records that the API cannot revoke tokens.
+Vue escapes text by default, so most injections fail.
+A bug in a dependency or a later use of `v-html` can still let a script in.
+A strict Content Security Policy (CSP) stops the browser from running such a script.
+
 Expected outcome:
 - One binary serves the Public UI, the Public API, the PocketBase API, and the PocketBase dashboard.
 - The UI and the Public API have the same origin. The API needs no CORS settings for the UI.
 - Developers run the UI with the Vite dev server and hot reload.
 - The Go and npm tools of the project work with the UI inside the Go module.
+- The UI route sends a CSP that allows scripts and styles only from the same origin. A change that breaks the policy fails the end-to-end tests.
 
 # Scope
 [scope]: #scope
@@ -28,12 +36,15 @@ In scope:
 - The routes of the UI next to the other routes of the app
 - The development flow and the `make` targets
 - The changes to the docs that use the old `ui` path
+- The CSP of the UI route, and how the tests find violations
 
 Out of scope:
 - The screens, components, and state of the UI. The design system in `specs/design-system` covers the look.
 - Server-side rendering
 - A CDN or a separate static host
-- A Content Security Policy. The backlog has it.
+- A CSP for the Public API under `/v1`. Its responses are JSON, which a browser does not run.
+- A CSP for the PocketBase dashboard under `/_/`. PocketBase sends its own policy there.
+- Trusted Types. Vue sets `innerHTML` for static template parts, which Trusted Types blocks.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -71,6 +82,20 @@ make test-ui     # Run the UI tests
 For UI work, run `make run-app` and `make dev-ui` at the same time.
 Open the Vite dev server URL.
 The Vite dev server sends `/v1` requests to the PocketBase app, so the UI uses the same paths as in production.
+
+## Content Security Policy
+
+Every response of the UI route has a `Content-Security-Policy` header.
+The value is the constant `contentSecurityPolicy` in `app/internal/webui/webui.go`.
+The Implementation Details explain each directive.
+
+The UI must not add:
+- inline scripts, `eval`, or `new Function`
+- inline `<style>` elements or `style="..."` attributes in HTML. Vue `:style` bindings are allowed, because they set styles through the CSSOM.
+- files from other origins, such as fonts or images from a CDN
+- `data:` URLs. `assetsInlineLimit: 0` in `app/ui/vite.config.ts` makes Vite emit every asset as a file, also a small one.
+
+A change that breaks one of these rules fails the end-to-end tests with the text of the violation.
 
 # Implementation Details
 [implementation-details]: #implementation-details
@@ -151,6 +176,71 @@ The app has these routes:
 - `make test-ui` runs Vitest with Vue Test Utils in jsdom
 - the component tests run `axe-core` directly. `vitest-axe` has no release since 2022. jsdom does not render, so the color contrast rule does not run. `tokens.json` has the contrast values.
 - `app/internal/webui` has Go tests for the routes and the cache headers
+
+## Content Security Policy
+
+### Directives
+
+| Directive | Value | Why |
+| --- | --- | --- |
+| `default-src` | `'self'` | the base for all other types |
+| `script-src` | `'self'` | the Vite chunks and `theme.js`. No inline scripts. |
+| `style-src` | `'self'` and one hash | the Tailwind CSS file and the inline style of Reka UI `SelectViewport` |
+| `img-src` | `'self'` | the logos and icons are files of the build |
+| `font-src` | `'self'` | the UI uses system fonts. No web fonts. |
+| `connect-src` | `'self'` | the Public API is on the same origin |
+| `manifest-src` | `'self'` | `site.webmanifest` |
+| `object-src` | `'none'` | no plugins |
+| `base-uri` | `'none'` | an injected `<base>` cannot move the relative URLs |
+| `form-action` | `'self'` | forms send only to this origin |
+| `frame-ancestors` | `'none'` | other sites cannot put the UI in a frame. This also stops clickjacking. |
+| `report-uri`, `report-to` | `/csp-report`, `csp` | browsers send violations to the app. See Reports. |
+
+- `app/internal/webui/webui.go` sets the header on every response of the UI route
+- the Vite dev server of `make dev-ui` does not send the header. Hot reload needs inline scripts and a WebSocket.
+
+### Reports
+
+- the UI route also sends `Reporting-Endpoints: csp="/csp-report"`. Browsers that support `report-to` use it. Other browsers use `report-uri`.
+- `POST /csp-report` logs the report as a warning in the PocketBase log, with the user agent. It returns `204`.
+- anybody can send a report. The handler keeps at most 16 KB of each body. A PocketBase rate limit rule allows 20 reports per minute per IP address.
+- the log shows a violation that the tests did not find, for example after a Reka UI update in a screen without a test
+
+### Uploads
+
+PocketBase serves uploaded files under `/api/files` on the origin of the UI, which `'self'` trusts.
+A migration removes the default `avatar` file field of `users`. The Public API has no profile pictures.
+No collection then has a file field, and nobody can upload a file that the policy would trust.
+A later file field needs a check of this risk, for example a separate host for files.
+
+### The style hash
+
+Reka UI `SelectViewport` renders a `<style>` element that hides the scrollbar of select lists.
+Its text is fixed, so its SHA-256 hash allows it without `'unsafe-inline'`.
+
+Other options:
+
+| Option | Result |
+| --- | --- |
+| A hash of the fixed text | Selected. The policy stays static. The tests find a new text after a Reka UI update. |
+| A nonce | Not selected. The server would need to rewrite `index.html` for each response with a new nonce, and pass it to `SelectViewport`. |
+| `'unsafe-inline'` for styles | Not selected. An injected `<style>` can then change the page, for example to hide or fake content. |
+
+### Tests
+
+- the Go test of `app/internal/webui` checks that the UI route sends the policy and `/v1` does not
+- the `noCspViolations` fixture in `tests/fixtures.ts` runs in every end-to-end test
+  - it listens to `securitypolicyviolation` events and to console messages about the policy
+  - a test with a violation fails and shows the text of the violation
+- the fixture ignores other policy messages in the console, such as an ignored source. Only a refused or blocked load fails a test.
+- `tests/e2e/csp.spec.ts` opens the parts of the UI that change styles at runtime: the theme menu, Load more, the filter popover with the kind select, the sort select, the rating inputs, the success and error toasts, the delete dialog, and the account menu
+
+### Rollout
+
+The backlog item said to send the policy first as `Content-Security-Policy-Report-Only`.
+The policy is enforced at once instead:
+- report-only shows a violation only in the console and the log. The tests find violations before release.
+- the end-to-end tests run the UI under the enforced policy in Chromium, Firefox, WebKit, and a small viewport. They found the Reka UI style before release.
 
 ## Docs changed
 

@@ -13,6 +13,8 @@ export default defineConfig({
     // The PocketBase app embeds this folder. See decision 00005.
     outDir: '../internal/webui/dist',
     emptyOutDir: true,
+    // Every asset is a file. The Content Security Policy blocks data: URLs.
+    assetsInlineLimit: 0,
   },
   server: {
     proxy: { '/v1': 'http://127.0.0.1:8090' },

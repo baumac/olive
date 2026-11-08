@@ -20,7 +20,34 @@ export async function signIn(page: Page, user: TestUser) {
   )
 }
 
-export const test = base.extend<{ api: TestApi; user: TestUser }>({
+export const test = base.extend<{ api: TestApi; user: TestUser; noCspViolations: void }>({
+  // noCspViolations fails a test if the browser blocks anything under the
+  // Content Security Policy of decision 00005. It runs in every test.
+  noCspViolations: [
+    async ({ page }, use) => {
+      const violations: string[] = []
+      await page.exposeBinding('reportCspViolation', (_source, text: string) => {
+        violations.push(text)
+      })
+      await page.addInitScript(() => {
+        document.addEventListener('securitypolicyviolation', (e) => {
+          const report = (window as unknown as { reportCspViolation: (t: string) => void }).reportCspViolation
+          report(`${e.violatedDirective} blocked ${e.blockedURI || 'inline'} at ${e.sourceFile}:${e.lineNumber}`)
+        })
+      })
+      // Browsers also log other policy messages, such as an ignored source.
+      // Only a refused or blocked load is a violation.
+      page.on('console', (msg) => {
+        const text = msg.text()
+        if (/Content[ -]Security[ -]Policy/i.test(text) && /refused|blocked|violates/i.test(text)) {
+          violations.push(text)
+        }
+      })
+      await use()
+      expect(violations, 'Content Security Policy violations').toEqual([])
+    },
+    { auto: true },
+  ],
   api: async ({ baseURL }, use) => {
     await use(new TestApi(baseURL!))
   },

@@ -4,6 +4,7 @@ package webui
 
 import (
 	"embed"
+	"io"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -17,6 +18,23 @@ import (
 //
 //go:embed all:dist
 var dist embed.FS
+
+// contentSecurityPolicy allows only files of this origin. Decision 00005
+// explains each directive. The UI has no inline scripts.
+//
+// The hash allows the inline style of Reka UI SelectViewport. A Reka UI
+// update can change its text. The end-to-end tests then fail.
+const contentSecurityPolicy = "default-src 'self'; script-src 'self'; " +
+	"style-src 'self' 'sha256-60LHlRjW/B3CtzIoE/Lf1/NEDvko9efWMFaGVhHu/cs='; img-src 'self'; " +
+	"font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; " +
+	"form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; report-to csp"
+
+// reportPath gets the violation reports of the browsers. The log then shows
+// a violation that the tests did not find.
+const reportPath = "/csp-report"
+
+// maxReportBytes is far above one report. A larger body is cut.
+const maxReportBytes = 16 << 10
 
 var placeholder = fstest.MapFS{
 	"index.html": {Data: []byte(`<!doctype html>
@@ -59,6 +77,7 @@ func Register(app core.App) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		files := Files()
 		static := apis.Static(files, true)
+		se.Router.POST(reportPath, logReport)
 		// The route has no method. A GET route would conflict with the /v1
 		// route of the Public API, which has no method.
 		se.Router.Any("/{path...}", func(e *core.RequestEvent) error {
@@ -71,6 +90,8 @@ func Register(app core.App) {
 				return e.NoContent(http.StatusMethodNotAllowed)
 			}
 			e.Response.Header().Set("Cache-Control", cacheControl(files, path))
+			e.Response.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+			e.Response.Header().Set("Reporting-Endpoints", `csp="`+reportPath+`"`)
 			return static(e)
 		}).Bind(apis.Gzip())
 		return se.Next()
@@ -97,4 +118,19 @@ func isPocketBasePath(path string) bool {
 		}
 	}
 	return false
+}
+
+// logReport logs a CSP violation report. Anybody can send one. The log
+// keeps at most maxReportBytes of it.
+func logReport(e *core.RequestEvent) error {
+	body, err := io.ReadAll(io.LimitReader(e.Request.Body, maxReportBytes))
+	if err != nil {
+		return e.BadRequestError("", nil)
+	}
+	e.App.Logger().Warn("Content Security Policy violation",
+		"contentType", e.Request.Header.Get("Content-Type"),
+		"report", string(body),
+		"userAgent", e.Request.UserAgent(),
+	)
+	return e.NoContent(http.StatusNoContent)
 }

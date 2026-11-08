@@ -3,6 +3,7 @@ package migrations
 import (
 	"testing"
 
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 	"github.com/pocketbase/pocketbase/tools/dbutils"
 )
@@ -48,5 +49,25 @@ func TestRateLimitsAreOn(t *testing.T) {
 	defer app.Cleanup()
 	if !app.Settings().RateLimits.Enabled {
 		t.Error("the PocketBase rate limits are off")
+	}
+	if _, ok := app.Settings().RateLimits.FindRateLimitRule([]string{"POST /csp-report"}); !ok {
+		t.Error("no rate limit rule for the CSP reports")
+	}
+}
+
+func TestUsersHaveNoFileFields(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	users, err := app.FindCollectionByNameOrId("users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range users.Fields {
+		if f.Type() == core.FieldTypeFile {
+			t.Errorf("users has the file field %s", f.GetName())
+		}
 	}
 }
