@@ -1,7 +1,7 @@
 BIN := $(CURDIR)/bin
 VACUUM_VERSION := v0.33.2
 VACUUM := $(BIN)/vacuum
-SPECS := specs/api/restaurants-openapi.yaml specs/api/users-openapi.yaml
+SPECS := specs/api/public-openapi.yaml
 
 .PHONY: install-tools lint lint-spec
 

@@ -1,6 +1,6 @@
 # User authentication
 
-How people sign up, sign in and stay signed in. The API is the User Auth API in `specs/api/users-openapi.yaml`. PocketBase serves it for the `users` collection.
+How people sign up, sign in and stay signed in. The API is the User Auth API: the `users` tag in `specs/api/public-openapi.yaml`. PocketBase serves it for the `users` collection.
 
 ## Who needs an account
 

@@ -2,7 +2,7 @@
 
 Signs a person in with an email address and a password. People must sign in to add restaurants and to write, edit and delete reviews. Reading needs no account.
 
-Project component built from `Card`, `Form`, `Input`, `Button` and `Alert`. Lives in `@/components/ui/sign-in-form`. Props: `loading` (boolean), `error` (string or null), `notice` (`"session-ended"` or null). Event: `submit` with `{ identity, password }`. The screen calls `POST /api/collections/users/auth-with-password` (`signIn` in `users-openapi.yaml`), stores the token and goes back to the page in the `redirect` query. See the "User authentication" section for the whole flow.
+Project component built from `Card`, `Form`, `Input`, `Button` and `Alert`. Lives in `@/components/ui/sign-in-form`. Props: `loading` (boolean), `error` (string or null), `notice` (`"session-ended"` or null). Event: `submit` with `{ identity, password }`. The screen calls `POST /api/collections/users/auth-with-password` (`signIn` in `public-openapi.yaml`), stores the token and goes back to the page in the `redirect` query. See the "User authentication" section for the whole flow.
 
 - Title "Sign in". Description: "Sign in to add restaurants and write reviews."
 - Fields: "Email" (`type="email"`, `autocomplete="username"`, sent as `identity`) and "Password" (`type="password"`, `autocomplete="current-password"`). Both required. Check before sending that both have a value.

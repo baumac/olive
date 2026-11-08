@@ -2,7 +2,7 @@
 
 Creates an account with an email address and a password, then signs the person in.
 
-Project component built from `Card`, `Form`, `Input`, `Button` and `Alert`, like `SignInForm`. Lives in `@/components/ui/sign-up-form`. Props: `loading` (boolean), `errors` (field messages keyed by property), `error` (string or null). Event: `submit` with `{ name, email, password, passwordConfirm }`. The screen calls `POST /api/collections/users/records` (`signUp` in `users-openapi.yaml`). That response has no token, so the screen then calls `signIn` with the same email and password. See the "User authentication" section.
+Project component built from `Card`, `Form`, `Input`, `Button` and `Alert`, like `SignInForm`. Lives in `@/components/ui/sign-up-form`. Props: `loading` (boolean), `errors` (field messages keyed by property), `error` (string or null). Event: `submit` with `{ name, email, password, passwordConfirm }`. The screen calls `POST /api/collections/users/records` (`signUp` in `public-openapi.yaml`). That response has no token, so the screen then calls `signIn` with the same email and password. See the "User authentication" section.
 
 - Title "Create an account". Description: "With an account you can add restaurants and write reviews."
 - Fields, in this order:

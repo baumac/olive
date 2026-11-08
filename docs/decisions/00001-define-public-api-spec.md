@@ -1,5 +1,5 @@
 ---
-description: Define OAS specifications for the Public API and the PocketBase user auth APIs.
+description: Define the OAS specification for the Public API and the PocketBase user auth APIs.
 status: implemented
 ---
 
@@ -16,8 +16,9 @@ PocketBase gives these user auth APIs, so we define an OAS specification for the
 [scope]: #scope
 
 In scope:
-- defining the Public API OAS specification for restaurants and reviews in `specs/api/restaurants-openapi.yaml`
-- defining the OAS specification for Pocketbase user auth in `specs/api/users-openapi.yaml`
+- defining one OAS specification in `specs/api/public-openapi.yaml` with two tags:
+  - `restaurants`: the Public API for restaurants and reviews
+  - `users`: the PocketBase user auth APIs
 
 Out of scope:
 - All other APIs provided by PocketBase not listed as in scope
@@ -44,15 +45,19 @@ New Concepts:
   - a user creates restaurants and reviews
 - **Auth token**: a PocketBase auth token for a user. The Public API uses it as a bearer token.
 
-The file `specs/api/restaurants-openapi.yaml` contains the OpenAPI Specification (OAS) for the Public API. In the OAS file,
+The file `specs/api/public-openapi.yaml` contains the OpenAPI Specification (OAS) for the Public API and the User Auth API. In the OAS file,
 the endpoints, request/response schemas, and authentication mechanisms are defined.
 
-The file `specs/api/users-openapi.yaml` contains the OAS for the User Auth API.
-It describes the PocketBase APIs as PocketBase serves them.
+The OAS uses tags to separate the two sets of operations:
+- `restaurants`: the operations of the Public API for restaurants and reviews
+- `users`: the operations of the User Auth API
+
+The `users` operations describe the PocketBase APIs as PocketBase serves them.
 The project does not change these APIs.
 
-The paths of the Public API are relative to the versioned base path `/v1`.
-The paths of the User Auth API are relative to the PocketBase base path `/api`.
+The server URL of the OAS is `/`.
+The paths of the Public API start with the versioned base path `/v1`.
+The paths of the User Auth API start with the PocketBase base path `/api`.
 Paths use the OAS path template syntax, for example `{restaurantId}`.
 
 ## Restaurants API
@@ -565,9 +570,9 @@ Each kind schema sets `additionalProperties: false`.
 The create and patch request bodies use the same pattern.
 `kind` is required in the patch body so that the API can select the kind schema.
 
-The two OAS files do not refer to each other.
-`users-openapi.yaml` has its own copies of the `RecordId` and `Timestamp` schemas.
-Each file can be used alone, for example to make a client.
+The `restaurants` and `users` operations share the `bearerAuth` security scheme and the `RecordId` and `Timestamp` schemas.
+The `users` operations use their own error responses and schemas with the `PocketBase` prefix, for example `PocketBaseBadRequest` and `PocketBaseError`.
+The `restaurants` operations use the `Problem` schema.
 
 ## PocketBase Mapping
 
