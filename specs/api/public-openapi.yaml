@@ -583,19 +583,7 @@ components:
       style: deepObject
       explode: true
       schema:
-        type: object
-        additionalProperties: false
-        properties:
-          lt:
-            $ref: '#/components/schemas/Rating'
-          lte:
-            $ref: '#/components/schemas/Rating'
-          eq:
-            $ref: '#/components/schemas/Rating'
-          gte:
-            $ref: '#/components/schemas/Rating'
-          gt:
-            $ref: '#/components/schemas/Rating'
+        $ref: '#/components/schemas/RatingRange'
       example: {gte: 4}
 
     SpaceFilter:
@@ -605,19 +593,7 @@ components:
       style: deepObject
       explode: true
       schema:
-        type: object
-        additionalProperties: false
-        properties:
-          lt:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          lte:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          eq:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          gte:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          gt:
-            $ref: '#/components/schemas/JocDeCartesScore'
+        $ref: '#/components/schemas/ScoreRange'
       example: {gte: 7}
 
     ServiceFilter:
@@ -627,19 +603,7 @@ components:
       style: deepObject
       explode: true
       schema:
-        type: object
-        additionalProperties: false
-        properties:
-          lt:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          lte:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          eq:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          gte:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          gt:
-            $ref: '#/components/schemas/JocDeCartesScore'
+        $ref: '#/components/schemas/ScoreRange'
       example: {gte: 7}
 
     FoodFilter:
@@ -649,19 +613,7 @@ components:
       style: deepObject
       explode: true
       schema:
-        type: object
-        additionalProperties: false
-        properties:
-          lt:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          lte:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          eq:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          gte:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          gt:
-            $ref: '#/components/schemas/JocDeCartesScore'
+        $ref: '#/components/schemas/ScoreRange'
       example: {gte: 7}
 
     PriceFilter:
@@ -671,19 +623,7 @@ components:
       style: deepObject
       explode: true
       schema:
-        type: object
-        additionalProperties: false
-        properties:
-          lt:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          lte:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          eq:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          gte:
-            $ref: '#/components/schemas/JocDeCartesScore'
-          gt:
-            $ref: '#/components/schemas/JocDeCartesScore'
+        $ref: '#/components/schemas/ScoreRange'
       example: {gte: 7}
 
     CreatedFilter:
@@ -693,19 +633,7 @@ components:
       style: deepObject
       explode: true
       schema:
-        type: object
-        additionalProperties: false
-        properties:
-          lt:
-            $ref: '#/components/schemas/Timestamp'
-          lte:
-            $ref: '#/components/schemas/Timestamp'
-          eq:
-            $ref: '#/components/schemas/Timestamp'
-          gte:
-            $ref: '#/components/schemas/Timestamp'
-          gt:
-            $ref: '#/components/schemas/Timestamp'
+        $ref: '#/components/schemas/TimestampRange'
       example: {gte: '2024-11-01 00:00:00.000Z'}
 
     UpdatedFilter:
@@ -715,19 +643,7 @@ components:
       style: deepObject
       explode: true
       schema:
-        type: object
-        additionalProperties: false
-        properties:
-          lt:
-            $ref: '#/components/schemas/Timestamp'
-          lte:
-            $ref: '#/components/schemas/Timestamp'
-          eq:
-            $ref: '#/components/schemas/Timestamp'
-          gte:
-            $ref: '#/components/schemas/Timestamp'
-          gt:
-            $ref: '#/components/schemas/Timestamp'
+        $ref: '#/components/schemas/TimestampRange'
       example: {gte: '2024-11-01 00:00:00.000Z'}
 
     CreatorEq:
@@ -907,6 +823,52 @@ components:
         name:
           $ref: '#/components/schemas/Name'
 
+    RatingRange:
+      description: Comparisons for a `basic` rating. All comparisons must match.
+      type: object
+      additionalProperties: false
+      properties:
+        lt:
+          $ref: '#/components/schemas/Rating'
+        lte:
+          $ref: '#/components/schemas/Rating'
+        eq:
+          $ref: '#/components/schemas/Rating'
+        gte:
+          $ref: '#/components/schemas/Rating'
+        gt:
+          $ref: '#/components/schemas/Rating'
+    ScoreRange:
+      description: Comparisons for a `joc_de_cartes` score. All comparisons must match.
+      type: object
+      additionalProperties: false
+      properties:
+        lt:
+          $ref: '#/components/schemas/JocDeCartesScore'
+        lte:
+          $ref: '#/components/schemas/JocDeCartesScore'
+        eq:
+          $ref: '#/components/schemas/JocDeCartesScore'
+        gte:
+          $ref: '#/components/schemas/JocDeCartesScore'
+        gt:
+          $ref: '#/components/schemas/JocDeCartesScore'
+    TimestampRange:
+      description: Comparisons for a timestamp. All comparisons must match.
+      type: object
+      additionalProperties: false
+      properties:
+        lt:
+          $ref: '#/components/schemas/Timestamp'
+        lte:
+          $ref: '#/components/schemas/Timestamp'
+        eq:
+          $ref: '#/components/schemas/Timestamp'
+        gte:
+          $ref: '#/components/schemas/Timestamp'
+        gt:
+          $ref: '#/components/schemas/Timestamp'
+
     Restaurant:
       description: A restaurant that can be reviewed.
       type: object
@@ -1055,6 +1017,7 @@ components:
           required: [kind, rating]
           properties:
             kind:
+              type: string
               const: basic
             rating:
               $ref: '#/components/schemas/Rating'
@@ -1079,6 +1042,7 @@ components:
           required: [kind, space, service, food, price]
           properties:
             kind:
+              type: string
               const: joc_de_cartes
             space:
               $ref: '#/components/schemas/SpaceScore'
@@ -1153,6 +1117,7 @@ components:
       required: [kind, rating, title]
       properties:
         kind:
+          type: string
           const: basic
         rating:
           $ref: '#/components/schemas/Rating'
@@ -1169,6 +1134,7 @@ components:
       required: [kind, space, service, food, price, title]
       properties:
         kind:
+          type: string
           const: joc_de_cartes
         space:
           $ref: '#/components/schemas/SpaceScore'
@@ -1210,6 +1176,7 @@ components:
       required: [kind]
       properties:
         kind:
+          type: string
           const: basic
         rating:
           $ref: '#/components/schemas/Rating'
@@ -1230,6 +1197,7 @@ components:
       required: [kind]
       properties:
         kind:
+          type: string
           const: joc_de_cartes
         space:
           $ref: '#/components/schemas/SpaceScore'

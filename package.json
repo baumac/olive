@@ -1,0 +1,7 @@
+{
+  "name": "reviews-app",
+  "private": true,
+  "workspaces": [
+    "sdk/typescript"
+  ]
+}

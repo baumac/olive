@@ -5,3 +5,6 @@
 
 # Dev tools
 /bin
+
+# Node
+node_modules/

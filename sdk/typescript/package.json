@@ -1,0 +1,28 @@
+{
+  "name": "@reviews/sdk",
+  "version": "1.0.0",
+  "description": "The TypeScript client for the Public API. Generated from specs/api/public-openapi.yaml.",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "tsc -p tsconfig.test.json && vitest run"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

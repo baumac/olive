@@ -18,8 +18,11 @@ This project allows users to review a variety of things. It is composed of the f
 
 ```bash
 make install-tools    # Install dev tools to ./bin/. Needs Go.
-make lint             # Run all linters
+make lint             # Run all linters. Needs Docker.
 make lint-spec        # Lint the API specs in specs/api with vacuum
+make generate         # Generate the SDKs in sdk/ from the API spec. Needs Docker.
+make check-generate   # Fail if the generated SDKs do not match the API spec
+make test-sdk         # Run the tests of both SDKs. Needs Node.js.
 ```
 
 TODO update this as more commands exist. Some example commands are:
@@ -28,7 +31,6 @@ TODO update this as more commands exist. Some example commands are:
 make test-api         # Run all API tests
 make test-ui          # Run all UI tests
 make build            # Build binary to ./bin/gw-admin
-make generate         # Generate code and mocks
 make run              # Run server (starts Postgres + migrations automatically)
 make run-local        # Run with -tags=local for local development mocks
 ```
@@ -43,6 +45,9 @@ make run-local        # Run with -tags=local for local development mocks
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`
+- **`sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00003.
+  - **`sdk/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
+  - **`sdk/go`** - the Go module with the server interface and the types that the API uses
 - **`api`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the Go programming language

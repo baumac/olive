@@ -1,6 +1,6 @@
 ---
 description: Generate a TypeScript SDK and a Go SDK from the Public API spec.
-status: proposed
+status: implemented
 ---
 
 # Motivation
@@ -52,6 +52,7 @@ To change the API, change the spec and run `make generate`.
 ```bash
 make generate         # Generate the TypeScript SDK and the Go SDK
 make check-generate   # Fail if the generated code does not match the spec
+make test-sdk         # Run the tests of both SDKs
 ```
 
 ## TypeScript SDK
@@ -83,6 +84,7 @@ const page = await restaurants.listReviews({
 
 A response with a status that is not `2xx` throws a `ResponseError`.
 The UI reads the Problem Details body from `error.response`.
+Each method also has a `Raw` form, such as `createRestaurantRaw`, that gives the response headers.
 
 ## Go SDK
 
@@ -100,7 +102,9 @@ func (s *Server) GetRestaurant(
 	r, err := s.app.FindRecordById("restaurants", req.RestaurantId)
 	if err != nil {
 		return reviewsapi.GetRestaurant404ApplicationProblemPlusJSONResponse{
-			Type: "about:blank", Title: "Not Found", Status: 404,
+			NotFoundApplicationProblemPlusJSONResponse: reviewsapi.NotFoundApplicationProblemPlusJSONResponse{
+				Type: "about:blank", Title: "Not Found", Status: 404,
+			},
 		}, nil
 	}
 	return reviewsapi.GetRestaurant200JSONResponse(toRestaurant(r)), nil
@@ -125,38 +129,42 @@ It also fails when a handler returns a status or a body that the spec does not d
 ## Layout
 
 ```
+go.work                       # hand-written
+package.json                  # hand-written npm workspace root
 sdk/
   typescript/
-    package.json            # hand-written
-    tsconfig.json           # hand-written
-    openapitools.json       # hand-written generator settings
-    src/                    # generated
+    package.json              # hand-written
+    tsconfig.json             # hand-written
+    tsconfig.test.json        # hand-written
+    templates/                # hand-written template overrides
+    test/                     # hand-written tests
+    src/                      # generated
   go/
-    go.mod                  # hand-written
-    oapi-codegen.yaml       # hand-written generator settings
-    reviewsapi.gen.go       # generated
+    go.mod                    # hand-written
+    oapi-codegen.yaml         # hand-written generator settings
+    reviewsapi_test.go        # hand-written tests
+    reviewsapi.gen.go         # generated
 ```
 
 - generated files are committed. The `api` and `ui` apps build without the generators.
-- each generated directory has only generated files. `make generate` deletes and makes it again, so no old file stays.
-- `.openapi-generator-ignore` keeps the hand-written files in `sdk/typescript` safe from the generator
-- a root `go.work` file adds `sdk/go` and `api` to one workspace. The `api` app uses the local Go SDK without a `replace` line.
-- a root `package.json` adds `sdk/typescript` and `ui` to one npm workspace
+- `sdk/typescript/src` has only generated files. `make generate` deletes it before it runs the generator. The generator does not delete the files of removed schemas.
+- the root `go.work` file has `sdk/go`. The `api` app adds itself when it exists. It then uses the local Go SDK without a `replace` line.
+- the root `package.json` is an npm workspace with `sdk/typescript`. The `ui` app adds itself when it exists.
 
 ## TypeScript SDK settings
 
 - generator: `typescript-fetch`
-- the version of OpenAPI Generator is pinned in `sdk/typescript/openapitools.json`
-- `make generate` runs the pinned `openapitools/openapi-generator-cli` Docker image. Developers do not need Java.
-- options:
-  - `npmName`: `@reviews/sdk`
+- the makefile pins the version of the `openapitools/openapi-generator-cli` Docker image. `make generate` runs it, so developers do not need Java.
+- the makefile gives these options:
   - `supportsES6`: `true`
   - `importFileExtension`: `.js`. The package is an ES module.
   - `useSingleRequestParameter`: `true`
   - `withInterfaces`: `true`. Tests in the `ui` app can replace an API class with a fake.
-  - `stringEnums`: `true`
   - `legacyDiscriminatorBehavior`: `false`. The `Review`, `ReviewCreate`, and `ReviewPatch` unions then select the model from `kind`.
+  - `apiDocs` and `modelDocs`: `false`. The spec is the documentation.
+- `stringEnums` stays `false`. With `true`, the enum type of `kind` does not match the literal types of the union, and `tsc` fails.
 - `tsc` builds the package into `sdk/typescript/dist`. The `ui` app imports the built package.
+- `package.json` is hand-written. The package name is `@reviews/sdk`.
 
 ## Go SDK settings
 
@@ -176,7 +184,7 @@ output-options:
 ```
 
 - the server uses `net/http` because the PocketBase router uses `net/http` handlers
-- the `api` app mounts the generated handler under `/v1`. PocketBase keeps its own routes under `/api` and `/_`.
+- the `api` app mounts the generated handler under `/v1` with `StdHTTPServerOptions.BaseURL`. PocketBase keeps its own routes under `/api` and `/_`.
 - `nullable-type: true` makes `nullable.Nullable[T]` for nullable properties. A merge patch body then shows the difference between a missing property and `null`.
 - the strict server calls hand-written error handlers for request decode errors and handler errors. These handlers return Problem Details, so all errors keep one format.
 
@@ -184,26 +192,42 @@ output-options:
 
 The generators do not support all parts of OpenAPI 3.1 in the same way.
 Each part below has a test in the SDK that it affects.
-If a generator does not support a part, the test fails, and we change the settings or add a small hand-written helper.
-We do not change the spec to work around a generator without a new decision.
+`make test-sdk` runs the tests of both SDKs.
+If a generator does not support a part, we change the settings or add a small hand-written fix.
+We do not change the meaning of the spec to work around a generator without a new decision.
 
-| Part of the spec | Expected result | Test |
+| Part of the spec | Result | Test |
 | --- | --- | --- |
-| `Review` is a `oneOf` with a `discriminator` on `kind` | TypeScript selects `BasicReview` or `JocDeCartesReview` from `kind`. Go makes a union type with `AsBasicReview` and `AsJocDeCartesReview` methods. | both SDKs |
-| `OtherReview` uses `not` for kinds that a later release adds | A review with an unknown `kind` does not cause an error. Both SDKs keep the common properties. | both SDKs |
-| `const` values on `kind` | The `kind` property has the type of the literal value, or a string | both SDKs |
+| `Review` is a `oneOf` with a `discriminator` on `kind` | TypeScript selects `BasicReview` or `JocDeCartesReview` from `kind`. Go makes a union type with `AsBasicReview`, `AsJocDeCartesReview`, and `ValueByDiscriminator` methods. | both SDKs |
+| `OtherReview` uses `not` for kinds that a later release adds | TypeScript returns the JSON object without changes. Go `ValueByDiscriminator` returns an error, but `AsOtherReview` gets the common properties. | both SDKs |
+| `const` values on `kind` | TypeScript and Go make an enum type with one value | both SDKs |
 | Merge patch bodies with `application/merge-patch+json` | The client sends this content type. A `null` value stays in the body. A missing property is not in the body. | TypeScript |
 | Merge patch bodies on the server | The handler sees the difference between a missing property and `null` | Go |
-| `deepObject` filters, such as `rating` | The client sends `rating[gte]=4`. The server reads it into a struct. | both SDKs |
-| Array filters with `explode: true`, such as `tags[has_any]` | The client repeats the parameter for each value | TypeScript |
+| `deepObject` filters, such as `rating` | The client sends `rating[gte]=4`. It encodes the brackets as `%5B` and `%5D`, which servers decode. The server reads the filter into a struct. | both SDKs |
+| Array filters with `explode: true`, such as `tags[has_any]` | The client repeats the parameter for each value | both SDKs |
 | `Timestamp` is a string with a `pattern`, not `date-time` | Both SDKs keep the value as a string. They do not parse it as a date. | both SDKs |
+| `next_cursor` is `null` on the last page | Go uses `nullable.Nullable` and sends `null`. TypeScript gives `null`. | both SDKs |
 | Responses with `application/problem+json` | Go makes a response type for each status. TypeScript throws `ResponseError` with the body. | both SDKs |
-| `Location` and `Retry-After` response headers | Go response types have header fields. TypeScript gives access through the raw response. | Go |
+| `Location` and `Retry-After` response headers | Go response types have header fields. TypeScript gives the headers through the `Raw` methods. | both SDKs |
+| Operations with `security: - {}` | The TypeScript client does not send the stored token on sign up and sign in | TypeScript |
+
+### Workarounds
+
+- `typescript-fetch` changes an optional `null` array with `uniqueItems` to `undefined`. A merge patch then cannot clear `tags`.
+  `sdk/typescript/templates/modelGeneric.mustache` is a copy of the generator template with a fix in the `ToJSON` part. It keeps `null`.
+  Update this copy when the generator version changes.
+- `typescript-fetch` makes a `Set<string>` for `tags` because of `uniqueItems`. The UI changes it to an array where it needs one.
+- both generators add the schema name `OtherReview` as a discriminator value, because the mapping has no entry for it.
+  The TypeScript type of `kind` therefore lists `OtherReview`, not `string`.
+  The UI handles a `kind` that it does not know in the `default` branch of a `switch`.
+- the spec has these changes that do not change the API:
+  - each `kind` with `const` also has `type: string`. Without it, `typescript-fetch` cannot read the discriminator.
+  - the `deepObject` filters use the named schemas `RatingRange`, `ScoreRange`, and `TimestampRange`. Without them, the generated names come from the first operation that uses each filter.
 
 ## Out-of-date check
 
-- `make check-generate` runs `make generate` and then `git diff --exit-code sdk`
-- `make lint` runs `make check-generate` after `lint-spec`
+- `make check-generate` runs `make generate`. Then it fails if `git diff` shows changes in `sdk` or if `sdk` has files that git does not track.
+- `make lint` runs `make check-generate` after `lint-spec`. The lint therefore needs Docker.
 - a change to the spec without new generated code then fails the lint
 
 # Unresolved questions
