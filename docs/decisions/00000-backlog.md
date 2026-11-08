@@ -15,7 +15,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - decide the policy when the UI components exist. Some components can need `style-src 'unsafe-inline'`.
   - set the header only on the UI route of decision 00005, not on the PocketBase dashboard. Apply it to the UI build, not to the Vite dev server.
   - first send it as `Content-Security-Policy-Report-Only`, then enforce it
-- Define end-to-end tests in the `tests` directory
 - Adding rating aggregate field to restaurants
 - Adding search
 - Adding email verification to sign up

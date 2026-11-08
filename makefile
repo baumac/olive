@@ -16,7 +16,7 @@ UI_DIST := app/internal/webui/dist
 # npm ci runs again only when the lockfile changes.
 NODE_MODULES := node_modules/.package-lock.json
 
-.PHONY: install-tools lint lint-spec lint-go lint-ui generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui build-sdk-ts build-ui build-app run-app dev-ui
+.PHONY: install-tools lint lint-spec lint-go lint-ui generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app run-app dev-ui
 
 install-tools: $(VACUUM) $(OAPI_CODEGEN)
 
@@ -37,6 +37,7 @@ lint-go:
 
 lint-ui: build-sdk-ts
 	npm run typecheck --workspace @reviews/ui
+	npm run typecheck --workspace @reviews/tests
 
 generate: generate-sdk-go generate-sdk-ts
 
@@ -73,6 +74,13 @@ test-app:
 
 test-ui: build-sdk-ts
 	npm test --workspace @reviews/ui
+
+# The end-to-end tests start ./bin/reviews-app. See decision 00006.
+test-e2e: build-app
+	npm test --workspace @reviews/tests
+
+test-e2e-ui: build-app
+	npm run test:ui --workspace @reviews/tests
 
 $(NODE_MODULES): package-lock.json
 	npm ci

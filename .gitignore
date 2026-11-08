@@ -9,6 +9,10 @@
 # PocketBase data of make run-app
 /app/pb_data
 
+# Results of make test-e2e
+/test/test-results
+/test/playwright-report
+
 # The UI build of make build-ui
 /app/internal/webui/dist/*
 !/app/internal/webui/dist/.gitkeep

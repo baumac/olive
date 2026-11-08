@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { User } from '@reviews/sdk'
 import { LogOutIcon } from 'lucide-vue-next'
+import { initials } from '@/lib/format'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,7 +29,8 @@ defineEmits<{ signOut: [] }>()
   </Button>
   <DropdownMenu v-else>
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="icon" class="rounded-full" :aria-label="`Account menu for ${user.name}`">
+      <!-- The name starts with the visible initials. Speech input can then use them. -->
+      <Button variant="ghost" size="icon" class="rounded-full" :aria-label="`${initials(user.name)}, account menu for ${user.name}`">
         <InitialsAvatar :name="user.name" />
       </Button>
     </DropdownMenuTrigger>

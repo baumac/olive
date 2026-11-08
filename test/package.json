@@ -1,0 +1,20 @@
+{
+  "name": "@reviews/tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests of the built app. See decision 00006.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@reviews/sdk": "*",
+    "@types/node": "26.6.5",
+    "playwright-core": "1.64.1",
+    "typescript": "6.0.3"
+  }
+}
