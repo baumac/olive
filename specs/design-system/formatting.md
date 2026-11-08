@@ -24,7 +24,7 @@ The API sends UTC timestamps in the PocketBase format, `2024-11-04 01:26:55.002Z
 - Show `name`, `title`, `description` and `feedback` as typed. Keep line breaks in `description` and `feedback` with `white-space: pre-line`. Do not render Markdown or HTML.
 - Long text in a card stops after 3 lines with an ellipsis (`line-clamp-3`). The detail screen shows all of it.
 - Tags show as stored: lowercase, with hyphens.
-- A creator that is `null` shows as "Deleted user". An empty creator `name` shows as "Anonymous".
+- A creator that is `null` shows as "Deleted user".
 
 ## Language
 

@@ -39,12 +39,12 @@ make run-local        # Run with -tags=local for local development mocks
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
-    - the `users` tag has the PocketBase user auth operations
+    - the `users` tag has the sign up, sign in, and token refresh operations
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`
 - **`api`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
-  - Implements the `restaurants` operations of the OpenAPI specification defined in `specs/api/public-openapi.yaml`
+  - Implements the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the Go programming language
   - Built using the Pocketbase framework
 - **`ui`** - the directory containing the app that serves the Public UI

@@ -6,7 +6,7 @@ From shadcn-vue (`@/components/ui/card`). Parts: `CardHeader`, `CardTitle`, `Car
 
 - Restaurant card: `name` as the title, `description` as the description, tags as `Badge`s, the creator and date in the footer.
 - Review card: `title` as the title, the scores as `RatingDisplay`, `feedback` in the content, tags and the creator in the footer.
-- `creator` can be `null` after the user is deleted, and `name` can be empty. Show "Deleted user" or "Anonymous" in these cases.
+- `creator` can be `null` after the user is deleted. Show "Deleted user" in this case.
 - Use the `card` token for the fill, `border` for the hairline, `radius-xl` and `shadow-sm`. Padding and gap are 24px (`space-6`).
 - Stack cards with a 16px gap. Render the list as `<ul>`, one card per `<li>`.
 - A review of an unknown `kind` still shows its title and feedback, with no scores.

@@ -1,5 +1,5 @@
 ---
-description: Define the OAS specification for the Public API and the PocketBase user auth APIs.
+description: Define the OAS specification for the Public API.
 status: implemented
 ---
 
@@ -10,18 +10,19 @@ To allow the UI and API to be developed independently, we need to define the Ope
 
 The UI also needs users to sign up and sign in.
 The Public API needs an auth token for create, update, and delete operations.
-PocketBase gives these user auth APIs, so we define an OAS specification for the parts that the UI uses.
+The Public API wraps the PocketBase user auth, so clients do not depend on PocketBase.
 
 # Scope
 [scope]: #scope
 
 In scope:
 - defining one OAS specification in `specs/api/public-openapi.yaml` with two tags:
-  - `restaurants`: the Public API for restaurants and reviews
-  - `users`: the PocketBase user auth APIs
+  - `users`: sign up, sign in, and auth token refresh
+  - `restaurants`: restaurants and reviews
 
 Out of scope:
-- All other APIs provided by PocketBase not listed as in scope
+- All APIs provided by PocketBase. Clients use only the Public API.
+- Password reset, email verification, sign out on the server, and changes to a user after sign up
 - Generating client libraries and documentation for the Public API
 - Implementation of the API spec
 - Reviews of things that are not restaurants, such as books or movies
@@ -40,24 +41,18 @@ New Concepts:
   - a review has exactly one kind. The kind sets which score properties the review has.
 - **Restaurant**: a restaurant that can be reviewed
   - a restaurant has zero to many reviews
-- **User Auth API**: the PocketBase APIs that let a user sign up, sign in, and refresh an auth token
-- **User**: a record in the PocketBase `users` auth collection
+- **User**: a person who can sign in
   - a user creates restaurants and reviews
-- **Auth token**: a PocketBase auth token for a user. The Public API uses it as a bearer token.
+- **Auth token**: a token that the Public API gives to a user at sign up and sign in. Clients send it as a bearer token.
 
-The file `specs/api/public-openapi.yaml` contains the OpenAPI Specification (OAS) for the Public API and the User Auth API. In the OAS file,
+The file `specs/api/public-openapi.yaml` contains the OpenAPI Specification (OAS) for the Public API. In the OAS file,
 the endpoints, request/response schemas, and authentication mechanisms are defined.
 
 The OAS uses tags to separate the two sets of operations:
-- `restaurants`: the operations of the Public API for restaurants and reviews
-- `users`: the operations of the User Auth API
+- `users`: the operations of the [Users API](#users-api)
+- `restaurants`: the operations of the [Restaurants API](#restaurants-api) and the [Reviews API](#reviews-api)
 
-The `users` operations describe the PocketBase APIs as PocketBase serves them.
-The project does not change these APIs.
-
-The server URL of the OAS is `/`.
-The paths of the Public API start with the versioned base path `/v1`.
-The paths of the User Auth API start with the PocketBase base path `/api`.
+The paths of the Public API are relative to the versioned base path `/v1`.
 Paths use the OAS path template syntax, for example `{restaurantId}`.
 
 ## Restaurants API
@@ -266,44 +261,33 @@ A review that exists but belongs to a different restaurant is treated as not fou
 If the restaurant in the path does not exist, all reviews operations return `404 Not Found`.
 This includes the list operation. It does not return an empty list.
 
-## User Auth API
+## Users API
 
-The User Auth API is a part of the PocketBase API for the `users` collection.
-It exists on the base path `/api/collections/users`.
+The users API exists on the base path `/users`.
+It lets a user sign up, sign in, and refresh an auth token.
 
 ### Properties
 
 The properties of a user are as follows:
 - required properties to sign up:
     - `email`: email address with a maximum length of 255 characters. It must be unique.
-    - `password`: string with a length of 8 to 71 characters
-    - `passwordConfirm`: the same value as `password`
-- optional properties to sign up:
-    - `name`: string with a maximum length of 255 characters. Other users see it as the [Creator](#creator) `name`.
-    - `emailVisibility`: boolean. The default is `false`.
-- read-only properties maintained by PocketBase:
-    - `id`: PocketBase record ID
-    - `collectionId`: the ID of the `users` collection
-    - `collectionName`: always `users`
-    - `verified`: boolean. It is `true` after the user confirms the email address.
-    - `avatar`: the file name of the avatar, or an empty string
+    - `password`: string with a length of 8 to 71 characters. Its UTF-8 encoding must be at most 72 bytes.
+    - `name`: string with 1 to 255 characters and at least one character that is not ASCII whitespace. Other users see it as the [Creator](#creator) `name`.
+- read-only properties:
+    - `id`: user ID
     - `created`: timestamp
     - `updated`: timestamp
 
-`email` is in a response only for the user of the auth token, or when `emailVisibility` is `true`.
+Only the user of the auth token gets the user object.
+Other users see only the [Creator](#creator) fields.
 Passwords are never in a response.
 
 Example:
 ```json
 {
   "id": "u5n1c8r3t6y0b2e",
-  "collectionId": "_pb_users_auth_",
-  "collectionName": "users",
   "email": "ana@example.com",
-  "emailVisibility": false,
-  "verified": false,
   "name": "Ana",
-  "avatar": "",
   "created": "2024-11-01 08:12:40.517Z",
   "updated": "2024-11-01 08:12:40.517Z"
 }
@@ -311,41 +295,48 @@ Example:
 
 ### Operations
 
-The operations of the User Auth API are as follows:
-- `POST /collections/users/records` to sign up a user
+The operations of the users API are as follows:
+- `POST /users` to sign up a user
     - it does not require authentication
-    - the response is `200 OK` with the user in the body. The response does not contain an auth token.
-- `POST /collections/users/auth-with-password` to sign in a user
+    - the response is `201 Created` with an auth token. The user is signed in after sign up.
+    - the response has no `Location` header. The API has no operation to read a user.
+    - an `email` that another user has causes `409 Conflict`
+- `POST /users/tokens` to sign in a user
     - it does not require authentication
-    - the request body has the `identity` and `password` properties. `identity` is the email address of the user.
-    - the response is `200 OK` with an auth token and the user
-    - a wrong email address or password causes `400 Bad Request`
-- `POST /collections/users/auth-refresh` to get a new auth token
+    - the request body has the `email` and `password` properties
+    - the response is `200 OK` with an auth token
+    - a wrong email address or password causes `401 Unauthorized`. The response does not say which one is wrong.
+- sign up and sign in ignore the `Authorization` header. A stored token that is not valid does not block them.
+- sign up and sign in have a rate limit. Too many requests cause `429 Too Many Requests` with a `Retry-After` header.
+- `POST /users/tokens/refresh` to get a new auth token
     - it requires a valid auth token that is not expired
-    - the response is `200 OK` with a new auth token and the user
+    - the response is `200 OK` with a new auth token
     - clients also use it to check a stored token
 
-The sign in and refresh response has this format:
+The auth token response has this format:
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "record": { "id": "u5n1c8r3t6y0b2e", "collectionName": "users", "name": "Ana" }
+  "expires": "2024-11-08 08:12:40.517Z",
+  "user": { "id": "u5n1c8r3t6y0b2e", "email": "ana@example.com", "name": "Ana", "created": "...", "updated": "..." }
 }
 ```
 
+Clients must not parse `token`.
+`expires` is the time when the token stops being valid.
+
 A typical client flow is as follows:
-1. sign up the user
-2. sign in the user, and store the auth token
-3. send the auth token as a bearer token to the Public API
-4. refresh the auth token before it expires. If the refresh fails, sign in again.
+1. sign up the user, or sign in the user. Store the auth token.
+2. send the auth token as a bearer token to the Public API
+3. refresh the auth token before it expires. If the refresh fails, sign in again.
 
 # Implementation Details
 [implementation-details]: #implementation-details
 
 ## Authentication
 Create, update, and delete endpoints require authentication using a bearer token in the `Authorization` header.
+The client gets the token from the [Users API](#users-api).
 The token is a PocketBase auth token for a record in the `users` auth collection.
-The client gets the token from the [User Auth API](#user-auth-api).
 Requests to these endpoints without a valid token get `401 Unauthorized`.
 
 Read endpoints (`GET`) do not require authentication.
@@ -353,13 +344,30 @@ Anonymous users can read all restaurants and reviews.
 A read request with an invalid token gets `401 Unauthorized`.
 The API does not treat it as an anonymous request.
 
+Sign up and sign in ignore the `Authorization` header.
+
 ## Authorization
 - anonymous and authenticated users can read all restaurants and reviews
 - any authenticated user can create restaurants and reviews
 - only the creator of a restaurant or review can update or delete it. Other users get `403 Forbidden`.
 - PocketBase superusers manage all records through the PocketBase API, not the Public API
 
-## User Deletion
+## Account Enumeration
+
+Sign up shows whether an email address has an account.
+An email that another user has causes `409 Conflict`.
+This is an accepted risk.
+An account shows only that a person reviews restaurants.
+
+These rules limit the risk:
+- sign up and sign in have a rate limit. It makes checks of many email addresses slow.
+- sign in returns the same `401 Unauthorized` for an unknown email address and a wrong password
+- sign in takes the same time for an unknown email address and a wrong password. The API checks a password hash also when no user has the email address.
+
+Email verification can remove this risk.
+Sign up then gives the same response for all email addresses, and the API sends the result by email.
+The backlog has this change.
+
 
 When a user is deleted:
 - the reviews of that user are deleted
@@ -383,7 +391,7 @@ Restaurants stay because the reviews of other users can refer to them.
 
 The `creator` property is an object with the public fields of a user:
 - `id`: the PocketBase record ID of the user
-- `name`: the `name` field of the user in the PocketBase `users` collection. It can be an empty string.
+- `name`: the `name` field of the user in the PocketBase `users` collection. It has the same rules as the user `name`.
 
 The API does not return other user fields, such as `email`.
 The `creator` filter compares the user `id`, for example `creator[eq]=u2g6k0m4o8q1s5w`.
@@ -411,6 +419,7 @@ The API does not change tag values. Invalid tags cause `422 Unprocessable Conten
 - the request content type is `application/json`. Other content types cause `415 Unsupported Media Type`.
 - the response is `201 Created` with the created resource in the body
 - the `Location` header contains the URL of the created resource
+- sign up is different. Its body is an auth token, and it has no `Location` header.
 
 ## Update operations
 
@@ -499,7 +508,6 @@ A client can then miss the item or get it two times, mostly with a sort on `upda
 ## Errors
 
 The Public API error responses use RFC 9457 Problem Details with the content type `application/problem+json`.
-The User Auth API uses a different format. See [User Auth API Errors](#user-auth-api-errors).
 Validation errors add an `errors` array with one item for each invalid property.
 The `property` of an array item uses a zero-based index, for example `tags[2]` for the third tag.
 
@@ -519,48 +527,13 @@ Example:
 | Status | Use |
 | --- | --- |
 | `400 Bad Request` | malformed request, invalid query parameters, unknown or read-only properties in the body, or properties of a different review kind |
-| `401 Unauthorized` | missing bearer token on a create, update, or delete request, or an invalid bearer token on any request |
+| `401 Unauthorized` | missing bearer token on a create, update, delete, or token refresh request, an invalid bearer token on any request, or a wrong email or password on sign in |
 | `403 Forbidden` | the user is not the creator of the resource |
 | `404 Not Found` | the resource or the restaurant in the path does not exist, or the review belongs to a different restaurant |
-| `409 Conflict` | duplicate review for a restaurant, delete of a restaurant that has reviews, or change of `name` on a restaurant that has reviews |
+| `409 Conflict` | sign up with an email that another user has, duplicate review for a restaurant, delete of a restaurant that has reviews, or change of `name` on a restaurant that has reviews |
 | `415 Unsupported Media Type` | wrong request content type |
 | `422 Unprocessable Content` | the request body has invalid property values, or a change of `kind` on a review |
-
-## User Auth API Details
-
-The User Auth API is the PocketBase API without changes.
-Its behavior is different from the Public API in these ways:
-- the base path is `/api`, not `/v1`
-- sign up returns `200 OK`, not `201 Created`. The response has no `Location` header.
-- invalid request bodies cause `400 Bad Request`, not `422 Unprocessable Content`
-- request bodies with unknown properties do not cause an error. PocketBase ignores them.
-
-### User Auth API Errors
-
-Error responses use the PocketBase error format with the content type `application/json`.
-`data` has one item for each invalid property.
-The key of an item is the property name.
-`data` is an empty object for other errors.
-
-Example:
-```json
-{
-  "status": 400,
-  "message": "Failed to create record.",
-  "data": {
-    "email": { "code": "validation_not_unique", "message": "Value must be unique." }
-  }
-}
-```
-
-Clients use `code` to select an error message.
-Clients must not parse `message`.
-
-| Status | Use |
-| --- | --- |
-| `400 Bad Request` | invalid sign up properties, or a wrong email address or password on sign in |
-| `401 Unauthorized` | missing, invalid, or expired auth token on refresh |
-| `403 Forbidden` | the auth token is not for a record in the `users` collection |
+| `429 Too Many Requests` | too many sign up or sign in requests in a short time |
 
 ## OAS Mapping
 
@@ -568,11 +541,12 @@ The review schemas use `oneOf` with a `discriminator` on `kind`.
 Each kind has its own schema with the common properties and the properties of that kind.
 Each kind schema sets `additionalProperties: false`.
 The create and patch request bodies use the same pattern.
+The `Review` response also has an `OtherReview` schema for kinds that a later release adds.
 `kind` is required in the patch body so that the API can select the kind schema.
 
-The `restaurants` and `users` operations share the `bearerAuth` security scheme and the `RecordId` and `Timestamp` schemas.
-The `users` operations use their own error responses and schemas with the `PocketBase` prefix, for example `PocketBaseBadRequest` and `PocketBaseError`.
-The `restaurants` operations use the `Problem` schema.
+The `users` and `restaurants` operations share the security scheme, the error responses, and the common schemas.
+The sign in `401` uses its own `InvalidCredentials` response.
+Its `WWW-Authenticate` header is `Bearer`, the scheme of the Public API.
 
 ## PocketBase Mapping
 
@@ -606,11 +580,17 @@ The PocketBase collections need this additional setup:
 - the reviews collection has a unique index on the `restaurant` and `creator` fields
   - two requests at the same time can both pass the duplicate check of the API
   - the API changes the unique index error to `409 Conflict`, not `500 Internal Server Error`
-- the `users` collection uses the default PocketBase settings for these parts:
+- the [Users API](#users-api) wraps the PocketBase password auth of the `users` collection
   - password auth is on. `email` is the only identity field.
-  - the create API rule is an empty string. Anyone can sign up.
-  - the list and view API rules let a user see only the user's own record
+  - sign up creates the record and then makes an auth token for it. The API sends `passwordConfirm` with the value of `password`.
+  - sign in uses the PocketBase password auth. A wrong email or password causes `401 Unauthorized`, not the PocketBase `400`.
+  - refresh uses the PocketBase auth refresh
+  - `expires` comes from the `exp` claim of the token
+  - the API changes PocketBase errors to Problem Details. A PocketBase `validation_not_unique` error on `email` causes `409 Conflict`.
+  - `name` is a required text field with a maximum length of 255 characters
   - the auth token duration is the PocketBase default
+- the API rules of `users` are empty. Only superusers can use this collection through the PocketBase API.
+  - without this, users can skip the Users API rules, such as the required `name`
 - the API uses custom auth middleware for the [Authentication](#authentication) rules
   - by default, PocketBase treats a request with an invalid token as anonymous
   - the custom middleware returns `401 Unauthorized` for an invalid token on all requests
