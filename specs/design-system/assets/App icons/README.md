@@ -1,6 +1,6 @@
 # App icons
 
-Favicons and home screen icons, made from the olive mark. Put the files in `ui/public/` and link them from `index.html`.
+Favicons and home screen icons, made from the olive mark. Put the files in `app/ui/public/` and link them from `index.html`.
 
 - `favicon.svg`: the browser tab icon. It switches to the dark-theme olive when the system is dark, through a `prefers-color-scheme` rule inside the SVG.
 - `favicon-32.png`: a fallback for browsers without SVG favicons.

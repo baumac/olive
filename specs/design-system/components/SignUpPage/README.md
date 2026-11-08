@@ -2,7 +2,7 @@
 
 The page at `/sign-up`. It shows `SignUpForm` under `AppHeader`.
 
-Page, not a component. Lives in `ui/src/pages/SignUpPage.vue`.
+Page, not a component. Lives in `app/ui/src/pages/SignUpPage.vue`.
 
 - Route: `/sign-up`. Query `redirect`: the same rules as `SignInPage`.
 - Page title: "Create an account · Sponga47 Reviews".

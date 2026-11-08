@@ -11,8 +11,12 @@ OPENAPI_GENERATOR_IMAGE := openapitools/openapi-generator-cli:v7.27.0
 
 APP_BIN := $(BIN)/reviews-app
 APP_DATA := app/pb_data
+UI_DIST := app/internal/webui/dist
 
-.PHONY: install-tools lint lint-spec lint-go generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app build-app run-app
+# npm ci runs again only when the lockfile changes.
+NODE_MODULES := node_modules/.package-lock.json
+
+.PHONY: install-tools lint lint-spec lint-go lint-ui generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui build-sdk-ts build-ui build-app run-app dev-ui
 
 install-tools: $(VACUUM) $(OAPI_CODEGEN)
 
@@ -22,7 +26,7 @@ $(VACUUM):
 $(OAPI_CODEGEN):
 	GOBIN=$(BIN) go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION)
 
-lint: lint-spec lint-go check-generate
+lint: lint-spec lint-go lint-ui check-generate
 
 lint-spec: $(VACUUM)
 	$(VACUUM) lint --details --fail-severity warn --ruleset specs/api/vacuum-ruleset.yaml $(SPEC)
@@ -30,6 +34,9 @@ lint-spec: $(VACUUM)
 lint-go:
 	go vet ./app/... ./sdk/go/...
 	@test -z "$$(gofmt -l app sdk/go)" || { gofmt -l app sdk/go; echo "Run gofmt -w on these files."; exit 1; }
+
+lint-ui: build-sdk-ts
+	npm run typecheck --workspace @reviews/ui
 
 generate: generate-sdk-go generate-sdk-ts
 
@@ -51,22 +58,41 @@ check-generate: generate
 	git diff --exit-code -- sdk
 	@test -z "$$(git ls-files --others --exclude-standard -- sdk)" || { git ls-files --others --exclude-standard -- sdk; echo "New generated files are not in git. Run make generate and add them."; exit 1; }
 
-test: test-sdk test-app
+test: test-sdk test-app test-ui
 
 test-sdk: test-sdk-go test-sdk-ts
 
 test-sdk-go:
 	cd sdk/go && go test ./...
 
-test-sdk-ts:
-	npm ci
+test-sdk-ts: $(NODE_MODULES)
 	npm test --workspace @reviews/sdk
 
 test-app:
 	cd app && go test ./...
 
-build-app:
+test-ui: build-sdk-ts
+	npm test --workspace @reviews/ui
+
+$(NODE_MODULES): package-lock.json
+	npm ci
+
+# The UI imports the built SDK from sdk/typescript/dist.
+build-sdk-ts: $(NODE_MODULES)
+	npm run build --workspace @reviews/sdk
+
+# vite build empties the folder, so the target makes .gitkeep again. The Go
+# embed needs a file in the folder.
+build-ui: build-sdk-ts
+	npm run build --workspace @reviews/ui
+	touch $(UI_DIST)/.gitkeep
+
+build-app: build-ui
 	go build -o $(APP_BIN) ./app
 
 run-app:
 	go run ./app serve --dir $(APP_DATA)
+
+# Run make run-app at the same time. The Vite dev server sends /v1 to it.
+dev-ui: build-sdk-ts
+	npm run dev --workspace @reviews/ui

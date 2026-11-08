@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sponga47 Reviews</title>
+    <meta name="description" content="Find a restaurant. Score it. Say why." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c0c09" media="(prefers-color-scheme: dark)" />
+    <meta property="og:site_name" content="Sponga47 Reviews" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sponga47 Reviews" />
+    <meta property="og:description" content="Find a restaurant. Score it. Say why." />
+    <meta property="og:image" content="https://reviews.sponga47.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sponga47 Reviews logo with the tagline Find a restaurant. Score it. Say why." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Sets the theme class before the first paint. useColorMode uses the
+      // same localStorage key.
+      ;(function () {
+        var mode = 'auto'
+        try {
+          mode = localStorage.getItem('vueuse-color-scheme') || 'auto'
+        } catch (e) {}
+        var dark = mode === 'dark' || (mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

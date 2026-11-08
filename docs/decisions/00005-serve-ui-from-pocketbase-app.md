@@ -1,6 +1,6 @@
 ---
 description: Build the Public UI in app/ui and serve it from the PocketBase app.
-status: proposed
+status: implemented
 ---
 
 # Motivation
@@ -96,6 +96,7 @@ The app has these routes:
 
 - the UI route is the least specific route. The router selects the other routes first.
 - `webui.Register` adds the UI route with `apis.Static(fsys, true)` in an `OnServe` hook
+- the UI route has no method. `GET /{path...}` and `/v1/{path...}` conflict in `http.ServeMux`, because neither is more specific. The UI route returns `405` for methods other than `GET` and `HEAD`.
 - `true` turns on the index fallback. A path that is not a file in the UI build gets `index.html`. The UI router then shows the screen or a not found screen.
 - an unknown path under `/v1` still gets the Problem Details `404` of decision 00004. It does not get `index.html`.
 - the UI uses HTML5 history mode in Vue Router. Paths have no `#`.
@@ -126,7 +127,7 @@ The app has these routes:
 
 - Vite puts a content hash in the names of the files in `assets/`. These files get `Cache-Control: public, max-age=31536000, immutable`.
 - `index.html` gets `Cache-Control: no-cache`. A new deploy then loads the new asset names.
-- a middleware on the UI route sets these headers
+- the UI route sets these headers. A missing file in `assets/` gets `index.html` with `no-cache`, so a wrong file is never cached.
 
 ## Auth token
 
@@ -134,11 +135,26 @@ The app has these routes:
 - the UI and the API have the same origin, so the API needs no CORS settings for the UI
 - the API does not use cookies. It does not need CSRF protection.
 
-## Docs to change
+## UI structure
 
-- `AGENTS.md`: the `ui` paths become `app/ui`, and the UI commands replace the TODO
-- `specs/design-system/README.md` and the component READMEs: `ui/src/...` becomes `app/ui/src/...`, and `ui/public/` becomes `app/ui/public/`
-- decision 00003: the `ui` app becomes the UI in `app/ui`
+- `src/lib/api.ts` makes one `Configuration` for `RestaurantsApi` and `UsersApi` with the base path `/v1`
+- a middleware of the SDK handles a `401` on a request with a token. It deletes the session and sends the request again without the token. A read then works. A write gets `401`, and a page that needs an account opens the sign in page with `reason=session-ended`.
+- forms save a draft in `sessionStorage` before each request that needs an account. They restore it after sign in.
+- list filters and the sort are in the URL query. A change loads the first page again.
+- the components come from the shadcn-vue CLI, then follow the design system: a solid 2px focus outline in `ring`, the dark `destructive` fill at 50%, a `success` alert, and `radius-md` badges
+- the `Form` parts are small project components, not the vee-validate parts of shadcn-vue. They set `id`, `aria-describedby`, and `aria-invalid`.
+
+## Tests
+
+- `make test-ui` runs Vitest with Vue Test Utils in jsdom
+- the component tests run `axe-core` directly. `vitest-axe` has no release since 2022. jsdom does not render, so the color contrast rule does not run. `tokens.json` has the contrast values.
+- `app/internal/webui` has Go tests for the routes and the cache headers
+
+## Docs changed
+
+- `AGENTS.md`: the `app/ui` paths and the UI commands
+- `specs/design-system/README.md` and the component READMEs: `ui/src/...` became `app/ui/src/...`, and `ui/public/` became `app/ui/public/`
+- decision 00003: the `ui` app became the UI in `app/ui`
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

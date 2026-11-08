@@ -1,0 +1,32 @@
+<script setup lang="ts">
+import type { Restaurant } from '@reviews/sdk'
+import { InitialsAvatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { tagList } from '@/lib/reviews'
+import DateText from './DateText.vue'
+
+defineProps<{ restaurant: Restaurant }>()
+</script>
+
+<template>
+  <Card class="h-full">
+    <CardHeader>
+      <CardTitle as="h2" class="text-base leading-snug">
+          <RouterLink :to="`/restaurants/${restaurant.id}`" class="rounded-sm hover:underline">
+            {{ restaurant.name }}
+          </RouterLink>
+        </CardTitle>
+      <CardDescription v-if="restaurant.description" class="line-clamp-3 whitespace-pre-line">
+        {{ restaurant.description }}
+      </CardDescription>
+    </CardHeader>
+    <CardContent v-if="tagList(restaurant.tags).length" class="flex flex-wrap gap-1.5">
+      <Badge v-for="tag in tagList(restaurant.tags)" :key="tag" variant="secondary">{{ tag }}</Badge>
+    </CardContent>
+    <CardFooter class="text-muted-foreground mt-auto gap-2 text-sm">
+      <InitialsAvatar :name="restaurant.creator?.name ?? null" size="sm" />
+      <span>{{ restaurant.creator?.name ?? 'Deleted user' }} · <DateText :created="restaurant.created" :updated="restaurant.updated" /></span>
+    </CardFooter>
+  </Card>
+</template>

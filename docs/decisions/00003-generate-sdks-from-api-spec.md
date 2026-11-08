@@ -6,7 +6,7 @@ status: implemented
 # Motivation
 [motivation]: #motivation
 
-The Public API spec in `specs/api/public-openapi.yaml` is the contract between the `ui` app and the PocketBase app in `app`.
+The Public API spec in `specs/api/public-openapi.yaml` is the contract between the UI in `app/ui` and the PocketBase app in `app`.
 If each app writes its own types and HTTP code by hand, the apps can drift from the spec without notice.
 A change to the spec then breaks the other app only at runtime.
 
@@ -15,7 +15,7 @@ A change to the spec then changes the generated code.
 The compiler of each app finds the code that does not match the spec.
 
 Expected outcome:
-- The `ui` app calls the Public API only through a generated TypeScript client.
+- The UI in `app/ui` calls the Public API only through a generated TypeScript client.
 - The PocketBase app in `app` implements a generated Go server interface and uses generated Go types.
 - One `make` command generates both SDKs from the spec.
 - A check finds generated code that does not match the spec.
@@ -24,7 +24,7 @@ Expected outcome:
 [scope]: #scope
 
 In scope:
-- A TypeScript SDK in `sdk/typescript` with the client that the `ui` app uses. [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator) generates it.
+- A TypeScript SDK in `sdk/typescript` with the client that the UI in `app/ui` uses. [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator) generates it.
 - A Go SDK in `sdk/go` with the server interface and the Go types. [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen) generates it.
 - The generator settings, the `make` targets, and the check for out-of-date code
 - Tests that show the generated code handles the difficult parts of the spec
@@ -33,7 +33,7 @@ Out of scope:
 - Publishing the SDKs to npm or to other package registries. Only this repository uses them.
 - A Go client. The PocketBase app in `app` is the only Go user, and it needs only the server code.
 - API documentation from the spec. This stays in the backlog.
-- Implementing the `app` and `ui` apps. Each SDK gives only the code that the spec defines.
+- Implementing the app and the UI. Each SDK gives only the code that the spec defines.
 - Request validation middleware that reads the spec at runtime
 
 # Guide-level explanation
@@ -57,7 +57,7 @@ make test-sdk         # Run the tests of both SDKs
 
 ## TypeScript SDK
 
-The `ui` app depends on `@reviews/sdk` through an npm workspace.
+The UI in `app/ui` depends on `@reviews/sdk` through an npm workspace.
 The SDK has a `UsersApi` class and a `RestaurantsApi` class, one for each tag.
 Each method has the name of the `operationId` and takes one request object.
 
@@ -146,10 +146,10 @@ sdk/
     reviewsapi.gen.go         # generated
 ```
 
-- generated files are committed. The `app` and `ui` apps build without the generators.
+- generated files are committed. The app and the UI build without the generators.
 - `sdk/typescript/src` has only generated files. `make generate` deletes it before it runs the generator. The generator does not delete the files of removed schemas.
 - the root `go.work` file has `sdk/go` and `app`. The `app` module also has a `replace` line for `sdk/go`. `go mod tidy` does not use `go.work`, and the SDK module is not published.
-- the root `package.json` is an npm workspace with `sdk/typescript`. The `ui` app adds itself when it exists.
+- the root `package.json` is an npm workspace with `sdk/typescript` and `app/ui`
 
 ## TypeScript SDK settings
 
@@ -159,11 +159,12 @@ sdk/
   - `supportsES6`: `true`
   - `importFileExtension`: `.js`. The package is an ES module.
   - `useSingleRequestParameter`: `true`
-  - `withInterfaces`: `true`. Tests in the `ui` app can replace an API class with a fake.
+  - `withInterfaces`: `true`. Tests in the UI can replace an API class with a fake.
   - `legacyDiscriminatorBehavior`: `false`. The `Review`, `ReviewCreate`, and `ReviewPatch` unions then select the model from `kind`.
   - `apiDocs` and `modelDocs`: `false`. The spec is the documentation.
 - `stringEnums` stays `false`. With `true`, the enum type of `kind` does not match the literal types of the union, and `tsc` fails.
-- `tsc` builds the package into `sdk/typescript/dist`. The `ui` app imports the built package.
+- the SDK and the UI use TypeScript 6.0.3. `vue-tsc` needs the JavaScript API of the compiler, and TypeScript 7 does not have it. One version for the npm workspace keeps one copy in `node_modules`.
+- `tsc` builds the package into `sdk/typescript/dist`. The UI imports the built package. `make build-ui` builds the SDK first.
 - `package.json` is hand-written. The package name is `@reviews/sdk`.
 
 ## Go SDK settings

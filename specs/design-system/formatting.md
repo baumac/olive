@@ -1,6 +1,6 @@
 # Dates, numbers and language
 
-Rules for how the UI shows values from the API. Format every value with the browser's `Intl` APIs and the `en` locale. Never build date or number text by hand.
+Rules for how the UI shows values from the API. Format every value with the browser's `Intl` APIs. Numbers and relative times use the `en` locale. Dates use `en-GB`, which puts the day first as in "4 Nov 2024". `en` gives "Nov 4, 2024". Never build date or number text by hand.
 
 ## Dates and times
 
@@ -29,5 +29,5 @@ The API sends UTC timestamps in the PocketBase format, `2024-11-04 01:26:55.002Z
 ## Language
 
 - The UI supports only English, with `<html lang="en">`. Other languages are out of scope (ADR 00002). Do not add a language switcher or translation files.
-- Format dates and numbers with the `en` locale, as in the examples above.
+- Format numbers with the `en` locale and dates with `en-GB`, as in the examples above. The page language stays `en`.
 - Review kind names stay as the product names them: "Basic" and "Joc de cartes". "Joc de cartes" is Catalan. Mark it with `<span lang="ca">` so screen readers say it correctly.

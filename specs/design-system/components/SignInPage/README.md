@@ -2,7 +2,7 @@
 
 The page at `/sign-in`. It shows `SignInForm` under `AppHeader`.
 
-Page, not a component. Lives in `ui/src/pages/SignInPage.vue`.
+Page, not a component. Lives in `app/ui/src/pages/SignInPage.vue`.
 
 - Route: `/sign-in`. Query `redirect`: the path to open after sign in, for example `/restaurants/k3x9m2p7q1w8z4a/reviews/new`. Accept only paths that start with `/` and not `//`. Without it, open `/restaurants`.
 - Query `reason=session-ended`: show the "Your session has ended" notice. The app adds it when a token refresh fails.

@@ -7,7 +7,9 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 - Add a README.md file to the project for newcomers to understand and get started with the project.
-- Implement the UI based on the Public API Spec
+- Add review lists that are not per restaurant to the Public API
+  - the `AppHeader` design has a "Reviews" link, and the `UserMenu` design has "My reviews"
+  - the Public API lists reviews only for one restaurant. The UI does not show these items until the API can list them.
 - Add a Content Security Policy to the UI
   - the UI keeps the auth token in `localStorage`. A script that an attacker injects can read it. The CSP stops the browser from running injected scripts.
   - decide the policy when the UI components exist. Some components can need `style-src 'unsafe-inline'`.

@@ -8,7 +8,7 @@ This project allows users to review a variety of things. It is composed of the f
 - **Public API** for reviewing things with token auth
   - this is implemented and served by the app in the `app` directory
 - **Public UI** to interact with the Public API
-  - this is implemented in the `ui` directory
+  - this is implemented in the `app/ui` directory and served by the app in the `app` directory
 - **Pocketbase API** for admin operations with token auth
   - this is served by the app in the `app` directory
 - **Pocketbase UI** to interact with the Management API
@@ -23,18 +23,23 @@ make lint-spec        # Lint the API specs in specs/api with vacuum
 make generate         # Generate the SDKs in sdk/ from the API spec. Needs Docker.
 make lint-go          # Run go vet and gofmt on the Go modules
 make check-generate   # Fail if the generated SDKs do not match the API spec
-make test             # Run the tests of the SDKs and the app. Needs Node.js.
+make lint-ui          # Type-check the UI. Needs Node.js.
+make test             # Run the tests of the SDKs, the app, and the UI. Needs Node.js.
 make test-sdk         # Run the tests of both SDKs. Needs Node.js.
-make test-app         # Run the tests of the app
-make build-app        # Build the app server to ./bin/reviews-app
+make test-app         # Run the Go tests of the app
+make test-ui          # Run the UI tests. Needs Node.js.
+make build-ui         # Build the UI into app/internal/webui/dist. Needs Node.js.
+make build-app        # Build the UI, then the app server to ./bin/reviews-app
 make run-app          # Run the app server on 127.0.0.1:8090 with data in app/pb_data
+make dev-ui           # Run the Vite dev server. It sends /v1 to make run-app.
 ```
 
 The app server applies the migrations when it starts.
 The PocketBase dashboard is at `http://127.0.0.1:8090/_/`.
 To make the first superuser, run `go run ./app superuser create EMAIL PASSWORD --dir app/pb_data`.
 
-TODO add the UI commands when the `ui` app exists.
+`make run-app` serves the UI build that `make build-ui` made last.
+For UI work, run `make run-app` and `make dev-ui` at the same time, and open the Vite URL.
 
 ## Architecture
 
@@ -49,17 +54,19 @@ TODO add the UI commands when the `ui` app exists.
 - **`sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00003.
   - **`sdk/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
   - **`sdk/go`** - the Go module with the server interface and the types that the API uses
-- **`app`** - the directory containining the app that serves the Public API, Pocketbase API, and Pocketbase UI
+- **`app`** - the directory containining the app that serves the Public UI, Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.
   - **`app/main.go`** - the PocketBase app
   - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, and `reviews` collections
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `sdk/go`.
-- **`ui`** - the directory containing the app that serves the Public UI
-  - Implemented against the OpenAPI specification defined in `specs/api/public-openapi.yaml`
-  - Written in the TypeScript programming language
-  - Built using the Vue framework
+  - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
+- **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
+  - Calls the Public API only through `@reviews/sdk`
+  - Written in TypeScript with Vue, Vue Router, and shadcn-vue on Tailwind CSS. See decision 00002.
+  - Follows `specs/design-system`. Components live in `app/ui/src/components/ui`, route-aware components in `app/ui/src/components/app`, and screens in `app/ui/src/pages`.
+  - `app/ui/go.mod` is an empty Go module. The Go tools of `app` then skip `app/ui/node_modules`.
 
 ## Code Comment Style (Mandatory)
 
