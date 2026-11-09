@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/baumac/reviews-app/app/internal/searchindex"
 	"github.com/pocketbase/dbx"
@@ -30,9 +29,6 @@ var (
 // term. FTS5 operators in the search are then plain text. A word of two or
 // more characters is a prefix term.
 func ftsQuery(search string) (string, string) {
-	if n := utf8.RuneCountInString(search); n < 1 || n > 255 {
-		return "", "The search must have 1 to 255 characters."
-	}
 	var terms []string
 	for _, word := range strings.Fields(search) {
 		if !strings.ContainsFunc(word, isWordChar) {

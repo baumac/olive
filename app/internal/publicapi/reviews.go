@@ -15,8 +15,6 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-const maxScore = 10
-
 // reviewInput is a create or patch body. The body schema checked the values
 // before.
 type reviewInput struct {
@@ -41,9 +39,6 @@ var reviewSorts = map[string]sortField{
 // ListReviews returns 404 when the restaurant does not exist. It does not
 // return an empty list.
 func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsRequestObject) (reviewsapi.ListReviewsResponseObject, error) {
-	if !recordIDPattern.MatchString(req.RestaurantId) {
-		return reviewsapi.ListReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(invalidRestaurantID)}, nil
-	}
 	p := req.Params
 	all := reviewsapi.ListAllReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, RestaurantEq: &req.RestaurantId,
@@ -103,10 +98,7 @@ func (s *Server) reviewPage(
 	fingerprintOf func(sort string) []any,
 	restaurant func() (*core.Record, error),
 ) (reviewPageResult, error) {
-	limit, detail := parseLimit(p.Limit)
-	if detail != "" {
-		return reviewPageResult{bad: detail}, nil
-	}
+	limit := limitOf(p.Limit)
 	search := newSearchPage("reviews")
 	if detail := search.parse(p.Search); detail != "" {
 		return reviewPageResult{bad: detail}, nil
@@ -136,22 +128,16 @@ func (s *Server) reviewPage(
 
 	w := newWhere()
 	search.filter(w)
-	for _, detail := range []string{
-		w.restaurantFilters(p.RestaurantEq, p.RestaurantIn),
-		w.scoreFilter("space", scoreComparisons(p.Space)),
-		w.scoreFilter("service", scoreComparisons(p.Service)),
-		w.scoreFilter("food", scoreComparisons(p.Food)),
-		w.scoreFilter("price", scoreComparisons(p.Price)),
-		w.scoreFilter("cleanliness", scoreComparisons(p.Cleanliness)),
-		w.tagFilters("reviews", p.TagsHas, p.TagsHasAny, p.TagsHasAll),
-		w.creatorFilters("reviews", p.CreatorEq, p.CreatorIn),
-		w.timestampFilter("reviews", "created", timestampComparisons(p.Created)),
-		w.timestampFilter("reviews", "updated", timestampComparisons(p.Updated)),
+	w.idFilters("reviews", "restaurant", p.RestaurantEq, p.RestaurantIn)
+	for name, r := range map[string]*reviewsapi.ScoreRange{
+		"space": p.Space, "service": p.Service, "food": p.Food, "price": p.Price, "cleanliness": p.Cleanliness,
 	} {
-		if detail != "" {
-			return reviewPageResult{bad: detail}, nil
-		}
+		w.compare(column("reviews", name), scoreComparisons(r))
 	}
+	w.tagFilters("reviews", p.TagsHas, p.TagsHasAny, p.TagsHasAll)
+	w.idFilters("reviews", "creator", p.CreatorEq, p.CreatorIn)
+	w.compare(column("reviews", "created"), timestampComparisons(p.Created))
+	w.compare(column("reviews", "updated"), timestampComparisons(p.Updated))
 	if after != nil {
 		w.keyset(keys, after)
 	}
@@ -189,28 +175,6 @@ func (s *Server) reviewPage(
 	return reviewPageResult{list: reviewsapi.ReviewList{Items: items, NextCursor: next}}, nil
 }
 
-func (w *where) restaurantFilters(eq *string, in *[]string) string {
-	ids := []string{}
-	if eq != nil {
-		ids = append(ids, *eq)
-	}
-	if in != nil {
-		ids = append(ids, *in...)
-	}
-	for _, id := range ids {
-		if !recordIDPattern.MatchString(id) {
-			return fmt.Sprintf("The restaurant ID %q is not valid.", id)
-		}
-	}
-	if eq != nil {
-		w.compare(column("reviews", "restaurant"), []comparison{{"=", *eq}})
-	}
-	if in != nil {
-		w.in(column("reviews", "restaurant"), *in)
-	}
-	return ""
-}
-
 // restaurantNames reads only the restaurants that are not in known. The
 // per-restaurant list then needs no extra query.
 func (s *Server) restaurantNames(known map[string]string, reviews ...*core.Record) (map[string]string, error) {
@@ -237,9 +201,6 @@ func (s *Server) restaurantNames(known map[string]string, reviews ...*core.Recor
 // CreateReview runs the duplicate check and the save in one transaction.
 // The unique index on restaurant and creator also blocks a second review.
 func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRequestObject) (reviewsapi.CreateReviewResponseObject, error) {
-	if !recordIDPattern.MatchString(req.RestaurantId) {
-		return reviewsapi.CreateReview400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(invalidRestaurantID)}, nil
-	}
 	st := stateFrom(ctx)
 	duplicate := reviewsapi.CreateReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The user already has a review for this restaurant.")}
 
@@ -298,9 +259,6 @@ func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRe
 
 // GetReview returns 404 for a review of a different restaurant.
 func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObject) (reviewsapi.GetReviewResponseObject, error) {
-	if detail := checkReviewIDs(req.RestaurantId, req.ReviewId); detail != "" {
-		return reviewsapi.GetReview400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
-	}
 	restaurant, r, detail, err := s.findReview(s.app, req.RestaurantId, req.ReviewId)
 	if err != nil {
 		return nil, err
@@ -321,9 +279,6 @@ func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObj
 
 // UpdateReview lets only the creator change a review.
 func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRequestObject) (reviewsapi.UpdateReviewResponseObject, error) {
-	if detail := checkReviewIDs(req.RestaurantId, req.ReviewId); detail != "" {
-		return reviewsapi.UpdateReview400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
-	}
 	st := stateFrom(ctx)
 
 	var response reviewsapi.UpdateReviewResponseObject
@@ -367,9 +322,6 @@ func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRe
 
 // DeleteReview lets only the creator delete a review.
 func (s *Server) DeleteReview(ctx context.Context, req reviewsapi.DeleteReviewRequestObject) (reviewsapi.DeleteReviewResponseObject, error) {
-	if detail := checkReviewIDs(req.RestaurantId, req.ReviewId); detail != "" {
-		return reviewsapi.DeleteReview400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
-	}
 	user := stateFrom(ctx).user
 
 	var response reviewsapi.DeleteReviewResponseObject = reviewsapi.DeleteReview204Response{}
@@ -392,16 +344,6 @@ func (s *Server) DeleteReview(ctx context.Context, req reviewsapi.DeleteReviewRe
 		return nil, err
 	}
 	return response, nil
-}
-
-func checkReviewIDs(restaurantID, reviewID string) string {
-	if !recordIDPattern.MatchString(restaurantID) {
-		return invalidRestaurantID
-	}
-	if !recordIDPattern.MatchString(reviewID) {
-		return "The review ID is not valid."
-	}
-	return ""
 }
 
 // findReview returns a detail for the 404 response if the restaurant or the
@@ -481,19 +423,6 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string) (revi
 		Title:       r.GetString("title"), Feedback: optionalText(r, "feedback"), Tags: tagsOf(r),
 		Creator: toCreator(creator), Created: r.GetDateTime("created").String(), Updated: r.GetDateTime("updated").String(),
 	}, nil
-}
-
-func (w *where) scoreFilter(name string, cs []comparison) string {
-	if len(cs) == 0 {
-		return ""
-	}
-	for _, c := range cs {
-		if v := c.value.(int); v < 1 || v > maxScore {
-			return fmt.Sprintf("The %s filter values must be between 1 and %d.", name, maxScore)
-		}
-	}
-	w.compare(column("reviews", name), cs)
-	return ""
 }
 
 func scoreComparisons(r *reviewsapi.ScoreRange) []comparison {

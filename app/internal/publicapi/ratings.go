@@ -2,7 +2,6 @@ package publicapi
 
 import (
 	"fmt"
-	"math"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/pocketbase/dbx"
@@ -82,16 +81,6 @@ func overallSort(desc bool) []sortKey {
 		{"(" + overallColumn + " IS NULL)", false},
 		{"COALESCE(" + overallColumn + ", 0)", desc},
 	}
-}
-
-// checkAverages also rejects NaN. A NaN value passes the range comparisons.
-func checkAverages(name string, cs []comparison) string {
-	for _, c := range cs {
-		if v := c.value.(float64); math.IsNaN(v) || v < 1 || v > maxScore {
-			return fmt.Sprintf("The %s filter values must be between 1 and %d.", name, maxScore)
-		}
-	}
-	return ""
 }
 
 func averageComparisons(r *reviewsapi.AverageRange) []comparison {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"slices"
 	"strings"
 
@@ -29,10 +30,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		return reviewsapi.ListRestaurants400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
 	}
 
-	limit, detail := parseLimit(p.Limit)
-	if detail != "" {
-		return bad(detail)
-	}
+	limit := limitOf(p.Limit)
 	search := newSearchPage("restaurants")
 	if detail := search.parse(p.Search); detail != "" {
 		return bad(detail)
@@ -45,9 +43,9 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if detail != "" {
 		return bad(detail)
 	}
-	// fingerprint cannot marshal NaN. The check runs first.
-	if detail := checkAverages("overall", averageComparisons(p.Overall)); detail != "" {
-		return bad(detail)
+	// The spec validation can be off. The fingerprint cannot marshal NaN.
+	if slices.ContainsFunc(averageComparisons(p.Overall), func(c comparison) bool { return math.IsNaN(c.value.(float64)) }) {
+		return bad("The overall filter values must be numbers.")
 	}
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
 	query, err := fingerprint("restaurants", p)
@@ -65,16 +63,10 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		w.joinOverall()
 	}
 	w.compare(overallColumn, averageComparisons(p.Overall))
-	for _, detail := range []string{
-		w.tagFilters("restaurants", p.TagsHas, p.TagsHasAny, p.TagsHasAll),
-		w.creatorFilters("restaurants", p.CreatorEq, p.CreatorIn),
-		w.timestampFilter("restaurants", "created", timestampComparisons(p.Created)),
-		w.timestampFilter("restaurants", "updated", timestampComparisons(p.Updated)),
-	} {
-		if detail != "" {
-			return bad(detail)
-		}
-	}
+	w.tagFilters("restaurants", p.TagsHas, p.TagsHasAny, p.TagsHasAll)
+	w.idFilters("restaurants", "creator", p.CreatorEq, p.CreatorIn)
+	w.compare(column("restaurants", "created"), timestampComparisons(p.Created))
+	w.compare(column("restaurants", "updated"), timestampComparisons(p.Updated))
 	if after != nil {
 		w.keyset(keys, after)
 	}
@@ -130,12 +122,7 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 	}, nil
 }
 
-// GetRestaurant returns 400 for an ID that does not match the RecordId
-// pattern. The other operations with IDs do the same.
 func (s *Server) GetRestaurant(_ context.Context, req reviewsapi.GetRestaurantRequestObject) (reviewsapi.GetRestaurantResponseObject, error) {
-	if !recordIDPattern.MatchString(req.RestaurantId) {
-		return reviewsapi.GetRestaurant400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(invalidRestaurantID)}, nil
-	}
 	r, err := s.findRestaurant(s.app, req.RestaurantId)
 	if errors.Is(err, sql.ErrNoRows) {
 		return reviewsapi.GetRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}, nil
@@ -153,9 +140,6 @@ func (s *Server) GetRestaurant(_ context.Context, req reviewsapi.GetRestaurantRe
 // UpdateRestaurant runs the review check and the save in one transaction. A
 // review that another request adds cannot make the name check wrong.
 func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRestaurantRequestObject) (reviewsapi.UpdateRestaurantResponseObject, error) {
-	if !recordIDPattern.MatchString(req.RestaurantId) {
-		return reviewsapi.UpdateRestaurant400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(invalidRestaurantID)}, nil
-	}
 	user := stateFrom(ctx).user
 	b := req.Body
 
@@ -212,9 +196,6 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 
 // DeleteRestaurant runs the review check and the delete in one transaction.
 func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRestaurantRequestObject) (reviewsapi.DeleteRestaurantResponseObject, error) {
-	if !recordIDPattern.MatchString(req.RestaurantId) {
-		return reviewsapi.DeleteRestaurant400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(invalidRestaurantID)}, nil
-	}
 	user := stateFrom(ctx).user
 
 	var response reviewsapi.DeleteRestaurantResponseObject = reviewsapi.DeleteRestaurant204Response{}
@@ -247,10 +228,7 @@ func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRest
 	return response, nil
 }
 
-const (
-	invalidRestaurantID = "The restaurant ID is not valid."
-	restaurantNotFound  = "The restaurant does not exist."
-)
+const restaurantNotFound = "The restaurant does not exist."
 
 func (s *Server) findRestaurant(app core.App, id string) (*core.Record, error) {
 	return app.FindRecordById("restaurants", id)

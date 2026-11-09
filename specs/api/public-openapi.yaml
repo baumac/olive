@@ -30,6 +30,7 @@ paths:
   /users:
     post:
       operationId: signUp
+      x-rate-limited: true
       summary: Sign up a user
       description: |
         Creates a user and signs the user in.
@@ -68,6 +69,7 @@ paths:
   /users/tokens:
     post:
       operationId: signIn
+      x-rate-limited: true
       summary: Sign in a user with email and password
       description: The API ignores the `Authorization` header on this operation.
       tags: [users]
@@ -870,7 +872,8 @@ components:
       type: string
       minLength: 1
       maxLength: 255
-      pattern: '[^\t\n\v\f\r ]'
+      pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
+      x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters
     Title:
       description: |
         A title with at least one character that is not ASCII whitespace.
@@ -878,13 +881,16 @@ components:
       type: string
       minLength: 1
       maxLength: 255
-      pattern: '[^\t\n\v\f\r ]'
+      pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
+      x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters
     LongText:
       description: |
         A text of at most 10,000 characters.
         Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
       type: string
       maxLength: 10000
+      pattern: '^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
+      x-pattern-message: must not have control, direction, or invisible characters other than line breaks and tabs
     Score:
       description: The score of one category of a review.
       type: integer
@@ -896,6 +902,7 @@ components:
       minLength: 1
       maxLength: 63
       pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+      x-pattern-message: must have lowercase letters, digits, and single hyphens between them
     Tags:
       description: Unique tags.
       type: array

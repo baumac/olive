@@ -21,45 +21,7 @@ const (
 	defaultSort  = "-created"
 )
 
-var comparisonOps = []struct{ name, sql string }{
-	{"lt", "<"}, {"lte", "<="}, {"eq", "="}, {"gte", ">="}, {"gt", ">"},
-}
-
-// The array filters have a maximum number of values. Each value is one SQL
-// parameter. A tag array has at most maxTags items.
-const (
-	maxTagValues   = maxTags
-	maxOtherValues = 100
-)
-
-func withParams(query, params map[string]int) map[string]int {
-	out := maps.Clone(query)
-	maps.Copy(out, params)
-	return out
-}
-
-func withRanges(query map[string]int, names ...string) map[string]int {
-	ranges := map[string]int{}
-	for _, name := range names {
-		for _, op := range comparisonOps {
-			ranges[name+"["+op.name+"]"] = 1
-		}
-	}
-	return withParams(query, ranges)
-}
-
-var listQuery = withRanges(map[string]int{
-	"limit": 1, "cursor": 1, "sort": 1, "search": 1,
-	"tags[has]": 1, "tags[has_any]": maxTagValues, "tags[has_all]": maxTagValues,
-	"creator[eq]": 1, "creator[in]": maxOtherValues,
-}, "created", "updated")
-
-var restaurantQuery = withRanges(listQuery, "overall")
-
-var reviewQuery = withRanges(listQuery, "space", "service", "food", "price", "cleanliness")
-
-// allReviewQuery adds the restaurant filters of GET /v1/reviews.
-var allReviewQuery = withParams(reviewQuery, map[string]int{"restaurant[eq]": 1, "restaurant[in]": maxOtherValues})
+var comparisonOps = []string{"<", "<=", "=", ">=", ">"}
 
 // sortKey is one ORDER BY term. The page query also selects it for the
 // cursor.
@@ -114,14 +76,13 @@ func parseSort(raw *string, table string, fields map[string]sortField) ([]sortKe
 	return keys, spec, ""
 }
 
-func parseLimit(raw *int) (int, string) {
+// limitOf keeps the limit in the range of the spec. The spec validation can
+// be off. A limit below 1 would then break the cursor of page.
+func limitOf(raw *int) int {
 	if raw == nil {
-		return defaultLimit, ""
+		return defaultLimit
 	}
-	if *raw < 1 || *raw > maxLimit {
-		return 0, fmt.Sprintf("limit must be between 1 and %d.", maxLimit)
-	}
-	return *raw, ""
+	return min(max(*raw, 1), maxLimit)
 }
 
 // where collects the conditions and joins of a list query. All conditions
@@ -169,7 +130,7 @@ func comparisons[T any](lt, lte, eq, gte, gt *T) []comparison {
 	var out []comparison
 	for i, v := range []*T{lt, lte, eq, gte, gt} {
 		if v != nil {
-			out = append(out, comparison{comparisonOps[i].sql, *v})
+			out = append(out, comparison{comparisonOps[i], *v})
 		}
 	}
 	return out
@@ -202,7 +163,7 @@ func (w *where) hasTags(table string, tags []string) {
 		c, c, strings.Join(ps, ", ")))
 }
 
-func (w *where) tagFilters(table string, has *string, hasAny, hasAll *[]string) string {
+func (w *where) tagFilters(table string, has *string, hasAny, hasAll *[]string) {
 	all := []string{}
 	if has != nil {
 		all = append(all, *has)
@@ -211,52 +172,21 @@ func (w *where) tagFilters(table string, has *string, hasAny, hasAll *[]string) 
 		all = append(all, *hasAll...)
 	}
 	for _, tag := range all {
-		if !validTag(tag) {
-			return fmt.Sprintf("The tag %q is not valid.", tag)
-		}
 		w.hasTags(table, []string{tag})
 	}
 	if hasAny != nil {
-		for _, tag := range *hasAny {
-			if !validTag(tag) {
-				return fmt.Sprintf("The tag %q is not valid.", tag)
-			}
-		}
 		w.hasTags(table, *hasAny)
 	}
-	return ""
 }
 
-func (w *where) creatorFilters(table string, eq *string, in *[]string) string {
-	ids := []string{}
+// idFilters adds the eq and in filters of an ID column.
+func (w *where) idFilters(table, name string, eq *string, in *[]string) {
 	if eq != nil {
-		ids = append(ids, *eq)
+		w.compare(column(table, name), []comparison{{"=", *eq}})
 	}
 	if in != nil {
-		ids = append(ids, *in...)
+		w.in(column(table, name), *in)
 	}
-	for _, id := range ids {
-		if !recordIDPattern.MatchString(id) {
-			return fmt.Sprintf("The creator ID %q is not valid.", id)
-		}
-	}
-	if eq != nil {
-		w.compare(column(table, "creator"), []comparison{{"=", *eq}})
-	}
-	if in != nil {
-		w.in(column(table, "creator"), *in)
-	}
-	return ""
-}
-
-func (w *where) timestampFilter(table, name string, cs []comparison) string {
-	for _, c := range cs {
-		if !timestampPattern.MatchString(c.value.(string)) {
-			return fmt.Sprintf("The %s timestamp %q is not valid.", name, c.value)
-		}
-	}
-	w.compare(column(table, name), cs)
-	return ""
 }
 
 // keyset adds the condition that selects the rows after the cursor values

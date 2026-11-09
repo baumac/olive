@@ -2,6 +2,7 @@ package publicapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,136 +10,32 @@ import (
 	"maps"
 	"mime"
 	"net/http"
-	"net/mail"
 	"regexp"
 	"slices"
 	"strings"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
-)
-
-type propType int
-
-const (
-	typeString propType = iota
-	typeEmail
-	typeInteger
-	typeTags
-)
-
-type prop struct {
-	typ      propType
-	required bool
-	nullable bool
-	// check checks the value rules after the type check passes.
-	check func(errs *fieldErrors, name string, value json.RawMessage)
-}
-
-func (p prop) isRequired() prop {
-	p.required = true
-	return p
-}
-
-func (p prop) isNullable() prop {
-	p.nullable = true
-	return p
-}
-
-// bodySchema has the media type, the JSON types, and the value rules of a
-// request body.
-type bodySchema struct {
-	mediaType string
-	props     map[string]prop
-}
-
-const (
-	mediaJSON       = "application/json"
-	mediaMergePatch = "application/merge-patch+json"
-)
-
-func textRule(rule func(errs *fieldErrors, name, v string)) func(*fieldErrors, string, json.RawMessage) {
-	return func(errs *fieldErrors, name string, value json.RawMessage) {
-		var s string
-		_ = json.Unmarshal(value, &s)
-		rule(errs, name, s)
-	}
-}
-
-func scoreRule(maxValue int) func(*fieldErrors, string, json.RawMessage) {
-	return func(errs *fieldErrors, name string, value json.RawMessage) {
-		var v int
-		_ = json.Unmarshal(value, &v)
-		checkScore(errs, name, v, maxValue)
-	}
-}
-
-func tagsRule(errs *fieldErrors, name string, value json.RawMessage) {
-	var tags []string
-	_ = json.Unmarshal(value, &tags)
-	checkTags(errs, name, tags)
-}
-
-var (
-	nameProp     = prop{typ: typeString, check: textRule(checkName)}
-	longTextProp = prop{typ: typeString, check: textRule(checkLongText)}
-	tagsProp     = prop{typ: typeTags, check: tagsRule}
-	scoreProp    = prop{typ: typeInteger, check: scoreRule(maxScore)}
-)
-
-var (
-	userCreateSchema = bodySchema{mediaJSON, map[string]prop{
-		"email":    {typ: typeEmail, required: true, check: textRule(checkEmail)},
-		"password": {typ: typeString, required: true, check: textRule(checkPassword)},
-		"name":     nameProp.isRequired(),
-	}}
-	credentialsSchema = bodySchema{mediaJSON, map[string]prop{
-		"email":    {typ: typeEmail, required: true},
-		"password": {typ: typeString, required: true},
-	}}
-	restaurantCreateSchema = bodySchema{mediaJSON, map[string]prop{
-		"name":        nameProp.isRequired(),
-		"description": longTextProp,
-		"tags":        tagsProp,
-	}}
-	restaurantPatchSchema = bodySchema{mediaMergePatch, map[string]prop{
-		"name":        nameProp,
-		"description": longTextProp.isNullable(),
-		"tags":        tagsProp.isNullable(),
-	}}
-	reviewCreateSchema = bodySchema{mediaJSON, map[string]prop{
-		"space":       scoreProp.isRequired(),
-		"service":     scoreProp.isRequired(),
-		"food":        scoreProp.isRequired(),
-		"price":       scoreProp.isRequired(),
-		"cleanliness": scoreProp.isRequired(),
-		"title":       nameProp.isRequired(),
-		"feedback":    longTextProp,
-		"tags":        tagsProp,
-	}}
-	reviewPatchSchema = bodySchema{mediaMergePatch, map[string]prop{
-		"space":       scoreProp,
-		"service":     scoreProp,
-		"food":        scoreProp,
-		"price":       scoreProp,
-		"cleanliness": scoreProp,
-		"title":       nameProp,
-		"feedback":    longTextProp.isNullable(),
-		"tags":        tagsProp.isNullable(),
-	}}
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/getkin/kin-openapi/openapi3filter"
 )
 
 // maxBodyBytes is far above the largest valid body of about 100 KB. A larger
 // body gets 413 before the decoders use memory for it.
 const maxBodyBytes = 256 << 10
 
-// readBody checks the body against schema. The strict handler then reads
-// the same bytes from r.Body.
-func readBody(r *http.Request, schema *bodySchema) (map[string]json.RawMessage, *reviewsapi.Problem) {
+// readBody checks the body against the spec. Without validate, it does only
+// the checks that the strict handler needs to decode the body. The strict
+// handler then reads the same bytes from r.Body.
+func readBody(ctx context.Context, in *openapi3filter.RequestValidationInput, validate bool) (map[string]json.RawMessage, *reviewsapi.Problem) {
+	r := in.Request
+	body := in.Route.Operation.RequestBody.Value
 	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || mediaType != schema.mediaType {
-		p := newProblem(http.StatusUnsupportedMediaType, "The content type must be "+schema.mediaType+".")
+	content := body.Content[mediaType]
+	if err != nil || content == nil {
+		p := newProblem(http.StatusUnsupportedMediaType, "The content type must be "+strings.Join(slices.Sorted(maps.Keys(body.Content)), " or ")+".")
 		return nil, &p
 	}
+	schema := content.Schema.Value
 
 	raw, err := io.ReadAll(http.MaxBytesReader(nil, r.Body, maxBodyBytes))
 	if err != nil {
@@ -157,10 +54,9 @@ func readBody(r *http.Request, schema *bodySchema) (map[string]json.RawMessage, 
 		p := newProblem(http.StatusBadRequest, "The request body must be one JSON object without repeated properties.")
 		return nil, &p
 	}
-
 	var unknown []string
 	for name := range props {
-		if _, ok := schema.props[name]; !ok {
+		if _, ok := schema.Properties[name]; !ok {
 			unknown = append(unknown, name)
 		}
 	}
@@ -171,22 +67,14 @@ func readBody(r *http.Request, schema *bodySchema) (map[string]json.RawMessage, 
 		return nil, &p
 	}
 
-	var errs fieldErrors
-	for _, name := range slices.Sorted(maps.Keys(schema.props)) {
-		pr := schema.props[name]
-		value, ok := props[name]
-		if !ok {
-			if pr.required {
-				errs.add(name, "is required")
-			}
-			continue
-		}
-		if checkType(&errs, name, pr, value) && pr.check != nil && string(value) != "null" {
-			pr.check(&errs, name, value)
-		}
+	errs := integerLiterals(schema, props)
+	if validate {
+		err = openapi3filter.ValidateRequestBody(ctx, in, in.Route.Operation.RequestBody.Value)
+		r.Body = io.NopCloser(bytes.NewReader(raw))
+		errs = append(errs, bodyErrors(err)...)
 	}
 	if len(errs) > 0 {
-		p := reviewsapi.Problem(unprocessable(errs))
+		p := reviewsapi.Problem(unprocessable(sortedErrors(errs)))
 		return nil, &p
 	}
 	return props, nil
@@ -224,59 +112,150 @@ func decodeObject(raw []byte) (map[string]json.RawMessage, error) {
 	return props, nil
 }
 
-// integerLiteral allows at most 9 digits. The value then fits a Go int on
-// all platforms. The range check then gives 422.
-var integerLiteral = regexp.MustCompile(`^-?(0|[1-9][0-9]{0,8})$`)
+// integerLiteral has no fraction and no exponent. The schema allows 5.0 for
+// an integer. The strict handler cannot decode it into a Go int.
+var integerLiteral = regexp.MustCompile(`^-?(0|[1-9][0-9]*)$`)
 
-func checkType(errs *fieldErrors, name string, pr prop, value json.RawMessage) bool {
-	n := len(*errs)
-	if string(value) == "null" {
-		if !pr.nullable {
-			errs.add(name, "must not be null")
-		}
-		return len(*errs) == n
-	}
-	switch pr.typ {
-	case typeString:
-		var s string
-		if json.Unmarshal(value, &s) != nil {
-			errs.add(name, "must be a string")
-		}
-	case typeEmail:
-		var s string
-		if json.Unmarshal(value, &s) != nil {
-			errs.add(name, "must be a string")
-		} else if !isEmailAddress(s) {
-			errs.add(name, "must be an email address")
-		}
-	case typeInteger:
-		if !integerLiteral.Match(value) {
+func integerLiterals(schema *openapi3.Schema, props map[string]json.RawMessage) fieldErrors {
+	var errs fieldErrors
+	for name, value := range props {
+		s := schema.Properties[name].Value
+		isNumber := len(value) > 0 && (value[0] == '-' || (value[0] >= '0' && value[0] <= '9'))
+		if s.Type.Includes(openapi3.TypeInteger) && isNumber && !integerLiteral.Match(value) {
 			errs.add(name, "must be an integer")
 		}
-	case typeTags:
-		var items []json.RawMessage
-		switch {
-		case json.Unmarshal(value, &items) != nil:
-			errs.add(name, "must be an array")
-		case len(items) > maxTags:
-			// The item errors stop here. The response size then does not
-			// grow with the request.
-			errs.add(name, fmt.Sprintf("must have at most %d items", maxTags))
-		default:
-			for i, item := range items {
-				var s string
-				if json.Unmarshal(item, &s) != nil {
-					errs.add(fmt.Sprintf("%s[%d]", name, i), "must be a string")
-				}
-			}
-		}
 	}
-	return len(*errs) == n
+	return errs
 }
 
-// isEmailAddress accepts only a bare address. The strict handler uses
-// mail.ParseAddress, which also accepts a display name.
-func isEmailAddress(s string) bool {
-	a, err := mail.ParseAddress(s)
-	return err == nil && a.Name == "" && a.Address == s
+// bodyErrors changes the schema errors of the body to Public API errors. An
+// array with too many items gets only that error. The response size then
+// does not grow with the request.
+func bodyErrors(err error) fieldErrors {
+	var schemaErrs []*openapi3.SchemaError
+	collectSchemaErrors(err, &schemaErrs)
+	tooMany := map[string]bool{}
+	for _, e := range schemaErrs {
+		if e.SchemaField == "maxItems" {
+			tooMany[propertyPath(e.JSONPointer())] = true
+		}
+	}
+	var errs fieldErrors
+	for _, e := range schemaErrs {
+		ptr := e.JSONPointer()
+		if len(ptr) > 0 && tooMany[propertyPath(ptr[:1])] && e.SchemaField != "maxItems" {
+			continue
+		}
+		errs.add(propertyPath(ptr), schemaMessage(e))
+	}
+	return errs
+}
+
+func collectSchemaErrors(err error, out *[]*openapi3.SchemaError) {
+	var multi openapi3.MultiError
+	if errors.As(err, &multi) {
+		for _, e := range multi {
+			collectSchemaErrors(e, out)
+		}
+		return
+	}
+	var reqErr *openapi3filter.RequestError
+	if errors.As(err, &reqErr) && reqErr.Err != nil {
+		collectSchemaErrors(reqErr.Err, out)
+		return
+	}
+	var resErr *openapi3filter.ResponseError
+	if errors.As(err, &resErr) && resErr.Err != nil {
+		collectSchemaErrors(resErr.Err, out)
+		return
+	}
+	var schemaErr *openapi3.SchemaError
+	if errors.As(err, &schemaErr) {
+		*out = append(*out, schemaErr)
+	}
+}
+
+// propertyPath changes a JSON pointer such as tags/1 to tags[1].
+func propertyPath(ptr []string) string {
+	var b strings.Builder
+	for i, part := range ptr {
+		if i > 0 && isIndex(part) {
+			b.WriteString("[" + part + "]")
+			continue
+		}
+		if i > 0 {
+			b.WriteString(".")
+		}
+		b.WriteString(part)
+	}
+	return b.String()
+}
+
+func isIndex(s string) bool {
+	return s != "" && strings.Trim(s, "0123456789") == ""
+}
+
+// schemaMessage gives the Public API message of a schema error. A pattern
+// error uses the x-pattern-message of the schema.
+func schemaMessage(e *openapi3.SchemaError) string {
+	s := e.Schema
+	switch e.SchemaField {
+	case "required":
+		return "is required"
+	case "nullable":
+		return "must not be null"
+	case "type":
+		return "must be " + typeName(s)
+	case "minLength", "maxLength":
+		return lengthMessage(s)
+	case "pattern":
+		if m, ok := s.Extensions["x-pattern-message"].(string); ok {
+			return m
+		}
+	case "format":
+		if s.Format == "email" {
+			return "must be an email address"
+		}
+	case "minimum", "maximum":
+		if s.Min != nil && s.Max != nil {
+			return fmt.Sprintf("must be between %v and %v", *s.Min, *s.Max)
+		}
+	case "maxItems":
+		if s.MaxItems != nil {
+			return fmt.Sprintf("must have at most %d items", *s.MaxItems)
+		}
+	case "uniqueItems":
+		return "must have unique items"
+	}
+	return e.Reason
+}
+
+func typeName(s *openapi3.Schema) string {
+	for _, t := range s.Type.Slice() {
+		switch t {
+		case openapi3.TypeInteger, openapi3.TypeObject, openapi3.TypeArray:
+			return "an " + t
+		case openapi3.TypeNull:
+		default:
+			return "a " + t
+		}
+	}
+	return "a valid value"
+}
+
+func lengthMessage(s *openapi3.Schema) string {
+	switch {
+	case s.MaxLength != nil && s.MinLength > 0:
+		return fmt.Sprintf("must have %d to %d characters", s.MinLength, *s.MaxLength)
+	case s.MaxLength != nil:
+		return fmt.Sprintf("must have at most %d characters", *s.MaxLength)
+	default:
+		return fmt.Sprintf("must have at least %d characters", s.MinLength)
+	}
+}
+
+// sortedErrors keeps the first error of each property.
+func sortedErrors(errs fieldErrors) fieldErrors {
+	slices.SortStableFunc(errs, func(a, b reviewsapi.ValidationError) int { return strings.Compare(a.Property, b.Property) })
+	return slices.CompactFunc(errs, func(a, b reviewsapi.ValidationError) bool { return a.Property == b.Property })
 }

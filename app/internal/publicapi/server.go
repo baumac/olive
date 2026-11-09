@@ -13,6 +13,7 @@ import (
 	"time"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/pocketbase/pocketbase/core"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,6 +26,12 @@ type Options struct {
 	// address can send in SignInWindow. Each operation has its own count.
 	SignInLimit  int
 	SignInWindow time.Duration
+	// SkipRequestValidation turns off the spec validation of the parameters
+	// and the body values. Invalid values then reach the handlers.
+	SkipRequestValidation bool
+	// SkipResponseValidation turns off the spec validation of the
+	// responses. The responses then go to the client without a buffer.
+	SkipResponseValidation bool
 }
 
 // DefaultOptions are the settings of a production server.
@@ -33,6 +40,8 @@ var DefaultOptions = Options{SignInLimit: 10, SignInWindow: time.Minute}
 // Server implements reviewsapi.StrictServerInterface.
 type Server struct {
 	app     core.App
+	spec    *apiSpec
+	opts    Options
 	limiter *rateLimiter
 	// dummyHash lets sign in check a password hash for an unknown email.
 	// Sign in then takes the same time for all email addresses.
@@ -74,8 +83,23 @@ func New(app core.App, opts Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	spec, err := loadSpec()
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case opts.SkipRequestValidation && !opts.SkipResponseValidation:
+		// A saved invalid value makes each response with it fail.
+		app.Logger().Warn("The spec validation of Public API requests is off. Responses with invalid saved values get 500.")
+	case opts.SkipRequestValidation:
+		app.Logger().Warn("The spec validation of Public API requests and responses is off")
+	case opts.SkipResponseValidation:
+		app.Logger().Warn("The spec validation of Public API responses is off")
+	}
 	return &Server{
 		app:       app,
+		spec:      spec,
+		opts:      opts,
 		limiter:   newRateLimiter(opts.SignInLimit, opts.SignInWindow),
 		dummyHash: hash,
 	}, nil
@@ -128,42 +152,6 @@ func noRoute(mux *http.ServeMux) http.HandlerFunc {
 	}
 }
 
-type authMode int
-
-const (
-	authOptional authMode = iota
-	authRequired
-	authIgnored
-)
-
-// route has the checks that prepare does for one operation before the
-// strict handler decodes the request.
-type route struct {
-	auth    authMode
-	limited bool
-	body    *bodySchema
-	// query maps each allowed query parameter to its maximum number of
-	// values. A nil map does not check the query.
-	query map[string]int
-}
-
-var routes = map[string]route{
-	"POST " + basePath + "/users":                                           {auth: authIgnored, limited: true, body: &userCreateSchema},
-	"POST " + basePath + "/users/tokens":                                    {auth: authIgnored, limited: true, body: &credentialsSchema},
-	"POST " + basePath + "/users/tokens/refresh":                            {auth: authRequired},
-	"GET " + basePath + "/restaurants":                                      {query: restaurantQuery},
-	"POST " + basePath + "/restaurants":                                     {auth: authRequired, body: &restaurantCreateSchema},
-	"GET " + basePath + "/restaurants/{restaurantId}":                       {},
-	"PATCH " + basePath + "/restaurants/{restaurantId}":                     {auth: authRequired, body: &restaurantPatchSchema},
-	"DELETE " + basePath + "/restaurants/{restaurantId}":                    {auth: authRequired},
-	"GET " + basePath + "/reviews":                                          {query: allReviewQuery},
-	"GET " + basePath + "/restaurants/{restaurantId}/reviews":               {query: reviewQuery},
-	"POST " + basePath + "/restaurants/{restaurantId}/reviews":              {auth: authRequired, body: &reviewCreateSchema},
-	"GET " + basePath + "/restaurants/{restaurantId}/reviews/{reviewId}":    {},
-	"PATCH " + basePath + "/restaurants/{restaurantId}/reviews/{reviewId}":  {auth: authRequired, body: &reviewPatchSchema},
-	"DELETE " + basePath + "/restaurants/{restaurantId}/reviews/{reviewId}": {auth: authRequired},
-}
-
 type clientIPKey struct{}
 
 type pocketBaseAuthKey struct{}
@@ -184,13 +172,12 @@ func stateFrom(ctx context.Context) *state {
 }
 
 // prepare does the checks that come before the operation handler. Decision
-// 00004 lists them in order.
+// 00004 lists them in order. It also checks each response against the spec.
 func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// A panic gets Problem Details. The PocketBase recovery would answer
 		// with its own JSON format.
 		tw := &trackingWriter{ResponseWriter: w}
-		w = tw
 		defer func() {
 			if v := recover(); v != nil {
 				if tw.wrote {
@@ -199,64 +186,93 @@ func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 					s.app.Logger().Error("Public API panic after the response started", "error", v)
 					panic(http.ErrAbortHandler)
 				}
-				s.serverError(w, r, fmt.Errorf("panic: %v", v))
+				s.serverError(tw, r, fmt.Errorf("panic: %v", v))
 			}
 		}()
 		_, pattern := mux.Handler(r)
-		rt, ok := routes[pattern]
+		op, ok := s.spec.operations[pattern]
 		if !ok {
 			if pattern != basePath+"/" {
-				// An operation without a routes entry would skip all checks.
-				s.serverError(w, r, errors.New("no routes entry for "+pattern))
+				// An operation without a spec operation would skip all checks.
+				s.serverError(tw, r, errors.New("no spec operation for "+pattern))
 				return
 			}
-			mux.ServeHTTP(w, r)
+			mux.ServeHTTP(tw, r)
 			return
 		}
-		st := &state{}
-
-		if rt.limited {
-			if wait := s.limiter.allow(pattern + " " + clientKey(clientIP(r))); wait > 0 {
-				w.Header().Set("Retry-After", retryAfter(wait))
-				writeProblem(w, newProblem(http.StatusTooManyRequests, "Too many requests. Try again later."))
-				return
-			}
+		in, err := op.input(r)
+		if err != nil {
+			writeProblem(tw, newProblem(http.StatusNotFound, "The path does not exist."))
+			return
+		}
+		if s.opts.SkipResponseValidation {
+			s.serveOperation(tw, mux, op, in)
+			return
 		}
 
-		if rt.auth != authIgnored {
-			user, token, ok := s.authenticate(r)
-			if !ok {
-				w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
-				writeProblem(w, newProblem(http.StatusUnauthorized, "The bearer token is not valid or is expired."))
-				return
-			}
-			if user == nil && rt.auth == authRequired {
-				w.Header().Set("WWW-Authenticate", "Bearer")
-				writeProblem(w, newProblem(http.StatusUnauthorized, "The operation requires a bearer token."))
-				return
-			}
-			st.user, st.token = user, token
+		bw := newBufferedWriter(tw)
+		s.serveOperation(bw, mux, op, in)
+		// The handler can read the body. The response check does not need it.
+		r.Body = http.NoBody
+		if err := checkResponse(r.Context(), in, bw.Status(), bw.Header(), bw.body.Bytes()); err != nil {
+			s.serverError(tw, r, errors.New("the response does not match the spec: "+responseProblem(err)))
+			return
 		}
-
-		if rt.query != nil {
-			if detail := checkQueryNames(r.URL.Query(), rt.query); detail != "" {
-				writeProblem(w, newProblem(http.StatusBadRequest, detail))
-				return
-			}
+		if err := bw.Flush(); err != nil {
+			s.app.Logger().Debug("Public API response write failed", "error", err)
 		}
-
-		if rt.body != nil {
-			props, p := readBody(r, rt.body)
-			if p != nil {
-				writeProblem(w, *p)
-				return
-			}
-			st.props = props
-		}
-
-		next := r.WithContext(context.WithValue(r.Context(), stateKey{}, st))
-		mux.ServeHTTP(w, next)
 	})
+}
+
+// serveOperation does the request checks of op and then runs the handler.
+func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *operation, in *openapi3filter.RequestValidationInput) {
+	r := in.Request
+	st := &state{}
+	if op.limited {
+		if wait := s.limiter.allow(op.pattern + " " + clientKey(clientIP(r))); wait > 0 {
+			w.Header().Set("Retry-After", retryAfter(wait))
+			writeProblem(w, newProblem(http.StatusTooManyRequests, "Too many requests. Try again later."))
+			return
+		}
+	}
+
+	if op.auth != authIgnored {
+		user, token, ok := s.authenticate(r)
+		if !ok {
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+			writeProblem(w, newProblem(http.StatusUnauthorized, "The bearer token is not valid or is expired."))
+			return
+		}
+		if user == nil && op.auth == authRequired {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			writeProblem(w, newProblem(http.StatusUnauthorized, "The operation requires a bearer token."))
+			return
+		}
+		st.user, st.token = user, token
+	}
+
+	if detail := op.checkQuery(r); detail != "" {
+		writeProblem(w, newProblem(http.StatusBadRequest, detail))
+		return
+	}
+	validate := !s.opts.SkipRequestValidation
+	if validate {
+		if detail := op.checkParams(r.Context(), in); detail != "" {
+			writeProblem(w, newProblem(http.StatusBadRequest, detail))
+			return
+		}
+	}
+
+	if op.route.Operation.RequestBody != nil {
+		props, p := readBody(r.Context(), in, validate)
+		if p != nil {
+			writeProblem(w, *p)
+			return
+		}
+		st.props = props
+	}
+
+	mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), stateKey{}, st)))
 }
 
 // authenticate returns the user of the bearer token. It returns a nil user
@@ -293,19 +309,6 @@ func clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
-}
-
-func checkQueryNames(query map[string][]string, allowed map[string]int) string {
-	for name, values := range query {
-		maxValues, ok := allowed[name]
-		if !ok {
-			return "The query parameter " + name + " is not supported."
-		}
-		if len(values) > maxValues {
-			return fmt.Sprintf("The query parameter %s can occur at most %d times.", name, maxValues)
-		}
-	}
-	return ""
 }
 
 // paramErrorDetail names the parameter of a binder error. The binder text

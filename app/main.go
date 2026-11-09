@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -16,26 +17,44 @@ import (
 )
 
 func main() {
+	opts, err := options(os.Getenv)
+	if err != nil {
+		log.Fatal(err)
+	}
 	app := pocketbase.New()
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{TemplateLang: migratecmd.TemplateLangGo})
 	searchindex.Register(app)
-	publicapi.Register(app, options())
+	publicapi.Register(app, opts)
 	webui.Register(app)
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// options reads REVIEWS_SIGN_IN_LIMIT. The end-to-end tests raise the limit.
-// Their parallel sign ups come from one IP address.
-func options() publicapi.Options {
+// options reads the settings of the Public API from the environment. The
+// Production section of AGENTS.md lists the variables.
+func options(getenv func(string) string) (publicapi.Options, error) {
 	opts := publicapi.DefaultOptions
-	if v := os.Getenv("REVIEWS_SIGN_IN_LIMIT"); v != "" {
+	if v := getenv("REVIEWS_SIGN_IN_LIMIT"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 {
-			log.Fatalf("REVIEWS_SIGN_IN_LIMIT must be a positive integer, not %q", v)
+			return opts, fmt.Errorf("REVIEWS_SIGN_IN_LIMIT must be a positive integer, not %q", v)
 		}
 		opts.SignInLimit = n
 	}
-	return opts
+	for name, skip := range map[string]*bool{
+		"REVIEWS_VALIDATE_REQUESTS":  &opts.SkipRequestValidation,
+		"REVIEWS_VALIDATE_RESPONSES": &opts.SkipResponseValidation,
+	} {
+		v := getenv(name)
+		if v == "" {
+			continue
+		}
+		validate, err := strconv.ParseBool(v)
+		if err != nil {
+			return opts, fmt.Errorf("%s must be true or false, not %q", name, v)
+		}
+		*skip = !validate
+	}
+	return opts, nil
 }

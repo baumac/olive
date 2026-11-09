@@ -17,17 +17,43 @@ func (p *patternRecorder) HandleFunc(pattern string, h func(http.ResponseWriter,
 	p.ServeMux.HandleFunc(pattern, h)
 }
 
-// A generated operation without a routes entry gets 500 from prepare.
-func TestEveryOperationHasARoute(t *testing.T) {
+// A generated operation without a spec operation gets 500 from prepare.
+func TestEveryOperationIsInTheSpec(t *testing.T) {
+	spec, err := loadSpec()
+	if err != nil {
+		t.Fatal(err)
+	}
 	rec := &patternRecorder{ServeMux: http.NewServeMux()}
 	reviewsapi.HandlerWithOptions(reviewsapi.NewStrictHandler(&Server{}, nil),
 		reviewsapi.StdHTTPServerOptions{BaseURL: basePath, BaseRouter: rec})
-	if len(rec.patterns) != len(routes) {
-		t.Errorf("%d generated operations, %d routes entries", len(rec.patterns), len(routes))
+	if len(rec.patterns) != len(spec.operations) {
+		t.Errorf("%d generated operations, %d spec operations", len(rec.patterns), len(spec.operations))
 	}
 	for _, p := range rec.patterns {
-		if _, ok := routes[p]; !ok {
-			t.Errorf("no routes entry for %q", p)
+		if _, ok := spec.operations[p]; !ok {
+			t.Errorf("no spec operation for %q", p)
+		}
+	}
+}
+
+func TestAuthAndRateLimitComeFromTheSpec(t *testing.T) {
+	spec, err := loadSpec()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for pattern, want := range map[string]struct {
+		auth    authMode
+		limited bool
+	}{
+		"POST " + basePath + "/users":                        {authIgnored, true},
+		"POST " + basePath + "/users/tokens":                 {authIgnored, true},
+		"POST " + basePath + "/users/tokens/refresh":         {authRequired, false},
+		"GET " + basePath + "/restaurants":                   {authOptional, false},
+		"DELETE " + basePath + "/restaurants/{restaurantId}": {authRequired, false},
+	} {
+		op := spec.operations[pattern]
+		if op == nil || op.auth != want.auth || op.limited != want.limited {
+			t.Errorf("%s: %+v, want %+v", pattern, op, want)
 		}
 	}
 }

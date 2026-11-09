@@ -317,6 +317,84 @@ func TestSignUpBody(t *testing.T) {
 	}
 }
 
+func TestValidationMessages(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	res := e.expect(request{method: "POST", path: "/v1/restaurants", token: ana.Token,
+		body: `{"name":"   ","description":"Tab\tand\u0007bell","tags":["Bad"]}`}, http.StatusUnprocessableEntity)
+	var p struct {
+		Errors []struct{ Property, Message string } `json:"errors"`
+	}
+	res.decode(t, &p)
+	got := map[string]string{}
+	for _, e := range p.Errors {
+		got[e.Property] = e.Message
+	}
+	want := map[string]string{
+		"name":        "must have a character that is not whitespace, and no control, direction, or invisible characters",
+		"description": "must not have control, direction, or invisible characters other than line breaks and tabs",
+		"tags[0]":     "must have lowercase letters, digits, and single hyphens between them",
+	}
+	for property, message := range want {
+		if got[property] != message {
+			t.Errorf("%s: message %q, want %q", property, got[property], message)
+		}
+	}
+
+	res = e.expect(request{method: "POST", path: "/v1/users",
+		body: `{"email":"x","password":"short","name":12}`}, http.StatusUnprocessableEntity)
+	p.Errors = nil
+	res.decode(t, &p)
+	clear(got)
+	for _, e := range p.Errors {
+		got[e.Property] = e.Message
+	}
+	for property, message := range map[string]string{
+		"email":    "must be an email address",
+		"password": "must have 8 to 71 characters",
+		"name":     "must be a string",
+	} {
+		if got[property] != message {
+			t.Errorf("%s: message %q, want %q", property, got[property], message)
+		}
+	}
+}
+
+func TestSkipRequestValidation(t *testing.T) {
+	opts := testOptions
+	opts.SkipRequestValidation = true
+	e := newEnv(t, opts)
+	ana := e.signUp("ana@example.com", "Ana")
+
+	// The spec allows only lowercase tags. The handler gets the value.
+	e.expect(request{method: "GET", path: "/v1/restaurants?tags[has]=Italian"}, http.StatusOK)
+	// The response validation still refuses the saved tag.
+	e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"Luigi's","tags":["Italian"]}`, token: ana.Token}, http.StatusInternalServerError)
+
+	// The checks that the strict handler needs stay.
+	e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","extra":1}`, token: ana.Token}, http.StatusBadRequest)
+	e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A"}`, contentType: "text/plain", token: ana.Token}, http.StatusUnsupportedMediaType)
+	e.expect(request{method: "GET", path: "/v1/restaurants?name[eq]=x"}, http.StatusBadRequest)
+
+	opts.SkipResponseValidation = true
+	e = newEnv(t, opts)
+	ana = e.signUp("ana@example.com", "Ana")
+	e.createRestaurant(ana.Token, `{"name":"Luigi's","tags":["Italian"]}`)
+
+	// The handlers stay safe with values that the spec refuses.
+	e.createRestaurant(ana.Token, `{"name":"Second"}`)
+	for limit, want := range map[string]int{"0": 1, "-5": 1, "1000": 2} {
+		var page struct {
+			Items []map[string]any `json:"items"`
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?limit=" + limit}, http.StatusOK).decode(t, &page)
+		if len(page.Items) != want {
+			t.Errorf("limit %s: %d items, want %d", limit, len(page.Items), want)
+		}
+	}
+	e.expect(request{method: "GET", path: "/v1/restaurants?overall[gte]=NaN"}, http.StatusBadRequest)
+}
+
 func TestSignInRateLimit(t *testing.T) {
 	e := newEnv(t, publicapi.Options{SignInLimit: 2, SignInWindow: time.Minute})
 	body := `{"email":"ana@example.com","password":"wrong-password"}`
@@ -358,7 +436,7 @@ func TestRestaurants(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","id":"k3x9m2p7q1w8z4a"}`, token: ana.Token}, http.StatusBadRequest)
 		res := e.expect(request{method: "POST", path: "/v1/restaurants",
 			body: `{"description":null,"tags":["ok","Bad","ok"]}`, token: ana.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "description,name,tags[1],tags[2]" {
+		if got := strings.Join(errorProperties(t, res), ","); got != "description,name,tags,tags[1]" {
 			t.Errorf("properties %q", got)
 		}
 		many := `["` + strings.Repeat(`Bad","`, 999) + `Bad"]`
@@ -467,6 +545,7 @@ func TestReviews(t *testing.T) {
 			`{"space":7,"service":9,"title":"X"}`:                                             "cleanliness,food,price",
 			`{"space":9999999999,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`: "space",
 			`{"space":7,"service":2.5,"food":8,"price":6,"cleanliness":8,"title":"X"}`:        "service",
+			`{"space":7.0,"service":9,"food":8,"price":6,"cleanliness":1e1,"title":"X"}`:      "cleanliness,space",
 		} {
 			res := e.expect(request{method: "POST", path: otherReviews, body: body, token: joe.Token}, http.StatusUnprocessableEntity)
 			if got := strings.Join(errorProperties(t, res), ","); got != want {
@@ -711,7 +790,7 @@ func TestListRestaurants(t *testing.T) {
 
 	t.Run("a binder error names the parameter", func(t *testing.T) {
 		res := e.expect(request{method: "GET", path: "/v1/restaurants?limit=x"}, http.StatusBadRequest)
-		if got := res.object(t)["detail"]; got != "The parameter limit is not valid." {
+		if got := res.object(t)["detail"]; got != "The query parameter limit is not valid." {
 			t.Errorf("detail %q", got)
 		}
 	})
@@ -730,6 +809,7 @@ func TestListRestaurants(t *testing.T) {
 
 func TestUnknownRoutes(t *testing.T) {
 	e := newEnv(t, testOptions)
+	e.expect(request{method: "HEAD", path: "/v1/restaurants"}, http.StatusOK)
 	e.expect(request{method: "GET", path: "/v1/nothing"}, http.StatusNotFound)
 	res := e.expect(request{method: "PUT", path: "/v1/restaurants"}, http.StatusMethodNotAllowed)
 	if got := res.header.Get("Allow"); got != "GET, POST" {

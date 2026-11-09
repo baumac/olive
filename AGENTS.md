@@ -54,6 +54,10 @@ Run one browser with `cd tests && npx playwright test --project=chromium`.
 - Behind a reverse proxy, set the trusted proxy header in the PocketBase settings, such as `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign up and sign in rate limit counts all of them together. See decision 00004.
 - Set the superuser IP allow-list in the PocketBase settings, so only admin networks can open the dashboard at `/_/`.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
+- Environment variables of the app:
+  - `REVIEWS_SIGN_IN_LIMIT` sets the sign up and sign in limit per minute. The end-to-end tests raise it. Their parallel sign ups come from one IP address.
+  - `REVIEWS_VALIDATE_RESPONSES=false` turns off the spec validation of responses. See decision 00007.
+  - `REVIEWS_VALIDATE_REQUESTS=false` turns off the spec validation of parameters and body values. Invalid values can then be saved. Turn it off only with the response validation, or responses with these values get 500.
 
 ## Architecture
 
@@ -75,6 +79,7 @@ Run one browser with `cd tests && npx playwright test --project=chromium`.
   - **`app/main.go`** - the PocketBase app
   - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, and `reviews` collections
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
+    - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00007.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
   - Calls the Public API only through `@reviews/sdk`

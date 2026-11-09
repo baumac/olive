@@ -11,23 +11,21 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Add deploy folder and docker compose setup
   - need to run the built app 
   - the app will run as a single instance and deployment
-- Add OAS validation middleware
-  - should be built using https://github.com/getkin/kin-openapi
-  - it should be able to validate requests
-  - it should be able to validate responses using a buffered response writer wrapper that buffers the response body, headers, and status code to be modified. To write to the buffered response the Flush() function must be called, otherwise underlying writer will never be written. When an invalid response is detected a generic 500 error response should be returned.
-  - it should replace what is in app/internal/publicap/validate.go
-- Add CI integration that depends on GitHub actions, split the commands into the following
-  - lint
-  - UI tests
-  - API tests
-  - E2E tests
+- Add CI integration that depends on GitHub actions.
+  - Job for lint
+  - Job for test
+  - Job for docker build
+  - all workflows should use the makefile to execute their tasks
+  - look in AGENTS.md for the full list of potential make commands
+  - workflow result to capture the result of the above workflows and combine them into a single pass fail result
 
 ## Low Priority
 
-- Remove reviews from to nav bar
+- Remove reviews from top nav bar
 - Rename cleanliness to hygine
 - Add maps feature and add location to to each restaurant
 - Add IOS app
+- Add load tests
 
 ## Won't Do
 

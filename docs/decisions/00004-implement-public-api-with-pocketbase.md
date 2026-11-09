@@ -49,14 +49,15 @@ app/
   main.go                      # the PocketBase app
   migrations/                  # Go migrations of the collections
   internal/publicapi/
-    server.go                  # Register, the route table, auth, and request checks
-    body.go                    # the body schemas
-    validate.go                # the value rules
+    server.go                  # Register, auth, and the request checks
+    body.go                    # the body checks and the 422 messages
+    buffer.go                  # the buffered response writer of decision 00007
     users.go                   # signUp, signIn, refreshToken
     restaurants.go             # the restaurant operations
     reviews.go                 # the review operations
     list.go                    # filters, sorts, and cursors
     ratelimit.go               # the sign up and sign in rate limit
+    openapi.go                 # the spec validation of decision 00007
     publicapi_test.go          # tests through the PocketBase router
 ```
 
@@ -75,32 +76,36 @@ app/
 
 ## Request checks
 
-A `prepare` middleware runs before the generated strict handler. A route table gives the checks of each operation.
-An operation without a route table entry gets `500`. A test checks that each generated operation has an entry.
+A `prepare` middleware runs before the generated strict handler. The spec gives the checks of each operation. Decision 00007 explains the spec validation.
+- the `security` of an operation gives the token check. Only `{}` ignores the `Authorization` header. `{}` with `bearerAuth` makes the token optional. `bearerAuth` alone makes it required.
+- `x-rate-limited: true` on an operation turns on the rate limit
+- an operation without a spec operation gets `500`. A test checks that each generated operation has a spec operation.
 The checks run in this order:
 
 | Order | Check | Status |
 | --- | --- | --- |
 | 1 | the rate limit of sign up and sign in | `429` |
 | 2 | the bearer token. Sign up and sign in ignore it. | `401` |
-| 3 | the names of the query parameters, and the number of values of each parameter | `400` |
-| 4 | the content type of the body | `415` |
-| 5 | the body is one JSON object without unknown, read-only, or repeated properties | `400` |
-| 6 | the JSON types, required properties, `null` values, and value rules of the body properties | `422` |
-| 7 | the IDs in the path, and the values of the query parameters | `400` |
-| 8 | the restaurant and the review exist | `404` |
-| 9 | the user is the creator | `403` |
-| 10 | duplicate reviews, and restaurants with reviews | `409` |
+| 3 | the names of the query parameters | `400` |
+| 4 | the path and query parameters against the spec | `400` |
+| 5 | the content type of the body | `415` |
+| 6 | the body is one JSON object without unknown, read-only, or repeated properties | `400` |
+| 7 | the body properties against the spec | `422` |
+| 8 | the sort, the search, and the cursor rules that the spec cannot describe | `400` |
+| 9 | the restaurant and the review exist | `404` |
+| 10 | the user is the creator | `403` |
+| 11 | duplicate reviews, and restaurants with reviews | `409` |
 
-- checks 1 to 6 are in `prepare`. Checks 7 to 10 are in the operation handlers.
-- check 6 gives all invalid properties in one response
-- a JSON number for an integer property must be an integer literal of at most 9 digits. `5.0` gets `422`. The value then fits a Go `int` on all platforms.
+- checks 1 to 7 are in `prepare`. Checks 8 to 11 are in the operation handlers.
+- after the handler, `prepare` checks the response against the spec. An invalid response gets `500`.
+- check 7 gives all invalid properties in one response, with one error for each property
+- a JSON number for an integer property must be an integer literal. `5.0` and `1e1` get `422`. JSON Schema allows them, but the strict handler cannot decode them into a Go `int`.
 - a body larger than 256 KB gets `413`. The largest valid body is about 100 KB.
 - more than 20 tags give one `tags` error, without an error for each item. The size of the response then does not grow with the request.
 - the strict handler decodes the body after `prepare`. Its decode errors therefore do not occur for client input.
 - the decoders after `prepare` read the first copy of a repeated property. `prepare` therefore rejects repeated properties.
-- an email must be a bare address. `mail.ParseAddress` also accepts `Ana <ana@example.com>`, so `prepare` rejects a display name.
-- a parameter that is not an array has one value. `tags[has_any]` and `tags[has_all]` have at most 20 values. `creator[in]` and `restaurant[in]` have at most 100 values. Each value is one SQL parameter.
+- an email must be a bare address. `mail.ParseAddress` also accepts `Ana <ana@example.com>`, so the `email` format of the spec validation rejects a display name.
+- the spec gives the maximum number of values of each array parameter. Each value is one SQL parameter. A repeated parameter that is not an array gets `400` from the generated binder.
 
 ## Authentication
 

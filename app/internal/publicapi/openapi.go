@@ -1,0 +1,258 @@
+package publicapi
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/mail"
+	"net/url"
+	"slices"
+	"strings"
+
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/getkin/kin-openapi/openapi3filter"
+	"github.com/getkin/kin-openapi/routers"
+)
+
+// operation has the spec of one operation and the checks that prepare does
+// before the spec validation.
+type operation struct {
+	pattern string
+	route   *routers.Route
+	query   map[string]bool
+	auth    authMode
+	limited bool
+}
+
+type authMode int
+
+const (
+	authOptional authMode = iota
+	authRequired
+	authIgnored
+)
+
+// apiSpec has the operations of the embedded spec by ServeMux pattern.
+type apiSpec struct {
+	operations map[string]*operation
+}
+
+// loadSpec reads the spec that the Go SDK embeds.
+func loadSpec() (*apiSpec, error) {
+	doc, err := reviewsapi.GetSwagger()
+	if err != nil {
+		return nil, err
+	}
+	s := &apiSpec{operations: map[string]*operation{}}
+	for path, item := range doc.Paths.Map() {
+		for method, op := range item.Operations() {
+			pattern := method + " " + basePath + path
+			limited, _ := op.Extensions["x-rate-limited"].(bool)
+			s.operations[pattern] = &operation{
+				pattern: pattern,
+				route:   &routers.Route{Spec: doc, Path: path, PathItem: item, Method: method, Operation: op},
+				query:   queryNames(item, op),
+				auth:    authOf(doc, op),
+				limited: limited,
+			}
+		}
+	}
+	return s, nil
+}
+
+// authOf reads the security requirements of op. An empty requirement allows
+// a request without a token. An operation without bearerAuth ignores the
+// Authorization header.
+func authOf(doc *openapi3.T, op *openapi3.Operation) authMode {
+	reqs := doc.Security
+	if op.Security != nil {
+		reqs = *op.Security
+	}
+	anonymous, bearer := false, false
+	for _, req := range reqs {
+		if len(req) == 0 {
+			anonymous = true
+		}
+		if _, ok := req["bearerAuth"]; ok {
+			bearer = true
+		}
+	}
+	switch {
+	case !bearer:
+		return authIgnored
+	case anonymous:
+		return authOptional
+	default:
+		return authRequired
+	}
+}
+
+// queryNames gives the names that a client can send. A deepObject
+// parameter has one name for each property, such as created[lt].
+func queryNames(item *openapi3.PathItem, op *openapi3.Operation) map[string]bool {
+	names := map[string]bool{}
+	for _, ref := range slices.Concat(item.Parameters, op.Parameters) {
+		p := ref.Value
+		if p.In != openapi3.ParameterInQuery {
+			continue
+		}
+		if p.Style != openapi3.SerializationDeepObject {
+			names[p.Name] = true
+			continue
+		}
+		for prop := range p.Schema.Value.Properties {
+			names[p.Name+"["+prop+"]"] = true
+		}
+	}
+	return names
+}
+
+var validationOptions = &openapi3filter.Options{
+	MultiError: true,
+	// The defaults would change the request. The cursor fingerprint
+	// then would not match the request of the client.
+	SkipSettingDefaults: true,
+	// prepare checks the bearer token before the validation.
+	AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
+	SchemaValidationOptions: []openapi3.SchemaValidationOption{
+		openapi3.WithStringFormatValidator("email", openapi3.NewCallbackValidator(checkEmailFormat)),
+	},
+}
+
+var paramOptions = func() *openapi3filter.Options {
+	opts := *validationOptions
+	opts.ExcludeRequestBody = true
+	return &opts
+}()
+
+// responseOptions accept each stored email. PocketBase checked it, also for
+// a save in the dashboard.
+var responseOptions = &openapi3filter.Options{
+	MultiError:            true,
+	IncludeResponseStatus: true,
+	SchemaValidationOptions: []openapi3.SchemaValidationOption{
+		openapi3.WithStringFormatValidator("email", openapi3.NewCallbackValidator(func(string) error { return nil })),
+	},
+}
+
+// responseProblem names the place and the rule of each response error. It
+// leaves out the values. The log then does not get tokens or emails.
+func responseProblem(err error) string {
+	var schemaErrs []*openapi3.SchemaError
+	collectSchemaErrors(err, &schemaErrs)
+	var parts []string
+	for _, e := range schemaErrs {
+		parts = append(parts, "/"+strings.Join(e.JSONPointer(), "/")+" "+e.SchemaField)
+	}
+	var resErr *openapi3filter.ResponseError
+	if errors.As(err, &resErr) {
+		parts = append([]string{resErr.Reason}, parts...)
+	}
+	if len(parts) == 0 {
+		return fmt.Sprintf("%T", err)
+	}
+	return strings.Join(parts, "; ")
+}
+
+// checkEmailFormat accepts only a bare address. mail.ParseAddress also
+// accepts a display name, such as Ana <ana@example.com>.
+func checkEmailFormat(s string) error {
+	if a, err := mail.ParseAddress(s); err == nil && a.Name == "" && a.Address == s {
+		return nil
+	}
+	return errors.New("not a bare email address")
+}
+
+// input makes the validation input of r. The ServeMux pattern gives the
+// path parameters.
+func (op *operation) input(r *http.Request) (*openapi3filter.RequestValidationInput, error) {
+	params, err := pathParams(op.pattern, r.URL.EscapedPath())
+	if err != nil {
+		return nil, err
+	}
+	return &openapi3filter.RequestValidationInput{
+		Request:    r,
+		PathParams: params,
+		Route:      op.route,
+		Options:    validationOptions,
+	}, nil
+}
+
+func pathParams(pattern, escapedPath string) (map[string]string, error) {
+	_, path, _ := strings.Cut(pattern, " ")
+	names := strings.Split(path, "/")
+	values := strings.Split(escapedPath, "/")
+	if len(names) != len(values) {
+		return nil, fmt.Errorf("the path %s does not match %s", escapedPath, pattern)
+	}
+	params := map[string]string{}
+	for i, name := range names {
+		if strings.HasPrefix(name, "{") && strings.HasSuffix(name, "}") {
+			v, err := url.PathUnescape(values[i])
+			if err != nil {
+				return nil, err
+			}
+			params[strings.Trim(name, "{}")] = v
+		}
+	}
+	return params, nil
+}
+
+// checkQuery returns a detail for the 400 response. The spec does not
+// refuse unknown query parameters.
+func (op *operation) checkQuery(r *http.Request) string {
+	names := make([]string, 0, len(r.URL.Query()))
+	for name := range r.URL.Query() {
+		if !op.query[name] {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return ""
+	}
+	slices.Sort(names)
+	return "The query parameter " + names[0] + " is not supported."
+}
+
+// checkParams validates the path and query parameters. It returns a
+// detail for the 400 response.
+func (op *operation) checkParams(ctx context.Context, in *openapi3filter.RequestValidationInput) string {
+	params := *in
+	params.Options = paramOptions
+	err := openapi3filter.ValidateRequest(ctx, &params)
+	if err == nil {
+		return ""
+	}
+	var reqErr *openapi3filter.RequestError
+	if !errors.As(err, &reqErr) || reqErr.Parameter == nil {
+		return "The request has a parameter that is not valid."
+	}
+	p := reqErr.Parameter
+	name := p.Name
+	if p.Style == openapi3.SerializationDeepObject {
+		var schemaErr *openapi3.SchemaError
+		if errors.As(reqErr.Err, &schemaErr) && len(schemaErr.JSONPointer()) > 0 {
+			name += "[" + schemaErr.JSONPointer()[0] + "]"
+		}
+		var parseErr *openapi3filter.ParseError
+		if errors.As(reqErr.Err, &parseErr) && len(parseErr.Path()) > 0 {
+			name += fmt.Sprintf("[%v]", parseErr.Path()[0])
+		}
+	}
+	return fmt.Sprintf("The %s parameter %s is not valid.", p.In, name)
+}
+
+// checkResponse validates the status, the headers, and the body of the
+// response to the request of in.
+func checkResponse(ctx context.Context, in *openapi3filter.RequestValidationInput, status int, header http.Header, body []byte) error {
+	res := &openapi3filter.ResponseValidationInput{
+		RequestValidationInput: in,
+		Status:                 status,
+		Header:                 header,
+		Options:                responseOptions,
+	}
+	res.SetBodyBytes(body)
+	return openapi3filter.ValidateResponse(ctx, res)
+}

@@ -46,3 +46,9 @@ func unprocessable(errs fieldErrors) reviewsapi.UnprocessableContentApplicationP
 	p.Errors = &list
 	return reviewsapi.UnprocessableContentApplicationProblemPlusJSONResponse(p)
 }
+
+type fieldErrors []reviewsapi.ValidationError
+
+func (e *fieldErrors) add(property, message string) {
+	*e = append(*e, reviewsapi.ValidationError{Property: property, Message: message})
+}
