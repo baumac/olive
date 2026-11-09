@@ -22,3 +22,6 @@ node_modules/
 
 # Copy of the generated SDKs of make check-generate
 /.check-generate
+
+# Claude Files
+.claude

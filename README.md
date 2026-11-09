@@ -18,7 +18,7 @@ You need Go, Node.js 22, and Docker.
 ```bash
 make install-tools   # vacuum and oapi-codegen into ./bin
 make build-app       # build the UI and the app to ./bin/reviews-app
-make run-app         # serve on http://127.0.0.1:8090 with data in app/pb_data
+make run-app         # serve on http://127.0.0.1:8090 with data in app/pb_ddata
 ```
 
 Make a superuser for the dashboard:
