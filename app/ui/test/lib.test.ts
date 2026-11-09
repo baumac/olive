@@ -85,7 +85,8 @@ describe('fieldErrors', () => {
 
 describe('reviewFilterParams', () => {
   it('changes the filters to SDK parameters', () => {
-    expect(reviewFilterParams({ tags: ['pasta'], food: '4', creator: 'u5n1c8r3t6y0b2e' })).toEqual({
+    expect(reviewFilterParams({ search: 'carbonara', tags: ['pasta'], food: '4', creator: 'u5n1c8r3t6y0b2e' })).toEqual({
+      search: 'carbonara',
       tagsHasAny: ['pasta'],
       food: { gte: 4 },
       service: undefined,
@@ -112,7 +113,11 @@ describe('ratings', () => {
 
 describe('restaurantFilterParams', () => {
   it('changes the filters to SDK parameters', () => {
-    expect(restaurantFilterParams({ tags: ['pasta'], overall: '8' })).toEqual({ tagsHasAny: ['pasta'], overall: { gte: 8 } })
-    expect(restaurantFilterParams({})).toEqual({ tagsHasAny: undefined, overall: undefined })
+    expect(restaurantFilterParams({ search: 'lui', tags: ['pasta'], overall: '8' })).toEqual({
+      search: 'lui',
+      tagsHasAny: ['pasta'],
+      overall: { gte: 8 },
+    })
+    expect(restaurantFilterParams({})).toEqual({ search: undefined, tagsHasAny: undefined, overall: undefined })
   })
 })

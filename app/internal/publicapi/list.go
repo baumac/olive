@@ -42,7 +42,7 @@ func withRanges(query map[string]int, names ...string) map[string]int {
 }
 
 var restaurantQuery = withRanges(map[string]int{
-	"limit": 1, "cursor": 1, "sort": 1,
+	"limit": 1, "cursor": 1, "sort": 1, "search": 1,
 	"tags[has]": 1, "tags[has_any]": maxTagValues, "tags[has_all]": maxTagValues,
 	"creator[eq]": 1, "creator[in]": maxOtherValues,
 }, "created", "updated")
@@ -133,10 +133,12 @@ func parseLimit(raw *int) (int, string) {
 type where struct {
 	parts  []string
 	params dbx.Params
-	joins  []leftJoin
+	joins  []join
 }
 
-type leftJoin struct {
+// join is a LEFT JOIN, or an INNER JOIN that also filters the rows.
+type join struct {
+	inner bool
 	table string
 	on    dbx.Expression
 }
@@ -350,8 +352,14 @@ func (s *Server) page(
 ) ([]*core.Record, nullable.Nullable[string], error) {
 	q := s.app.RecordQuery(collection)
 	for _, j := range w.joins {
-		q.LeftJoin(j.table, j.on)
+		if j.inner {
+			q.InnerJoin(j.table, j.on)
+		} else {
+			q.LeftJoin(j.table, j.on)
+		}
 	}
+	// A join can have parameters without a condition in parts.
+	q.Bind(w.params)
 	if e := w.expression(); e != nil {
 		q.AndWhere(e)
 	}

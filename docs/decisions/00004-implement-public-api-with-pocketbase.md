@@ -155,6 +155,23 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 - the cursor of an `overall` sort needs the average of the last restaurant of the page. It comes from the ratings query of the page, so the sort adds no query.
 - an `overall` filter value of `NaN` gets `400`. The range check runs before the cursor fingerprint, which cannot hold `NaN`.
 
+## Search
+
+- the search uses two SQLite FTS5 tables, `restaurants_fts` and `reviews_fts`. Each row has the record ID in an `UNINDEXED` column.
+- the `unicode61` tokenizer with `remove_diacritics 2` ignores case and accents. The `prefix = '2 3'` indexes make short prefix terms fast.
+- `internal/searchindex` keeps the tables equal to the records. Record hooks change the index in the transaction of each save and delete.
+  - an update writes the index row only when an indexed field changes. A save that only unsets `creator` does not write it.
+  - the hooks also run for saves in the PocketBase dashboard and for cascade deletes, because these go through `app.Save` and `app.Delete`
+  - SQL triggers were not selected. A trigger blocks a later `DROP COLUMN` of a column that it uses.
+  - an external-content FTS5 table was not selected. It needs a stable `rowid`, and PocketBase uses text IDs.
+- `reviews_fts` also has the restaurant name. The API keeps the name of a restaurant with reviews. A dashboard change of the name updates the review rows.
+- a migration makes the tables and fills them from the existing records
+- the API changes a search into an FTS5 query. Each word with a letter or a digit becomes a quoted term, such as `"carb"*`. A quote in a word is doubled. FTS5 syntax in the search is then plain text, and no search causes an FTS5 syntax error.
+- a word of one character is a whole-word term without `*`. The prefix indexes do not cover one character, so a prefix of one character reads all index terms that start with it.
+- the list query has an `INNER JOIN` on the matches with their score. The score adds the weight of each column that matches the query with an FTS5 column filter, such as `name : ("carb"*)`. Each column filter runs one time for the query.
+- `bm25` was not selected for the score. It depends on all rows of the table, so each write moves the ranks of all matches. A cursor with a `bm25` value then skips or repeats items.
+- the cursor of a `relevance` sort needs the score of the last item. The page gets the scores of its items in one more query, only for a `relevance` sort.
+
 ## PocketBase mapping
 
 - PocketBase stores an empty string for a text field that has no value. An empty `description` or `feedback` is therefore not in responses.

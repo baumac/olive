@@ -4,10 +4,25 @@ import { computed, toValue } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { isTag } from '@/lib/validation'
 
+// RelevanceSort is the sort of a search filter. It is an option and the
+// default only while the filter has a value.
+export interface RelevanceSort {
+  filter: string
+  option: Option
+}
+
+// searchRelevance is the relevance sort of the API search filter.
+export const searchRelevance: RelevanceSort = { filter: 'search', option: { value: 'relevance', label: 'Best match' } }
+
 // useListQuery keeps the filters and the sort of a list in the URL query.
 // It ignores values that defs do not allow. defs can change, for example
 // when the signed in user changes.
-export function useListQuery(defs: MaybeRefOrGetter<FilterDef[]>, sortOptions: Option[], defaultSort: string) {
+export function useListQuery(
+  defs: MaybeRefOrGetter<FilterDef[]>,
+  baseSortOptions: Option[],
+  baseDefaultSort: string,
+  relevance?: RelevanceSort,
+) {
   const route = useRoute()
   const router = useRouter()
 
@@ -17,6 +32,10 @@ export function useListQuery(defs: MaybeRefOrGetter<FilterDef[]>, sortOptions: O
   }
 
   function parse(def: FilterDef, raw: string): FilterValue {
+    if (def.type === 'search') {
+      const text = raw.trim()
+      return text && Array.from(text).length <= 255 ? text : undefined
+    }
     if (def.type === 'tags') {
       const tags = raw.split(',').filter(isTag)
       return tags.length ? tags : undefined
@@ -45,21 +64,25 @@ export function useListQuery(defs: MaybeRefOrGetter<FilterDef[]>, sortOptions: O
           query[key] = value
         }
       }
-      if (sort.value !== defaultSort) {
+      if (sort.value !== defaultSort.value) {
         query.sort = sort.value
       }
       void router.replace({ query })
     },
   })
 
+  const searching = computed(() => !!relevance && filters.value[relevance.filter] !== undefined)
+  const sortOptions = computed(() => (searching.value && relevance ? [relevance.option, ...baseSortOptions] : baseSortOptions))
+  const defaultSort = computed(() => (searching.value && relevance ? relevance.option.value : baseDefaultSort))
+
   const sort = computed<string>({
     get() {
       const raw = first(route.query.sort)
-      return sortOptions.some((o) => o.value === raw) ? (raw as string) : defaultSort
+      return sortOptions.value.some((o) => o.value === raw) ? (raw as string) : defaultSort.value
     },
     set(next) {
       const query = { ...route.query }
-      if (next === defaultSort) {
+      if (next === defaultSort.value) {
         delete query.sort
       } else {
         query.sort = next
@@ -70,5 +93,5 @@ export function useListQuery(defs: MaybeRefOrGetter<FilterDef[]>, sortOptions: O
 
   const active = computed(() => Object.keys(filters.value).length > 0)
 
-  return { filters, sort, active }
+  return { filters, sort, active, sortOptions }
 }

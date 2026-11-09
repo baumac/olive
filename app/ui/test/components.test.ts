@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FilterBar } from '@/components/ui/filter-bar'
 import { RatingDisplay } from '@/components/ui/rating-display'
@@ -146,6 +146,86 @@ describe('FilterBar', () => {
     await w.get('button[aria-label="Remove filter tag italian"]').trigger('click')
     expect(w.emitted('update:filters')?.at(-1)).toEqual([{ tags: ['pasta'] }])
     await expectAccessible(w.element)
+  })
+
+  it('sends a search after a pause in typing', async () => {
+    vi.useFakeTimers()
+    try {
+      const w = mount(FilterBar, {
+        props: {
+          defs: [{ key: 'name', label: 'Search by name', type: 'search', chip: (v: string) => `Name: ${v}` }],
+          sortOptions: [{ value: '-created', label: 'Newest' }],
+          sortLabel: 'Sort by',
+          status: '',
+          filters: {},
+          sort: '-created',
+        },
+        attachTo: attach(),
+      })
+      expect(w.find('button[aria-haspopup]').exists()).toBe(false)
+      const input = w.get('input[type=search]')
+      await input.setValue('lu')
+      await input.setValue(' lui ')
+      expect(w.emitted('update:filters')).toBeUndefined()
+      vi.advanceTimersByTime(300)
+      expect(w.emitted('update:filters')).toEqual([[{ name: 'lui' }]])
+      vi.useRealTimers()
+      await expectAccessible(w.element)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('drops a pending search when the filters change from outside', async () => {
+    vi.useFakeTimers()
+    try {
+      const w = mount(FilterBar, {
+        props: {
+          defs: [{ key: 'search', label: 'Search', type: 'search', chip: (v: string) => `Search: ${v}` }],
+          sortOptions: [{ value: '-created', label: 'Newest' }],
+          sortLabel: 'Sort by',
+          status: '',
+          filters: { search: 'old' },
+          sort: '-created',
+        },
+        attachTo: attach(),
+      })
+      const input = w.get('input[type=search]')
+      await input.setValue('pasta')
+      await w.setProps({ filters: {} })
+      vi.advanceTimersByTime(300)
+      expect(w.emitted('update:filters')).toBeUndefined()
+      expect((input.element as HTMLInputElement).value).toBe('')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps typing while its own search comes back', async () => {
+    vi.useFakeTimers()
+    try {
+      const w = mount(FilterBar, {
+        props: {
+          defs: [{ key: 'search', label: 'Search', type: 'search', chip: (v: string) => `Search: ${v}` }],
+          sortOptions: [{ value: '-created', label: 'Newest' }],
+          sortLabel: 'Sort by',
+          status: '',
+          filters: {},
+          sort: '-created',
+        },
+        attachTo: attach(),
+      })
+      const input = w.get('input[type=search]')
+      await input.setValue('pas')
+      vi.advanceTimersByTime(300)
+      await input.setValue('pasta')
+      await w.setProps({ filters: { search: 'pas' } })
+      expect((input.element as HTMLInputElement).value).toBe('pasta')
+      vi.advanceTimersByTime(300)
+      expect(w.emitted('update:filters')?.at(-1)).toEqual([{ search: 'pasta' }])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

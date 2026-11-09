@@ -38,7 +38,9 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
   await page.getByRole('combobox', { name: 'Food' }).click()
   await page.getByRole('option', { name: '7 or more' }).click()
   await expect(page.getByText('Food: 7 or more')).toBeVisible()
+  await expect(page.getByRole('listbox')).toBeHidden()
   await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Filters' })).toBeHidden()
 
   // A restaurant with reviews cannot be deleted. The UI shows an error toast.
   await page.getByRole('button', { name: 'Delete restaurant' }).click()

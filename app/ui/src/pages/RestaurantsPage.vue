@@ -7,7 +7,7 @@ import RestaurantCard from '@/components/app/RestaurantCard.vue'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FilterBar } from '@/components/ui/filter-bar'
-import { useListQuery } from '@/composables/useListQuery'
+import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { restaurantsApi } from '@/lib/api'
@@ -18,7 +18,7 @@ usePageTitle('Restaurants')
 
 const limit = 20
 
-const { filters, sort, active } = useListQuery(restaurantFilterDefs, restaurantSortOptions, '-created')
+const { filters, sort, active, sortOptions } = useListQuery(restaurantFilterDefs, restaurantSortOptions, '-created', searchRelevance)
 
 const list = usePagedList<Restaurant>(async (cursor) => {
   const page = await restaurantsApi.listRestaurants({
@@ -54,7 +54,7 @@ const status = computed(() => {
       v-model:filters="filters"
       v-model:sort="sort"
       :defs="restaurantFilterDefs"
-      :sort-options="restaurantSortOptions"
+      :sort-options="sortOptions"
       sort-label="Sort by"
       :status="status"
     />

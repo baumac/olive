@@ -20,7 +20,7 @@ const overallColumn = "[[overall_of.overall]]"
 // joinOverall computes the averages of all restaurants in one grouped scan of
 // reviews. A correlated subquery runs again for each use in a row.
 func (w *where) joinOverall() {
-	w.joins = append(w.joins, leftJoin{
+	w.joins = append(w.joins, join{
 		table: "(SELECT [[restaurant]], " + overallAverage + " AS [[overall]] FROM {{reviews}} GROUP BY [[restaurant]]) [[overall_of]]",
 		on:    dbx.NewExp("[[overall_of.restaurant]] = [[restaurants.id]]"),
 	})

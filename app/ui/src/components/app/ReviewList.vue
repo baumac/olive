@@ -6,7 +6,7 @@ import { computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FilterBar } from '@/components/ui/filter-bar'
-import { useListQuery } from '@/composables/useListQuery'
+import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
 import { restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
@@ -28,7 +28,7 @@ const props = withDefaults(
 
 const limit = 20
 
-const { filters, sort, active } = useListQuery(() => props.defs, reviewSortOptions, '-created')
+const { filters, sort, active, sortOptions } = useListQuery(() => props.defs, reviewSortOptions, '-created', searchRelevance)
 
 const list = usePagedList<Review>(async (cursor) => {
   const params = { limit, cursor, sort: sort.value, ...reviewFilterParams(filters.value) }
@@ -57,7 +57,7 @@ const status = computed(() => {
       v-model:filters="filters"
       v-model:sort="sort"
       :defs="defs"
-      :sort-options="reviewSortOptions"
+      :sort-options="sortOptions"
       sort-label="Sort by"
       :status="status"
     />

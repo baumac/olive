@@ -167,3 +167,30 @@ func newRecord(t *testing.T, app core.App, collection string, data map[string]an
 	}
 	return r
 }
+
+func TestSearchIndexFillsExistingRecords(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268805_add_search_index.go")
+
+	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "tags": []string{"date-night"}})
+	newRecord(t, app, "reviews", map[string]any{
+		"restaurant": restaurant.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "cleanliness": 4,
+		"title": "Good", "feedback": "Creamy carbonara",
+	})
+
+	redo()
+	for table, match := range map[string]string{"restaurants_fts": "ole night", "reviews_fts": "carbonara ole"} {
+		var n int
+		if err := app.DB().NewQuery("SELECT COUNT(*) FROM " + table + " WHERE " + table + " MATCH {:q}").Bind(map[string]any{"q": match}).Row(&n); err != nil {
+			t.Fatal(err)
+		}
+		if n != 1 {
+			t.Errorf("%s MATCH %q: %d rows, want 1", table, match, n)
+		}
+	}
+}

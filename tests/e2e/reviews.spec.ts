@@ -118,3 +118,16 @@ test('the reviews link lists reviews of all restaurants', async ({ page, api }) 
   const card = page.getByRole('listitem').filter({ hasText: 'Seen on all reviews' })
   await expect(card.getByRole('link', { name: 'Any Place' })).toBeVisible()
 })
+
+test('the search box finds reviews by their text', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const restaurant = await api.createRestaurant(owner, { name: 'Search Kitchen' })
+  const ana = await api.signUp('Ana')
+  const word = uniqueTag('dish')
+  await api.createReview(owner, restaurant.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: `The ${word} was good` })
+  await api.createReview(ana, restaurant.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'Fine', feedback: `Try the ${word}.` })
+
+  await page.goto('/reviews')
+  await page.getByRole('searchbox', { name: 'Search reviews' }).fill(word)
+  await expect(page.getByRole('heading', { level: 3 })).toHaveText([`The ${word} was good`, 'Fine'])
+})

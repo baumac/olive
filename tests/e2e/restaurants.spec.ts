@@ -124,3 +124,28 @@ test('restaurants filter and sort by the overall rating', async ({ page, api }) 
   await page.getByRole('button', { name: 'Remove filter overall 8 or more' }).click()
   await expect(names).toHaveCount(3)
 })
+
+test('the search box finds restaurants by name, description, and tags', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const word = uniqueTag('find')
+  await api.createRestaurant(owner, { name: 'Quiet Corner', description: `Known for ${word} dishes` })
+  await api.createRestaurant(owner, { name: `${word.toUpperCase()} Café` })
+  await api.createRestaurant(owner, { name: 'Somewhere else' })
+  const names = page.getByRole('heading', { level: 2 })
+  const box = page.getByRole('searchbox', { name: 'Search restaurants' })
+
+  await page.goto('/restaurants')
+  await box.fill(word)
+  await expect(page).toHaveURL(new RegExp(`search=${word}`))
+  await expect(names).toHaveText([`${word.toUpperCase()} Café`, 'Quiet Corner'])
+  await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Best match')
+  await expect(page.getByText(`Search: ${word}`)).toBeVisible()
+
+  await box.fill(`${word} cafe`)
+  await expect(names).toHaveText([`${word.toUpperCase()} Café`])
+
+  await page.getByRole('button', { name: `Remove filter search ${word} cafe` }).click()
+  await expect(box).toHaveValue('')
+  await expect(page).not.toHaveURL(/search=/)
+  await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Newest')
+})

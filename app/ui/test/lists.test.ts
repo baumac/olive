@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import PagedList from '@/components/app/PagedList.vue'
-import { useListQuery } from '@/composables/useListQuery'
+import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
 
 const defs: FilterDef[] = [
@@ -13,14 +13,14 @@ const defs: FilterDef[] = [
 ]
 const sortOptions: Option[] = [{ value: '-created', label: 'Newest' }]
 
-async function queryAt(url: string, filterDefs: FilterDef[] | (() => FilterDef[]) = defs) {
+async function queryAt(url: string, filterDefs: FilterDef[] | (() => FilterDef[]) = defs, relevance = false) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
   await router.push(url)
   let result!: ReturnType<typeof useListQuery>
   mount(
     defineComponent({
       setup() {
-        result = useListQuery(filterDefs, sortOptions, '-created')
+        result = useListQuery(filterDefs, sortOptions, '-created', relevance ? searchRelevance : undefined)
         return () => null
       },
     }),
@@ -40,6 +40,30 @@ describe('useListQuery', () => {
     const q = await queryAt('/r?rating=4')
     expect(q.filters.value).toEqual({ rating: '4' })
     expect(q.active.value).toBe(true)
+  })
+})
+
+describe('useListQuery search filters', () => {
+  it('trims the text and drops text that is too long', async () => {
+    const search: FilterDef[] = [{ key: 'name', label: 'Name', type: 'search', chip: (v) => v }]
+    expect((await queryAt('/r?name=%20lui%20', search)).filters.value).toEqual({ name: 'lui' })
+    expect((await queryAt(`/r?name=${'x'.repeat(256)}`, search)).filters.value).toEqual({})
+  })
+})
+
+describe('useListQuery relevance sort', () => {
+  const search: FilterDef[] = [{ key: 'search', label: 'Search', type: 'search', chip: (v) => v }]
+
+  it('sorts a search by relevance', async () => {
+    const q = await queryAt('/r?search=pasta', search, true)
+    expect(q.sort.value).toBe('relevance')
+    expect(q.sortOptions.value.map((o) => o.value)).toEqual(['relevance', '-created'])
+  })
+
+  it('has no relevance sort without a search', async () => {
+    const q = await queryAt('/r?sort=relevance', search, true)
+    expect(q.sort.value).toBe('-created')
+    expect(q.sortOptions.value.map((o) => o.value)).toEqual(['-created'])
   })
 })
 

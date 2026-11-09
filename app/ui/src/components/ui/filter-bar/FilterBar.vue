@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { SlidersHorizontalIcon, XIcon } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { SearchIcon, SlidersHorizontalIcon, XIcon } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -17,9 +18,11 @@ export type FilterValue = string | string[] | undefined
 export interface FilterDef {
   key: string
   label: string
-  type: 'tags' | 'select'
+  // A search filter shows in the toolbar, not in the popover.
+  type: 'tags' | 'select' | 'search'
   options?: Option[]
   help?: string
+  placeholder?: string
   // chip gives the chip text for one value, such as "Food: 8 or more".
   chip: (value: string) => string
 }
@@ -38,6 +41,54 @@ const sort = defineModel<string>('sort', { required: true })
 // Reka UI Select needs a value for each item. "any" means no filter.
 const any = 'any'
 const tagError = ref('')
+
+const searchDefs = computed(() => props.defs.filter((d) => d.type === 'search'))
+const popoverDefs = computed(() => props.defs.filter((d) => d.type !== 'search'))
+
+// A search waits for a pause in typing. Each key press then does not start a
+// new request.
+const searchDelay = 300
+const searchText = reactive<Record<string, string>>({})
+const timers = new Map<string, ReturnType<typeof setTimeout>>()
+// sent has the last search that this component set. The URL update comes
+// back later. A different value comes from outside, such as Clear all.
+const sent = new Map<string, string | undefined>()
+
+watch(
+  [searchDefs, filters],
+  (_, before) => {
+    for (const def of searchDefs.value) {
+      const value = filters.value[def.key] as string | undefined
+      if (timers.has(def.key)) {
+        const previous = before?.[1]?.[def.key] as string | undefined
+        if (value === previous || (sent.has(def.key) && value === sent.get(def.key))) {
+          continue
+        }
+        clearTimeout(timers.get(def.key))
+        timers.delete(def.key)
+      }
+      sent.delete(def.key)
+      searchText[def.key] = value ?? ''
+    }
+  },
+  { immediate: true },
+)
+
+function typed(key: string, text: string) {
+  searchText[key] = text
+  clearTimeout(timers.get(key))
+  timers.set(
+    key,
+    setTimeout(() => {
+      timers.delete(key)
+      const value = text.trim() || undefined
+      sent.set(key, value)
+      set(key, value)
+    }, searchDelay),
+  )
+}
+
+onBeforeUnmount(() => timers.forEach((t) => clearTimeout(t)))
 
 function set(key: string, value: FilterValue) {
   const next = { ...filters.value }
@@ -72,7 +123,20 @@ function removeChip(chip: Chip) {
 <template>
   <div class="flex flex-col gap-3">
     <div class="flex flex-wrap items-center gap-2">
-      <Popover>
+      <div v-for="def in searchDefs" :key="def.key" class="relative w-full sm:w-64">
+        <Label :for="`filter-${def.key}`" class="sr-only">{{ def.label }}</Label>
+        <SearchIcon class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" aria-hidden="true" />
+        <Input
+          :id="`filter-${def.key}`"
+          :model-value="searchText[def.key]"
+          type="search"
+          maxlength="255"
+          class="pl-8"
+          :placeholder="def.placeholder"
+          @update:model-value="typed(def.key, String($event))"
+        />
+      </div>
+      <Popover v-if="popoverDefs.length">
         <PopoverTrigger as-child>
           <Button variant="outline">
             <SlidersHorizontalIcon aria-hidden="true" />
@@ -80,7 +144,7 @@ function removeChip(chip: Chip) {
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" class="grid max-h-(--reka-popover-content-available-height) w-80 gap-4 overflow-y-auto">
-          <div v-for="def in defs" :key="def.key" class="grid gap-2">
+          <div v-for="def in popoverDefs" :key="def.key" class="grid gap-2">
             <Label :for="`filter-${def.key}`">{{ def.label }}</Label>
             <template v-if="def.type === 'tags'">
               <TagInput

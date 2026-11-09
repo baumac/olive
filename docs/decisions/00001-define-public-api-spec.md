@@ -120,9 +120,7 @@ The operations of the restaurants API are as follows:
       - `created`
       - `updated`
     - the default sort is `-created`
-    - results are not filterable by the following properties:
-        - `name`
-        - `description`
+    - results are not filterable by `name` or `description`. The `search` parameter finds words in them, see [Search](#search).
     - results are filterable by the following properties and operators, see [Filtering](#filtering):
         - `overall`: `lt`, `lte`, `eq`, `gte`, `gt`. It compares the rounded `rating.overall` value. Restaurants without reviews match no `overall` filter.
         - `tags`: `has`, `has_any`, `has_all`
@@ -467,6 +465,28 @@ An unknown property, an unknown operator, or an operator that is not allowed for
 
 The tag operators compare whole tags.
 For example, `tags[has]=italian` does not match the tag `south-italian`.
+
+### Search
+
+`GET /restaurants`, `GET /restaurants/{restaurantId}/reviews`, and `GET /reviews` take a `search` query parameter for full-text search.
+- restaurants: `name`, `description`, and `tags`
+- reviews: `title`, `feedback`, `tags`, and `restaurant_name`
+- an item matches when it has all words of the search. Each word of two or more characters also matches longer words that start with it. For example, `carb` matches "carbonara". A one-character word matches only that word.
+- the search ignores case and accents in all languages. For example, `cafe` matches "Café".
+- the search splits words at spaces and punctuation. For example, `date-night` matches the tag `date-night` and the text "date night".
+- the search is 1 to 255 characters with at most 10 words. A search without a letter or a digit causes `400 Bad Request`.
+- characters such as `"`, `*`, and `OR` have no special meaning. The search is plain text.
+- `search` combines with all filters. All of them must match.
+
+The `relevance` sort puts the best matches first.
+The score of an item adds a weight for each property that has all words of the search:
+- restaurants: `name` 10, `tags` 4, `description` 1
+- reviews: `title` 10, `tags` 4, `restaurant_name` 2, `feedback` 1
+
+An item that has the words only across properties has the score 0.
+The score depends only on the item. A change of another item does not move it, so pages of a `relevance` sort stay stable.
+With `search` and no `sort`, the sort is `relevance`.
+A `relevance` sort without `search` causes `400 Bad Request`.
 
 ### Sorting
 

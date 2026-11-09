@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/baumac/reviews-app/app/internal/publicapi"
+	"github.com/baumac/reviews-app/app/internal/searchindex"
 	_ "github.com/baumac/reviews-app/app/migrations"
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"
@@ -38,6 +39,7 @@ func newEnv(t *testing.T, opts publicapi.Options) *env {
 	}
 	t.Cleanup(app.Cleanup)
 
+	searchindex.Register(app)
 	publicapi.Register(app, opts)
 	router, err := apis.NewRouter(app)
 	if err != nil {
@@ -894,4 +896,181 @@ func TestListRestaurantsByOverall(t *testing.T) {
 		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
 	}
 	e.expect(request{method: "GET", path: "/v1/reviews?overall[gte]=5"}, http.StatusBadRequest)
+}
+
+func TestSearch(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+	pasta := e.createRestaurant(ana.Token, `{"name":"Pasta Place","description":"Fresh noodles","tags":["italian"]}`)["id"].(string)
+	cafe := e.createRestaurant(ana.Token, `{"name":"Café Olé","description":"Coffee and pasta","tags":["date-night"]}`)["id"].(string)
+	e.createRestaurant(ana.Token, `{"name":"Bao House","description":"Steamed buns"}`)
+
+	names := func(path string) string {
+		t.Helper()
+		var out []string
+		for range 5 {
+			var page struct {
+				Items      []map[string]any `json:"items"`
+				NextCursor *string          `json:"next_cursor"`
+			}
+			e.expect(request{method: "GET", path: path}, http.StatusOK).decode(t, &page)
+			for _, it := range page.Items {
+				name, ok := it["name"].(string)
+				if !ok {
+					name = it["title"].(string)
+				}
+				out = append(out, name)
+			}
+			if page.NextCursor == nil {
+				break
+			}
+			path = strings.Split(path, "&cursor=")[0] + "&cursor=" + url.QueryEscape(*page.NextCursor)
+		}
+		return strings.Join(out, ",")
+	}
+	restaurants := func(query string) string { return names("/v1/restaurants?" + query) }
+
+	t.Run("restaurants", func(t *testing.T) {
+		for query, want := range map[string]string{
+			"search=pasta":                        "Pasta Place,Café Olé",
+			"search=pasta&limit=1":                "Pasta Place,Café Olé",
+			"search=pasta&sort=name":              "Café Olé,Pasta Place",
+			"search=PAS":                          "Pasta Place,Café Olé",
+			"search=cafe":                         "Café Olé",
+			"search=night":                        "Café Olé",
+			"search=date-night":                   "Café Olé",
+			"search=coffee+pasta":                 "Café Olé",
+			"search=pasta+buns":                   "",
+			"search=noodle":                       "Pasta Place",
+			"search=" + url.QueryEscape(`"pasta`): "Pasta Place,Café Olé",
+			"search=pasta+OR+bao":                 "",
+			"search=NEAR(pasta+bao)":              "",
+			"search=pasta&tags[has]=italian":      "Pasta Place",
+			"search=pasta&sort=-relevance":        "Café Olé,Pasta Place",
+		} {
+			if got := restaurants(query); got != want {
+				t.Errorf("%s: %q, want %q", query, got, want)
+			}
+		}
+		for _, query := range []string{"search=", "search=%25%25", "search=" + strings.Repeat("a+", 11), "sort=relevance", "search=" + strings.Repeat("a", 256)} {
+			e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("one-letter words are whole words", func(t *testing.T) {
+		if got := restaurants("search=p"); got != "" {
+			t.Errorf("p matches %q", got)
+		}
+		if got := restaurants("search=pa"); got != "Pasta Place,Café Olé" {
+			t.Errorf("pa: %q", got)
+		}
+	})
+
+	t.Run("relevance pages stay stable when other records change", func(t *testing.T) {
+		var first struct {
+			Items      []map[string]any `json:"items"`
+			NextCursor *string          `json:"next_cursor"`
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?search=pasta&limit=1"}, http.StatusOK).decode(t, &first)
+		e.createRestaurant(ana.Token, `{"name":"Unrelated","description":"pasta pasta pasta","tags":["pasta"]}`)
+		var second struct {
+			Items []map[string]any `json:"items"`
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?search=pasta&limit=1&cursor=" + url.QueryEscape(*first.NextCursor)}, http.StatusOK).decode(t, &second)
+		if first.Items[0]["name"] != "Pasta Place" || len(second.Items) != 1 || second.Items[0]["name"] != "Unrelated" {
+			t.Errorf("pages %v then %v", first.Items, second.Items)
+		}
+	})
+
+	t.Run("the index follows changes", func(t *testing.T) {
+		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + cafe, body: `{"description":"Tea only"}`, token: ana.Token}, http.StatusOK)
+		if got := restaurants("search=coffee"); got != "" {
+			t.Errorf("old description still matches: %q", got)
+		}
+		if got := restaurants("search=tea"); got != "Café Olé" {
+			t.Errorf("new description: %q", got)
+		}
+		gone := e.createRestaurant(ana.Token, `{"name":"Gone Soon"}`)["id"].(string)
+		e.expect(request{method: "DELETE", path: "/v1/restaurants/" + gone, token: ana.Token}, http.StatusNoContent)
+		if got := restaurants("search=gone"); got != "" {
+			t.Errorf("deleted restaurant matches: %q", got)
+		}
+	})
+
+	t.Run("reviews", func(t *testing.T) {
+		e.createReview(joe.Token, pasta, `{"space":5,"service":5,"food":9,"price":5,"cleanliness":5,"title":"Great carbonara","feedback":"Creamy sauce","tags":["date-night"]}`)
+		e.createReview(ana.Token, cafe, `{"space":5,"service":5,"food":5,"price":5,"cleanliness":5,"title":"Nice tea","feedback":"Carbonara was a special"}`)
+		for path, want := range map[string]string{
+			"/v1/reviews?search=carbonara":                          "Great carbonara,Nice tea",
+			"/v1/reviews?search=carbonara&limit=1":                  "Great carbonara,Nice tea",
+			"/v1/reviews?search=ole":                                "Nice tea",
+			"/v1/reviews?search=night":                              "Great carbonara",
+			"/v1/reviews?search=creamy":                             "Great carbonara",
+			"/v1/restaurants/" + cafe + "/reviews?search=carbonara": "Nice tea",
+		} {
+			if got := names(path); got != want {
+				t.Errorf("%s: %q, want %q", path, got, want)
+			}
+		}
+		e.expect(request{method: "GET", path: "/v1/reviews?sort=relevance"}, http.StatusBadRequest)
+
+		user, err := e.app.FindRecordById("users", joe.User.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := e.app.Delete(user); err != nil {
+			t.Fatal(err)
+		}
+		n, err := e.app.CountRecords("reviews")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var indexed int
+		if err := e.app.DB().NewQuery("SELECT COUNT(*) FROM reviews_fts").Row(&indexed); err != nil {
+			t.Fatal(err)
+		}
+		if indexed != int(n) {
+			t.Errorf("after the cascade delete, %d index rows for %d reviews", indexed, n)
+		}
+	})
+
+	t.Run("a dashboard rename updates the reviews", func(t *testing.T) {
+		r, err := e.app.FindRecordById("restaurants", cafe)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Set("name", "Teahouse")
+		if err := e.app.Save(r); err != nil {
+			t.Fatal(err)
+		}
+		if got := names("/v1/reviews?search=teahouse"); got != "Nice tea" {
+			t.Errorf("new name: %q", got)
+		}
+		if got := names("/v1/reviews?search=ole"); got != "" {
+			t.Errorf("old name: %q", got)
+		}
+	})
+
+	t.Run("a save without text changes keeps the index row", func(t *testing.T) {
+		rowid := func() int {
+			var id int
+			if err := e.app.DB().NewQuery("SELECT rowid FROM restaurants_fts WHERE id = {:id}").Bind(map[string]any{"id": pasta}).Row(&id); err != nil {
+				t.Fatal(err)
+			}
+			return id
+		}
+		before := rowid()
+		r, err := e.app.FindRecordById("restaurants", pasta)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Set("creator", "")
+		if err := e.app.Save(r); err != nil {
+			t.Fatal(err)
+		}
+		if after := rowid(); after != before {
+			t.Errorf("the index row changed from %d to %d", before, after)
+		}
+	})
 }

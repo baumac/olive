@@ -572,6 +572,9 @@ type RestaurantId = RecordId
 // RestaurantIn Examples: ["k3x9m2p7q1w8z4a","x7b2n9m4q1w8z3c"]
 type RestaurantIn = []RecordId
 
+// RestaurantSearch defines model for RestaurantSearch.
+type RestaurantSearch = string
+
 // RestaurantSort defines model for RestaurantSort.
 type RestaurantSort = string
 
@@ -579,6 +582,9 @@ type RestaurantSort = string
 //
 // Examples: k3x9m2p7q1w8z4a
 type ReviewId = RecordId
+
+// ReviewSearch defines model for ReviewSearch.
+type ReviewSearch = string
 
 // ReviewSort defines model for ReviewSort.
 type ReviewSort = string
@@ -666,8 +672,17 @@ type ListRestaurantsParams struct {
 	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
 	// The `name` sort ignores case only for the ASCII letters `A` to `Z`.
 	// The `overall` sort uses `rating.overall`. It puts restaurants without reviews last in both directions.
+	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
+	// With `search`, the default sort is `relevance`.
 	// The API always adds `id` as the last sort key.
 	Sort *RestaurantSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Search Full-text search in `name`, `description`, and `tags`.
+	// A restaurant matches when it has all words of the search. A word also matches longer words that start with it.
+	// The search ignores case and accents. `Cafe` matches `Café`.
+	// Matches in `name` count most for the `relevance` sort, then `tags`, then `description`.
+	// A search without a letter or a digit causes `400 Bad Request`.
+	Search *RestaurantSearch `form:"search,omitempty" json:"search,omitempty"`
 
 	// Overall Compares `rating.overall`, the rounded value of the response.
 	// Each key is an operator, for example `overall[gte]=`.
@@ -710,8 +725,17 @@ type ListReviewsParams struct {
 	// A `-` prefix sorts a property in descending order.
 	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
 	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
+	// With `search`, the default sort is `relevance`.
 	// The API always adds `id` as the last sort key.
 	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Search Full-text search in `title`, `feedback`, `tags`, and `restaurant_name`.
+	// A review matches when it has all words of the search. A word also matches longer words that start with it.
+	// The search ignores case and accents. `Cafe` matches `Café`.
+	// Matches in `title` count most for the `relevance` sort, then `tags`, then `restaurant_name`, then `feedback`.
+	// A search without a letter or a digit causes `400 Bad Request`.
+	Search *ReviewSearch `form:"search,omitempty" json:"search,omitempty"`
 
 	// Space Compares the `space` score. Each key is an operator, for example `space[gte]=`.
 	Space *SpaceFilter `json:"space,omitempty"`
@@ -764,8 +788,17 @@ type ListAllReviewsParams struct {
 	// A `-` prefix sorts a property in descending order.
 	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
 	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
+	// With `search`, the default sort is `relevance`.
 	// The API always adds `id` as the last sort key.
 	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Search Full-text search in `title`, `feedback`, `tags`, and `restaurant_name`.
+	// A review matches when it has all words of the search. A word also matches longer words that start with it.
+	// The search ignores case and accents. `Cafe` matches `Café`.
+	// Matches in `title` count most for the `relevance` sort, then `tags`, then `restaurant_name`, then `feedback`.
+	// A search without a letter or a digit causes `400 Bad Request`.
+	Search *ReviewSearch `form:"search,omitempty" json:"search,omitempty"`
 
 	// RestaurantEq The `restaurant` of the review is equal to the value.
 	RestaurantEq *RestaurantEq `form:"restaurant[eq],omitempty" json:"restaurant[eq],omitempty"`
@@ -927,6 +960,19 @@ func (siw *ServerInterfaceWrapper) ListRestaurants(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
 		}
 		return
 	}
@@ -1191,6 +1237,19 @@ func (siw *ServerInterfaceWrapper) ListReviews(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
 		}
 		return
 	}
@@ -1537,6 +1596,19 @@ func (siw *ServerInterfaceWrapper) ListAllReviews(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
 		}
 		return
 	}

@@ -45,7 +45,7 @@ func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsReques
 	}
 	p := req.Params
 	all := reviewsapi.ListAllReviewsParams{
-		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, RestaurantEq: &req.RestaurantId,
+		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, RestaurantEq: &req.RestaurantId,
 		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price, Cleanliness: p.Cleanliness,
 		TagsHas: p.TagsHas, TagsHasAny: p.TagsHasAny, TagsHasAll: p.TagsHasAll,
 		Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
@@ -106,7 +106,17 @@ func (s *Server) reviewPage(
 	if detail != "" {
 		return reviewPageResult{bad: detail}, nil
 	}
-	keys, sort, detail := parseSort(p.Sort, "reviews", reviewSorts)
+	search := newSearchPage(s, "reviews")
+	if detail := search.parse(p.Search); detail != "" {
+		return reviewPageResult{bad: detail}, nil
+	}
+	sortSpec, detail := search.sortWithSearch(p.Sort)
+	if detail != "" {
+		return reviewPageResult{bad: detail}, nil
+	}
+	sorts := maps.Clone(reviewSorts)
+	sorts["relevance"] = search.relevanceSort
+	keys, sort, detail := parseSort(sortSpec, "reviews", sorts)
 	if detail != "" {
 		return reviewPageResult{bad: detail}, nil
 	}
@@ -126,6 +136,7 @@ func (s *Server) reviewPage(
 	}
 
 	w := newWhere()
+	search.filter(w)
 	for _, detail := range []string{
 		w.restaurantFilters(p.RestaurantEq, p.RestaurantIn),
 		w.scoreFilter("space", scoreComparisons(p.Space)),
@@ -158,7 +169,7 @@ func (s *Server) reviewPage(
 		known[r.Id] = r.GetString("name")
 	}
 
-	records, next, err := s.page("reviews", w, keys, limit, query, nil)
+	records, next, err := s.page("reviews", w, keys, limit, query, search.load)
 	if err != nil {
 		return reviewPageResult{}, err
 	}

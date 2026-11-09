@@ -13,12 +13,13 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func restaurantSorts(rated *ratedPage) map[string]sortField {
+func restaurantSorts(rated *ratedPage, search *searchPage) map[string]sortField {
 	return map[string]sortField{
-		"name":    textSort("restaurants", "name"),
-		"overall": rated.overallSort,
-		"created": timestampSort("restaurants", "created"),
-		"updated": timestampSort("restaurants", "updated"),
+		"name":      textSort("restaurants", "name"),
+		"overall":   rated.overallSort,
+		"relevance": search.relevanceSort,
+		"created":   timestampSort("restaurants", "created"),
+		"updated":   timestampSort("restaurants", "updated"),
 	}
 }
 
@@ -35,7 +36,15 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		return bad(detail)
 	}
 	rated := &ratedPage{s: s}
-	keys, sort, detail := parseSort(p.Sort, "restaurants", restaurantSorts(rated))
+	search := newSearchPage(s, "restaurants")
+	if detail := search.parse(p.Search); detail != "" {
+		return bad(detail)
+	}
+	sortSpec, detail := search.sortWithSearch(p.Sort)
+	if detail != "" {
+		return bad(detail)
+	}
+	keys, sort, detail := parseSort(sortSpec, "restaurants", restaurantSorts(rated, search))
 	if detail != "" {
 		return bad(detail)
 	}
@@ -54,6 +63,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	}
 
 	w := newWhere()
+	search.filter(w)
 	if p.Overall != nil || sortsBy(sort, "overall") {
 		w.joinOverall()
 	}
@@ -72,7 +82,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		w.keyset(keys, after)
 	}
 
-	records, next, err := s.page("restaurants", w, keys, limit, query, rated.load)
+	records, next, err := s.page("restaurants", w, keys, limit, query, loadAll(rated.load, search.load))
 	if err != nil {
 		return nil, err
 	}

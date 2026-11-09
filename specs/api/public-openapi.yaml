@@ -168,6 +168,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/RestaurantSort'
+        - $ref: '#/components/parameters/RestaurantSearch'
         - $ref: '#/components/parameters/OverallFilter'
         - $ref: '#/components/parameters/TagsHas'
         - $ref: '#/components/parameters/TagsHasAny'
@@ -332,6 +333,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/ReviewSort'
+        - $ref: '#/components/parameters/ReviewSearch'
         - $ref: '#/components/parameters/SpaceFilter'
         - $ref: '#/components/parameters/ServiceFilter'
         - $ref: '#/components/parameters/FoodFilter'
@@ -375,6 +377,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/ReviewSort'
+        - $ref: '#/components/parameters/ReviewSearch'
         - $ref: '#/components/parameters/RestaurantEq'
         - $ref: '#/components/parameters/RestaurantIn'
         - $ref: '#/components/parameters/SpaceFilter'
@@ -545,10 +548,12 @@ components:
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `name` sort ignores case only for the ASCII letters `A` to `Z`.
         The `overall` sort uses `rating.overall`. It puts restaurants without reviews last in both directions.
+        The `relevance` sort puts the best matches of `search` first. It needs `search`.
+        With `search`, the default sort is `relevance`.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(name|overall|created|updated)(,-?(name|overall|created|updated))*$'
+        pattern: '^-?(name|overall|relevance|created|updated)(,-?(name|overall|relevance|created|updated))*$'
         default: '-created'
       example: 'name,-created'
     ReviewSort:
@@ -559,13 +564,43 @@ components:
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+        The `relevance` sort puts the best matches of `search` first. It needs `search`.
+        With `search`, the default sort is `relevance`.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(space|service|food|price|cleanliness|title|created|updated)(,-?(space|service|food|price|cleanliness|title|created|updated))*$'
+        pattern: '^-?(space|service|food|price|cleanliness|relevance|title|created|updated)(,-?(space|service|food|price|cleanliness|relevance|title|created|updated))*$'
         default: '-created'
       example: '-food,title'
 
+    RestaurantSearch:
+      name: search
+      in: query
+      description: |
+        Full-text search in `name`, `description`, and `tags`.
+        A restaurant matches when it has all words of the search. A word also matches longer words that start with it.
+        The search ignores case and accents. `Cafe` matches `Café`.
+        Matches in `name` count most for the `relevance` sort, then `tags`, then `description`.
+        A search without a letter or a digit causes `400 Bad Request`.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      example: italian pasta
+    ReviewSearch:
+      name: search
+      in: query
+      description: |
+        Full-text search in `title`, `feedback`, `tags`, and `restaurant_name`.
+        A review matches when it has all words of the search. A word also matches longer words that start with it.
+        The search ignores case and accents. `Cafe` matches `Café`.
+        Matches in `title` count most for the `relevance` sort, then `tags`, then `restaurant_name`, then `feedback`.
+        A search without a letter or a digit causes `400 Bad Request`.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      example: carbonara
     TagsHas:
       name: tags[has]
       in: query

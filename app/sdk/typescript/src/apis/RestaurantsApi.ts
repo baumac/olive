@@ -145,10 +145,21 @@ export interface ListAllReviewsRequest {
      * A `-` prefix sorts a property in descending order.
      * Each property can occur only one time. A repeated property causes `400 Bad Request`.
      * The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+     * The `relevance` sort puts the best matches of `search` first. It needs `search`.
+     * With `search`, the default sort is `relevance`.
      * The API always adds `id` as the last sort key.
      * 
      */
     sort?: string;
+    /**
+     * Full-text search in `title`, `feedback`, `tags`, and `restaurant_name`.
+     * A review matches when it has all words of the search. A word also matches longer words that start with it.
+     * The search ignores case and accents. `Cafe` matches `Café`.
+     * Matches in `title` count most for the `relevance` sort, then `tags`, then `restaurant_name`, then `feedback`.
+     * A search without a letter or a digit causes `400 Bad Request`.
+     * 
+     */
+    search?: string;
     /**
      * The `restaurant` of the review is equal to the value.
      */
@@ -225,10 +236,21 @@ export interface ListRestaurantsRequest {
      * Each property can occur only one time. A repeated property causes `400 Bad Request`.
      * The `name` sort ignores case only for the ASCII letters `A` to `Z`.
      * The `overall` sort uses `rating.overall`. It puts restaurants without reviews last in both directions.
+     * The `relevance` sort puts the best matches of `search` first. It needs `search`.
+     * With `search`, the default sort is `relevance`.
      * The API always adds `id` as the last sort key.
      * 
      */
     sort?: string;
+    /**
+     * Full-text search in `name`, `description`, and `tags`.
+     * A restaurant matches when it has all words of the search. A word also matches longer words that start with it.
+     * The search ignores case and accents. `Cafe` matches `Café`.
+     * Matches in `name` count most for the `relevance` sort, then `tags`, then `description`.
+     * A search without a letter or a digit causes `400 Bad Request`.
+     * 
+     */
+    search?: string;
     /**
      * Compares `rating.overall`, the rounded value of the response.
      * Each key is an operator, for example `overall[gte]=`.
@@ -287,10 +309,21 @@ export interface ListReviewsRequest {
      * A `-` prefix sorts a property in descending order.
      * Each property can occur only one time. A repeated property causes `400 Bad Request`.
      * The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+     * The `relevance` sort puts the best matches of `search` first. It needs `search`.
+     * With `search`, the default sort is `relevance`.
      * The API always adds `id` as the last sort key.
      * 
      */
     sort?: string;
+    /**
+     * Full-text search in `title`, `feedback`, `tags`, and `restaurant_name`.
+     * A review matches when it has all words of the search. A word also matches longer words that start with it.
+     * The search ignores case and accents. `Cafe` matches `Café`.
+     * Matches in `title` count most for the `relevance` sort, then `tags`, then `restaurant_name`, then `feedback`.
+     * A search without a letter or a digit causes `400 Bad Request`.
+     * 
+     */
+    search?: string;
     /**
      * Compares the `space` score. Each key is an operator, for example `space[gte]=`.
      */
@@ -525,7 +558,8 @@ export interface RestaurantsApiInterface {
      * Creates request options for listAllReviews without sending the request
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, &#x60;tags&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {string} [restaurantEq] The &#x60;restaurant&#x60; of the review is equal to the value.
      * @param {Array<string>} [restaurantIn] The &#x60;restaurant&#x60; of the review is equal to any of the values.
      * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
@@ -550,7 +584,8 @@ export interface RestaurantsApiInterface {
      * @summary List the reviews of all restaurants
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, &#x60;tags&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {string} [restaurantEq] The &#x60;restaurant&#x60; of the review is equal to the value.
      * @param {Array<string>} [restaurantIn] The &#x60;restaurant&#x60; of the review is equal to any of the values.
      * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
@@ -581,7 +616,8 @@ export interface RestaurantsApiInterface {
      * Creates request options for listRestaurants without sending the request
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. It puts restaurants without reviews last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. It puts restaurants without reviews last in both directions. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, and &#x60;tags&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant without reviews matches no &#x60;overall&#x60; filter. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
@@ -600,7 +636,8 @@ export interface RestaurantsApiInterface {
      * @summary List restaurants
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. It puts restaurants without reviews last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. It puts restaurants without reviews last in both directions. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, and &#x60;tags&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant without reviews matches no &#x60;overall&#x60; filter. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
@@ -625,7 +662,8 @@ export interface RestaurantsApiInterface {
      * @param {string} restaurantId The ID of the restaurant.
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, &#x60;tags&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
@@ -649,7 +687,8 @@ export interface RestaurantsApiInterface {
      * @param {string} restaurantId The ID of the restaurant.
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, &#x60;tags&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
@@ -1102,6 +1141,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             queryParameters['sort'] = requestParameters['sort'];
         }
 
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
+        }
+
         if (requestParameters['restaurantEq'] != null) {
             queryParameters['restaurant[eq]'] = requestParameters['restaurantEq'];
         }
@@ -1217,6 +1260,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             queryParameters['sort'] = requestParameters['sort'];
         }
 
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
+        }
+
         if (requestParameters['overall'] != null) {
             queryParameters['overall'] = requestParameters['overall'];
         }
@@ -1311,6 +1358,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
 
         if (requestParameters['sort'] != null) {
             queryParameters['sort'] = requestParameters['sort'];
+        }
+
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
         }
 
         if (requestParameters['space'] != null) {

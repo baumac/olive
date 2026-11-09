@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/baumac/reviews-app/app/internal/publicapi"
+	"github.com/baumac/reviews-app/app/internal/searchindex"
 	"github.com/baumac/reviews-app/app/internal/webui"
 	_ "github.com/baumac/reviews-app/app/migrations"
 	"github.com/pocketbase/pocketbase"
@@ -17,6 +18,7 @@ import (
 func main() {
 	app := pocketbase.New()
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{TemplateLang: migratecmd.TemplateLangGo})
+	searchindex.Register(app)
 	publicapi.Register(app, options())
 	webui.Register(app)
 	if err := app.Start(); err != nil {
