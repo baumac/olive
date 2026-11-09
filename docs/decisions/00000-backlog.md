@@ -23,6 +23,7 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 - Remove reviews from top nav bar
 - Rename cleanliness to hygine
+- Allow adding photos to restaurants and reviews
 - Add maps feature and add location to to each restaurant
 - Add IOS app
 - Add load tests
