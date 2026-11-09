@@ -1,6 +1,6 @@
 import type { FilterDef, FilterValue, Option } from '@/components/ui/filter-bar'
 
-// The review filters and sorts of the restaurant page and the reviews page.
+// The review filters and sorts of the restaurant page and the my reviews page.
 
 function scoreOptions(max: number): Option[] {
   return Array.from({ length: max }, (_, i) => max - i).map((n) => ({ value: String(n), label: `${n} or more` }))
@@ -43,6 +43,5 @@ export function reviewFilterParams(f: Record<string, FilterValue>) {
     space: atLeast(f, 'space'),
     price: atLeast(f, 'price'),
     cleanliness: atLeast(f, 'cleanliness'),
-    creatorEq: typeof f.creator === 'string' ? f.creator : undefined,
   }
 }

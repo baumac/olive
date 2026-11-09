@@ -94,40 +94,39 @@ test('my reviews lists the reviews of the user at all restaurants', async ({ pag
   await page.getByRole('menuitem', { name: 'My reviews' }).click()
 
   await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
-  await expect(page.getByText('Written by: you')).toBeVisible()
+  await expect(page).toHaveURL(/\/my-reviews$/)
   await expect(page.getByRole('heading', { level: 3 })).toHaveText(['Mine at second', 'Mine at first'])
   await page.getByRole('link', { name: 'First Place' }).click()
   await expect(page.getByRole('heading', { name: 'First Place', level: 1 })).toBeVisible()
 })
 
-test('the reviews link lists reviews of all restaurants', async ({ page, api }) => {
-  const owner = await api.signUp('Joe')
-  const restaurant = await api.createRestaurant(owner, { name: 'Any Place' })
-  const tag = uniqueTag('all')
-  await api.createReview(owner, restaurant.id, { space: 3, service: 3, food: 3, price: 3, cleanliness: 3, title: 'Seen on all reviews', tags: [tag] })
-
+test('the main navigation has no reviews link', async ({ page }) => {
   await page.goto('/restaurants')
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Reviews' }).click()
-  await expect(page.getByRole('heading', { name: 'Reviews', level: 1 })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Reviews', exact: true })).toHaveAttribute(
-    'aria-current',
-    'page',
-  )
-
-  await page.goto(`/reviews?tags=${tag}`)
-  const card = page.getByRole('listitem').filter({ hasText: 'Seen on all reviews' })
-  await expect(card.getByRole('link', { name: 'Any Place' })).toBeVisible()
+  const nav = page.getByRole('navigation', { name: 'Main' })
+  await expect(nav.getByRole('link', { name: 'Restaurants' })).toBeVisible()
+  await expect(nav.getByRole('link', { name: 'Reviews' })).toHaveCount(0)
 })
 
-test('the search box finds reviews by their text', async ({ page, api }) => {
-  const owner = await api.signUp('Joe')
-  const restaurant = await api.createRestaurant(owner, { name: 'Search Kitchen' })
-  const ana = await api.signUp('Ana')
-  const word = uniqueTag('dish')
-  await api.createReview(owner, restaurant.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: `The ${word} was good` })
-  await api.createReview(ana, restaurant.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'Fine', feedback: `Try the ${word}.` })
+test('my reviews needs an account', async ({ page }) => {
+  await page.goto('/my-reviews')
+  await expect(page).toHaveURL(/\/sign-in\?redirect=(%2F|\/)my-reviews$/)
+})
 
+test('the all reviews page does not exist', async ({ page }) => {
   await page.goto('/reviews')
+  await expect(page.getByRole('heading', { name: 'We cannot find this page' })).toBeVisible()
+})
+
+test('the search box finds reviews by their text', async ({ page, api, user }) => {
+  const owner = await api.signUp('Joe')
+  const first = await api.createRestaurant(owner, { name: 'Search Kitchen' })
+  const second = await api.createRestaurant(owner, { name: 'Search Grill' })
+  const word = uniqueTag('dish')
+  await api.createReview(user, first.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: `The ${word} was good` })
+  await api.createReview(user, second.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'Fine', feedback: `Try the ${word}.` })
+  await api.createReview(owner, first.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: `Not mine, also ${word}` })
+
+  await page.goto('/my-reviews')
   await page.getByRole('searchbox', { name: 'Search reviews' }).fill(word)
   await expect(page.getByRole('heading', { level: 3 })).toHaveText([`The ${word} was good`, 'Fine'])
 })

@@ -89,7 +89,7 @@ describe('fieldErrors', () => {
 
 describe('reviewFilterParams', () => {
   it('changes the filters to SDK parameters', () => {
-    expect(reviewFilterParams({ search: 'carbonara', tags: ['pasta'], food: '4', creator: 'u5n1c8r3t6y0b2e' })).toEqual({
+    expect(reviewFilterParams({ search: 'carbonara', tags: ['pasta'], food: '4' })).toEqual({
       search: 'carbonara',
       tagsHasAny: ['pasta'],
       food: { gte: 4 },
@@ -97,7 +97,6 @@ describe('reviewFilterParams', () => {
       space: undefined,
       price: undefined,
       cleanliness: undefined,
-      creatorEq: 'u5n1c8r3t6y0b2e',
     })
   })
 })

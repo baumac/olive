@@ -164,9 +164,9 @@ The app has these routes:
 
 ## UI structure
 
-- `/reviews` lists the reviews of all restaurants with `GET /v1/reviews`. Its cards name the restaurant. "Reviews" in `AppHeader` opens it.
-- "My reviews" in `UserMenu` opens `/reviews?creator=<user id>`. The creator filter offers only the signed in user.
-- the restaurant page and `/reviews` use one `ReviewList` component. Without a restaurant, it calls `listAllReviews`. The filters and sorts are in `src/lib/reviewFilters.ts`.
+- `/my-reviews` lists the reviews of the signed in user at all restaurants. Its cards name the restaurant. "My reviews" in `UserMenu` opens it.
+- the UI has no page with the reviews of all users. `AppHeader` has only the "Restaurants" link.
+- the restaurant page and `/my-reviews` use one `ReviewList` component. Without a restaurant, it calls `listAllReviews` with `creator[eq]` set to the user. The filters and sorts are in `src/lib/reviewFilters.ts`.
 
 - `src/lib/api.ts` makes one `Configuration` for `RestaurantsApi` and `UsersApi` with the base path `/v1`
 - a middleware of the SDK handles a `401` on a request with a token. It deletes the session and sends the request again without the token. A read then works. A write gets `401`, and a page that needs an account opens the sign in page with `reason=session-ended`.

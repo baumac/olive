@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Restaurant, Review } from '@reviews/sdk'
-import type { FilterDef } from '@/components/ui/filter-bar'
 import { MessageSquareIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
@@ -14,31 +13,30 @@ import { reviewFilterDefs, reviewFilterParams, reviewSortOptions } from '@/lib/r
 import PagedList from './PagedList.vue'
 import ReviewCard from './ReviewCard.vue'
 
-// Without a restaurant, the list has the reviews of all restaurants.
+// Without a restaurant, the list has the reviews of the creator at all
+// restaurants.
 const props = withDefaults(
   defineProps<{
     restaurant?: Restaurant
     writePath?: string
-    defs?: FilterDef[]
-    // mine is true when the creator filter selects the signed in user.
-    mine?: boolean
+    creator?: string
   }>(),
-  { restaurant: undefined, writePath: undefined, defs: () => reviewFilterDefs, mine: false },
+  { restaurant: undefined, writePath: undefined, creator: undefined },
 )
 
 const limit = 20
 
-const { filters, sort, active, sortOptions } = useListQuery(() => props.defs, reviewSortOptions, '-created', searchRelevance)
+const { filters, sort, active, sortOptions } = useListQuery(reviewFilterDefs, reviewSortOptions, '-created', searchRelevance)
 
 const list = usePagedList<Review>(async (cursor) => {
   const params = { limit, cursor, sort: sort.value, ...reviewFilterParams(filters.value) }
   const page = props.restaurant
     ? await restaurantsApi.listReviews({ restaurantId: props.restaurant.id, ...params })
-    : await restaurantsApi.listAllReviews(params)
+    : await restaurantsApi.listAllReviews({ creatorEq: props.creator, ...params })
   return { items: page.items, nextCursor: page.nextCursor }
 })
 
-watch([filters, sort, () => props.restaurant?.id], () => void list.reload(), { immediate: true })
+watch([filters, sort, () => props.restaurant?.id, () => props.creator], () => void list.reload(), { immediate: true })
 
 defineExpose({ reload: list.reload })
 
@@ -56,7 +54,7 @@ const status = computed(() => {
     <FilterBar
       v-model:filters="filters"
       v-model:sort="sort"
-      :defs="defs"
+      :defs="reviewFilterDefs"
       :sort-options="sortOptions"
       sort-label="Sort by"
       :status="status"
@@ -66,17 +64,7 @@ const status = computed(() => {
       <template #item="{ item }"><ReviewCard :review="item" :show-restaurant="!restaurant" /></template>
       <template #empty>
         <EmptyState
-          v-if="mine && Object.keys(filters).length === 1"
-          :icon="MessageSquareIcon"
-          title="You have no reviews yet"
-          description="Find a restaurant and write the first one."
-        >
-          <template #action>
-            <Button as-child><RouterLink to="/restaurants">Go to restaurants</RouterLink></Button>
-          </template>
-        </EmptyState>
-        <EmptyState
-          v-else-if="active"
+          v-if="active"
           :icon="MessageSquareIcon"
           title="No reviews match these filters"
           description="Remove a filter or clear all filters."
@@ -98,8 +86,8 @@ const status = computed(() => {
         <EmptyState
           v-else
           :icon="MessageSquareIcon"
-          title="No reviews yet"
-          description="Find a restaurant and write the first review."
+          title="You have no reviews yet"
+          description="Find a restaurant and write the first one."
         >
           <template #action>
             <Button as-child><RouterLink to="/restaurants">Go to restaurants</RouterLink></Button>

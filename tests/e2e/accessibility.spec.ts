@@ -36,11 +36,6 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('heading', { name: 'Good' })).toBeVisible()
       await expectNoViolations(page)
 
-      await page.goto('/reviews')
-      await expect(page.getByRole('heading', { name: 'Reviews', level: 1 })).toBeVisible()
-      await expect(page.getByRole('status')).not.toHaveText('Loading reviews')
-      await expectNoViolations(page)
-
       await page.goto('/sign-in')
       await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
       await expectNoViolations(page)
@@ -52,6 +47,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await signIn(page, reviewer)
       await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
       await expect(page.getByRole('heading', { name: 'Edit review' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.goto('/my-reviews')
+      await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
+      await expect(page.getByRole('status')).not.toHaveText('Loading reviews')
       await expectNoViolations(page)
     })
   })
