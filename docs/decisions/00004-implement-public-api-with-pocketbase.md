@@ -116,8 +116,9 @@ The checks run in this order:
 ## Rate limit
 
 - sign up and sign in each allow 10 requests per IP address per minute
+- an IPv6 address counts as its /64 network. One host often gets a full /64 network.
 - the count uses fixed windows in the memory of the server
-- at 10,000 windows, the limiter removes the expired windows. It does this at most one time per window.
+- the limiter keeps at most 10,000 windows. Each request removes the expired windows first. At the maximum, a new key removes the oldest window.
 - `Retry-After` is the number of seconds until the window ends, at least 1
 - a restart clears the counts. Each server has its own counts.
 - the IP address comes from `RequestEvent.RealIP`. Behind a reverse proxy, the PocketBase setting `trustedProxy.headers` must name the header that the proxy sets, such as `X-Real-IP`. Without it, `RealIP` is the address of the proxy for all clients, and the limit counts all clients together.
@@ -138,6 +139,7 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 - a review without its restaurant gets `500`, like a review without its creator. `restaurant_name` is never empty.
 
 - pagination uses a keyset. The cursor is base64url JSON with the sort values of the last item and a fingerprint.
+- the list query selects the IDs and the sort values of the page. A second query gets the records by ID. The cursor values then come from the query that sorts the page. A write between the two queries cannot skip or repeat items.
 - the fingerprint is a hash of the filters, the sort, and the restaurant ID. `limit` is not in it, so a client can change `limit` between pages.
 - the `name` and `title` sorts use `COLLATE NOCASE`
 - the `id` key has the direction of the key before it. When all keys have one direction, the cursor condition is a row value comparison, such as `(created, id) < (x, y)`. SQLite can then use the index. Mixed directions use an `OR` condition.
@@ -152,14 +154,15 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 - SQLite rounds the averages. The `overall` filter and sort use the same SQL expression, so they compare the value that the response shows.
 - an `overall` filter or sort adds a `LEFT JOIN` on one grouped query over all reviews. SQLite computes each average one time, not one time for each use in the row. The join reads all reviews, so other lists do not add it. Stored averages that each review change updates can replace it later.
 - the `overall` sort has two keys. The first is `1` for restaurants without reviews and `0` for the others. The second is the average, or `0` without reviews. This puts restaurants without reviews last in both directions, and the cursor never has `null`.
-- the cursor of an `overall` sort needs the average of the last restaurant of the page. It comes from the ratings query of the page, so the sort adds no query.
+- the cursor of an `overall` sort gets the average of the last restaurant from the list query. The ratings query of the page gives only the response values.
 - an `overall` filter value of `NaN` gets `400`. The range check runs before the cursor fingerprint, which cannot hold `NaN`.
 
 ## Search
 
 - the search uses two SQLite FTS5 tables, `restaurants_fts` and `reviews_fts`. Each row has the record ID in an `UNINDEXED` column.
 - the `unicode61` tokenizer with `remove_diacritics 2` ignores case and accents. The `prefix = '2 3'` indexes make short prefix terms fast.
-- `internal/searchindex` keeps the tables equal to the records. Record hooks change the index in the transaction of each save and delete.
+- `internal/searchindex` keeps the tables equal to the records. Each record hook runs the save or delete and the index change in one transaction.
+  - PocketBase starts no transaction for a save. The hook starts one when the caller has none. A failed index change then also removes the record change.
   - an update writes the index row only when an indexed field changes. A save that only unsets `creator` does not write it.
   - the hooks also run for saves in the PocketBase dashboard and for cascade deletes, because these go through `app.Save` and `app.Delete`
   - SQL triggers were not selected. A trigger blocks a later `DROP COLUMN` of a column that it uses.
@@ -170,7 +173,7 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 - a word of one character is a whole-word term without `*`. The prefix indexes do not cover one character, so a prefix of one character reads all index terms that start with it.
 - the list query has an `INNER JOIN` on the matches with their score. The score adds the weight of each column that matches the query with an FTS5 column filter, such as `name : ("carb"*)`. Each column filter runs one time for the query.
 - `bm25` was not selected for the score. It depends on all rows of the table, so each write moves the ranks of all matches. A cursor with a `bm25` value then skips or repeats items.
-- the cursor of a `relevance` sort needs the score of the last item. The page gets the scores of its items in one more query, only for a `relevance` sort.
+- the cursor of a `relevance` sort gets the score of the last item from the list query
 
 ## PocketBase mapping
 

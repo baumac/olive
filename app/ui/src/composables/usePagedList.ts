@@ -7,12 +7,20 @@ export interface Page<T> {
   nextCursor: string | null
 }
 
+export interface ListFailure {
+  // status is null for a network error.
+  status: number | null
+  // detail is the reason of a 400 response, such as a search with too many
+  // words. Another try with the same filters gets the same response.
+  detail: string | null
+}
+
 export interface PagedList<T> {
   items: Ref<T[]>
   cursor: Ref<string | null>
   loading: Ref<boolean>
   loadingMore: Ref<boolean>
-  failed: Ref<{ status: number | null } | null>
+  failed: Ref<ListFailure | null>
   moreFailed: Ref<boolean>
   reload: () => Promise<void>
   loadMore: (cursor: string) => Promise<void>
@@ -26,13 +34,14 @@ export function usePagedList<T>(fetchPage: (cursor?: string) => Promise<Page<T>>
   const cursor = ref<string | null>(null)
   const loading = ref(true)
   const loadingMore = ref(false)
-  const failed = ref<{ status: number | null } | null>(null)
+  const failed = ref<ListFailure | null>(null)
   const moreFailed = ref(false)
   let generation = 0
 
   async function reload() {
     const g = ++generation
     loading.value = true
+    loadingMore.value = false
     failed.value = null
     moreFailed.value = false
     try {
@@ -44,7 +53,8 @@ export function usePagedList<T>(fetchPage: (cursor?: string) => Promise<Page<T>>
       cursor.value = page.nextCursor
     } catch (error) {
       if (g === generation) {
-        failed.value = { status: (await apiFailure(error)).status }
+        const { status, problem } = await apiFailure(error)
+        failed.value = { status, detail: status === 400 ? (problem?.detail ?? null) : null }
       }
     } finally {
       if (g === generation) {
@@ -65,9 +75,13 @@ export function usePagedList<T>(fetchPage: (cursor?: string) => Promise<Page<T>>
       items.value = [...items.value, ...page.items]
       cursor.value = page.nextCursor
     } catch {
-      moreFailed.value = true
+      if (g === generation) {
+        moreFailed.value = true
+      }
     } finally {
-      loadingMore.value = false
+      if (g === generation) {
+        loadingMore.value = false
+      }
     }
   }
 

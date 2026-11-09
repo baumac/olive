@@ -26,44 +26,46 @@ var comparisonOps = []struct{ name, sql string }{
 }
 
 // The array filters have a maximum number of values. Each value is one SQL
-// parameter. A tag array has at most 20 items.
+// parameter. A tag array has at most maxTags items.
 const (
-	maxTagValues   = 20
+	maxTagValues   = maxTags
 	maxOtherValues = 100
 )
 
-func withRanges(query map[string]int, names ...string) map[string]int {
-	for _, name := range names {
-		for _, op := range comparisonOps {
-			query[name+"["+op.name+"]"] = 1
-		}
-	}
-	return query
+func withParams(query, params map[string]int) map[string]int {
+	out := maps.Clone(query)
+	maps.Copy(out, params)
+	return out
 }
 
-var restaurantQuery = withRanges(map[string]int{
+func withRanges(query map[string]int, names ...string) map[string]int {
+	ranges := map[string]int{}
+	for _, name := range names {
+		for _, op := range comparisonOps {
+			ranges[name+"["+op.name+"]"] = 1
+		}
+	}
+	return withParams(query, ranges)
+}
+
+var listQuery = withRanges(map[string]int{
 	"limit": 1, "cursor": 1, "sort": 1, "search": 1,
 	"tags[has]": 1, "tags[has_any]": maxTagValues, "tags[has_all]": maxTagValues,
 	"creator[eq]": 1, "creator[in]": maxOtherValues,
 }, "created", "updated")
 
-var reviewQuery = withRanges(maps.Clone(restaurantQuery), "space", "service", "food", "price", "cleanliness")
+var restaurantQuery = withRanges(listQuery, "overall")
+
+var reviewQuery = withRanges(listQuery, "space", "service", "food", "price", "cleanliness")
 
 // allReviewQuery adds the restaurant filters of GET /v1/reviews.
-var allReviewQuery = maps.Clone(reviewQuery)
+var allReviewQuery = withParams(reviewQuery, map[string]int{"restaurant[eq]": 1, "restaurant[in]": maxOtherValues})
 
-func init() {
-	withRanges(restaurantQuery, "overall")
-	allReviewQuery["restaurant[eq]"] = 1
-	allReviewQuery["restaurant[in]"] = maxOtherValues
-}
-
-// sortKey is one ORDER BY term. value gets the value of the term from a
-// record for the cursor.
+// sortKey is one ORDER BY term. The page query also selects it for the
+// cursor.
 type sortKey struct {
-	expr  string
-	desc  bool
-	value func(*core.Record) any
+	expr string
+	desc bool
 }
 
 type sortField func(desc bool) []sortKey
@@ -76,25 +78,19 @@ func column(table, name string) string {
 // collation.
 func textSort(table, name string) sortField {
 	return func(desc bool) []sortKey {
-		return []sortKey{{column(table, name) + " COLLATE NOCASE", desc, func(r *core.Record) any { return r.GetString(name) }}}
+		return []sortKey{{column(table, name) + " COLLATE NOCASE", desc}}
 	}
 }
 
-func timestampSort(table, name string) sortField {
+func columnSort(table, name string) sortField {
 	return func(desc bool) []sortKey {
-		return []sortKey{{column(table, name), desc, func(r *core.Record) any { return r.GetDateTime(name).String() }}}
-	}
-}
-
-func scoreSort(table, name string) sortField {
-	return func(desc bool) []sortKey {
-		return []sortKey{{column(table, name), desc, func(r *core.Record) any { return r.GetInt(name) }}}
+		return []sortKey{{column(table, name), desc}}
 	}
 }
 
 // parseSort returns the sort keys and the sort value that the cursor uses.
-// The last key is always id. It has the direction of the key before it, so
-// SQLite can read an index on (column, id) in one direction.
+// The last key is always id with the direction of the key before it. SQLite
+// can then read an index on the column and id in one direction.
 func parseSort(raw *string, table string, fields map[string]sortField) ([]sortKey, string, string) {
 	spec := defaultSort
 	if raw != nil {
@@ -114,7 +110,7 @@ func parseSort(raw *string, table string, fields map[string]sortField) ([]sortKe
 		seen[name] = true
 		keys = append(keys, field(desc)...)
 	}
-	keys = append(keys, sortKey{column(table, "id"), keys[len(keys)-1].desc, func(r *core.Record) any { return r.Id }})
+	keys = append(keys, sortKey{column(table, "id"), keys[len(keys)-1].desc})
 	return keys, spec, ""
 }
 
@@ -343,14 +339,50 @@ func decodeCursor(raw *string, query string, n int) ([]any, string) {
 	return c.Values, ""
 }
 
-// page gets one page of records. It gets one more record than limit to know
-// if a next page exists. A load function runs on the page before the sort
-// keys give the cursor values.
-func (s *Server) page(
-	collection string, w *where, keys []sortKey, limit int, query string,
-	load func([]*core.Record) error,
-) ([]*core.Record, nullable.Nullable[string], error) {
-	q := s.app.RecordQuery(collection)
+// page gets one page of records with one more row than limit for the next
+// page check. The cursor values come from the query that sorts the page. A
+// write during the request then cannot move the cursor.
+func (s *Server) page(collection string, w *where, keys []sortKey, limit int, query string) ([]*core.Record, nullable.Nullable[string], error) {
+	rows, err := s.sortValues(collection, w, keys, limit+1)
+	if err != nil {
+		return nil, nil, err
+	}
+	more := len(rows) > limit
+	if more {
+		rows = rows[:limit]
+	}
+	ids := make([]string, len(rows))
+	for i, row := range rows {
+		id, ok := row[len(row)-1].(string)
+		if !ok {
+			return nil, nil, fmt.Errorf("the id sort value %v is not a string", row[len(row)-1])
+		}
+		ids[i] = id
+	}
+	records, err := s.recordsInOrder(collection, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	next := nullable.NewNullNullable[string]()
+	if more {
+		cursor, err := encodeCursor(query, rows[limit-1])
+		if err != nil {
+			return nil, nil, err
+		}
+		next = nullable.NewNullableWithValue(cursor)
+	}
+	return records, next, nil
+}
+
+// sortValues gets the values of the sort keys for at most n rows in the sort
+// order. The last value of a row is the record ID.
+func (s *Server) sortValues(collection string, w *where, keys []sortKey, n int) ([][]any, error) {
+	columns := make([]string, len(keys))
+	for i, k := range keys {
+		columns[i] = fmt.Sprintf("%s AS [[k%d]]", k.expr, i)
+	}
+	q := s.app.DB().Select(columns...).From(collection)
 	for _, j := range w.joins {
 		if j.inner {
 			q.InnerJoin(j.table, j.on)
@@ -370,35 +402,49 @@ func (s *Server) page(
 		}
 		q.AndOrderBy(k.expr + dir)
 	}
-	q.Limit(int64(limit + 1))
+	q.Limit(int64(n))
 
-	var records []*core.Record
-	if err := q.All(&records); err != nil {
-		return nil, nil, err
+	rows, err := q.Rows()
+	if err != nil {
+		return nil, err
 	}
-	more := len(records) > limit
-	if more {
-		records = records[:limit]
-	}
-	if load != nil {
-		if err := load(records); err != nil {
-			return nil, nil, err
-		}
-	}
-	next := nullable.NewNullNullable[string]()
-	if more {
-		last := records[limit-1]
+	defer rows.Close()
+	var out [][]any
+	for rows.Next() {
 		values := make([]any, len(keys))
-		for i, k := range keys {
-			values[i] = k.value(last)
+		ptrs := make([]any, len(keys))
+		for i := range values {
+			ptrs[i] = &values[i]
 		}
-		cursor, err := encodeCursor(query, values)
-		if err != nil {
-			return nil, nil, err
+		if err := rows.Scan(ptrs...); err != nil {
+			return nil, err
 		}
-		next = nullable.NewNullableWithValue(cursor)
+		out = append(out, values)
 	}
-	return records, next, nil
+	return out, rows.Err()
+}
+
+// recordsInOrder gets the records in the order of ids. A record that is
+// deleted after the sort query is not in the result.
+func (s *Server) recordsInOrder(collection string, ids []string) ([]*core.Record, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	found, err := s.app.FindRecordsByIds(collection, ids)
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[string]*core.Record, len(found))
+	for _, r := range found {
+		byID[r.Id] = r
+	}
+	out := make([]*core.Record, 0, len(ids))
+	for _, id := range ids {
+		if r, ok := byID[id]; ok {
+			out = append(out, r)
+		}
+	}
+	return out, nil
 }
 
 func (s *Server) creators(records ...*core.Record) (map[string]*core.Record, error) {

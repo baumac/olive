@@ -25,7 +25,7 @@ export interface Creator {
     id: string;
     /**
      * A name with at least one character that is not ASCII whitespace.
-     * Control characters, direction marks and overrides, and zero-width spaces cause `422`.
+     * Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
      * 
      */
     name: string;

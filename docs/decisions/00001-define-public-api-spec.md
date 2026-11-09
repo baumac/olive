@@ -341,8 +341,9 @@ Sign up and sign in ignore the `Authorization` header.
 
 ## Text that hides characters
 
-Control characters, direction marks and overrides (such as U+202E), and zero-width spaces cause `422` in `name` and `title`.
-A name with them can look like the name of another record.
+Control characters, direction marks and overrides (such as U+202E and U+061C), and invisible characters cause `422` in `name` and `title`.
+The invisible characters are the zero-width spaces, the soft hyphen, the invisible operators, and the Hangul fillers.
+A name with them can look like the name of another record, or show as blank space.
 `description` and `feedback` allow line breaks and tabs, but not the other characters.
 The zero-width joiners stay allowed, because emoji and some scripts use them.
 

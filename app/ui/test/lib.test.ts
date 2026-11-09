@@ -48,7 +48,11 @@ describe('validation', () => {
   it('refuses hidden characters like the API', () => {
     expect(checkName('Luigi\u202es', 'empty')).toContain('hidden')
     expect(checkName('Luigi\u200b', 'empty')).toContain('hidden')
+    expect(checkName('Luigi\u061cs', 'empty')).toContain('hidden')
+    expect(checkName('Piz\u00adza', 'empty')).toContain('hidden')
+    expect(checkName('\u3164\u3164', 'empty')).toContain('hidden')
     expect(checkName('Family \u{1F468}\u200d\u{1F469}', 'empty')).toBe('')
+    expect(checkName('\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F} pub', 'empty')).toBe('')
     expect(checkLongText('Line one\nLine two')).toBe('')
     expect(checkLongText('Bad\u2066')).toContain('hidden')
   })

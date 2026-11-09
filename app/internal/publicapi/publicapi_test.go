@@ -15,6 +15,7 @@ import (
 	"github.com/baumac/reviews-app/app/internal/publicapi"
 	"github.com/baumac/reviews-app/app/internal/searchindex"
 	_ "github.com/baumac/reviews-app/app/migrations"
+	"github.com/pocketbase/dbx"
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -364,6 +365,17 @@ func TestRestaurants(t *testing.T) {
 		res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","tags":` + many + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
 		if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
 			t.Errorf("properties %q", got)
+		}
+		numbers := "[" + strings.Repeat("0,", 999) + "0]"
+		res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","tags":` + numbers + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
+		if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
+			t.Errorf("properties %q", got)
+		}
+		for _, name := range []string{"Luigi\u061cs", "Piz\u00adza", "\u3164\u3164", "A\u2063B"} {
+			res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"` + name + `"}`, token: ana.Token}, http.StatusUnprocessableEntity)
+			if got := strings.Join(errorProperties(t, res), ","); got != "name" {
+				t.Errorf("%q: properties %q", name, got)
+			}
 		}
 	})
 
@@ -1049,6 +1061,35 @@ func TestSearch(t *testing.T) {
 		}
 		if got := names("/v1/reviews?search=ole"); got != "" {
 			t.Errorf("old name: %q", got)
+		}
+	})
+
+	t.Run("a failed index change keeps no record", func(t *testing.T) {
+		rename := func(from, to string) {
+			t.Helper()
+			if _, err := e.app.DB().NewQuery("ALTER TABLE " + from + " RENAME TO " + to).Execute(); err != nil {
+				t.Fatal(err)
+			}
+		}
+		rename("restaurants_fts", "restaurants_fts_off")
+		defer rename("restaurants_fts_off", "restaurants_fts")
+
+		e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"Not Indexed"}`, token: ana.Token}, http.StatusInternalServerError)
+		restaurants, err := e.app.FindCollectionByNameOrId("restaurants")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := core.NewRecord(restaurants)
+		r.Set("name", "Not Indexed")
+		if err := e.app.Save(r); err == nil {
+			t.Error("a dashboard save without the index works")
+		}
+		n, err := e.app.CountRecords("restaurants", dbx.HashExp{"name": "Not Indexed"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n != 0 {
+			t.Errorf("%d restaurants without an index row", n)
 		}
 	})
 

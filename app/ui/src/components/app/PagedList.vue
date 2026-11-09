@@ -43,7 +43,10 @@ async function load(cursor: string) {
   <Alert v-if="list.failed.value" variant="destructive">
     <CircleAlertIcon aria-hidden="true" />
     <AlertTitle>{{ title }} did not load</AlertTitle>
-    <AlertDescription class="flex flex-wrap items-center gap-3">
+    <AlertDescription v-if="list.failed.value.detail">
+      {{ list.failed.value.detail }} Change the search or the filters.
+    </AlertDescription>
+    <AlertDescription v-else class="flex flex-wrap items-center gap-3">
       Check your connection and try again.
       <Button variant="outline" size="sm" @click="list.reload">Try again</Button>
     </AlertDescription>

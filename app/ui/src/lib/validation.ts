@@ -11,9 +11,10 @@ function length(v: string): number {
   return Array.from(v).length
 }
 
-// hidden matches the characters that the API refuses: control characters,
-// direction marks and overrides, and zero-width spaces.
-const hidden = /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/
+// hidden has the characters that the API refuses. These are control
+// characters, direction marks and overrides, and invisible characters.
+const hidden =
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u115f\u1160\u180e\u200b\u200e\u200f\u202a-\u202e\u2060-\u206f\u3164\ufeff\uffa0\ufff9-\ufffb]/
 const hiddenText = 'Remove the hidden characters, such as direction marks or zero-width spaces.'
 
 export function checkName(v: string, empty: string): string {

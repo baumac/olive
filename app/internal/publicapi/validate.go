@@ -57,21 +57,21 @@ func hasHiddenChar(v string, lineBreaks bool) bool {
 				return true
 			}
 		case unicode.IsControl(r),
-			r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069,
-			r == 0x200B, r == 0x200E, r == 0x200F, r == 0x2060, r == 0xFEFF:
+			r >= 0x202A && r <= 0x202E, r >= 0x2060 && r <= 0x206F, r >= 0xFFF9 && r <= 0xFFFB,
+			r == 0x00AD, r == 0x061C, r == 0x180E, r == 0x200B, r == 0x200E, r == 0x200F, r == 0xFEFF,
+			// The Hangul fillers show as blank space.
+			r == 0x115F, r == 0x1160, r == 0x3164, r == 0xFFA0:
 			return true
 		}
 	}
 	return false
 }
 
+const maxTags = 20
+
+// checkTags needs the type check of the body schema first. That check
+// refuses more than maxTags items.
 func checkTags(errs *fieldErrors, property string, tags []string) {
-	// The item errors stop here. The response size then does not grow with
-	// the request.
-	if len(tags) > 20 {
-		errs.add(property, "must have at most 20 items")
-		return
-	}
 	seen := make(map[string]bool, len(tags))
 	for i, tag := range tags {
 		item := fmt.Sprintf("%s[%d]", property, i)

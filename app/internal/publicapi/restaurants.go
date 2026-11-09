@@ -13,14 +13,12 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func restaurantSorts(rated *ratedPage, search *searchPage) map[string]sortField {
-	return map[string]sortField{
-		"name":      textSort("restaurants", "name"),
-		"overall":   rated.overallSort,
-		"relevance": search.relevanceSort,
-		"created":   timestampSort("restaurants", "created"),
-		"updated":   timestampSort("restaurants", "updated"),
-	}
+var restaurantSorts = map[string]sortField{
+	"name":      textSort("restaurants", "name"),
+	"overall":   overallSort,
+	"relevance": relevanceSort,
+	"created":   columnSort("restaurants", "created"),
+	"updated":   columnSort("restaurants", "updated"),
 }
 
 // ListRestaurants uses keyset pagination. The cursor has the sort values of
@@ -35,8 +33,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if detail != "" {
 		return bad(detail)
 	}
-	rated := &ratedPage{s: s}
-	search := newSearchPage(s, "restaurants")
+	search := newSearchPage("restaurants")
 	if detail := search.parse(p.Search); detail != "" {
 		return bad(detail)
 	}
@@ -44,7 +41,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if detail != "" {
 		return bad(detail)
 	}
-	keys, sort, detail := parseSort(sortSpec, "restaurants", restaurantSorts(rated, search))
+	keys, sort, detail := parseSort(sortSpec, "restaurants", restaurantSorts)
 	if detail != "" {
 		return bad(detail)
 	}
@@ -82,7 +79,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		w.keyset(keys, after)
 	}
 
-	records, next, err := s.page("restaurants", w, keys, limit, query, loadAll(rated.load, search.load))
+	records, next, err := s.page("restaurants", w, keys, limit, query)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +87,13 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if err != nil {
 		return nil, err
 	}
+	ratings, err := s.ratings(records...)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]reviewsapi.Restaurant, len(records))
 	for i, r := range records {
-		items[i] = toRestaurant(r, users, rated.ratings)
+		items[i] = toRestaurant(r, users, ratings)
 	}
 	return reviewsapi.ListRestaurants200JSONResponse{Items: items, NextCursor: next}, nil
 }

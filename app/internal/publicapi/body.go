@@ -127,8 +127,8 @@ var (
 	}}
 )
 
-// maxBodyBytes is far above the largest valid body, which is about 100 KB.
-// A larger body gets 413 before the decoders use memory for it.
+// maxBodyBytes is far above the largest valid body of about 100 KB. A larger
+// body gets 413 before the decoders use memory for it.
 const maxBodyBytes = 256 << 10
 
 // readBody checks the body against schema. The strict handler then reads
@@ -255,14 +255,19 @@ func checkType(errs *fieldErrors, name string, pr prop, value json.RawMessage) b
 		}
 	case typeTags:
 		var items []json.RawMessage
-		if json.Unmarshal(value, &items) != nil {
+		switch {
+		case json.Unmarshal(value, &items) != nil:
 			errs.add(name, "must be an array")
-			break
-		}
-		for i, item := range items {
-			var s string
-			if json.Unmarshal(item, &s) != nil {
-				errs.add(fmt.Sprintf("%s[%d]", name, i), "must be a string")
+		case len(items) > maxTags:
+			// The item errors stop here. The response size then does not
+			// grow with the request.
+			errs.add(name, fmt.Sprintf("must have at most %d items", maxTags))
+		default:
+			for i, item := range items {
+				var s string
+				if json.Unmarshal(item, &s) != nil {
+					errs.add(fmt.Sprintf("%s[%d]", name, i), "must be a string")
+				}
 			}
 		}
 	}

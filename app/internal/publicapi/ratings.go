@@ -75,37 +75,12 @@ func (r restaurantRating) toAPI() reviewsapi.RestaurantRating {
 	}
 }
 
-// ratedPage has the ratings of one page of restaurants. The overall sort
-// reads the cursor values from it, so the page needs one rating query.
-type ratedPage struct {
-	s       *Server
-	ratings map[string]restaurantRating
-}
-
-func (p *ratedPage) load(records []*core.Record) error {
-	ratings, err := p.s.ratings(records...)
-	p.ratings = ratings
-	return err
-}
-
 // overallSort puts restaurants without reviews last in both directions. Its
 // first key is 1 for them and 0 for the others. They have 0 as the second key.
-func (p *ratedPage) overallSort(desc bool) []sortKey {
+func overallSort(desc bool) []sortKey {
 	return []sortKey{
-		{
-			expr: "(" + overallColumn + " IS NULL)",
-			value: func(r *core.Record) any {
-				if _, ok := p.ratings[r.Id]; ok {
-					return 0
-				}
-				return 1
-			},
-		},
-		{
-			expr:  "COALESCE(" + overallColumn + ", 0)",
-			desc:  desc,
-			value: func(r *core.Record) any { return p.ratings[r.Id].Overall },
-		},
+		{"(" + overallColumn + " IS NULL)", false},
+		{"COALESCE(" + overallColumn + ", 0)", desc},
 	}
 }
 

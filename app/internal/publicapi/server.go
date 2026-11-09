@@ -216,7 +216,7 @@ func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 		st := &state{}
 
 		if rt.limited {
-			if wait := s.limiter.allow(pattern + " " + clientIP(r)); wait > 0 {
+			if wait := s.limiter.allow(pattern + " " + clientKey(clientIP(r))); wait > 0 {
 				w.Header().Set("Retry-After", retryAfter(wait))
 				writeProblem(w, newProblem(http.StatusTooManyRequests, "Too many requests. Try again later."))
 				return

@@ -8,7 +8,6 @@ import (
 
 	"github.com/baumac/reviews-app/app/internal/searchindex"
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/core"
 )
 
 const maxSearchWords = 10
@@ -70,20 +69,16 @@ func countFunc(s string, f func(rune) bool) int {
 	return n
 }
 
-// searchPage has the search of one list request and the scores of one page.
-// The relevance sort reads the cursor values from it.
+// searchPage has the search of one list request.
 type searchPage struct {
-	s       *Server
 	table   string
 	fts     string
 	columns []scoreColumn
 	query   string
-	sorted  bool
-	scores  map[string]int
 }
 
-func newSearchPage(s *Server, table string) *searchPage {
-	p := &searchPage{s: s, table: table, fts: searchindex.Restaurants, columns: restaurantScores}
+func newSearchPage(table string) *searchPage {
+	p := &searchPage{table: table, fts: searchindex.Restaurants, columns: restaurantScores}
 	if table == "reviews" {
 		p.fts, p.columns = searchindex.Reviews, reviewScores
 	}
@@ -128,39 +123,10 @@ func (p *searchPage) filter(w *where) {
 	})
 }
 
-// relevanceSort puts the highest score first. -relevance puts it last.
-func (p *searchPage) relevanceSort(desc bool) []sortKey {
-	p.sorted = true
-	return []sortKey{{"[[search_hits.score]]", !desc, func(r *core.Record) any { return p.scores[r.Id] }}}
-}
-
-func (p *searchPage) load(records []*core.Record) error {
-	if !p.sorted || len(records) == 0 {
-		return nil
-	}
-	ids := make([]any, len(records))
-	for i, r := range records {
-		ids[i] = r.Id
-	}
-	w := newWhere()
-	var rows []struct {
-		ID    string `db:"id"`
-		Score int    `db:"score"`
-	}
-	err := p.s.app.DB().
-		Select("[[id]]", "[[score]]").
-		From(p.hits(w) + " [[search_hits]]").
-		Where(dbx.In("id", ids...)).
-		Bind(w.params).
-		All(&rows)
-	if err != nil {
-		return err
-	}
-	p.scores = make(map[string]int, len(rows))
-	for _, row := range rows {
-		p.scores[row.ID] = row.Score
-	}
-	return nil
+// relevanceSort puts the highest score first. -relevance puts it last. It
+// needs the join of searchPage.filter.
+func relevanceSort(desc bool) []sortKey {
+	return []sortKey{{"[[search_hits.score]]", !desc}}
 }
 
 // sortWithSearch gives the sort to parse. Without a sort, a search sorts by
@@ -174,15 +140,4 @@ func (p *searchPage) sortWithSearch(sort *string) (*string, string) {
 		return nil, "The relevance sort needs a search."
 	}
 	return sort, ""
-}
-
-func loadAll(loads ...func([]*core.Record) error) func([]*core.Record) error {
-	return func(records []*core.Record) error {
-		for _, load := range loads {
-			if err := load(records); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
 }

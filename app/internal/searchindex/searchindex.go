@@ -15,38 +15,51 @@ const (
 	Reviews     = "reviews_fts"
 )
 
-// Register adds record hooks to app. Each hook changes the index in the
-// transaction of the save or delete. Saves in the PocketBase dashboard and
+// Register adds record hooks to app. Each hook runs the save or delete and
+// the index change in one transaction. Saves in the PocketBase dashboard and
 // cascade deletes also run them.
 func Register(app core.App) {
 	app.OnRecordCreateExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
-		if err := e.Next(); err != nil {
-			return err
-		}
-		return Put(e.App, e.Record)
+		return inTransaction(e, func(tx core.App) error {
+			return Put(tx, e.Record)
+		})
 	})
 	app.OnRecordUpdateExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
-		if err := e.Next(); err != nil {
-			return err
-		}
-		if !changed(e.Record, indexedFields(e.Record)...) {
+		return inTransaction(e, func(tx core.App) error {
+			original := e.Record.Original()
+			if !changed(original, e.Record, indexedFields(e.Record)...) {
+				return nil
+			}
+			if err := Put(tx, e.Record); err != nil {
+				return err
+			}
+			// The API keeps the name of a restaurant with reviews. A superuser
+			// can still change it in the dashboard.
+			if tableOf(e.Record) == Restaurants && changed(original, e.Record, "name") {
+				return renameInReviews(tx, e.Record)
+			}
 			return nil
-		}
-		if err := Put(e.App, e.Record); err != nil {
-			return err
-		}
-		// The API keeps the name of a restaurant with reviews. A superuser
-		// can still change it in the dashboard.
-		if tableOf(e.Record) == Restaurants && changed(e.Record, "name") {
-			return renameInReviews(e.App, e.Record)
-		}
-		return nil
+		})
 	})
 	app.OnRecordDeleteExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
+		return inTransaction(e, func(tx core.App) error {
+			return remove(tx, tableOf(e.Record), e.Record.Id)
+		})
+	})
+}
+
+// inTransaction runs the next hooks and then index in one transaction.
+// PocketBase starts no transaction for a save without one. A failed index
+// change then also removes the record change.
+func inTransaction(e *core.RecordEvent, index func(tx core.App) error) error {
+	app := e.App
+	defer func() { e.App = app }()
+	return app.RunInTransaction(func(tx core.App) error {
+		e.App = tx
 		if err := e.Next(); err != nil {
 			return err
 		}
-		return remove(e.App, tableOf(e.Record), e.Record.Id)
+		return index(tx)
 	})
 }
 
@@ -58,9 +71,9 @@ func indexedFields(r *core.Record) []string {
 	return []string{"title", "feedback", "tags", "restaurant"}
 }
 
-func changed(r *core.Record, fields ...string) bool {
+func changed(original, r *core.Record, fields ...string) bool {
 	for _, f := range fields {
-		if r.Original().GetString(f) != r.GetString(f) {
+		if original.GetString(f) != r.GetString(f) {
 			return true
 		}
 	}

@@ -27,14 +27,15 @@ type reviewInput struct {
 }
 
 var reviewSorts = map[string]sortField{
-	"space":       scoreSort("reviews", "space"),
-	"service":     scoreSort("reviews", "service"),
-	"food":        scoreSort("reviews", "food"),
-	"price":       scoreSort("reviews", "price"),
-	"cleanliness": scoreSort("reviews", "cleanliness"),
+	"space":       columnSort("reviews", "space"),
+	"service":     columnSort("reviews", "service"),
+	"food":        columnSort("reviews", "food"),
+	"price":       columnSort("reviews", "price"),
+	"cleanliness": columnSort("reviews", "cleanliness"),
 	"title":       textSort("reviews", "title"),
-	"created":     timestampSort("reviews", "created"),
-	"updated":     timestampSort("reviews", "updated"),
+	"relevance":   relevanceSort,
+	"created":     columnSort("reviews", "created"),
+	"updated":     columnSort("reviews", "updated"),
 }
 
 // ListReviews returns 404 when the restaurant does not exist. It does not
@@ -106,7 +107,7 @@ func (s *Server) reviewPage(
 	if detail != "" {
 		return reviewPageResult{bad: detail}, nil
 	}
-	search := newSearchPage(s, "reviews")
+	search := newSearchPage("reviews")
 	if detail := search.parse(p.Search); detail != "" {
 		return reviewPageResult{bad: detail}, nil
 	}
@@ -114,9 +115,7 @@ func (s *Server) reviewPage(
 	if detail != "" {
 		return reviewPageResult{bad: detail}, nil
 	}
-	sorts := maps.Clone(reviewSorts)
-	sorts["relevance"] = search.relevanceSort
-	keys, sort, detail := parseSort(sortSpec, "reviews", sorts)
+	keys, sort, detail := parseSort(sortSpec, "reviews", reviewSorts)
 	if detail != "" {
 		return reviewPageResult{bad: detail}, nil
 	}
@@ -169,7 +168,7 @@ func (s *Server) reviewPage(
 		known[r.Id] = r.GetString("name")
 	}
 
-	records, next, err := s.page("reviews", w, keys, limit, query, search.load)
+	records, next, err := s.page("reviews", w, keys, limit, query)
 	if err != nil {
 		return reviewPageResult{}, err
 	}

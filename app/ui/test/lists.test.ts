@@ -1,4 +1,5 @@
 import type { FilterDef, Option } from '@/components/ui/filter-bar'
+import { FetchError, ResponseError } from '@reviews/sdk'
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
@@ -40,6 +41,12 @@ describe('useListQuery', () => {
     const q = await queryAt('/r?rating=4')
     expect(q.filters.value).toEqual({ rating: '4' })
     expect(q.active.value).toBe(true)
+  })
+
+  it('keeps at most 20 different tags like the API', async () => {
+    const tags = Array.from({ length: 25 }, (_, i) => `t${i}`)
+    const q = await queryAt(`/r?tags=t0,t0,${tags.join(',')}`)
+    expect(q.filters.value.tags).toEqual(tags.slice(0, 20))
   })
 })
 
@@ -98,5 +105,39 @@ describe('PagedList', () => {
     await flushPromises()
     expect(fetchPage).toHaveBeenLastCalledWith('next')
     expect(document.activeElement?.id).toBe('items-c')
+  })
+
+  it('shows the reason of a 400 response without a retry button', async () => {
+    const problem = { type: 'about:blank', title: 'Bad Request', status: 400, detail: 'The search can have at most 10 words.' }
+    const list = usePagedList<{ id: string }>(async () => {
+      throw new ResponseError(new Response(JSON.stringify(problem), { status: 400, headers: { 'Content-Type': 'application/problem+json' } }))
+    })
+    await list.reload()
+    const w = mount(PagedList, {
+      props: { list, noun: 'items', skeletonClass: '', skeletonCount: 1 },
+      slots: { item: () => h('span'), empty: () => h('p', 'none') },
+    })
+    expect(w.text()).toContain('The search can have at most 10 words.')
+    expect(w.text()).not.toContain('Check your connection')
+    expect(w.find('button').exists()).toBe(false)
+  })
+
+  it('keeps a failed load more of an old list out of the new list', async () => {
+    let failMore!: () => void
+    const list = usePagedList(async (cursor?: string) => {
+      if (cursor) {
+        await new Promise<void>((_, reject) => {
+          failMore = () => reject(new FetchError(new Error('offline')))
+        })
+      }
+      return { items: [{ id: 'a' }], nextCursor: 'next' }
+    })
+    await list.reload()
+    const more = list.loadMore('next')
+    await list.reload()
+    failMore()
+    await more
+    expect(list.moreFailed.value).toBe(false)
+    expect(list.loadingMore.value).toBe(false)
   })
 })
