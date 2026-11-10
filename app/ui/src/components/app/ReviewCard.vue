@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { scoresOf, tagList } from '@/lib/reviews'
 import DateText from './DateText.vue'
+import ReviewPhotos from './ReviewPhotos.vue'
 
 const props = defineProps<{
   review: Review
@@ -35,6 +36,7 @@ const tags = computed(() => tagList(props.review.tags))
         <RatingDisplay v-for="s in scores" :key="s.name" :value="s.value" :max="s.max" :label="s.label" />
       </div>
       <p v-if="review.feedback" class="line-clamp-3 whitespace-pre-line">{{ review.feedback }}</p>
+      <ReviewPhotos :review="review" />
     </CardContent>
     <CardFooter class="text-muted-foreground flex flex-wrap gap-2 text-sm">
       <Badge v-for="tag in tags" :key="tag" variant="secondary">{{ tag }}</Badge>

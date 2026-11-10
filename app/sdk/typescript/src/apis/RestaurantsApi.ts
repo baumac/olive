@@ -19,6 +19,16 @@ import {
     AverageRangeToJSON,
 } from '../models/AverageRange.js';
 import {
+    type Photo,
+    PhotoFromJSON,
+    PhotoToJSON,
+} from '../models/Photo.js';
+import {
+    type PhotoPatch,
+    PhotoPatchFromJSON,
+    PhotoPatchToJSON,
+} from '../models/PhotoPatch.js';
+import {
     type Problem,
     ProblemFromJSON,
     ProblemToJSON,
@@ -74,6 +84,23 @@ import {
     TimestampRangeToJSON,
 } from '../models/TimestampRange.js';
 
+export interface AddReviewPhotoRequest {
+    /**
+     * The ID of the restaurant.
+     */
+    restaurantId: string;
+    /**
+     * The ID of the review.
+     */
+    reviewId: string;
+    /**
+     * The bytes of the image.
+     * The `Content-Type` is `image/jpeg`, `image/png`, or `image/webp`. Other types get `415`.
+     * 
+     */
+    body: Blob;
+}
+
 export interface CreateRestaurantRequest {
     /**
      * The restaurant to create.
@@ -110,6 +137,21 @@ export interface DeleteReviewRequest {
     reviewId: string;
 }
 
+export interface DeleteReviewPhotoRequest {
+    /**
+     * The ID of the restaurant.
+     */
+    restaurantId: string;
+    /**
+     * The ID of the review.
+     */
+    reviewId: string;
+    /**
+     * The ID of the photo.
+     */
+    photoId: string;
+}
+
 export interface GetRestaurantRequest {
     /**
      * The ID of the restaurant.
@@ -126,6 +168,27 @@ export interface GetReviewRequest {
      * The ID of the review.
      */
     reviewId: string;
+}
+
+export interface GetReviewPhotoFileRequest {
+    /**
+     * The ID of the restaurant.
+     */
+    restaurantId: string;
+    /**
+     * The ID of the review.
+     */
+    reviewId: string;
+    /**
+     * The ID of the photo.
+     */
+    photoId: string;
+    /**
+     * The size of the image.
+     * `full` has at most 2048 pixels on its long side. `thumb` has at most 480 pixels on its long side.
+     * 
+     */
+    variant: GetReviewPhotoFileVariantEnum;
 }
 
 export interface ListAllReviewsRequest {
@@ -400,6 +463,25 @@ export interface UpdateReviewRequest {
     reviewPatch: ReviewPatch;
 }
 
+export interface UpdateReviewPhotoRequest {
+    /**
+     * The ID of the restaurant.
+     */
+    restaurantId: string;
+    /**
+     * The ID of the review.
+     */
+    reviewId: string;
+    /**
+     * The ID of the photo.
+     */
+    photoId: string;
+    /**
+     * The photo properties to change.
+     */
+    photoPatch: PhotoPatch;
+}
+
 /**
  * RestaurantsApi - interface
  * 
@@ -407,6 +489,34 @@ export interface UpdateReviewRequest {
  * @interface RestaurantsApiInterface
  */
 export interface RestaurantsApiInterface {
+    /**
+     * Creates request options for addReviewPhoto without sending the request
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {string} reviewId The ID of the review.
+     * @param {Blob} body The bytes of the image. The &#x60;Content-Type&#x60; is &#x60;image/jpeg&#x60;, &#x60;image/png&#x60;, or &#x60;image/webp&#x60;. Other types get &#x60;415&#x60;. 
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    addReviewPhotoRequestOpts(requestParameters: AddReviewPhotoRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateReviewPhoto`. 
+     * @summary Add a photo to a review
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {string} reviewId The ID of the review.
+     * @param {Blob} body The bytes of the image. The &#x60;Content-Type&#x60; is &#x60;image/jpeg&#x60;, &#x60;image/png&#x60;, or &#x60;image/webp&#x60;. Other types get &#x60;415&#x60;. 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    addReviewPhotoRaw(requestParameters: AddReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>>;
+
+    /**
+     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateReviewPhoto`. 
+     * Add a photo to a review
+     */
+    addReviewPhoto(requestParameters: AddReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo>;
+
     /**
      * Creates request options for createRestaurant without sending the request
      * @param {RestaurantCreate} restaurantCreate The restaurant to create.
@@ -507,6 +617,34 @@ export interface RestaurantsApiInterface {
     deleteReview(requestParameters: DeleteReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
 
     /**
+     * Creates request options for deleteReviewPhoto without sending the request
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {string} reviewId The ID of the review.
+     * @param {string} photoId The ID of the photo.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    deleteReviewPhotoRequestOpts(requestParameters: DeleteReviewPhotoRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * Only the creator of the review can delete its photos.
+     * @summary Delete a photo
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {string} reviewId The ID of the review.
+     * @param {string} photoId The ID of the photo.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    deleteReviewPhotoRaw(requestParameters: DeleteReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+
+    /**
+     * Only the creator of the review can delete its photos.
+     * Delete a photo
+     */
+    deleteReviewPhoto(requestParameters: DeleteReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+
+    /**
      * Creates request options for getRestaurant without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @throws {RequiredError}
@@ -553,6 +691,36 @@ export interface RestaurantsApiInterface {
      * Get a review
      */
     getReview(requestParameters: GetReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review>;
+
+    /**
+     * Creates request options for getReviewPhotoFile without sending the request
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {string} reviewId The ID of the review.
+     * @param {string} photoId The ID of the photo.
+     * @param {'full' | 'thumb'} variant The size of the image. &#x60;full&#x60; has at most 2048 pixels on its long side. &#x60;thumb&#x60; has at most 480 pixels on its long side. 
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    getReviewPhotoFileRequestOpts(requestParameters: GetReviewPhotoFileRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * Clients use the `urls` of the photo and do not build this path. The file never changes, so clients can cache it for a long time. The operation supports `HEAD`, `If-None-Match`, and `Range`. 
+     * @summary Get the image file of a photo
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {string} reviewId The ID of the review.
+     * @param {string} photoId The ID of the photo.
+     * @param {'full' | 'thumb'} variant The size of the image. &#x60;full&#x60; has at most 2048 pixels on its long side. &#x60;thumb&#x60; has at most 480 pixels on its long side. 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    getReviewPhotoFileRaw(requestParameters: GetReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.HttpFile>>;
+
+    /**
+     * Clients use the `urls` of the photo and do not build this path. The file never changes, so clients can cache it for a long time. The operation supports `HEAD`, `If-None-Match`, and `Range`. 
+     * Get the image file of a photo
+     */
+    getReviewPhotoFile(requestParameters: GetReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.HttpFile>;
 
     /**
      * Creates request options for listAllReviews without sending the request
@@ -766,12 +934,115 @@ export interface RestaurantsApiInterface {
      */
     updateReview(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review>;
 
+    /**
+     * Creates request options for updateReviewPhoto without sending the request
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {string} reviewId The ID of the review.
+     * @param {string} photoId The ID of the photo.
+     * @param {PhotoPatch} photoPatch The photo properties to change.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    updateReviewPhotoRequestOpts(requestParameters: UpdateReviewPhotoRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * Only the creator of the review can change its photos.
+     * @summary Change the alt text of a photo
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {string} reviewId The ID of the review.
+     * @param {string} photoId The ID of the photo.
+     * @param {PhotoPatch} photoPatch The photo properties to change.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    updateReviewPhotoRaw(requestParameters: UpdateReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>>;
+
+    /**
+     * Only the creator of the review can change its photos.
+     * Change the alt text of a photo
+     */
+    updateReviewPhoto(requestParameters: UpdateReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo>;
+
 }
 
 /**
  * 
  */
 export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInterface {
+
+    /**
+     * Creates request options for addReviewPhoto without sending the request
+     */
+    async addReviewPhotoRequestOpts(requestParameters: AddReviewPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['restaurantId'] == null) {
+            throw new runtime.RequiredError(
+                'restaurantId',
+                'Required parameter "restaurantId" was null or undefined when calling addReviewPhoto().'
+            );
+        }
+
+        if (requestParameters['reviewId'] == null) {
+            throw new runtime.RequiredError(
+                'reviewId',
+                'Required parameter "reviewId" was null or undefined when calling addReviewPhoto().'
+            );
+        }
+
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling addReviewPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'image/*';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/restaurants/{restaurantId}/reviews/{reviewId}/photos`;
+        urlPath = urlPath.replace('{restaurantId}', encodeURIComponent(String(requestParameters['restaurantId'])));
+        urlPath = urlPath.replace('{reviewId}', encodeURIComponent(String(requestParameters['reviewId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['body'] as any,
+        };
+    }
+
+    /**
+     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateReviewPhoto`. 
+     * Add a photo to a review
+     */
+    async addReviewPhotoRaw(requestParameters: AddReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>> {
+        const requestOptions = await this.addReviewPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PhotoFromJSON(jsonValue));
+    }
+
+    /**
+     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateReviewPhoto`. 
+     * Add a photo to a review
+     */
+    async addReviewPhoto(requestParameters: AddReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo> {
+        const response = await this.addReviewPhotoRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for createRestaurant without sending the request
@@ -1010,6 +1281,76 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
+     * Creates request options for deleteReviewPhoto without sending the request
+     */
+    async deleteReviewPhotoRequestOpts(requestParameters: DeleteReviewPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['restaurantId'] == null) {
+            throw new runtime.RequiredError(
+                'restaurantId',
+                'Required parameter "restaurantId" was null or undefined when calling deleteReviewPhoto().'
+            );
+        }
+
+        if (requestParameters['reviewId'] == null) {
+            throw new runtime.RequiredError(
+                'reviewId',
+                'Required parameter "reviewId" was null or undefined when calling deleteReviewPhoto().'
+            );
+        }
+
+        if (requestParameters['photoId'] == null) {
+            throw new runtime.RequiredError(
+                'photoId',
+                'Required parameter "photoId" was null or undefined when calling deleteReviewPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}`;
+        urlPath = urlPath.replace('{restaurantId}', encodeURIComponent(String(requestParameters['restaurantId'])));
+        urlPath = urlPath.replace('{reviewId}', encodeURIComponent(String(requestParameters['reviewId'])));
+        urlPath = urlPath.replace('{photoId}', encodeURIComponent(String(requestParameters['photoId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Only the creator of the review can delete its photos.
+     * Delete a photo
+     */
+    async deleteReviewPhotoRaw(requestParameters: DeleteReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteReviewPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Only the creator of the review can delete its photos.
+     * Delete a photo
+     */
+    async deleteReviewPhoto(requestParameters: DeleteReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deleteReviewPhotoRaw(requestParameters, initOverrides);
+    }
+
+    /**
      * Creates request options for getRestaurant without sending the request
      */
     async getRestaurantRequestOpts(requestParameters: GetRestaurantRequest): Promise<runtime.RequestOpts> {
@@ -1120,6 +1461,85 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      */
     async getReview(requestParameters: GetReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review> {
         const response = await this.getReviewRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getReviewPhotoFile without sending the request
+     */
+    async getReviewPhotoFileRequestOpts(requestParameters: GetReviewPhotoFileRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['restaurantId'] == null) {
+            throw new runtime.RequiredError(
+                'restaurantId',
+                'Required parameter "restaurantId" was null or undefined when calling getReviewPhotoFile().'
+            );
+        }
+
+        if (requestParameters['reviewId'] == null) {
+            throw new runtime.RequiredError(
+                'reviewId',
+                'Required parameter "reviewId" was null or undefined when calling getReviewPhotoFile().'
+            );
+        }
+
+        if (requestParameters['photoId'] == null) {
+            throw new runtime.RequiredError(
+                'photoId',
+                'Required parameter "photoId" was null or undefined when calling getReviewPhotoFile().'
+            );
+        }
+
+        if (requestParameters['variant'] == null) {
+            throw new runtime.RequiredError(
+                'variant',
+                'Required parameter "variant" was null or undefined when calling getReviewPhotoFile().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant}`;
+        urlPath = urlPath.replace('{restaurantId}', encodeURIComponent(String(requestParameters['restaurantId'])));
+        urlPath = urlPath.replace('{reviewId}', encodeURIComponent(String(requestParameters['reviewId'])));
+        urlPath = urlPath.replace('{photoId}', encodeURIComponent(String(requestParameters['photoId'])));
+        urlPath = urlPath.replace('{variant}', encodeURIComponent(String(requestParameters['variant'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Clients use the `urls` of the photo and do not build this path. The file never changes, so clients can cache it for a long time. The operation supports `HEAD`, `If-None-Match`, and `Range`. 
+     * Get the image file of a photo
+     */
+    async getReviewPhotoFileRaw(requestParameters: GetReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.HttpFile>> {
+        const requestOptions = await this.getReviewPhotoFileRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * Clients use the `urls` of the photo and do not build this path. The file never changes, so clients can cache it for a long time. The operation supports `HEAD`, `If-None-Match`, and `Range`. 
+     * Get the image file of a photo
+     */
+    async getReviewPhotoFile(requestParameters: GetReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.HttpFile> {
+        const response = await this.getReviewPhotoFileRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1590,4 +2010,94 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
         return await response.value();
     }
 
+    /**
+     * Creates request options for updateReviewPhoto without sending the request
+     */
+    async updateReviewPhotoRequestOpts(requestParameters: UpdateReviewPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['restaurantId'] == null) {
+            throw new runtime.RequiredError(
+                'restaurantId',
+                'Required parameter "restaurantId" was null or undefined when calling updateReviewPhoto().'
+            );
+        }
+
+        if (requestParameters['reviewId'] == null) {
+            throw new runtime.RequiredError(
+                'reviewId',
+                'Required parameter "reviewId" was null or undefined when calling updateReviewPhoto().'
+            );
+        }
+
+        if (requestParameters['photoId'] == null) {
+            throw new runtime.RequiredError(
+                'photoId',
+                'Required parameter "photoId" was null or undefined when calling updateReviewPhoto().'
+            );
+        }
+
+        if (requestParameters['photoPatch'] == null) {
+            throw new runtime.RequiredError(
+                'photoPatch',
+                'Required parameter "photoPatch" was null or undefined when calling updateReviewPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/merge-patch+json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}`;
+        urlPath = urlPath.replace('{restaurantId}', encodeURIComponent(String(requestParameters['restaurantId'])));
+        urlPath = urlPath.replace('{reviewId}', encodeURIComponent(String(requestParameters['reviewId'])));
+        urlPath = urlPath.replace('{photoId}', encodeURIComponent(String(requestParameters['photoId'])));
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PhotoPatchToJSON(requestParameters['photoPatch']),
+        };
+    }
+
+    /**
+     * Only the creator of the review can change its photos.
+     * Change the alt text of a photo
+     */
+    async updateReviewPhotoRaw(requestParameters: UpdateReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>> {
+        const requestOptions = await this.updateReviewPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PhotoFromJSON(jsonValue));
+    }
+
+    /**
+     * Only the creator of the review can change its photos.
+     * Change the alt text of a photo
+     */
+    async updateReviewPhoto(requestParameters: UpdateReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo> {
+        const response = await this.updateReviewPhotoRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }
+
+/**
+ * @export
+ */
+export const GetReviewPhotoFileVariantEnum = {
+    Full: 'full',
+    Thumb: 'thumb',
+} as const;
+export type GetReviewPhotoFileVariantEnum = typeof GetReviewPhotoFileVariantEnum[keyof typeof GetReviewPhotoFileVariantEnum];

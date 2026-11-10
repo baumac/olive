@@ -1,0 +1,19 @@
+<!-- @dsCard group="Forms" height=380 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>PhotoUpload — preview</title></head>
+<body>
+<div class="rv-stage" style="max-width:420px">
+<div class="rv-field">
+<label class="rv-btn rv-btn-outline" style="width:fit-content"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg>Add photo<input type="file" class="rv-sr" accept="image/jpeg,image/png,image/webp"></label>
+<p class="rv-desc">JPEG, PNG, or WebP of at most 10 MB. Add only photos of food, rooms, and menus.</p>
+</div>
+<div class="rv-col" style="border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-3);gap:var(--space-3)">
+<div class="rv-skeleton" role="img" aria-label="The selected photo" style="width:192px;height:128px"></div>
+<div class="rv-field"><label class="rv-label" for="pu-alt">Description</label><input id="pu-alt" class="rv-input" value="A plate of carbonara"><p class="rv-desc">Optional. Describe the photo for people who cannot see it.</p></div>
+<div class="rv-row"><button class="rv-btn">Upload photo</button><button class="rv-btn rv-btn-outline">Cancel</button></div>
+</div>
+<div class="rv-field"><p class="rv-msg">Select a JPEG, PNG, or WebP image of at most 10 MB.</p></div>
+</div>
+</body>
+</html>

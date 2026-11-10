@@ -22,7 +22,14 @@ Each sub-bullet point contains notes about the incomplete decision.
 ## Low Priority
 
 - Rename cleanliness to hygine
-- Allow adding photos to restaurants and reviews
+- Add a backup plan for `pb_data`
+  - the database and the photo files in `pb_data/storage` need backups
+  - the photos of decision 00008 make `pb_data/storage` much larger than the database
+- Add a cleanup job for photo files without a record
+  - PocketBase deletes the files of a deleted record in the background and does not try again after a failure
+  - a crash after the delete, or a failed upload cleanup, can also leave files in `pb_data/storage`
+  - the job finds the files of `review_photos` that have no record and deletes them
+  - see the Deletion section of decision 00008
 - Add maps feature and add location to to each restaurant
 - Add IOS app
 - Add load tests

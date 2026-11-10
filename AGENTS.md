@@ -56,6 +56,7 @@ Run one browser with `cd tests && npx playwright test --project=chromium`.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
 - Environment variables of the app:
   - `REVIEWS_SIGN_IN_LIMIT` sets the sign up and sign in limit per minute. The end-to-end tests raise it. Their parallel sign ups come from one IP address.
+  - `REVIEWS_PHOTO_UPLOAD_LIMIT` sets the photo uploads of each user per hour. The default is 30. See decision 00008.
   - `REVIEWS_VALIDATE_RESPONSES=false` turns off the spec validation of responses. See decision 00007.
   - `REVIEWS_VALIDATE_REQUESTS=false` turns off the spec validation of parameters and body values. Invalid values can then be saved. Turn it off only with the response validation, or responses with these values get 500.
 
@@ -77,9 +78,10 @@ Run one browser with `cd tests && npx playwright test --project=chromium`.
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.
   - **`app/main.go`** - the PocketBase app
-  - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, and `reviews` collections
+  - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, and `review_photos` collections
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
     - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00007.
+    - It checks, changes, and serves the photos of reviews. See decision 00008.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
   - Calls the Public API only through `@reviews/sdk`
@@ -89,6 +91,7 @@ Run one browser with `cd tests && npx playwright test --project=chromium`.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name
+  - **`tests/photos`** - the small test images of the photo tests
 
 ## Code Comment Style (Mandatory)
 

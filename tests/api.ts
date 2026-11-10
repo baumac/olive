@@ -1,6 +1,8 @@
-import type { AuthToken, Restaurant, RestaurantCreate, Review, ReviewCreate } from '@reviews/sdk'
+import type { AuthToken, Photo, Restaurant, RestaurantCreate, Review, ReviewCreate } from '@reviews/sdk'
 import { Configuration, RestaurantsApi, UsersApi } from '@reviews/sdk'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 // WithTagArray changes the tags of an SDK body from a Set to an array.
 type WithTagArray<T> = T extends unknown ? Omit<T, 'tags'> & { tags?: string[] } : never
@@ -41,6 +43,26 @@ export class TestApi {
     const reviewCreate = { ...rest, tags: tags ? new Set(tags) : undefined } as ReviewCreate
     return new RestaurantsApi(this.config(user.auth.token)).createReview({ restaurantId, reviewCreate })
   }
+
+  deleteReview(user: TestUser, review: Review): Promise<void> {
+    return new RestaurantsApi(this.config(user.auth.token)).deleteReview({ restaurantId: review.restaurant, reviewId: review.id })
+  }
+
+  // addPhoto sends a file of tests/photos with its own content type.
+  async addPhoto(user: TestUser, review: Review, name: string, alt?: string): Promise<Photo> {
+    const type = name.endsWith('.png') ? 'image/png' : 'image/jpeg'
+    const api = new RestaurantsApi(this.config(user.auth.token))
+    const ids = { restaurantId: review.restaurant, reviewId: review.id }
+    const photo = await api.addReviewPhoto({ ...ids, body: new Blob([new Uint8Array(photoFile(name))], { type }) }, async ({ init }) => ({
+      headers: { ...(init.headers as Record<string, string>), 'Content-Type': type },
+    }))
+    return alt ? api.updateReviewPhoto({ ...ids, photoId: photo.id, photoPatch: { alt } }) : photo
+  }
+}
+
+// photoFile reads a test image from tests/photos.
+export function photoFile(name: string): Buffer {
+  return readFileSync(fileURLToPath(new URL(`./photos/${name}`, import.meta.url)))
 }
 
 // uniqueTag gives a tag that only this test uses. A tag filter then shows

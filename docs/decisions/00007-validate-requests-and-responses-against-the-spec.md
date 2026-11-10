@@ -67,7 +67,7 @@ Tag:
 
 - `app/sdk/go/oapi-codegen.yaml` has `embedded-spec: true`. The spec is outside the Go module of the app, so `go:embed` cannot read it.
 - `app/internal/publicapi/openapi.go` loads the spec one time in `New`
-- the spec also gives the token check and the rate limit of each operation. The `security` of the operation gives the token check. The `x-rate-limited` extension gives the rate limit. The app has no second table of operations.
+- the spec also gives the token check and the rate limit of each operation. The `security` of the operation gives the token check. The `x-rate-limit` extension gives the rate limit. It was `x-rate-limited` before decision 00008. The app has no second table of operations.
 - the ServeMux pattern gives the path parameters. The app then does not need a second router.
 - the validation options:
   - `MultiError` gives all errors of a request in one response

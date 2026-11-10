@@ -23,7 +23,18 @@ type operation struct {
 	route   *routers.Route
 	query   map[string]bool
 	auth    authMode
-	limited bool
+	limit   *rateLimit
+	// fileBody and fileResponse mark binary bodies. The JSON checks of the
+	// body and the response body check skip them.
+	fileBody     bool
+	fileResponse bool
+}
+
+// rateLimit is the x-rate-limit extension of an operation. The key "ip"
+// counts each client network. The key "user" counts each user.
+type rateLimit struct {
+	key  string
+	name string
 }
 
 type authMode int
@@ -49,17 +60,59 @@ func loadSpec() (*apiSpec, error) {
 	for path, item := range doc.Paths.Map() {
 		for method, op := range item.Operations() {
 			pattern := method + " " + basePath + path
-			limited, _ := op.Extensions["x-rate-limited"].(bool)
+			limit, err := rateLimitOf(op)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", pattern, err)
+			}
+			if limit != nil && limit.key == "user" && authOf(doc, op) != authRequired {
+				return nil, fmt.Errorf("%s: x-rate-limit with the key user needs a bearer token", pattern)
+			}
 			s.operations[pattern] = &operation{
-				pattern: pattern,
-				route:   &routers.Route{Spec: doc, Path: path, PathItem: item, Method: method, Operation: op},
-				query:   queryNames(item, op),
-				auth:    authOf(doc, op),
-				limited: limited,
+				pattern:      pattern,
+				route:        &routers.Route{Spec: doc, Path: path, PathItem: item, Method: method, Operation: op},
+				query:        queryNames(item, op),
+				auth:         authOf(doc, op),
+				limit:        limit,
+				fileBody:     op.RequestBody != nil && !hasJSON(op.RequestBody.Value.Content),
+				fileResponse: hasFileResponse(op),
 			}
 		}
 	}
 	return s, nil
+}
+
+func rateLimitOf(op *openapi3.Operation) (*rateLimit, error) {
+	raw, ok := op.Extensions["x-rate-limit"]
+	if !ok {
+		return nil, nil
+	}
+	m, _ := raw.(map[string]any)
+	key, _ := m["key"].(string)
+	name, _ := m["name"].(string)
+	if (key != "ip" && key != "user") || !slices.Contains(rateLimitNames, name) {
+		return nil, fmt.Errorf("x-rate-limit %v is not valid", raw)
+	}
+	return &rateLimit{key: key, name: name}, nil
+}
+
+func hasJSON(content openapi3.Content) bool {
+	for mediaType := range content {
+		if strings.HasPrefix(mediaType, "application/") && strings.HasSuffix(mediaType, "json") {
+			return true
+		}
+	}
+	return false
+}
+
+// hasFileResponse is true when a success response has a body that is not
+// JSON.
+func hasFileResponse(op *openapi3.Operation) bool {
+	for status, ref := range op.Responses.Map() {
+		if strings.HasPrefix(status, "2") && len(ref.Value.Content) > 0 && !hasJSON(ref.Value.Content) {
+			return true
+		}
+	}
+	return false
 }
 
 // authOf reads the security requirements of op. An empty requirement allows
@@ -136,6 +189,14 @@ var responseOptions = &openapi3filter.Options{
 		openapi3.WithStringFormatValidator("email", openapi3.NewCallbackValidator(func(string) error { return nil })),
 	},
 }
+
+// fileResponseOptions skip the body of a file response. The image bytes
+// then do not need a buffer.
+var fileResponseOptions = func() *openapi3filter.Options {
+	opts := *responseOptions
+	opts.ExcludeResponseBody = true
+	return &opts
+}()
 
 // responseProblem names the place and the rule of each response error. It
 // leaves out the values. The log then does not get tokens or emails.
@@ -221,6 +282,11 @@ func (op *operation) checkQuery(r *http.Request) string {
 func (op *operation) checkParams(ctx context.Context, in *openapi3filter.RequestValidationInput) string {
 	params := *in
 	params.Options = paramOptions
+	// The security check of kin-openapi reads the full body, also with
+	// ExcludeRequestBody. The parameters do not need the body.
+	req := *in.Request
+	req.Body = http.NoBody
+	params.Request = &req
 	err := openapi3filter.ValidateRequest(ctx, &params)
 	if err == nil {
 		return ""
@@ -255,4 +321,15 @@ func checkResponse(ctx context.Context, in *openapi3filter.RequestValidationInpu
 	}
 	res.SetBodyBytes(body)
 	return openapi3filter.ValidateResponse(ctx, res)
+}
+
+// checkResponseHeaders validates the status and the headers of a file
+// response.
+func checkResponseHeaders(ctx context.Context, in *openapi3filter.RequestValidationInput, status int, header http.Header) error {
+	return openapi3filter.ValidateResponse(ctx, &openapi3filter.ResponseValidationInput{
+		RequestValidationInput: in,
+		Status:                 status,
+		Header:                 header,
+		Options:                fileResponseOptions,
+	})
 }

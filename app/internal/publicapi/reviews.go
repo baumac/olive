@@ -166,9 +166,13 @@ func (s *Server) reviewPage(
 	if err != nil {
 		return reviewPageResult{}, err
 	}
+	photos, err := s.reviewPhotos(records...)
+	if err != nil {
+		return reviewPageResult{}, err
+	}
 	items := make([]reviewsapi.Review, len(records))
 	for i, r := range records {
-		if items[i], err = toReview(r, users[r.GetString("creator")], names[r.GetString("restaurant")]); err != nil {
+		if items[i], err = toReview(r, users[r.GetString("creator")], names[r.GetString("restaurant")], photos[r.Id]); err != nil {
 			return reviewPageResult{}, err
 		}
 	}
@@ -246,7 +250,7 @@ func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRe
 		return response, nil
 	}
 
-	out, err := toReview(saved, st.user, restaurant.GetString("name"))
+	out, err := toReview(saved, st.user, restaurant.GetString("name"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +274,11 @@ func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObj
 	if err != nil {
 		return nil, err
 	}
-	out, err := toReview(r, users[r.GetString("creator")], restaurant.GetString("name"))
+	photos, err := s.reviewPhotos(r)
+	if err != nil {
+		return nil, err
+	}
+	out, err := toReview(r, users[r.GetString("creator")], restaurant.GetString("name"), photos[r.Id])
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +321,11 @@ func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRe
 		return response, nil
 	}
 
-	out, err := toReview(saved, st.user, restaurant.GetString("name"))
+	photos, err := s.reviewPhotos(saved)
+	if err != nil {
+		return nil, err
+	}
+	out, err := toReview(saved, st.user, restaurant.GetString("name"), photos[saved.Id])
 	if err != nil {
 		return nil, err
 	}
@@ -409,19 +421,24 @@ func (in reviewInput) apply(r *core.Record) bool {
 	return ch.changed
 }
 
-func toReview(r *core.Record, creator *core.Record, restaurantName string) (reviewsapi.Review, error) {
+// toReview gives an empty photos array for nil photos. The spec requires
+// the array.
+func toReview(r *core.Record, creator *core.Record, restaurantName string, photos []reviewsapi.Photo) (reviewsapi.Review, error) {
 	if creator == nil {
 		return reviewsapi.Review{}, fmt.Errorf("review %s has no creator", r.Id)
 	}
 	if restaurantName == "" {
 		return reviewsapi.Review{}, fmt.Errorf("review %s has no restaurant", r.Id)
 	}
+	if photos == nil {
+		photos = []reviewsapi.Photo{}
+	}
 	return reviewsapi.Review{
 		Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName,
 		Space: r.GetInt("space"), Service: r.GetInt("service"), Food: r.GetInt("food"), Price: r.GetInt("price"),
 		Cleanliness: r.GetInt("cleanliness"),
 		Title:       r.GetString("title"), Feedback: optionalText(r, "feedback"), Tags: tagsOf(r),
-		Creator: toCreator(creator), Created: r.GetDateTime("created").String(), Updated: r.GetDateTime("updated").String(),
+		Creator: toCreator(creator), Photos: photos, Created: r.GetDateTime("created").String(), Updated: r.GetDateTime("updated").String(),
 	}, nil
 }
 

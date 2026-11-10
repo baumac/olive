@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -23,6 +24,28 @@ import (
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for PhotoVariant.
+const (
+	Full  PhotoVariant = "full"
+	Thumb PhotoVariant = "thumb"
+)
+
+// Valid indicates whether the value is a known member of the PhotoVariant enum.
+func (e PhotoVariant) Valid() bool {
+	switch e {
+	case Full:
+		return true
+	case Thumb:
+		return true
+	default:
+		return false
+	}
+}
+
+// AltText A text with at least one character that is not ASCII whitespace.
+// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+type AltText = string
 
 // AuthToken An auth token and the user that it belongs to.
 //
@@ -117,6 +140,12 @@ type Email = openapi_types.Email
 // FoodScore Presentation, flavor, ingredient quality, and culinary execution.
 type FoodScore = Score
 
+// ImageFile The bytes of a JPEG image.
+type ImageFile = openapi_types.File
+
+// ImageUpload The bytes of a JPEG, PNG, or WebP image.
+type ImageUpload = openapi_types.File
+
 // LongText A text of at most 10,000 characters.
 // Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
 type LongText = string
@@ -134,6 +163,49 @@ type NextCursor = string
 //
 // Examples: correct-horse-battery
 type Password = string
+
+// Photo A photo of a review. The image of a photo never changes.
+//
+// Examples: {"alt":"A plate of carbonara on a wooden table","created":"2024-11-06 19:04:30.811Z","height":2048,"id":"p4h7j1l5n9q2s6v","urls":{"full":"/v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full","thumb":"/v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb"},"width":1536}
+type Photo struct {
+	// Alt A text that describes the photo for screen readers. It is `null` without a description.
+	Alt nullable.Nullable[AltText] `json:"alt"`
+
+	// Created A UTC timestamp with millisecond precision. This format is not RFC 3339.
+	//
+	// Examples: 2024-11-04 01:26:55.002Z
+	Created Timestamp `json:"created"`
+
+	// Height The height of the `full` image in pixels.
+	Height int `json:"height"`
+
+	// Id A record ID of 15 characters.
+	//
+	// Examples: k3x9m2p7q1w8z4a
+	Id RecordId `json:"id"`
+
+	// Urls The paths of the image files on the origin of the API. Clients use them as given.
+	Urls PhotoUrls `json:"urls"`
+
+	// Width The width of the `full` image in pixels.
+	Width int `json:"width"`
+}
+
+// PhotoPatch A JSON Merge Patch. `null` clears the alt text. An empty patch changes nothing.
+//
+// Examples: {"alt":"A plate of carbonara on a wooden table"}
+type PhotoPatch struct {
+	Alt nullable.Nullable[AltText] `json:"alt,omitempty"`
+}
+
+// PhotoUrls The paths of the image files on the origin of the API. Clients use them as given.
+type PhotoUrls struct {
+	// Full The image with at most 2048 pixels on its long side.
+	Full string `json:"full"`
+
+	// Thumb The image with at most 480 pixels on its long side.
+	Thumb string `json:"thumb"`
+}
 
 // PriceScore Value for money, and whether the final bill matches the quality provided.
 type PriceScore = Score
@@ -276,7 +348,7 @@ type RestaurantRating struct {
 
 // Review A review of a restaurant. It scores the space, service, food, price, and cleanliness.
 //
-// Examples: {"cleanliness":8,"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"feedback":"Friendly staff and great pasta","food":8,"id":"r1b8c5e2g9i6k3m","price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"tags":["date-night"],"title":"Great food, a bit expensive","updated":"2024-11-07 09:12:00.000Z"}
+// Examples: {"cleanliness":8,"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"feedback":"Friendly staff and great pasta","food":8,"id":"r1b8c5e2g9i6k3m","photos":[{"alt":"A plate of carbonara on a wooden table","created":"2024-11-06 19:04:30.811Z","height":2048,"id":"p4h7j1l5n9q2s6v","urls":{"full":"/v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full","thumb":"/v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb"},"width":1536}],"price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"tags":["date-night"],"title":"Great food, a bit expensive","updated":"2024-11-07 09:12:00.000Z"}
 type Review struct {
 	// Cleanliness Cleanliness of the dining room, the tableware, and the restrooms.
 	Cleanliness CleanlinessScore `json:"cleanliness"`
@@ -300,6 +372,9 @@ type Review struct {
 	//
 	// Examples: k3x9m2p7q1w8z4a
 	Id RecordId `json:"id"`
+
+	// Photos The photos of the review, the oldest first.
+	Photos []Photo `json:"photos"`
 
 	// Price Value for money, and whether the final bill matches the quality provided.
 	Price PriceScore `json:"price"`
@@ -369,7 +444,7 @@ type ReviewCreate struct {
 
 // ReviewList A page of reviews.
 //
-// Examples: {"items":[{"cleanliness":8,"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"food":10,"id":"r7d4f0h2j9l5s3v","price":9,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":10,"space":8,"title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"},{"cleanliness":8,"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"food":8,"id":"r1b8c5e2g9i6k3m","price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"title":"Great food, a bit expensive","updated":"2024-11-06 19:02:11.120Z"}],"next_cursor":null}
+// Examples: {"items":[{"cleanliness":8,"created":"2024-11-04 01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"food":10,"id":"r7d4f0h2j9l5s3v","photos":[],"price":9,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":10,"space":8,"title":"Best carbonara in town","updated":"2024-11-05 09:12:00.000Z"},{"cleanliness":8,"created":"2024-11-06 19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"food":8,"id":"r1b8c5e2g9i6k3m","photos":[],"price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"title":"Great food, a bit expensive","updated":"2024-11-06 19:02:11.120Z"}],"next_cursor":null}
 type ReviewList struct {
 	Items []Review `json:"items"`
 
@@ -562,6 +637,14 @@ type Limit = int
 // OverallFilter Comparisons for an average score. All comparisons must match.
 type OverallFilter = AverageRange
 
+// PhotoId A record ID of 15 characters.
+//
+// Examples: k3x9m2p7q1w8z4a
+type PhotoId = RecordId
+
+// PhotoVariant defines model for PhotoVariant.
+type PhotoVariant string
+
 // PriceFilter Comparisons for a score. All comparisons must match.
 type PriceFilter = ScoreRange
 
@@ -623,6 +706,11 @@ type BadRequest = Problem
 // Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type Conflict = Problem
 
+// ContentTooLarge An RFC 9457 Problem Details object.
+//
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+type ContentTooLarge = Problem
+
 // Forbidden An RFC 9457 Problem Details object.
 //
 // Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
@@ -632,6 +720,11 @@ type Forbidden = Problem
 //
 // Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type InvalidCredentials = Problem
+
+// InvalidImage An RFC 9457 Problem Details object.
+//
+// Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
+type InvalidImage = Problem
 
 // NotFound An RFC 9457 Problem Details object.
 //
@@ -861,6 +954,9 @@ type CreateReviewJSONRequestBody = ReviewCreate
 // UpdateReviewApplicationMergePatchPlusJSONRequestBody defines body for UpdateReview for application/merge-patch+json ContentType.
 type UpdateReviewApplicationMergePatchPlusJSONRequestBody = ReviewPatch
 
+// UpdateReviewPhotoApplicationMergePatchPlusJSONRequestBody defines body for UpdateReviewPhoto for application/merge-patch+json ContentType.
+type UpdateReviewPhotoApplicationMergePatchPlusJSONRequestBody = PhotoPatch
+
 // SignUpJSONRequestBody defines body for SignUp for application/json ContentType.
 type SignUpJSONRequestBody = UserCreate
 
@@ -899,6 +995,18 @@ type ServerInterface interface {
 	// UpdateReview Update a review
 	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId})
 	UpdateReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
+	// AddReviewPhoto Add a photo to a review
+	// (POST /restaurants/{restaurantId}/reviews/{reviewId}/photos)
+	AddReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
+	// DeleteReviewPhoto Delete a photo
+	// (DELETE /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId})
+	DeleteReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId)
+	// UpdateReviewPhoto Change the alt text of a photo
+	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId})
+	UpdateReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId)
+	// GetReviewPhotoFile Get the image file of a photo
+	// (GET /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant})
+	GetReviewPhotoFile(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant)
 	// ListAllReviews List the reviews of all restaurants
 	// (GET /reviews)
 	ListAllReviews(w http.ResponseWriter, r *http.Request, params ListAllReviewsParams)
@@ -1558,6 +1666,182 @@ func (siw *ServerInterfaceWrapper) UpdateReview(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// AddReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) AddReviewPhoto(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "restaurantId" -------------
+	var restaurantId RestaurantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "restaurantId", r.PathValue("restaurantId"), &restaurantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurantId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddReviewPhoto(w, r, restaurantId, reviewId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) DeleteReviewPhoto(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "restaurantId" -------------
+	var restaurantId RestaurantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "restaurantId", r.PathValue("restaurantId"), &restaurantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurantId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "photoId" -------------
+	var photoId PhotoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "photoId", r.PathValue("photoId"), &photoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "photoId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteReviewPhoto(w, r, restaurantId, reviewId, photoId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) UpdateReviewPhoto(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "restaurantId" -------------
+	var restaurantId RestaurantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "restaurantId", r.PathValue("restaurantId"), &restaurantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurantId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "photoId" -------------
+	var photoId PhotoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "photoId", r.PathValue("photoId"), &photoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "photoId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateReviewPhoto(w, r, restaurantId, reviewId, photoId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReviewPhotoFile operation middleware
+func (siw *ServerInterfaceWrapper) GetReviewPhotoFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "restaurantId" -------------
+	var restaurantId RestaurantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "restaurantId", r.PathValue("restaurantId"), &restaurantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurantId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "photoId" -------------
+	var photoId PhotoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "photoId", r.PathValue("photoId"), &photoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "photoId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variant" -------------
+	var variant PhotoVariant
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variant", r.PathValue("variant"), &variant, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReviewPhotoFile(w, r, restaurantId, reviewId, photoId, variant)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAllReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListAllReviews(w http.ResponseWriter, r *http.Request) {
 
@@ -1988,6 +2272,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.DeleteReview)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.GetReview)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.UpdateReview)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos", wrapper.AddReviewPhoto)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}", wrapper.DeleteReviewPhoto)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}", wrapper.UpdateReviewPhoto)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant}", wrapper.GetReviewPhotoFile)
 
 	return m
 }
@@ -1995,6 +2283,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 type BadRequestApplicationProblemPlusJSONResponse Problem
 
 type ConflictApplicationProblemPlusJSONResponse Problem
+
+type ContentTooLargeApplicationProblemPlusJSONResponse Problem
 
 type ForbiddenApplicationProblemPlusJSONResponse Problem
 
@@ -2006,6 +2296,8 @@ type InvalidCredentialsApplicationProblemPlusJSONResponse struct {
 
 	Headers InvalidCredentialsResponseHeaders
 }
+
+type InvalidImageApplicationProblemPlusJSONResponse Problem
 
 type NotFoundApplicationProblemPlusJSONResponse Problem
 
@@ -3136,6 +3428,608 @@ func (response UpdateReviewdefaultApplicationProblemPlusJSONResponse) VisitUpdat
 	return err
 }
 
+type AddReviewPhotoRequestObject struct {
+	RestaurantId RestaurantId `json:"restaurantId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	ContentType  string
+	Body         io.Reader
+}
+
+type AddReviewPhotoResponseObject interface {
+	VisitAddReviewPhotoResponse(w http.ResponseWriter) error
+}
+
+type AddReviewPhoto201ResponseHeaders struct {
+	Location *string
+}
+
+type AddReviewPhoto201JSONResponse struct {
+	Body    Photo
+	Headers AddReviewPhoto201ResponseHeaders
+}
+
+func (response AddReviewPhoto201JSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.Location != nil {
+		w.Header().Set("Location", fmt.Sprint(*response.Headers.Location))
+	}
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto400ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto401ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto403ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto404ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto409ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto413ApplicationProblemPlusJSONResponse struct {
+	ContentTooLargeApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto413ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto415ApplicationProblemPlusJSONResponse struct {
+	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto415ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto422ApplicationProblemPlusJSONResponse struct {
+	InvalidImageApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto422ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhoto429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response AddReviewPhoto429ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AddReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReviewPhotoRequestObject struct {
+	RestaurantId RestaurantId `json:"restaurantId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	PhotoId      PhotoId      `json:"photoId"`
+}
+
+type DeleteReviewPhotoResponseObject interface {
+	VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error
+}
+
+type DeleteReviewPhoto204Response struct {
+}
+
+func (response DeleteReviewPhoto204Response) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteReviewPhoto400ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteReviewPhoto401ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteReviewPhoto403ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteReviewPhoto404ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReviewPhotoRequestObject struct {
+	RestaurantId RestaurantId `json:"restaurantId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	PhotoId      PhotoId      `json:"photoId"`
+	Body         *UpdateReviewPhotoApplicationMergePatchPlusJSONRequestBody
+}
+
+type UpdateReviewPhotoResponseObject interface {
+	VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error
+}
+
+type UpdateReviewPhoto200JSONResponse Photo
+
+func (response UpdateReviewPhoto200JSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateReviewPhoto400ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateReviewPhoto401ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateReviewPhoto403ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateReviewPhoto404ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReviewPhoto415ApplicationProblemPlusJSONResponse struct {
+	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateReviewPhoto415ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReviewPhoto422ApplicationProblemPlusJSONResponse struct {
+	UnprocessableContentApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateReviewPhoto422ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetReviewPhotoFileRequestObject struct {
+	RestaurantId RestaurantId `json:"restaurantId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	PhotoId      PhotoId      `json:"photoId"`
+	Variant      PhotoVariant `json:"variant"`
+}
+
+type GetReviewPhotoFileResponseObject interface {
+	VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error
+}
+
+type GetReviewPhotoFile200ResponseHeaders struct {
+	CacheControl          string
+	ContentSecurityPolicy string
+	ETag                  string
+	XContentTypeOptions   string
+}
+
+type GetReviewPhotoFile200ImagejpegResponse struct {
+	Body          io.Reader
+	Headers       GetReviewPhotoFile200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetReviewPhotoFile200ImagejpegResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.Header().Set("Content-Security-Policy", fmt.Sprint(response.Headers.ContentSecurityPolicy))
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.Header().Set("X-Content-Type-Options", fmt.Sprint(response.Headers.XContentTypeOptions))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetReviewPhotoFile206ResponseHeaders struct {
+	ContentRange string
+	ETag         string
+}
+
+type GetReviewPhotoFile206ImagejpegResponse struct {
+	Body          io.Reader
+	Headers       GetReviewPhotoFile206ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetReviewPhotoFile206ImagejpegResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Content-Range", fmt.Sprint(response.Headers.ContentRange))
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(206)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetReviewPhotoFile304ResponseHeaders struct {
+	ETag string
+}
+
+type GetReviewPhotoFile304Response struct {
+	Headers GetReviewPhotoFile304ResponseHeaders
+}
+
+func (response GetReviewPhotoFile304Response) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(304)
+	return nil
+}
+
+type GetReviewPhotoFile400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response GetReviewPhotoFile400ApplicationProblemPlusJSONResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetReviewPhotoFile401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetReviewPhotoFile401ApplicationProblemPlusJSONResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetReviewPhotoFile404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response GetReviewPhotoFile404ApplicationProblemPlusJSONResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetReviewPhotoFile416ResponseHeaders struct {
+	ContentRange string
+}
+
+type GetReviewPhotoFile416Response struct {
+	Headers GetReviewPhotoFile416ResponseHeaders
+}
+
+func (response GetReviewPhotoFile416Response) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Range", fmt.Sprint(response.Headers.ContentRange))
+	w.WriteHeader(416)
+	return nil
+}
+
+type GetReviewPhotoFiledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetReviewPhotoFiledefaultApplicationProblemPlusJSONResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListAllReviewsRequestObject struct {
 	Params ListAllReviewsParams
 }
@@ -3536,6 +4430,18 @@ type StrictServerInterface interface {
 	// UpdateReview Update a review
 	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId})
 	UpdateReview(ctx context.Context, request UpdateReviewRequestObject) (UpdateReviewResponseObject, error)
+	// AddReviewPhoto Add a photo to a review
+	// (POST /restaurants/{restaurantId}/reviews/{reviewId}/photos)
+	AddReviewPhoto(ctx context.Context, request AddReviewPhotoRequestObject) (AddReviewPhotoResponseObject, error)
+	// DeleteReviewPhoto Delete a photo
+	// (DELETE /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId})
+	DeleteReviewPhoto(ctx context.Context, request DeleteReviewPhotoRequestObject) (DeleteReviewPhotoResponseObject, error)
+	// UpdateReviewPhoto Change the alt text of a photo
+	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId})
+	UpdateReviewPhoto(ctx context.Context, request UpdateReviewPhotoRequestObject) (UpdateReviewPhotoResponseObject, error)
+	// GetReviewPhotoFile Get the image file of a photo
+	// (GET /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant})
+	GetReviewPhotoFile(ctx context.Context, request GetReviewPhotoFileRequestObject) (GetReviewPhotoFileResponseObject, error)
 	// ListAllReviews List the reviews of all restaurants
 	// (GET /reviews)
 	ListAllReviews(ctx context.Context, request ListAllReviewsRequestObject) (ListAllReviewsResponseObject, error)
@@ -3879,6 +4785,128 @@ func (sh *strictHandler) UpdateReview(w http.ResponseWriter, r *http.Request, re
 	}
 }
 
+// AddReviewPhoto operation middleware
+func (sh *strictHandler) AddReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
+	var request AddReviewPhotoRequestObject
+
+	request.RestaurantId = restaurantId
+	request.ReviewId = reviewId
+	request.ContentType = r.Header.Get("Content-Type")
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddReviewPhoto(ctx, request.(AddReviewPhotoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddReviewPhoto")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitAddReviewPhotoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteReviewPhoto operation middleware
+func (sh *strictHandler) DeleteReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId) {
+	var request DeleteReviewPhotoRequestObject
+
+	request.RestaurantId = restaurantId
+	request.ReviewId = reviewId
+	request.PhotoId = photoId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteReviewPhoto(ctx, request.(DeleteReviewPhotoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteReviewPhoto")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitDeleteReviewPhotoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateReviewPhoto operation middleware
+func (sh *strictHandler) UpdateReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId) {
+	var request UpdateReviewPhotoRequestObject
+
+	request.RestaurantId = restaurantId
+	request.ReviewId = reviewId
+	request.PhotoId = photoId
+
+	var body UpdateReviewPhotoApplicationMergePatchPlusJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateReviewPhoto(ctx, request.(UpdateReviewPhotoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateReviewPhoto")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitUpdateReviewPhotoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetReviewPhotoFile operation middleware
+func (sh *strictHandler) GetReviewPhotoFile(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant) {
+	var request GetReviewPhotoFileRequestObject
+
+	request.RestaurantId = restaurantId
+	request.ReviewId = reviewId
+	request.PhotoId = photoId
+	request.Variant = variant
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetReviewPhotoFile(ctx, request.(GetReviewPhotoFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetReviewPhotoFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetReviewPhotoFileResponseObject); ok {
+		if err := validResponse.VisitGetReviewPhotoFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListAllReviews operation middleware
 func (sh *strictHandler) ListAllReviews(w http.ResponseWriter, r *http.Request, params ListAllReviewsParams) {
 	var request ListAllReviewsRequestObject
@@ -3996,120 +5024,146 @@ func (sh *strictHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

@@ -35,12 +35,19 @@ func main() {
 // Production section of AGENTS.md lists the variables.
 func options(getenv func(string) string) (publicapi.Options, error) {
 	opts := publicapi.DefaultOptions
-	if v := getenv("REVIEWS_SIGN_IN_LIMIT"); v != "" {
+	for name, limit := range map[string]*int{
+		"REVIEWS_SIGN_IN_LIMIT":      &opts.SignInLimit,
+		"REVIEWS_PHOTO_UPLOAD_LIMIT": &opts.PhotoUploadLimit,
+	} {
+		v := getenv(name)
+		if v == "" {
+			continue
+		}
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 {
-			return opts, fmt.Errorf("REVIEWS_SIGN_IN_LIMIT must be a positive integer, not %q", v)
+			return opts, fmt.Errorf("%s must be a positive integer, not %q", name, v)
 		}
-		opts.SignInLimit = n
+		*limit = n
 	}
 	for name, skip := range map[string]*bool{
 		"REVIEWS_VALIDATE_REQUESTS":  &opts.SkipRequestValidation,

@@ -56,7 +56,9 @@ app/
     restaurants.go             # the restaurant operations
     reviews.go                 # the review operations
     list.go                    # filters, sorts, and cursors
-    ratelimit.go               # the sign up and sign in rate limit
+    ratelimit.go               # the rate limits of sign up, sign in, and photo uploads
+    photos.go                  # the photo operations of decision 00008
+    photoimage.go              # the checks and the new encode of each photo
     openapi.go                 # the spec validation of decision 00007
     publicapi_test.go          # tests through the PocketBase router
 ```
@@ -71,14 +73,19 @@ app/
 - an `OnServe` hook adds the route `/v1/{path...}` to the PocketBase router
 - the route calls one `http.Handler`. It has the handler that `reviewsapi.HandlerWithOptions` makes on its own `http.ServeMux`.
 - the route puts the client IP from `RequestEvent.RealIP` in the request context. `RealIP` uses the trusted proxy settings of PocketBase.
-- the default PocketBase middlewares, such as the body limit and the panic recovery, also apply to `/v1`
+- the default PocketBase middlewares, such as the panic recovery, also apply to `/v1`
+- the `limitBody` middleware of the `/v1` route replaces the PocketBase body limit. It has the same ID, `pbBodyLimit`.
+  - the PocketBase limit is 32 MB. Its `413` is not Problem Details.
+  - `limitBody` limits each body under `/v1` to 10 MB, the largest photo upload of decision 00008. A larger `Content-Length` gets `413` with Problem Details before the handler.
+  - `readBody` limits each JSON body to 256 KB
+  - a JSON body without `Content-Length` fails at the first read over 256 KB. `readBody` then sends the same `413`.
 - a path under `/v1` that the spec does not define gets `404 Not Found`. A known path with a different method gets `405 Method Not Allowed` with an `Allow` header.
 
 ## Request checks
 
 A `prepare` middleware runs before the generated strict handler. The spec gives the checks of each operation. Decision 00007 explains the spec validation.
 - the `security` of an operation gives the token check. Only `{}` ignores the `Authorization` header. `{}` with `bearerAuth` makes the token optional. `bearerAuth` alone makes it required.
-- `x-rate-limited: true` on an operation turns on the rate limit
+- `x-rate-limit` on an operation turns on a rate limit. Its `key` is `ip` or `user`. Its `name` selects the settings: `sign-in` or `photo-upload`. Decision 00008 added the extension in place of `x-rate-limited: true`.
 - an operation without a spec operation gets `500`. A test checks that each generated operation has a spec operation.
 The checks run in this order:
 
@@ -100,7 +107,8 @@ The checks run in this order:
 - after the handler, `prepare` checks the response against the spec. An invalid response gets `500`.
 - check 7 gives all invalid properties in one response, with one error for each property
 - a JSON number for an integer property must be an integer literal. `5.0` and `1e1` get `422`. JSON Schema allows them, but the strict handler cannot decode them into a Go `int`.
-- a body larger than 256 KB gets `413`. The largest valid body is about 100 KB.
+- a body larger than 256 KB gets `413` with Problem Details. The largest valid body is about 100 KB. `TestBodyLimit` sends bodies of 33 MB with and without `Content-Length`.
+- the parameter check gives kin-openapi a copy of the request without the body. The security check of kin-openapi reads the full body, also with `ExcludeRequestBody`.
 - more than 20 tags give one `tags` error, without an error for each item. The size of the response then does not grow with the request.
 - the strict handler decodes the body after `prepare`. Its decode errors therefore do not occur for client input.
 - the decoders after `prepare` read the first copy of a repeated property. `prepare` therefore rejects repeated properties.
@@ -121,6 +129,7 @@ The checks run in this order:
 ## Rate limit
 
 - sign up and sign in each allow 10 requests per IP address per minute
+- a photo upload allows 30 requests per user per hour. Decision 00008 has the details. The token check runs before it, because the key is the user.
 - an IPv6 address counts as its /64 network. One host often gets a full /64 network.
 - the count uses fixed windows in the memory of the server
 - the limiter keeps at most 10,000 windows. Each request removes the expired windows first. At the maximum, a new key removes the oldest window.

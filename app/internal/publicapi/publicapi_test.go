@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -22,7 +23,10 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 )
 
-var testOptions = publicapi.Options{SignInLimit: 1000, SignInWindow: time.Minute}
+var testOptions = publicapi.Options{
+	SignInLimit: 1000, SignInWindow: time.Minute,
+	PhotoUploadLimit: 1000, PhotoUploadWindow: time.Hour,
+}
 
 type env struct {
 	t   *testing.T
@@ -312,6 +316,52 @@ func TestSignUpBody(t *testing.T) {
 				if want := strings.Join(tc.props, ","); got != want {
 					t.Errorf("properties %q, want %q", got, want)
 				}
+			}
+		})
+	}
+}
+
+// filler sends the byte 'a' without end.
+type filler struct{}
+
+func (filler) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = 'a'
+	}
+	return len(p), nil
+}
+
+// TestBodyLimit sends bodies over the PocketBase limit of 32 MB.
+func TestBodyLimit(t *testing.T) {
+	e := newEnv(t, testOptions)
+	const size = 33 << 20
+	tests := []struct {
+		name          string
+		method, path  string
+		contentLength bool
+		status        int
+	}{
+		{"JSON body with a length", http.MethodPost, "/v1/users", true, http.StatusRequestEntityTooLarge},
+		{"JSON body without a length", http.MethodPost, "/v1/users", false, http.StatusRequestEntityTooLarge},
+		{"body of a read with a length", http.MethodGet, "/v1/restaurants", true, http.StatusRequestEntityTooLarge},
+		{"body of a read without a length", http.MethodGet, "/v1/restaurants", false, http.StatusOK},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			body := io.MultiReader(strings.NewReader(`{"email":"`), io.LimitReader(filler{}, size))
+			r := httptest.NewRequest(tc.method, tc.path, body)
+			r.ContentLength = -1
+			if tc.contentLength {
+				r.ContentLength = size + int64(len(`{"email":"`))
+			}
+			r.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			e.h.ServeHTTP(w, r)
+			if w.Code != tc.status {
+				t.Fatalf("status %d, want %d: %.200s", w.Code, tc.status, w.Body)
+			}
+			if tc.status >= 400 && w.Header().Get("Content-Type") != "application/problem+json" {
+				t.Errorf("content type %q, want application/problem+json", w.Header().Get("Content-Type"))
 			}
 		})
 	}

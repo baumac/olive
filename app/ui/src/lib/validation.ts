@@ -89,3 +89,19 @@ export function checkTag(tag: string, tags: string[]): string {
 export function safeRedirect(value: unknown, fallback = '/restaurants'): string {
   return typeof value === 'string' && /^\/(?![/\\])/.test(value) ? value : fallback
 }
+
+export const photoTypes = ['image/jpeg', 'image/png', 'image/webp']
+export const maxPhotoBytes = 10 * 1024 * 1024
+export const maxPhotos = 5
+
+export function checkPhotoFile(file: File): string {
+  if (!photoTypes.includes(file.type) || file.size > maxPhotoBytes) {
+    return 'Select a JPEG, PNG, or WebP image of at most 10 MB.'
+  }
+  return ''
+}
+
+// checkAlt allows an empty alt text. The API stores it as null.
+export function checkAlt(v: string): string {
+  return v === '' ? '' : checkName(v, 'Enter a description with at least one character that is not a space.')
+}

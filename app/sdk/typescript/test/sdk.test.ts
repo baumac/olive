@@ -44,6 +44,7 @@ const review = {
   cleanliness: 5,
   title: 'Best carbonara in town',
   creator: { id: 'u2g6k0m4o8q1s5w', name: 'Joe' },
+  photos: [],
   created: '2024-11-04 01:38:00.431Z',
   updated: '2024-11-05 09:12:00.000Z',
 }
@@ -168,5 +169,36 @@ describe('auth', () => {
     const { sent, config } = fakeFetch(201, restaurant)
     await new RestaurantsApi(config).createRestaurant({ restaurantCreate: { name: "Luigi's Trattoria" } })
     expect(sent[0].headers.get('Authorization')).toBe('Bearer stored-token')
+  })
+})
+
+describe('review photos', () => {
+  const photo = {
+    id: 'p4h7j1l5n9q2s6v',
+    alt: null,
+    width: 1536,
+    height: 2048,
+    urls: { full: '/v1/x/full', thumb: '/v1/x/thumb' },
+    created: '2024-11-06 19:04:30.811Z',
+  }
+
+  it('sends the image with the content type of the call and the token', async () => {
+    const { sent, config } = fakeFetch(201, photo)
+    const api = new RestaurantsApi(config)
+    const body = new Blob(['png bytes'], { type: 'image/png' })
+    const got = await api.addReviewPhoto(
+      { restaurantId: 'k3x9m2p7q1w8z4a', reviewId: 'r7d4f0h2j9l5s3v', body },
+      async ({ init }) => ({ headers: { ...(init.headers as Record<string, string>), 'Content-Type': 'image/png' } }),
+    )
+    expect(got.alt).toBeNull()
+    expect(sent[0]!.url.pathname).toBe('/v1/restaurants/k3x9m2p7q1w8z4a/reviews/r7d4f0h2j9l5s3v/photos')
+    expect(sent[0]!.headers.get('Content-Type')).toBe('image/png')
+    expect(sent[0]!.headers.get('Authorization')).toBe('Bearer stored-token')
+  })
+
+  it('reads the photos of a review', async () => {
+    const { config } = fakeFetch(200, { ...review, photos: [photo] })
+    const got = await new RestaurantsApi(config).getReview({ restaurantId: review.restaurant, reviewId: review.id })
+    expect(got.photos[0]!.urls.thumb).toBe('/v1/x/thumb')
   })
 })

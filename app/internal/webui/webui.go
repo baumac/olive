@@ -22,10 +22,13 @@ var dist embed.FS
 // contentSecurityPolicy allows only files of this origin. Decision 00005
 // explains each directive. The UI has no inline scripts.
 //
+// blob: in img-src lets the photo upload show the selected file. Decision
+// 00008 has the details.
+//
 // The hash allows the inline style of Reka UI SelectViewport. A Reka UI
 // update can change its text. The end-to-end tests then fail.
 const contentSecurityPolicy = "default-src 'self'; script-src 'self'; " +
-	"style-src 'self' 'sha256-60LHlRjW/B3CtzIoE/Lf1/NEDvko9efWMFaGVhHu/cs='; img-src 'self'; " +
+	"style-src 'self' 'sha256-60LHlRjW/B3CtzIoE/Lf1/NEDvko9efWMFaGVhHu/cs='; img-src 'self' blob:; " +
 	"font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; " +
 	"form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; report-to csp"
 

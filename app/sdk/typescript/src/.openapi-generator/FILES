@@ -7,6 +7,9 @@ models/AuthToken.ts
 models/AverageRange.ts
 models/Creator.ts
 models/Credentials.ts
+models/Photo.ts
+models/PhotoPatch.ts
+models/PhotoUrls.ts
 models/Problem.ts
 models/Restaurant.ts
 models/RestaurantCreate.ts

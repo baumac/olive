@@ -26,6 +26,10 @@ type Options struct {
 	// address can send in SignInWindow. Each operation has its own count.
 	SignInLimit  int
 	SignInWindow time.Duration
+	// PhotoUploadLimit is the number of photos that one user can add in
+	// PhotoUploadWindow.
+	PhotoUploadLimit  int
+	PhotoUploadWindow time.Duration
 	// SkipRequestValidation turns off the spec validation of the parameters
 	// and the body values. Invalid values then reach the handlers.
 	SkipRequestValidation bool
@@ -35,14 +39,22 @@ type Options struct {
 }
 
 // DefaultOptions are the settings of a production server.
-var DefaultOptions = Options{SignInLimit: 10, SignInWindow: time.Minute}
+var DefaultOptions = Options{
+	SignInLimit: 10, SignInWindow: time.Minute,
+	PhotoUploadLimit: 30, PhotoUploadWindow: time.Hour,
+}
+
+// rateLimitNames are the values of the name in the x-rate-limit extension.
+var rateLimitNames = []string{"sign-in", "photo-upload"}
 
 // Server implements reviewsapi.StrictServerInterface.
 type Server struct {
-	app     core.App
-	spec    *apiSpec
-	opts    Options
-	limiter *rateLimiter
+	app      core.App
+	spec     *apiSpec
+	opts     Options
+	limiters map[string]*rateLimiter
+	// decodes holds one token for each photo upload that decodes its image.
+	decodes chan struct{}
 	// dummyHash lets sign in check a password hash for an unknown email.
 	// Sign in then takes the same time for all email addresses.
 	dummyHash []byte
@@ -66,7 +78,7 @@ func Register(app core.App, opts Options) {
 			ctx = context.WithValue(ctx, pocketBaseAuthKey{}, e.Auth)
 			h.ServeHTTP(e.Response, e.Request.WithContext(ctx))
 			return nil
-		})
+		}).Bind(limitBody())
 		return se.Next()
 	})
 }
@@ -97,10 +109,14 @@ func New(app core.App, opts Options) (*Server, error) {
 		app.Logger().Warn("The spec validation of Public API responses is off")
 	}
 	return &Server{
-		app:       app,
-		spec:      spec,
-		opts:      opts,
-		limiter:   newRateLimiter(opts.SignInLimit, opts.SignInWindow),
+		app:  app,
+		spec: spec,
+		opts: opts,
+		limiters: map[string]*rateLimiter{
+			"sign-in":      newRateLimiter(opts.SignInLimit, opts.SignInWindow),
+			"photo-upload": newRateLimiter(opts.PhotoUploadLimit, opts.PhotoUploadWindow),
+		},
+		decodes:   make(chan struct{}, maxParallelDecodes),
 		dummyHash: hash,
 	}, nil
 }
@@ -162,6 +178,8 @@ type state struct {
 	user  *core.Record
 	token string
 	props map[string]json.RawMessage
+	// request lets a file response read the Range and If-None-Match headers.
+	request *http.Request
 }
 
 func stateFrom(ctx context.Context) *state {
@@ -209,6 +227,17 @@ func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 			s.serveOperation(tw, mux, op, in)
 			return
 		}
+		if op.fileResponse {
+			hw := &headerCheckWriter{ResponseWriter: tw, check: func(status int, header http.Header) error {
+				return checkResponseHeaders(r.Context(), in, status, header)
+			}}
+			s.serveOperation(hw, mux, op, in)
+			hw.WriteHeader(http.StatusOK)
+			if hw.err != nil {
+				s.serverError(tw, r, errors.New("the response does not match the spec: "+responseProblem(hw.err)))
+			}
+			return
+		}
 
 		bw := newBufferedWriter(tw)
 		s.serveOperation(bw, mux, op, in)
@@ -227,13 +256,9 @@ func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 // serveOperation does the request checks of op and then runs the handler.
 func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *operation, in *openapi3filter.RequestValidationInput) {
 	r := in.Request
-	st := &state{}
-	if op.limited {
-		if wait := s.limiter.allow(op.pattern + " " + clientKey(clientIP(r))); wait > 0 {
-			w.Header().Set("Retry-After", retryAfter(wait))
-			writeProblem(w, newProblem(http.StatusTooManyRequests, "Too many requests. Try again later."))
-			return
-		}
+	st := &state{request: r}
+	if op.limit != nil && op.limit.key == "ip" && !s.allow(w, op, clientKey(clientIP(r))) {
+		return
 	}
 
 	if op.auth != authIgnored {
@@ -250,6 +275,10 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 		}
 		st.user, st.token = user, token
 	}
+	// The key is the user. The token check therefore runs first.
+	if op.limit != nil && op.limit.key == "user" && !s.allow(w, op, st.user.Id) {
+		return
+	}
 
 	if detail := op.checkQuery(r); detail != "" {
 		writeProblem(w, newProblem(http.StatusBadRequest, detail))
@@ -263,7 +292,7 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 		}
 	}
 
-	if op.route.Operation.RequestBody != nil {
+	if op.route.Operation.RequestBody != nil && !op.fileBody {
 		props, p := readBody(r.Context(), in, validate)
 		if p != nil {
 			writeProblem(w, *p)
@@ -273,6 +302,17 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 	}
 
 	mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), stateKey{}, st)))
+}
+
+// allow counts the request of key. It writes 429 when key reaches the limit.
+func (s *Server) allow(w http.ResponseWriter, op *operation, key string) bool {
+	wait := s.limiters[op.limit.name].allow(op.pattern + " " + key)
+	if wait == 0 {
+		return true
+	}
+	w.Header().Set("Retry-After", retryAfter(wait))
+	writeProblem(w, newProblem(http.StatusTooManyRequests, "Too many requests. Try again later."))
+	return false
 }
 
 // authenticate returns the user of the bearer token. It returns a nil user

@@ -49,6 +49,25 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('heading', { name: 'Edit review' })).toBeVisible()
       await expectNoViolations(page)
 
+      const photoReview = await api.createReview(reviewer, (await api.createRestaurant(owner, { name: 'Photo Spot' })).id, {
+        space: 6, service: 6, food: 6, price: 6, cleanliness: 6, title: 'With photos',
+      })
+      await api.addPhoto(reviewer, photoReview, 'menu.png', 'The menu')
+      await api.addPhoto(reviewer, photoReview, 'gps-rotated.jpg')
+      await page.goto(`/restaurants/${photoReview.restaurant}/reviews/${photoReview.id}`)
+      await expect(page.getByRole('button', { name: 'The menu' })).toBeVisible()
+      await expectNoViolations(page)
+      await page.getByRole('button', { name: 'The menu' }).click()
+      await expect(page.getByRole('dialog').getByRole('heading', { name: 'Photo 1 of 2' })).toBeVisible()
+      // The open animation changes the colors. axe runs after it.
+      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'))
+      await expectNoViolations(page)
+      await page.keyboard.press('Escape')
+
+      await page.goto(`/restaurants/${photoReview.restaurant}/reviews/${photoReview.id}/edit`)
+      await expect(page.getByRole('heading', { name: 'Photos' })).toBeVisible()
+      await expectNoViolations(page)
+
       await page.goto('/my-reviews')
       await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading reviews')

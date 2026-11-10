@@ -4,9 +4,10 @@ import { ArrowLeftIcon, PencilIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
-import ConfirmDelete from '@/components/app/ConfirmDelete.vue'
+import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import ReviewPhotos from '@/components/app/ReviewPhotos.vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -72,6 +73,7 @@ async function remove() {
         <RatingDisplay v-for="s in scoresOf(review)" :key="s.name" :value="s.value" :max="s.max" :label="s.label" />
       </div>
       <p v-if="review.feedback" class="leading-7 whitespace-pre-line">{{ review.feedback }}</p>
+      <ReviewPhotos :review="review" :editable="isCreator" @change="review.photos = $event" />
       <ul v-if="tagList(review.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
         <li v-for="tag in tagList(review.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
       </ul>

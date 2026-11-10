@@ -173,6 +173,7 @@ The `space` score covered cleanliness before, so the migration gives existing re
     - `created`: timestamp
     - `updated`: timestamp
     - `creator`: the user who created the review, see [Creator](#creator)
+    - `photos`: the photos of the review, at most 5. Decision 00008 has the photo operations.
     - `id`: PocketBase record ID
 
 Each score is an integer with a minimum value of 1 and a maximum value of 10.
@@ -549,10 +550,11 @@ Example:
 | `401 Unauthorized` | missing bearer token on a create, update, delete, or token refresh request, an invalid bearer token on any request, or a wrong email or password on sign in |
 | `403 Forbidden` | the user is not the creator of the resource |
 | `404 Not Found` | the resource or the restaurant in the path does not exist, or the review belongs to a different restaurant |
-| `409 Conflict` | sign up with an email that another user has, duplicate review for a restaurant, delete of a restaurant that has reviews, or change of `name` on a restaurant that has reviews |
+| `409 Conflict` | sign up with an email that another user has, duplicate review for a restaurant, delete of a restaurant that has reviews, change of `name` on a restaurant that has reviews, or a photo over the count limit |
+| `413 Content Too Large` | a request body over the size limit, such as a photo over 10 MB |
 | `415 Unsupported Media Type` | wrong request content type |
 | `422 Unprocessable Content` | the request body has invalid property values |
-| `429 Too Many Requests` | too many sign up or sign in requests in a short time |
+| `429 Too Many Requests` | too many sign up, sign in, or photo upload requests in a short time |
 
 ## OAS Mapping
 

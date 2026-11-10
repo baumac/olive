@@ -53,3 +53,33 @@ func (b *bufferedWriter) Flush() error {
 	_, err := b.body.WriteTo(b.w)
 	return err
 }
+
+// headerCheckWriter checks the status and the headers of a response before
+// it writes them. The body then goes to the client without a buffer. After
+// a failed check, the writer drops the headers and the body.
+type headerCheckWriter struct {
+	http.ResponseWriter
+	check func(status int, header http.Header) error
+	wrote bool
+	err   error
+}
+
+func (h *headerCheckWriter) WriteHeader(status int) {
+	if h.wrote {
+		return
+	}
+	h.wrote = true
+	if h.err = h.check(status, h.Header()); h.err != nil {
+		clear(h.Header())
+		return
+	}
+	h.ResponseWriter.WriteHeader(status)
+}
+
+func (h *headerCheckWriter) Write(p []byte) (int, error) {
+	h.WriteHeader(http.StatusOK)
+	if h.err != nil {
+		return len(p), nil
+	}
+	return h.ResponseWriter.Write(p)
+}

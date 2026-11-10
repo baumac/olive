@@ -45,9 +45,11 @@ The system is shadcn-vue with Tailwind CSS v4, as ADR 00002 decides. The tokens 
 
 ## Components
 
-The first set covers the Public API. From shadcn-vue: `Button`, `Input`, `Textarea`, `Label`, `Form`, `Select`, `Card`, `Badge`, `Alert`, `Dialog`, `Skeleton`, `Avatar`, `Sonner` (our `Toast`) and `DropdownMenu`. Project components: `RatingInput`, `RatingDisplay`, `TagInput`, `LoadMore`, `ThemeToggle`, `UserMenu`, `SignInForm`, `SignUpForm`, `FilterBar` and `EmptyState`. They live in `app/ui/src/components/ui/`, one folder each. `AppHeader` and `ErrorPage` know the routes, so they live in `app/ui/src/components/app/`. The Pages group shows whole pages: `SignInPage` and `SignUpPage` live in `app/ui/src/pages/`. Screens use these components and never style native controls directly. A new component goes into the set only when a screen needs it.
+The first set covers the Public API. From shadcn-vue: `Button`, `Input`, `Textarea`, `Label`, `Form`, `Select`, `Card`, `Badge`, `Alert`, `Dialog`, `Skeleton`, `Avatar`, `Sonner` (our `Toast`) and `DropdownMenu`. Project components: `RatingInput`, `RatingDisplay`, `TagInput`, `LoadMore`, `ThemeToggle`, `UserMenu`, `SignInForm`, `SignUpForm`, `FilterBar`, `EmptyState`, `PhotoUpload`, `PhotoGrid` and `PhotoViewer`. They live in `app/ui/src/components/ui/`, one folder each. `AppHeader` and `ErrorPage` know the routes, so they live in `app/ui/src/components/app/`. The Pages group shows whole pages: `SignInPage` and `SignUpPage` live in `app/ui/src/pages/`. Screens use these components and never style native controls directly. A new component goes into the set only when a screen needs it.
 
 The previews here are static HTML renditions of the Vue components. They show the look and the states, not the behavior. The UI in `app/ui` now has the real components. Replace the previews with them with the real components: sync this system from the code with `/design-sync` in Claude Code, so the previews run the Vue components and stay in step with them.
+
+Photos follow decision 00008. Each `<img>` gets `width` and `height` from the API, so the page does not move while it loads. Thumbnails load lazily, show `Skeleton` until they load, and show the image-off icon on `muted` when they fail. A photo without alt text is "Photo 2 of 5" for screen readers. UI text: "Add photo", "Delete this photo?", "Describe the photo for people who cannot see it".
 
 Format dates, numbers and API text as the "Dates, numbers and language" section says. Sign up, sign in, tokens and sign out follow the "User authentication" section.
 

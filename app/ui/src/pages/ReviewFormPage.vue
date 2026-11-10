@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { Restaurant, Review, ReviewCreate, ReviewPatch } from '@reviews/sdk'
-import { CircleAlertIcon } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { CircleAlertIcon, XIcon } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import ReviewPhotos from '@/components/app/ReviewPhotos.vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FormControl, FormDescription, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { PhotoUpload } from '@/components/ui/photo-upload'
 import { RatingInput } from '@/components/ui/rating-input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TagInput } from '@/components/ui/tag-input'
@@ -16,9 +18,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, restaurantsApi } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
+import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
 import { type ScoreField, scoreFields, scoresOf, tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
-import { checkLongText, checkName } from '@/lib/validation'
+import { checkLongText, checkName, maxPhotos } from '@/lib/validation'
 
 const props = defineProps<{ restaurantId: string; reviewId?: string }>()
 const router = useRouter()
@@ -46,6 +49,15 @@ const saving = ref(false)
 const loading = ref(true)
 const failed = ref<{ status: number | null } | null>(null)
 
+// saved is the review in the edit mode. Its photos change at once.
+const saved = ref<Review | null>(null)
+// queued has the photos of a new review. They upload after the create.
+const queued = ref<{ file: File; alt: string; url: string }[]>([])
+const uploading = ref(false)
+const uploadError = ref('')
+const upload = ref<InstanceType<typeof PhotoUpload> | null>(null)
+const photoCount = computed(() => (saved.value?.photos.length ?? 0) + queued.value.length)
+
 const draftKey = computed(() => `review:${props.restaurantId}:${props.reviewId ?? 'new'}`)
 const restaurantPath = computed(() => `/restaurants/${props.restaurantId}`)
 
@@ -58,6 +70,7 @@ onMounted(async () => {
         failed.value = { status: 403 }
         return
       }
+      saved.value = review
       for (const s of scoresOf(review)) {
         fields.value.scores[s.name] = s.value
       }
@@ -75,6 +88,11 @@ onMounted(async () => {
       if (own.items[0]) {
         void router.replace(`${restaurantPath.value}/reviews/${own.items[0].id}/edit`)
         return
+      }
+    }
+    if (!props.reviewId) {
+      for (const p of takePendingPhotos(draftKey.value)) {
+        queued.value.push({ ...p, url: URL.createObjectURL(p.file) })
       }
     }
     const draft = takeDraft<Fields>(draftKey.value)
@@ -129,6 +147,77 @@ function scoreValues() {
   return { space, service, food, price, cleanliness }
 }
 
+async function addSelected(file: File, alt: string) {
+  uploadError.value = ''
+  if (!saved.value) {
+    queued.value.push({ file, alt, url: URL.createObjectURL(file) })
+    upload.value?.reset()
+    return
+  }
+  uploading.value = true
+  try {
+    const { photo, altSaved } = await addPhoto(props.restaurantId, saved.value.id, file, alt)
+    saved.value.photos = [...saved.value.photos, photo]
+    upload.value?.reset()
+    if (altSaved) {
+      toast.success('Photo added')
+    } else {
+      toast.error('Description not saved', { description: 'The photo is added. Open it and add the description again.' })
+    }
+  } catch (error) {
+    uploadError.value = await uploadFailure(error)
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function uploadFailure(error: unknown): Promise<string> {
+  const { status, problem } = await apiFailure(error)
+  if (status === 409) {
+    return `A review can have at most ${maxPhotos} photos.`
+  }
+  if (status === 413 || status === 415 || status === 422) {
+    return problem?.detail ?? 'Select a JPEG, PNG, or WebP image of at most 10 MB.'
+  }
+  if (status === 429) {
+    return 'You added many photos in a short time. Try again later.'
+  }
+  return status === 401 ? 'Sign in again, then try again.' : 'Photo not added. Try again in a moment.'
+}
+
+function unqueue(index: number) {
+  const [photo] = queued.value.splice(index, 1)
+  if (photo) {
+    URL.revokeObjectURL(photo.url)
+  }
+}
+
+onBeforeUnmount(() => queued.value.forEach((p) => URL.revokeObjectURL(p.url)))
+
+// uploadQueued adds the photos of a new review. It tries each photo and
+// returns false if one failed. The failed photos then are not on the review.
+async function uploadQueued(reviewId: string): Promise<boolean> {
+  const failures: string[] = []
+  let altFailures = 0
+  for (const photo of [...queued.value]) {
+    try {
+      const { altSaved } = await addPhoto(props.restaurantId, reviewId, photo.file, photo.alt)
+      altFailures += altSaved ? 0 : 1
+    } catch (error) {
+      failures.push(await uploadFailure(error))
+    }
+    unqueue(queued.value.indexOf(photo))
+  }
+  if (failures.length) {
+    const title = failures.length === 1 ? '1 photo not added' : `${failures.length} photos not added`
+    toast.error(title, { description: `${[...new Set(failures)].join(' ')} Add the photos again on this page.` })
+  }
+  if (altFailures) {
+    toast.error('Description not saved', { description: 'Open the photo and add the description again.' })
+  }
+  return failures.length === 0 && altFailures === 0
+}
+
 async function submit() {
   alert.value = null
   if (!validate()) {
@@ -138,7 +227,7 @@ async function submit() {
   saveDraft(draftKey.value, fields.value)
   const { title, feedback, tags } = fields.value
   try {
-    let saved: Review
+    let result: Review
     if (props.reviewId) {
       const reviewPatch: ReviewPatch = {
         ...scoreValues(),
@@ -146,7 +235,7 @@ async function submit() {
         feedback: feedback || null,
         tags: tags.length ? new Set(tags) : null,
       }
-      saved = await restaurantsApi.updateReview({ restaurantId: props.restaurantId, reviewId: props.reviewId, reviewPatch })
+      result = await restaurantsApi.updateReview({ restaurantId: props.restaurantId, reviewId: props.reviewId, reviewPatch })
     } else {
       const reviewCreate: ReviewCreate = {
         ...scoreValues(),
@@ -154,16 +243,23 @@ async function submit() {
         feedback: feedback || undefined,
         tags: tags.length ? new Set(tags) : undefined,
       }
-      saved = await restaurantsApi.createReview({ restaurantId: props.restaurantId, reviewCreate })
+      result = await restaurantsApi.createReview({ restaurantId: props.restaurantId, reviewCreate })
     }
     clearDraft(draftKey.value)
-    toast.success('Review saved', { description: saved.title })
+    toast.success('Review saved', { description: result.title })
+    if (!(await uploadQueued(result.id))) {
+      // The edit page shows the saved review. The person can add the photo again.
+      void router.push(`${restaurantPath.value}/reviews/${result.id}/edit`)
+      return
+    }
     void router.push(restaurantPath.value)
   } catch (error) {
     const { status, problem } = await apiFailure(error)
     // A 401 opens the sign in page. The draft then waits for the return.
     if (status !== 401) {
       clearDraft(draftKey.value)
+    } else if (queued.value.length) {
+      keepPendingPhotos(draftKey.value, queued.value.map(({ file, alt }) => ({ file, alt })))
     }
     if (status === 422) {
       errors.value = fieldErrors(problem)
@@ -255,9 +351,42 @@ async function submit() {
         <FormMessage />
       </FormItem>
       <div class="flex flex-wrap gap-2">
-        <Button type="submit" :disabled="saving">{{ saving ? 'Saving…' : 'Save review' }}</Button>
+        <Button type="submit" :disabled="saving || uploading">{{ saving ? 'Saving…' : 'Save review' }}</Button>
         <Button variant="outline" as-child><RouterLink :to="restaurantPath">Cancel</RouterLink></Button>
       </div>
     </form>
+    <section v-if="!loading" class="grid gap-4 border-t pt-6" aria-labelledby="review-photos-title">
+      <div class="grid gap-1">
+        <h2 id="review-photos-title" class="text-xl font-semibold">Photos</h2>
+        <p class="text-muted-foreground text-sm">
+          {{ saved ? `Optional. Up to ${maxPhotos} photos. Each photo is added at once.` : `Optional. Up to ${maxPhotos} photos. They are added when you save the review.` }}
+        </p>
+      </div>
+      <ReviewPhotos v-if="saved" :review="saved" editable @change="saved.photos = $event" />
+      <ul v-if="queued.length" class="grid grid-cols-3 gap-2 sm:grid-cols-5" aria-label="Photos to add">
+        <li v-for="(photo, i) in queued" :key="photo.url" class="relative">
+          <img :src="photo.url" :alt="photo.alt || `Photo ${i + 1} to add`" class="bg-muted aspect-square w-full rounded-md object-cover">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            class="absolute top-1 right-1 size-7"
+            :aria-label="`Remove photo ${i + 1}`"
+            @click="unqueue(i)"
+          >
+            <XIcon aria-hidden="true" />
+          </Button>
+        </li>
+      </ul>
+      <PhotoUpload
+        v-if="photoCount < maxPhotos"
+        ref="upload"
+        :action-label="saved ? 'Upload photo' : 'Add to review'"
+        :busy="uploading"
+        :error="uploadError"
+        @add="addSelected"
+      />
+      <p v-else class="text-muted-foreground text-sm">This review has {{ maxPhotos }} photos. Delete one to add another.</p>
+    </section>
   </main>
 </template>

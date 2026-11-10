@@ -17,11 +17,36 @@ import (
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
+	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/hook"
 )
 
 // maxBodyBytes is far above the largest valid body of about 100 KB. A larger
 // body gets 413 before the decoders use memory for it.
 const maxBodyBytes = 256 << 10
+
+// limitBody has the ID of the PocketBase body limit. The router then uses it
+// in place of that limit. A body over maxUploadBytes gets 413 with Problem
+// Details.
+func limitBody() *hook.Handler[*core.RequestEvent] {
+	return &hook.Handler[*core.RequestEvent]{
+		Id:       apis.DefaultBodyLimitMiddlewareId,
+		Priority: apis.DefaultBodyLimitMiddlewarePriority,
+		Func: func(e *core.RequestEvent) error {
+			if e.Request.ContentLength > maxUploadBytes {
+				writeProblem(e.Response, bodyTooLarge())
+				return nil
+			}
+			e.Request.Body = http.MaxBytesReader(e.Response, e.Request.Body, maxUploadBytes)
+			return e.Next()
+		},
+	}
+}
+
+func bodyTooLarge() reviewsapi.Problem {
+	return newProblem(http.StatusRequestEntityTooLarge, "The request body is too large.")
+}
 
 // readBody checks the body against the spec. Without validate, it does only
 // the checks that the strict handler needs to decode the body. The strict
@@ -41,7 +66,7 @@ func readBody(ctx context.Context, in *openapi3filter.RequestValidationInput, va
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			p := newProblem(http.StatusRequestEntityTooLarge, "The request body is too large.")
+			p := bodyTooLarge()
 			return nil, &p
 		}
 		p := newProblem(http.StatusBadRequest, "The request body cannot be read.")

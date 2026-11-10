@@ -190,7 +190,7 @@ The app has these routes:
 | `default-src` | `'self'` | the base for all other types |
 | `script-src` | `'self'` | the Vite chunks and `theme.js`. No inline scripts. |
 | `style-src` | `'self'` and one hash | the Tailwind CSS file and the inline style of Reka UI `SelectViewport` |
-| `img-src` | `'self'` | the logos and icons are files of the build |
+| `img-src` | `'self' blob:` | the logos, the icons, and the photos of `/v1`. `blob:` shows the preview of a selected photo. See decision 00008. |
 | `font-src` | `'self'` | the UI uses system fonts. No web fonts. |
 | `connect-src` | `'self'` | the Public API is on the same origin |
 | `manifest-src` | `'self'` | `site.webmanifest` |
@@ -216,6 +216,9 @@ PocketBase serves uploaded files under `/api/files` on the origin of the UI, whi
 A migration removes the default `avatar` file field of `users`. The Public API has no profile pictures.
 No collection then has a file field, and nobody can upload a file that the policy would trust.
 A later file field needs a check of this risk, for example a separate host for files.
+
+Decision 00008 adds the photo file fields of `review_photos`. They are protected, so `/api/files` does not send them to clients.
+The Public API sends only JPEG files that it encoded itself, with `nosniff` and a `sandbox` policy.
 
 ### The style hash
 

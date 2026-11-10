@@ -24,9 +24,7 @@ func TestDownRestoresUsers(t *testing.T) {
 		t.Errorf("up: email index %+v", idx)
 	}
 
-	if err := down(app); err != nil {
-		t.Fatal(err)
-	}
+	downTo(t, app, "1794096000_create_collections.go")
 	if _, err := app.FindCollectionByNameOrId("restaurants"); err == nil {
 		t.Error("restaurants still exists")
 	}
@@ -193,4 +191,34 @@ func TestSearchIndexFillsExistingRecords(t *testing.T) {
 			t.Errorf("%s MATCH %q: %d rows, want 1", table, match, n)
 		}
 	}
+}
+
+func TestReviewPhotos(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	photos, err := app.FindCollectionByNameOrId("review_photos")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if photos.ListRule != nil || photos.ViewRule != nil || photos.CreateRule != nil || photos.UpdateRule != nil || photos.DeleteRule != nil {
+		t.Error("review_photos has API rules")
+	}
+	for _, name := range []string{"full", "thumb"} {
+		f, ok := photos.Fields.GetByName(name).(*core.FileField)
+		if !ok || !f.Protected || f.MaxSelect != 1 || !slices.Equal(f.MimeTypes, []string{"image/jpeg"}) {
+			t.Errorf("%s: %+v", name, f)
+		}
+	}
+	if review, ok := photos.Fields.GetByName("review").(*core.RelationField); !ok || !review.Required || !review.CascadeDelete {
+		t.Errorf("review: %+v", review)
+	}
+
+	redo := downTo(t, app, "1794268806_add_review_photos.go")
+	if _, err := app.FindCollectionByNameOrId("review_photos"); err == nil {
+		t.Error("down kept review_photos")
+	}
+	redo()
 }

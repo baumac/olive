@@ -1,4 +1,4 @@
-import { uniqueTag } from '../api'
+import { photoFile, uniqueTag } from '../api'
 import { expect, test } from '../fixtures'
 
 // The noCspViolations fixture checks each step. This test opens the menus,
@@ -49,4 +49,22 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
 
   await page.getByRole('button', { name: `AN, account menu for ${user.name}` }).click()
   await expect(page.getByRole('menuitem', { name: 'Sign out' })).toBeVisible()
+})
+
+// The upload form shows a blob: preview. The viewer shows the full image.
+test('the photos work under the Content Security Policy', async ({ page, api, user }) => {
+  const restaurant = await api.createRestaurant(user, { name: 'Photo Policy' })
+  const review = await api.createReview(user, restaurant.id, { space: 7, service: 7, food: 7, price: 7, cleanliness: 7, title: 'Policy' })
+  await api.addPhoto(user, review, 'menu.png', 'A menu')
+
+  await page.goto(`/restaurants/${restaurant.id}/reviews/${review.id}/edit`)
+  await page.getByLabel('Add photo').setInputFiles({ name: 'dish.jpg', mimeType: 'image/jpeg', buffer: photoFile('gps-rotated.jpg') })
+  await expect(page.getByRole('img', { name: 'The selected photo' })).toHaveJSProperty('complete', true)
+  await page.getByRole('button', { name: 'Upload photo' }).click()
+  await expect(page.getByText('Photo added')).toBeVisible()
+
+  await page.getByRole('button', { name: 'A menu' }).click()
+  await expect(page.getByRole('dialog').getByRole('img', { name: 'A menu' })).toHaveJSProperty('complete', true)
+  await page.getByRole('button', { name: 'Next photo' }).click()
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Photo 2 of 2' })).toBeVisible()
 })

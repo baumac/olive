@@ -30,7 +30,9 @@ paths:
   /users:
     post:
       operationId: signUp
-      x-rate-limited: true
+      x-rate-limit:
+        key: ip
+        name: sign-in
       summary: Sign up a user
       description: |
         Creates a user and signs the user in.
@@ -69,7 +71,9 @@ paths:
   /users/tokens:
     post:
       operationId: signIn
-      x-rate-limited: true
+      x-rate-limit:
+        key: ip
+        name: sign-in
       summary: Sign in a user with email and password
       description: The API ignores the `Authorization` header on this operation.
       tags: [users]
@@ -491,6 +495,194 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /restaurants/{restaurantId}/reviews/{reviewId}/photos:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/ReviewId'
+    post:
+      operationId: addReviewPhoto
+      x-rate-limit:
+        key: user
+        name: photo-upload
+      summary: Add a photo to a review
+      description: |
+        Only the creator of the review can add a photo. A review has at most 5 photos.
+        The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels.
+        The API turns the image upright, makes it smaller, and stores it as JPEG without metadata.
+        Set the alt text with `updateReviewPhoto`.
+      tags: [restaurants]
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: |
+          The bytes of the image.
+          The `Content-Type` is `image/jpeg`, `image/png`, or `image/webp`. Other types get `415`.
+        required: true
+        content:
+          image/*:
+            schema:
+              $ref: '#/components/schemas/ImageUpload'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '201':
+          description: The photo was added.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/ContentTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/InvalidImage'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/ReviewId'
+      - $ref: '#/components/parameters/PhotoId'
+    patch:
+      operationId: updateReviewPhoto
+      summary: Change the alt text of a photo
+      description: Only the creator of the review can change its photos.
+      tags: [restaurants]
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: The photo properties to change.
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/PhotoPatch'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The updated photo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+    delete:
+      operationId: deleteReviewPhoto
+      summary: Delete a photo
+      description: Only the creator of the review can delete its photos.
+      tags: [restaurants]
+      security:
+        - bearerAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The photo was deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/ReviewId'
+      - $ref: '#/components/parameters/PhotoId'
+      - $ref: '#/components/parameters/PhotoVariant'
+    get:
+      operationId: getReviewPhotoFile
+      summary: Get the image file of a photo
+      description: |
+        Clients use the `urls` of the photo and do not build this path.
+        The file never changes, so clients can cache it for a long time.
+        The operation supports `HEAD`, `If-None-Match`, and `Range`.
+      tags: [restaurants]
+      security:
+        - {}
+        - bearerAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The image file.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PhotoCacheControl'
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Content-Security-Policy:
+              $ref: '#/components/headers/PhotoContentSecurityPolicy'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            image/jpeg:
+              schema:
+                $ref: '#/components/schemas/ImageFile'
+        '206':
+          description: A range of the image file.
+          headers:
+            Content-Range:
+              description: The range of the file in the body.
+              required: true
+              schema:
+                type: string
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            image/jpeg:
+              schema:
+                $ref: '#/components/schemas/ImageFile'
+        '304':
+          description: The file did not change since the version of `If-None-Match`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '416':
+          description: The range of the `Range` header is not in the file.
+          headers:
+            Content-Range:
+              description: The size of the file, such as `bytes */48213`.
+              required: true
+              schema:
+                type: string
+
 components:
   securitySchemes:
     bearerAuth:
@@ -504,6 +696,29 @@ components:
       schema:
         type: string
         format: uri-reference
+    ETag:
+      description: The version of the file.
+      required: true
+      schema:
+        type: string
+    PhotoCacheControl:
+      description: The file never changes.
+      required: true
+      schema:
+        type: string
+        const: public, max-age=31536000, immutable
+    PhotoContentSecurityPolicy:
+      description: A file that the browser opens in its own tab cannot run code.
+      required: true
+      schema:
+        type: string
+        const: default-src 'none'; sandbox
+    NoSniff:
+      description: The browser uses the `Content-Type` and does not guess it.
+      required: true
+      schema:
+        type: string
+        const: nosniff
 
   parameters:
     RestaurantId:
@@ -520,6 +735,23 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/RecordId'
+    PhotoId:
+      name: photoId
+      in: path
+      description: The ID of the photo.
+      required: true
+      schema:
+        $ref: '#/components/schemas/RecordId'
+    PhotoVariant:
+      name: variant
+      in: path
+      description: |
+        The size of the image.
+        `full` has at most 2048 pixels on its long side. `thumb` has at most 480 pixels on its long side.
+      required: true
+      schema:
+        type: string
+        enum: [full, thumb]
 
     Limit:
       name: limit
@@ -797,7 +1029,8 @@ components:
       description: |
         The request conflicts with the current state.
         Examples are a sign up with an email that another user has, a duplicate review for a restaurant,
-        a delete of a restaurant that has reviews, or a change of `name` on a restaurant that has reviews.
+        a delete of a restaurant that has reviews, a change of `name` on a restaurant that has reviews,
+        or a sixth photo of a review.
       content:
         application/problem+json:
           schema:
@@ -810,6 +1043,20 @@ components:
             $ref: '#/components/schemas/Problem'
     UnprocessableContent:
       description: The request body has invalid property values.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ContentTooLarge:
+      description: The request body is too large.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InvalidImage:
+      description: |
+        The body is not an image of its content type, or the image has too many pixels.
+        The response has no `errors` array.
       content:
         application/problem+json:
           schema:
@@ -840,7 +1087,7 @@ components:
             status: 401
             detail: The email or password is not correct.
     TooManyRequests:
-      description: The client sent too many sign up or sign in requests in a short time.
+      description: The client sent too many sign up, sign in, or photo upload requests in a short time.
       headers:
         Retry-After:
           description: The number of seconds to wait before the next request.
@@ -1106,7 +1353,7 @@ components:
     Review:
       description: A review of a restaurant. It scores the space, service, food, price, and cleanliness.
       type: object
-      required: [id, restaurant, restaurant_name, space, service, food, price, cleanliness, title, creator, created, updated]
+      required: [id, restaurant, restaurant_name, space, service, food, price, cleanliness, title, creator, photos, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -1136,6 +1383,12 @@ components:
           $ref: '#/components/schemas/Tags'
         creator:
           $ref: '#/components/schemas/Creator'
+        photos:
+          description: The photos of the review, the oldest first.
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/Photo'
         created:
           $ref: '#/components/schemas/Timestamp'
         updated:
@@ -1155,6 +1408,15 @@ components:
           creator:
             id: u5n1c8r3t6y0b2e
             name: Ana
+          photos:
+            - id: p4h7j1l5n9q2s6v
+              alt: A plate of carbonara on a wooden table
+              width: 1536
+              height: 2048
+              urls:
+                full: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full
+                thumb: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb
+              created: '2024-11-06 19:04:30.811Z'
           created: '2024-11-06 19:02:11.120Z'
           updated: '2024-11-07 09:12:00.000Z'
     SpaceScore:
@@ -1257,6 +1519,7 @@ components:
               creator:
                 id: u2g6k0m4o8q1s5w
                 name: Joe
+              photos: []
               created: '2024-11-04 01:38:00.431Z'
               updated: '2024-11-05 09:12:00.000Z'
             - id: r1b8c5e2g9i6k3m
@@ -1271,9 +1534,87 @@ components:
               creator:
                 id: u5n1c8r3t6y0b2e
                 name: Ana
+              photos: []
               created: '2024-11-06 19:02:11.120Z'
               updated: '2024-11-06 19:02:11.120Z'
           next_cursor: null
+
+    Photo:
+      description: A photo of a review. The image of a photo never changes.
+      type: object
+      required: [id, alt, width, height, urls, created]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        alt:
+          description: A text that describes the photo for screen readers. It is `null` without a description.
+          oneOf:
+            - $ref: '#/components/schemas/AltText'
+            - type: 'null'
+        width:
+          description: The width of the `full` image in pixels.
+          type: integer
+          minimum: 1
+          maximum: 2048
+        height:
+          description: The height of the `full` image in pixels.
+          type: integer
+          minimum: 1
+          maximum: 2048
+        urls:
+          $ref: '#/components/schemas/PhotoUrls'
+        created:
+          $ref: '#/components/schemas/Timestamp'
+      examples:
+        - id: p4h7j1l5n9q2s6v
+          alt: A plate of carbonara on a wooden table
+          width: 1536
+          height: 2048
+          urls:
+            full: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full
+            thumb: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb
+          created: '2024-11-06 19:04:30.811Z'
+    PhotoUrls:
+      description: The paths of the image files on the origin of the API. Clients use them as given.
+      type: object
+      required: [full, thumb]
+      properties:
+        full:
+          description: The image with at most 2048 pixels on its long side.
+          type: string
+          format: uri-reference
+        thumb:
+          description: The image with at most 480 pixels on its long side.
+          type: string
+          format: uri-reference
+    AltText:
+      description: |
+        A text with at least one character that is not ASCII whitespace.
+        Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+      type: string
+      minLength: 1
+      maxLength: 255
+      pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
+      x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters
+    PhotoPatch:
+      description: A JSON Merge Patch. `null` clears the alt text. An empty patch changes nothing.
+      type: object
+      additionalProperties: false
+      properties:
+        alt:
+          oneOf:
+            - $ref: '#/components/schemas/AltText'
+            - type: 'null'
+      examples:
+        - alt: A plate of carbonara on a wooden table
+    ImageUpload:
+      description: The bytes of a JPEG, PNG, or WebP image.
+      type: string
+      format: binary
+    ImageFile:
+      description: The bytes of a JPEG image.
+      type: string
+      format: binary
 
     NextCursor:
       description: The cursor for the next page. It is `null` on the last page.

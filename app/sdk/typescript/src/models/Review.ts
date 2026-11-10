@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime.js';
+import type { Photo } from './Photo.js';
+import {
+    PhotoFromJSON,
+    PhotoFromJSONTyped,
+    PhotoToJSON,
+    PhotoToJSONTyped,
+} from './Photo.js';
 import type { Creator } from './Creator.js';
 import {
     CreatorFromJSON,
@@ -82,6 +89,10 @@ export interface Review {
      */
     creator: Creator;
     /**
+     * The photos of the review, the oldest first.
+     */
+    photos: Array<Photo>;
+    /**
      * A UTC timestamp with millisecond precision. This format is not RFC 3339.
      */
     created: string;
@@ -105,6 +116,7 @@ export function instanceOfReview(value: object): value is Review {
     if (!('cleanliness' in value) || value['cleanliness'] === undefined) return false;
     if (!('title' in value) || value['title'] === undefined) return false;
     if (!('creator' in value) || value['creator'] === undefined) return false;
+    if (!('photos' in value) || value['photos'] === undefined) return false;
     if (!('created' in value) || value['created'] === undefined) return false;
     if (!('updated' in value) || value['updated'] === undefined) return false;
     return true;
@@ -132,6 +144,7 @@ export function ReviewFromJSONTyped(json: any, ignoreDiscriminator: boolean): Re
         'feedback': json['feedback'] == null ? undefined : json['feedback'],
         'tags': json['tags'] == null ? undefined : new Set(json['tags']),
         'creator': CreatorFromJSON(json['creator']),
+        'photos': ((json['photos'] as Array<any>).map(PhotoFromJSON)),
         'created': json['created'],
         'updated': json['updated'],
     };
@@ -160,6 +173,7 @@ export function ReviewToJSONTyped(value?: Review | null, ignoreDiscriminator: bo
         'feedback': value['feedback'],
         'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
         'creator': CreatorToJSON(value['creator']),
+        'photos': ((value['photos'] as Array<any>).map(PhotoToJSON)),
         'created': value['created'],
         'updated': value['updated'],
     };
