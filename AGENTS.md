@@ -82,6 +82,7 @@ Run one browser with `cd tests && npx playwright test --project=chromium`.
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
     - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00007.
     - It checks, changes, and serves the photos of reviews. See decision 00008.
+  - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
   - Calls the Public API only through `@reviews/sdk`

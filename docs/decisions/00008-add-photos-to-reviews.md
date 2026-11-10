@@ -46,7 +46,7 @@ Out of scope:
 - photos of the reviews on the restaurant itself, such as a cover photo on the restaurant page or the restaurant cards. Each photo shows only in its review.
 - a limit on the total photo storage of a user. A user can write many reviews, so the count limit does not cap it. The upload rate limit makes the growth slow.
 - a backup plan for `pb_data/storage`. The photos make it much larger than the database. The backlog has this item.
-- a job that finds photo files without a record and deletes them. See [Deletion](#deletion). The backlog has this item.
+- a job that finds photo files without a record and deletes them. See [Deletion](#deletion). Decision 00009 adds it.
 - photos of users, such as profile pictures
 - video, animated images, and other file types
 - moderation, reports of bad photos, and automatic checks of the content. PocketBase superusers delete bad photos in the dashboard.
@@ -376,8 +376,8 @@ The policy of decision 00005 changes in one place:
   - the file delete fails, such as from a disk error or an S3 API limit
   - the server stops before the background file delete ends
   - the save of a new photo fails, and the delete of its new files also fails or does not run
-- a file without a record is protected, and `/v1` does not serve it. A superuser removes it with the help of the PocketBase log.
-- a job that finds and deletes these files is out of scope. The backlog has this item.
+- a file without a record is protected, and `/v1` does not serve it. The daily job of decision 00009 deletes it.
+- a job that finds and deletes these files is out of scope. Decision 00009 adds a daily job for it.
 
 ## Privacy
 

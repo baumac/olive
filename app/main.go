@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/baumac/reviews-app/app/internal/photocleanup"
 	"github.com/baumac/reviews-app/app/internal/publicapi"
 	"github.com/baumac/reviews-app/app/internal/searchindex"
 	"github.com/baumac/reviews-app/app/internal/webui"
@@ -25,6 +26,7 @@ func main() {
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{TemplateLang: migratecmd.TemplateLangGo})
 	searchindex.Register(app)
 	publicapi.Register(app, opts)
+	photocleanup.Register(app)
 	webui.Register(app)
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
