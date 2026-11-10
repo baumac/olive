@@ -1,11 +1,16 @@
 BIN := $(CURDIR)/bin
+
+# TOOLS_GO builds the tools. Its version changes the embedded spec of the Go
+# SDK. A new version gets a new folder of tools.
+TOOLS_GO := go1.27.3
+TOOLS_BIN := $(BIN)/tools-$(TOOLS_GO)
 SPEC := specs/api/public-openapi.yaml
 
 VACUUM_VERSION := v0.33.2
-VACUUM := $(BIN)/vacuum
+VACUUM := $(TOOLS_BIN)/vacuum
 
 OAPI_CODEGEN_VERSION := v2.8.2
-OAPI_CODEGEN := $(BIN)/oapi-codegen
+OAPI_CODEGEN := $(TOOLS_BIN)/oapi-codegen
 
 OPENAPI_GENERATOR_IMAGE := openapitools/openapi-generator-cli:v7.27.0
 
@@ -16,17 +21,17 @@ UI_DIST := app/internal/webui/dist
 # npm ci runs again only when the lockfile changes.
 NODE_MODULES := node_modules/.package-lock.json
 
-.PHONY: install-tools lint lint-spec lint-go lint-ui generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app run-app dev-ui
+.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app run-app dev-ui
 
 install-tools: $(VACUUM) $(OAPI_CODEGEN)
 
 $(VACUUM):
-	GOBIN=$(BIN) go install github.com/daveshanley/vacuum@$(VACUUM_VERSION)
+	GOBIN=$(TOOLS_BIN) GOTOOLCHAIN=$(TOOLS_GO) go install github.com/daveshanley/vacuum@$(VACUUM_VERSION)
 
 $(OAPI_CODEGEN):
-	GOBIN=$(BIN) go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION)
+	GOBIN=$(TOOLS_BIN) GOTOOLCHAIN=$(TOOLS_GO) go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION)
 
-lint: lint-spec lint-go lint-ui check-generate
+lint: lint-spec lint-go lint-ui check-generate check-ci-matrix
 
 lint-spec: $(VACUUM)
 	$(VACUUM) lint --details --fail-severity warn --ruleset specs/api/vacuum-ruleset.yaml $(SPEC)
@@ -88,8 +93,22 @@ test-ui: build-sdk-ts
 	npm test --workspace @reviews/ui
 
 # The end-to-end tests start ./bin/reviews-app. See decision 00006.
+# PROJECT runs one Playwright project, such as make test-e2e PROJECT=webkit.
 test-e2e: build-app
-	npm test --workspace @reviews/tests
+	npm test --workspace @reviews/tests $(if $(PROJECT),-- --project=$(PROJECT))
+
+# BROWSER installs one browser, such as make install-browsers BROWSER=firefox.
+install-browsers: $(NODE_MODULES)
+	cd tests && npx playwright install $(BROWSER)
+
+# install-browser-deps installs the system packages of the browsers. It
+# needs sudo on Linux.
+install-browser-deps: $(NODE_MODULES)
+	cd tests && npx playwright install-deps $(BROWSER)
+
+# check-ci-matrix fails when the e2e matrix of CI misses a Playwright project.
+check-ci-matrix: $(NODE_MODULES)
+	node tests/check-ci-matrix.mjs
 
 test-e2e-ui: build-app
 	npm run test:ui --workspace @reviews/tests

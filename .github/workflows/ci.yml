@@ -1,5 +1,5 @@
-# Runs the checks of AGENTS.md on each push and pull request. See decision
-# 00006.
+# Runs the checks of AGENTS.md on each push to main and each pull request.
+# Decision 00010 explains the jobs. CI result gives the result of the run.
 name: CI
 
 on:
@@ -10,50 +10,75 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels its older run. Each push to main has
+# its own group. GitHub then never cancels a waiting run of main.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  lint-and-test:
+  lint:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: app/go.mod
-          cache-dependency-path: |
-            app/go.sum
-            app/sdk/go/go.sum
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - uses: ./.github/actions/setup
       - run: make install-tools
-      # The lint runs the generators. OpenAPI Generator runs in Docker,
-      # which the runner has.
+      # The lint runs the generators. OpenAPI Generator runs in the Docker of
+      # the runner. check-ci-matrix compares the e2e matrix with the
+      # Playwright projects.
       - run: make lint
+
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      # This job saves the Go and npm caches. The other jobs only restore them.
+      - uses: ./.github/actions/setup
+        with:
+          save-cache: 'true'
       - run: make test
 
   e2e:
+    name: e2e (${{ matrix.project }})
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      # The other browsers finish after one fails.
+      fail-fast: false
+      matrix:
+        include:
+          - { project: chromium, browser: chromium }
+          - { project: firefox, browser: firefox }
+          - { project: webkit, browser: webkit }
+          - { project: chromium-small, browser: chromium }
+          - { project: rate-limit, browser: chromium }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: app/go.mod
-          cache-dependency-path: |
-            app/go.sum
-            app/sdk/go/go.sum
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps
-        working-directory: tests
-      - run: make test-e2e
+      - uses: ./.github/actions/setup
+      - run: make install-browsers BROWSER=${{ matrix.browser }}
+      - run: make install-browser-deps BROWSER=${{ matrix.browser }}
+      - run: make test-e2e PROJECT=${{ matrix.project }}
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: |
             tests/playwright-report
             tests/test-results
           retention-days: 7
+
+  result:
+    name: CI result
+    # A failed job does not skip this job. A cancelled run skips it.
+    if: ${{ !cancelled() }}
+    needs: [lint, test, e2e]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo "A job did not pass: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+      - run: echo "All jobs passed."

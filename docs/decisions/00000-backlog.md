@@ -11,13 +11,8 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Add deploy folder and docker compose setup
   - need to run the built app 
   - the app will run as a single instance and deployment
-- Add CI integration that depends on GitHub actions.
-  - Job for lint
-  - Job for test
-  - Job for docker build
-  - all workflows should use the makefile to execute their tasks
-  - look in AGENTS.md for the full list of potential make commands
-  - workflow result to capture the result of the above workflows and combine them into a single pass fail result
+  - add the `make build-image` target and the `docker` CI job of decision 00010
+  - add the `docker` job to the `needs` of the `CI result` job
 
 ## Low Priority
 

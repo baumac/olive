@@ -185,9 +185,9 @@ tests/
 ## CI
 
 - `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. The repository is on GitHub, so GitHub Actions needs no other service.
-- the `lint-and-test` job runs `make lint` and `make test`. The runner has Docker for OpenAPI Generator.
-- the `e2e` job installs the browsers with `npx playwright install --with-deps`, then runs `make test-e2e`. WebKit gets its system packages there.
-- a failed `e2e` job uploads the Playwright report and the traces for 7 days
+- decision 00010 splits the workflow into the `lint`, `test`, and `e2e` jobs and one `CI result` job
+- each `e2e` job runs one Playwright project. It runs `make install-browsers` and `make install-browser-deps` for its browser, then `make test-e2e`. WebKit gets its system packages there.
+- a failed `e2e` job uploads the Playwright report and the traces of its project for 7 days
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

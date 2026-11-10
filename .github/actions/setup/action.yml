@@ -1,0 +1,36 @@
+name: Set up Go and Node.js
+description: Installs the Go version of app/go.mod and Node.js 22, and restores the Go and npm caches. See decision 00010.
+inputs:
+  save-cache:
+    description: Save the caches at the end of the job. Only one job of a run saves them.
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    # The caches of setup-go and setup-node save in each job. Seven jobs then
+    # race for one cache key.
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: app/go.mod
+        cache: false
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - if: inputs.save-cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+          ~/.npm
+        key: ci-${{ runner.os }}-${{ hashFiles('app/go.sum', 'app/sdk/go/go.sum', 'package-lock.json') }}
+        restore-keys: ci-${{ runner.os }}-
+    - if: inputs.save-cache != 'true'
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+          ~/.npm
+        key: ci-${{ runner.os }}-${{ hashFiles('app/go.sum', 'app/sdk/go/go.sum', 'package-lock.json') }}
+        restore-keys: ci-${{ runner.os }}-

@@ -17,7 +17,7 @@ This project allows users to review a variety of things. It is composed of the f
 ## Commands
 
 ```bash
-make install-tools    # Install dev tools to ./bin/. Needs Go.
+make install-tools    # Install dev tools to ./bin/tools-<Go version>/ with the Go of TOOLS_GO. Needs Go.
 make lint             # Run all linters. Needs Docker and Node.js.
 make lint-spec        # Lint the API specs in specs/api with vacuum
 make generate         # Generate the SDKs in app/sdk/ from the API spec. Needs Docker.
@@ -32,7 +32,10 @@ make build-ui         # Build the UI into app/internal/webui/dist. Needs Node.js
 make build-app        # Build the UI, then the app server to ./bin/reviews-app
 make run-app          # Run the app server on 127.0.0.1:8090 with data in app/pb_data
 make dev-ui           # Run the Vite dev server. It sends /v1 to make run-app.
-make test-e2e         # Build the app, then run the end-to-end tests in tests/
+make test-e2e         # Build the app, then run the end-to-end tests in tests/. PROJECT=webkit runs one project.
+make install-browsers # Install the Playwright browsers. BROWSER=firefox installs one.
+make install-browser-deps # Install the system packages of the browsers. Needs sudo on Linux.
+make check-ci-matrix  # Fail if the e2e matrix of CI misses a Playwright project
 make test-e2e-ui      # Open the Playwright UI mode for the end-to-end tests
 ```
 
@@ -43,11 +46,15 @@ To make the first superuser, run `go run ./app superuser create EMAIL PASSWORD -
 `make run-app` serves the UI build that `make build-ui` made last.
 For UI work, run `make run-app` and `make dev-ui` at the same time, and open the Vite URL.
 
-Before the first `make test-e2e`, install the browsers with `cd tests && npx playwright install`.
-WebKit also needs system packages: `sudo npx playwright install-deps`.
-Run one browser with `cd tests && npx playwright test --project=chromium`.
+Before the first `make test-e2e`, install the browsers with `make install-browsers`.
+WebKit also needs system packages: `make install-browser-deps`. It needs sudo.
+Run one browser with `make test-e2e PROJECT=chromium`.
 
-`.github/workflows/ci.yml` runs `make lint`, `make test`, and `make test-e2e` on each push to `main` and on each pull request.
+`.github/workflows/ci.yml` runs on each push to `main` and on each pull request. See decision 00010.
+The `lint` job runs `make lint`, and the `test` job runs `make test`.
+The `e2e` jobs run `make test-e2e` with one Playwright project each.
+A new Playwright project needs an entry in the `e2e` matrix. `make lint` fails without it.
+The `CI result` job passes only when all other jobs pass. Read it first.
 
 ## Production
 
