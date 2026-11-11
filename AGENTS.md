@@ -17,24 +17,29 @@ This project allows users to review a variety of things. It is composed of the f
 ## Commands
 
 ```bash
-make install-tools    # Install dev tools to ./bin/tools-<Go version>/ with the Go of TOOLS_GO. Needs Go.
+make install-tools    # Install dev tools to ./bin/tools-<TOOLS_GO>/ with the Go of TOOLS_GO. Needs Go.
 make lint             # Run all linters. Needs Docker and Node.js.
 make lint-spec        # Lint the API specs in specs/api with vacuum
 make generate         # Generate the SDKs in app/sdk/ from the API spec. Needs Docker.
+make generate-sdk-go  # Generate only the Go SDK
+make generate-sdk-ts  # Generate only the TypeScript SDK. Needs Docker.
 make lint-go          # Run go vet and gofmt on the Go modules
 make check-generate   # Fail if the generated SDKs do not match the API spec
 make lint-ui          # Type-check the UI. Needs Node.js.
 make test             # Run the tests of the SDKs, the app, and the UI. Needs Node.js.
 make test-sdk         # Run the tests of both SDKs. Needs Node.js.
+make test-sdk-go      # Run the tests of the Go SDK
+make test-sdk-ts      # Run the tests of the TypeScript SDK. Needs Node.js.
 make test-app         # Run the Go tests of the app
 make test-ui          # Run the UI tests. Needs Node.js.
+make build-sdk-ts     # Build the TypeScript SDK into app/sdk/typescript/dist. Needs Node.js.
 make build-ui         # Build the UI into app/internal/webui/dist. Needs Node.js.
 make build-app        # Build the UI, then the app server to ./bin/reviews-app
 make run-app          # Run the app server on 127.0.0.1:8090 with data in app/pb_data
 make dev-ui           # Run the Vite dev server. It sends /v1 to make run-app.
 make test-e2e         # Build the app, then run the end-to-end tests in tests/. PROJECT=webkit runs one project.
 make install-browsers # Install the Playwright browsers. BROWSER=firefox installs one.
-make install-browser-deps # Install the system packages of the browsers. Needs sudo on Linux.
+make install-browser-deps # Install the system packages of the browsers on Linux. Needs sudo.
 make check-ci-matrix  # Fail if the e2e matrix of CI misses a Playwright project
 make test-e2e-ui      # Open the Playwright UI mode for the end-to-end tests
 ```
@@ -47,7 +52,7 @@ To make the first superuser, run `go run ./app superuser create EMAIL PASSWORD -
 For UI work, run `make run-app` and `make dev-ui` at the same time, and open the Vite URL.
 
 Before the first `make test-e2e`, install the browsers with `make install-browsers`.
-WebKit also needs system packages: `make install-browser-deps`. It needs sudo.
+On Linux, the browsers also need system packages. Install them with `make install-browser-deps`. It needs sudo.
 Run one browser with `make test-e2e PROJECT=chromium`.
 
 `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. See decision 00010.
@@ -86,9 +91,11 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Built using the Pocketbase framework. See decision 00004.
   - **`app/main.go`** - the PocketBase app
   - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, and `review_photos` collections
+    - They also make the indexes, the FTS5 search tables, and the rate limit rules
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
     - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00007.
     - It checks, changes, and serves the photos of reviews. See decision 00008.
+  - **`app/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
@@ -171,4 +178,4 @@ comments you write or edit. Commit messages are always necessary.
 
 - Substantive design decisions are recorded as decisions under `docs/decisions/`
   Start from `docs/decisions/00000-template.md`.
-- Backlog decisions to be completed at a future date are recorded `docs/decisions/backlog/`
+- Backlog items for a future date are in `docs/decisions/00000-backlog.md`

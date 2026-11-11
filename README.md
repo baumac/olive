@@ -16,9 +16,9 @@ One Go binary serves the whole app:
 You need Go, Node.js 22, and Docker.
 
 ```bash
-make install-tools   # vacuum and oapi-codegen into ./bin
+make install-tools   # vacuum and oapi-codegen into ./bin/tools-<TOOLS_GO of the makefile>
 make build-app       # build the UI and the app to ./bin/reviews-app
-make run-app         # serve on http://127.0.0.1:8090 with data in app/pb_ddata
+make run-app         # serve on http://127.0.0.1:8090 with data in app/pb_data
 ```
 
 Make a superuser for the dashboard:
@@ -32,12 +32,13 @@ For UI work, run `make run-app` and `make dev-ui` at the same time, and open the
 ## Check your work
 
 ```bash
-make lint       # spec lint, go vet, gofmt, type checks, and the generated SDK check
+make lint       # spec lint, go vet, gofmt, type checks, the generated SDK check, and the CI matrix check
 make test       # Go, SDK, and UI unit tests
-make test-e2e   # Playwright tests in Chromium, Firefox, and WebKit
+make test-e2e   # the Playwright projects chromium, firefox, webkit, chromium-small, and rate-limit
 ```
 
-Before the first `make test-e2e`, run `cd tests && npx playwright install`.
+Before the first `make test-e2e`, run `make install-browsers`.
+On Linux, the browsers also need system packages. Install them with `make install-browser-deps`. It needs sudo.
 CI runs the same commands. See `.github/workflows/ci.yml`.
 
 ## Layout
