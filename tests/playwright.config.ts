@@ -2,6 +2,9 @@ import { defineConfig, devices } from '@playwright/test'
 
 export const port = 8097
 export const baseURL = `http://127.0.0.1:${port}`
+// appURL is the Application URL of the test app. The link previews use it.
+// The app does not serve it.
+export const appURL = 'https://reviews.example.com'
 
 const desktop = { viewport: { width: 1280, height: 800 } }
 // The rate limit test has its own app and project. See rate-limit.spec.ts.

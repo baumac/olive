@@ -4,10 +4,12 @@ package webui
 
 import (
 	"embed"
+	"errors"
 	"io"
 	"io/fs"
 	"net/http"
 	"strings"
+	"sync"
 	"testing/fstest"
 
 	"github.com/pocketbase/pocketbase/apis"
@@ -77,8 +79,21 @@ func (f noDotFiles) Open(name string) (fs.File, error) {
 // Register serves the UI on all paths that no other route has. A path that
 // is not a file gets index.html. The UI router then shows the screen.
 func Register(app core.App) {
+	register(app, Files())
+}
+
+func register(app core.App, files fs.FS) {
+	index, hasMetaBlock := readIndex(files)
+	if _, built := files.(noDotFiles); built && !hasMetaBlock {
+		app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+			se.App.Logger().Warn("index.html of the UI build has no page-meta block. Pages get no link preview. See decision 00013.")
+			return se.Next()
+		})
+	}
+	if hasMetaBlock {
+		watchAppURL(app, warnAppURL)
+	}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		files := Files()
 		static := apis.Static(files, true)
 		se.Router.POST(reportPath, logReport)
 		// The route has no method. A GET route would conflict with the /v1
@@ -95,10 +110,75 @@ func Register(app core.App) {
 			e.Response.Header().Set("Cache-Control", cacheControl(files, path))
 			e.Response.Header().Set("Content-Security-Policy", contentSecurityPolicy)
 			e.Response.Header().Set("Reporting-Endpoints", `csp="`+reportPath+`"`)
+			if hasMetaBlock {
+				if page, status, ok := renderPage(e, index, path); ok {
+					return e.HTML(status, string(page))
+				}
+			}
 			return static(e)
 		}).Bind(apis.Gzip())
 		return se.Next()
 	})
+}
+
+// watchAppURL warns when the app starts to serve with a private Application
+// URL. After the start, it warns when a settings save changes the URL to
+// such a URL. CLI commands do not serve, so they do not warn.
+func watchAppURL(app core.App, warn func(core.App, string)) {
+	var mu sync.Mutex
+	serving, last := false, ""
+	check := func(app core.App, force bool) {
+		appURL := app.Settings().Meta.AppURL
+		mu.Lock()
+		changed := appURL != last
+		last = appURL
+		mu.Unlock()
+		if (force || changed) && publicBaseURL(appURL) == "" {
+			warn(app, appURL)
+		}
+	}
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		mu.Lock()
+		serving = true
+		mu.Unlock()
+		check(se.App, true)
+		return se.Next()
+	})
+	app.OnSettingsReload().BindFunc(func(e *core.SettingsReloadEvent) error {
+		mu.Lock()
+		started := serving
+		mu.Unlock()
+		if started {
+			check(e.App, false)
+		}
+		return e.Next()
+	})
+}
+
+func warnAppURL(app core.App, appURL string) {
+	app.Logger().Warn("The Application URL is not public. Pages get no canonical URL. See decision 00013.", "appURL", appURL)
+}
+
+// renderPage returns false for a path without its own page meta. A missing
+// record gets the default page with 404. The UI then shows its not found
+// screen. On a database error, the app logs it and sends the default page.
+func renderPage(e *core.RequestEvent, index indexPage, path string) ([]byte, int, bool) {
+	meta, ok, err := index.metaFor(e.App, e.App.Settings().Meta.AppURL, path)
+	if !ok {
+		return nil, 0, false
+	}
+	if errors.Is(err, errNoRecord) {
+		return index.whole, http.StatusNotFound, true
+	}
+	var page []byte
+	if err == nil {
+		page, err = index.render(meta)
+	}
+	if err != nil {
+		e.App.Logger().Error("Cannot make the page meta", "path", path, "error", err)
+		return nil, 0, false
+	}
+	return page, http.StatusOK, true
 }
 
 // cacheControl lets browsers keep the hashed files in assets/ for a year.

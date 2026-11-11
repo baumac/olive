@@ -303,13 +303,16 @@ func (s *Server) reviewPhotos(reviews ...*core.Record) (map[string][]reviewsapi.
 }
 
 func toPhoto(r *core.Record, restaurantID string) reviewsapi.Photo {
-	base := photoPath(restaurantID, r.GetString("review"), r.Id)
+	reviewID := r.GetString("review")
 	return reviewsapi.Photo{
-		Id:      r.Id,
-		Alt:     nullableText(r.GetString("alt")),
-		Width:   r.GetInt("width"),
-		Height:  r.GetInt("height"),
-		Urls:    reviewsapi.PhotoUrls{Full: base + "/full", Thumb: base + "/thumb"},
+		Id:     r.Id,
+		Alt:    nullableText(r.GetString("alt")),
+		Width:  r.GetInt("width"),
+		Height: r.GetInt("height"),
+		Urls: reviewsapi.PhotoUrls{
+			Full:  PhotoFilePath(restaurantID, reviewID, r.Id, reviewsapi.Full),
+			Thumb: PhotoFilePath(restaurantID, reviewID, r.Id, reviewsapi.Thumb),
+		},
 		Created: r.GetDateTime("created").String(),
 	}
 }
@@ -319,6 +322,11 @@ func nullableText(v string) nullable.Nullable[string] {
 		return nullable.NewNullNullable[string]()
 	}
 	return nullable.NewNullableWithValue(v)
+}
+
+// PhotoFilePath returns the path of the GetReviewPhotoFile operation.
+func PhotoFilePath(restaurantID, reviewID, photoID string, variant reviewsapi.PhotoVariant) string {
+	return photoPath(restaurantID, reviewID, photoID) + "/" + string(variant)
 }
 
 func photoPath(restaurantID, reviewID, photoID string) string {

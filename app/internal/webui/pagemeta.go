@@ -1,0 +1,278 @@
+package webui
+
+import (
+	"bytes"
+	"database/sql"
+	"errors"
+	"html"
+	"html/template"
+	"io/fs"
+	"net"
+	"net/url"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/baumac/reviews-app/app/internal/publicapi"
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
+)
+
+// The page-meta block of index.html starts and ends with these comments.
+// Decision 00013 has the details.
+const (
+	metaStart = "<!-- page-meta -->"
+	metaEnd   = "<!-- /page-meta -->"
+)
+
+// maxDescriptionRunes is near the length that search results show.
+const maxDescriptionRunes = 200
+
+// recordID is the RecordId pattern of the API spec. The path
+// /restaurants/new then does not match a restaurant.
+var recordID = regexp.MustCompile(`^[a-z0-9]{15}$`)
+
+var (
+	titleTag = regexp.MustCompile(`(?is)<title[^>]*>([^<]*)</title>`)
+	metaTag  = regexp.MustCompile(`(?is)<meta\s[^>]*>`)
+	attr     = regexp.MustCompile(`(?s)([a-zA-Z:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))`)
+)
+
+// metaAttrs returns the attributes of a meta tag with lowercase names.
+func metaAttrs(tag string) map[string]string {
+	out := map[string]string{}
+	for _, m := range attr.FindAllStringSubmatch(tag, -1) {
+		out[strings.ToLower(m[1])] = html.UnescapeString(m[2] + m[3] + m[4])
+	}
+	return out
+}
+
+// publicBaseURL returns the scheme, host, and path of the Application URL.
+// It returns an empty string for a host that the public cannot reach. The
+// PocketBase default is on such a host.
+func publicBaseURL(appURL string) string {
+	u, err := url.Parse(appURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {
+		return ""
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return ""
+	}
+	if ip := net.ParseIP(host); ip != nil && (ip.IsLoopback() || ip.IsUnspecified() || ip.IsPrivate() ||
+		ip.IsLinkLocalUnicast()) {
+		return ""
+	}
+	base := url.URL{Scheme: u.Scheme, Host: u.Host, Path: strings.TrimSuffix(u.Path, "/")}
+	return base.String()
+}
+
+// pageMeta has the values of the page-meta block. html/template escapes
+// each value for its HTML context.
+type pageMeta struct {
+	Title       string
+	OGTitle     string
+	Description string
+	Type        string
+	URL         string
+	Image       string
+	ImageWidth  int
+	ImageHeight int
+	ImageAlt    string
+}
+
+var metaTemplate = template.Must(template.New("meta").Parse(`<title>{{.Title}}</title>
+    <meta name="description" content="{{.Description}}" />
+    {{- if .URL}}
+    <link rel="canonical" href="{{.URL}}" />
+    {{- end}}
+    <meta property="og:type" content="{{.Type}}" />
+    <meta property="og:title" content="{{.OGTitle}}" />
+    <meta property="og:description" content="{{.Description}}" />
+    {{- if .URL}}
+    <meta property="og:url" content="{{.URL}}" />
+    {{- end}}
+    <meta property="og:image" content="{{.Image}}" />
+    {{- if .ImageWidth}}
+    <meta property="og:image:width" content="{{.ImageWidth}}" />
+    <meta property="og:image:height" content="{{.ImageHeight}}" />
+    {{- end}}
+    <meta property="og:image:alt" content="{{.ImageAlt}}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{.OGTitle}}" />
+    <meta name="twitter:description" content="{{.Description}}" />`))
+
+// indexPage is index.html cut around the page-meta block. siteName and
+// siteImage come from the default tags of the block.
+type indexPage struct {
+	whole, before, after []byte
+	siteName             string
+	siteImage            pageMeta
+}
+
+// readIndex returns false if index.html has no page-meta block with a title
+// and an og:image. The placeholder page has no block.
+func readIndex(files fs.FS) (indexPage, bool) {
+	data, err := fs.ReadFile(files, "index.html")
+	if err != nil {
+		return indexPage{}, false
+	}
+	start := bytes.Index(data, []byte(metaStart))
+	end := bytes.Index(data, []byte(metaEnd))
+	if start < 0 || end < start {
+		return indexPage{}, false
+	}
+	block := string(data[start:end])
+	title := titleTag.FindStringSubmatch(block)
+	if title == nil {
+		return indexPage{}, false
+	}
+	p := indexPage{whole: data, before: data[:start], after: data[end+len(metaEnd):], siteName: html.UnescapeString(strings.TrimSpace(title[1]))}
+	for _, tag := range metaTag.FindAllString(block, -1) {
+		a := metaAttrs(tag)
+		switch value := a["content"]; a["property"] {
+		case "og:image":
+			p.siteImage.Image = value
+		case "og:image:width":
+			p.siteImage.ImageWidth, _ = strconv.Atoi(value)
+		case "og:image:height":
+			p.siteImage.ImageHeight, _ = strconv.Atoi(value)
+		case "og:image:alt":
+			p.siteImage.ImageAlt = value
+		}
+	}
+	return p, p.siteImage.Image != ""
+}
+
+func (p indexPage) render(meta pageMeta) ([]byte, error) {
+	var b bytes.Buffer
+	b.Write(p.before)
+	if err := metaTemplate.Execute(&b, meta); err != nil {
+		return nil, err
+	}
+	b.Write(p.after)
+	return b.Bytes(), nil
+}
+
+// pageTitle has the format of usePageTitle in the UI.
+func (p indexPage) pageTitle(title string) string {
+	return title + " · " + p.siteName
+}
+
+// errNoRecord tells that the path names a restaurant or a review that does
+// not exist.
+var errNoRecord = errors.New("no record")
+
+// metaFor returns false for a path that is not a restaurant or review page.
+// appURL is the Application URL of the PocketBase settings. The literal
+// path parts ignore case like Vue Router.
+func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, error) {
+	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
+	if len(parts) < 2 || !strings.EqualFold(parts[0], "restaurants") || !recordID.MatchString(parts[1]) {
+		return pageMeta{}, false, nil
+	}
+	isReview := len(parts) == 4 && strings.EqualFold(parts[2], "reviews") && recordID.MatchString(parts[3])
+	if len(parts) != 2 && !isReview {
+		return pageMeta{}, false, nil
+	}
+	baseURL := publicBaseURL(appURL)
+	restaurant, err := app.FindRecordById("restaurants", parts[1])
+	if err != nil {
+		return pageMeta{}, true, notFound(err)
+	}
+	if !isReview {
+		return p.restaurantMeta(restaurant, baseURL), true, nil
+	}
+	review, err := app.FindRecordById("reviews", parts[3])
+	if err != nil {
+		return pageMeta{}, true, notFound(err)
+	}
+	if review.GetString("restaurant") != restaurant.Id {
+		return pageMeta{}, true, errNoRecord
+	}
+	photo := &core.Record{}
+	err = app.RecordQuery("review_photos").
+		AndWhere(dbx.HashExp{"review": review.Id}).
+		OrderBy("created ASC", "id ASC").
+		Limit(1).
+		One(photo)
+	if errors.Is(err, sql.ErrNoRows) {
+		photo = nil
+	} else if err != nil {
+		return pageMeta{}, true, err
+	}
+	return p.reviewMeta(restaurant, review, photo, baseURL), true, nil
+}
+
+func notFound(err error) error {
+	if errors.Is(err, sql.ErrNoRows) {
+		return errNoRecord
+	}
+	return err
+}
+
+// pageURL is empty without a baseURL.
+func pageURL(baseURL, path string) string {
+	if baseURL == "" {
+		return ""
+	}
+	return baseURL + path
+}
+
+func (p indexPage) restaurantMeta(restaurant *core.Record, baseURL string) pageMeta {
+	name := restaurant.GetString("name")
+	description := shorten(restaurant.GetString("description"))
+	if description == "" {
+		description = "Reviews of " + name + " on " + p.siteName + "."
+	}
+	meta := p.siteImage
+	meta.Title = p.pageTitle(name)
+	meta.OGTitle = name
+	meta.Description = description
+	meta.Type = "website"
+	meta.URL = pageURL(baseURL, "/restaurants/"+restaurant.Id)
+	return meta
+}
+
+// reviewMeta uses the site image without a baseURL. og:image needs an
+// absolute URL.
+func (p indexPage) reviewMeta(restaurant, review, photo *core.Record, baseURL string) pageMeta {
+	title := review.GetString("title")
+	description := shorten(review.GetString("feedback"))
+	if description == "" {
+		description = "A review of " + restaurant.GetString("name") + " on " + p.siteName + "."
+	}
+	meta := p.siteImage
+	if photo != nil && baseURL != "" {
+		meta.Image = baseURL + publicapi.PhotoFilePath(restaurant.Id, review.Id, photo.Id, reviewsapi.Full)
+		meta.ImageWidth = photo.GetInt("width")
+		meta.ImageHeight = photo.GetInt("height")
+		meta.ImageAlt = photo.GetString("alt")
+		if meta.ImageAlt == "" {
+			meta.ImageAlt = "A photo of the review " + title
+		}
+	}
+	meta.Title = p.pageTitle(title)
+	meta.OGTitle = title + " · " + restaurant.GetString("name")
+	meta.Description = description
+	meta.Type = "article"
+	meta.URL = pageURL(baseURL, "/restaurants/"+restaurant.Id+"/reviews/"+review.Id)
+	return meta
+}
+
+// shorten puts all whitespace on one line. It cuts a long text at a word
+// boundary and adds an ellipsis.
+func shorten(text string) string {
+	runes := []rune(strings.Join(strings.Fields(text), " "))
+	if len(runes) <= maxDescriptionRunes {
+		return string(runes)
+	}
+	cut := string(runes[:maxDescriptionRunes])
+	if runes[maxDescriptionRunes] != ' ' {
+		if i := strings.LastIndexByte(cut, ' '); i > 0 {
+			cut = cut[:i]
+		}
+	}
+	return strings.TrimRight(cut, ".,;:!? ") + "…"
+}
