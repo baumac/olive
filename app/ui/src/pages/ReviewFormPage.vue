@@ -23,6 +23,8 @@ import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, maxPhotos } from '@/lib/validation'
 
 const props = defineProps<{ restaurantId: string; reviewId?: string }>()
+// busyRetryAfter is the longest Retry-After in seconds of a busy server.
+const busyRetryAfter = 10
 const router = useRouter()
 
 const editing = computed(() => props.reviewId !== undefined)
@@ -167,12 +169,16 @@ async function addSelected(file: File, alt: string) {
 }
 
 async function uploadFailure(error: unknown): Promise<string> {
-  const { status, problem } = await apiFailure(error)
+  const { status, problem, retryAfter } = await apiFailure(error)
   if (status === 409) {
     return `A review can have at most ${maxPhotos} photos.`
   }
   if (status === 413 || status === 415 || status === 422) {
     return problem?.detail ?? 'Select a JPEG, PNG, or WebP image of at most 10 MB.'
+  }
+  // The rate limit of the user can wait up to one hour.
+  if (status === 429 && retryAfter !== null && retryAfter <= busyRetryAfter) {
+    return 'Many photos are uploading now. Try again in a few seconds.'
   }
   if (status === 429) {
     return 'You added many photos in a short time. Try again later.'

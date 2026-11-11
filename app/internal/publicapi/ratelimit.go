@@ -34,9 +34,9 @@ func newRateLimiter(limit int, window time.Duration) *rateLimiter {
 	return &rateLimiter{limit: limit, window: window, now: time.Now, keys: map[string]*list.Element{}, order: list.New()}
 }
 
-// allow returns 0 if the request can continue. Otherwise it returns the
-// time until the window of key ends.
-func (l *rateLimiter) allow(key string) time.Duration {
+// allow returns 0 and the start of the window that counts the request if the
+// request can continue. Otherwise it returns the time until the window ends.
+func (l *rateLimiter) allow(key string) (time.Duration, time.Time) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -48,16 +48,28 @@ func (l *rateLimiter) allow(key string) time.Duration {
 	if e, ok := l.keys[key]; ok {
 		w := e.Value.(*rateWindow)
 		if w.count >= l.limit {
-			return w.start.Add(l.window).Sub(now)
+			return w.start.Add(l.window).Sub(now), time.Time{}
 		}
 		w.count++
-		return 0
+		return 0, w.start
 	}
 	if l.order.Len() >= maxWindows {
 		l.remove(l.order.Front())
 	}
 	l.keys[key] = l.order.PushBack(&rateWindow{key: key, start: now, count: 1})
-	return 0
+	return 0, now
+}
+
+// giveBack removes one request of key from the window that started at start.
+// A later window of key stays the same.
+func (l *rateLimiter) giveBack(key string, start time.Time) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if e, ok := l.keys[key]; ok {
+		if w := e.Value.(*rateWindow); w.start.Equal(start) && w.count > 0 {
+			w.count--
+		}
+	}
 }
 
 func (l *rateLimiter) remove(e *list.Element) {

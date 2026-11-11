@@ -30,6 +30,8 @@ var uploadTypes = map[string]string{"image/jpeg": "JPEG", "image/png": "PNG", "i
 type processedPhoto struct {
 	full, thumb   []byte
 	width, height int
+	// held is the number of bytes that the photo holds in photoMemory.
+	held int64
 }
 
 // processPhoto makes new JPEG files from an upload. The JPEG encoder writes

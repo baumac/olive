@@ -416,3 +416,35 @@ func TestPhotoUploadRateLimit(t *testing.T) {
 	p.expect(request{method: "POST", path: "/v1/restaurants/" + strings.Split(p.reviews, "/")[3] + "/reviews/" + other + "/photos",
 		body: string(testJPEG(t, 4, 4, 0)), contentType: "image/jpeg", token: p.joe.Token}, http.StatusCreated)
 }
+
+func TestPhotoMemoryLimit(t *testing.T) {
+	opts := testOptions
+	opts.PhotoMemoryLimit = 64 << 10
+	opts.PhotoUploadLimit = 1
+	p := newPhotoEnv(t, opts)
+	large := append(testJPEG(t, 4, 4, 0), make([]byte, 100<<10)...)
+
+	res := p.upload(p.ana.Token, large, "image/jpeg", http.StatusTooManyRequests)
+	if got := res.header.Get("Retry-After"); got != "5" {
+		t.Errorf("Retry-After %q", got)
+	}
+	// The 429 does not use the upload limit, and the memory comes back.
+	p.addPhoto()
+	res = p.upload(p.ana.Token, testJPEG(t, 4, 4, 0), "image/jpeg", http.StatusTooManyRequests)
+	if got := res.header.Get("Retry-After"); got == "5" {
+		t.Error("the upload limit did not count the photo")
+	}
+}
+
+func TestPhotoMemoryComesBack(t *testing.T) {
+	opts := testOptions
+	opts.PhotoMemoryLimit = 64 << 10
+	p := newPhotoEnv(t, opts)
+	for range 3 {
+		p.upload(p.ana.Token, []byte("not an image"), "image/jpeg", http.StatusUnprocessableEntity)
+		p.upload(p.ana.Token, pngBomb(t), "image/png", http.StatusUnprocessableEntity)
+	}
+	for range 3 {
+		p.addPhoto()
+	}
+}

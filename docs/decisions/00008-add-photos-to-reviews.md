@@ -217,6 +217,7 @@ Why a separate collection and not a file field on `reviews`:
 | Pixels of the upload | at most 25 megapixels, at most 8192 on each side, at least 1 on each side | `422` |
 | Photos of a review | 5 | `409` |
 | Uploads of a user | 30 per hour | `429` |
+| Memory of all uploads in the app | 64 MB of bodies and processed photos | `429` with `Retry-After: 5` |
 | Long side of `full` | 2048 pixels | none. The app makes it smaller. |
 | Long side of `thumb` | 480 pixels | none. The app makes it smaller. |
 
@@ -267,20 +268,28 @@ The handler of the add operation runs these checks in order:
 | 7 | the user is the creator of the review | `403` |
 | 8 | the review has fewer than 5 photos | `409` |
 | 9 | the body is at most 10 MB. `http.MaxBytesReader` stops the read. | `413` |
-| 10 | the first bytes match the content type | `422` |
-| 11 | `image.DecodeConfig` gives a size inside the pixel limits | `422` |
-| 12 | the image decodes without an error | `422` |
-| 13 | in one transaction: the review and its creator again, the count again, and the save | `404`, `403`, `409` |
+| 10 | the memory limit of uploads has space for the body. The check runs at each step of the read. | `429` |
+| 11 | the first bytes match the content type | `422` |
+| 12 | `image.DecodeConfig` gives a size inside the pixel limits | `422` |
+| 13 | the image decodes without an error | `422` |
+| 14 | in one transaction: the review and its creator again, the count again, and the save | `404`, `403`, `409` |
 
 - `limitBody` sends the `413` of check 5 before all other checks. It runs as a PocketBase middleware.
 - checks 6 to 8 run before the app reads the body. A client that cannot add a photo then does not send 10 MB for nothing.
-- check 11 reads only the header of the image. A small file that claims 50,000 by 50,000 pixels never decodes.
-- check 13 repeats checks 6 to 8. Two parallel uploads cannot both pass the count, because PocketBase uses one SQLite writer.
+- check 12 reads only the header of the image. A small file that claims 50,000 by 50,000 pixels never decodes.
+- check 14 repeats checks 6 to 8. Two parallel uploads cannot both pass the count, because PocketBase uses one SQLite writer.
 - the decode and the encode run before the transaction. They are slow, and the transaction blocks other writes.
-- at most 2 uploads decode at the same time. A semaphore holds the others after check 9.
-- the semaphore does not cover the read of the body. Two slow clients then cannot block all uploads. The PocketBase read timeout of 5 minutes ends a slow read.
-- an upload that waits for the semaphore holds its body of at most 10 MB. The rate limit of each user limits these uploads.
-- a decode of 25 megapixels needs up to 100 MB of memory
+- at most 2 uploads decode at the same time. A semaphore holds the others after check 10.
+- `photoMemory` in `photomemory.go` counts the bytes of the uploads in memory. The read takes memory each time its buffer grows. It starts with 64 KB and doubles.
+- an upload holds its body from the read until the decode ends. Then it holds the processed `full` and `thumb` until the save ends.
+- a slow client holds only the bytes that it sent. Slow clients then cannot block all uploads. The PocketBase read timeout of 5 minutes ends a slow read.
+- check 10 does not wait. It stops the read at once and sends `429`. The client tries again after `Retry-After`.
+- the buffer can have up to twice the bytes of its body. 64 MB then holds 3 to 6 uploads of 10 MB.
+- a decode of 25 megapixels needs up to 100 MB of memory. The memory limit does not count it. The semaphore limits it to 200 MB.
+- `Options.PhotoMemoryLimit` sets the limit. It has no environment variable. Tests make it smaller.
+- the `429` of check 10 gives back the count of check 2. The upload rate limit of the user then counts only uploads that the server can do.
+- the description of the `TooManyRequests` response tells about the `429` of check 10
+- the UI shows "Try again in a few seconds" for a `429` with a `Retry-After` of at most 10 seconds. The rate limit of the user sends a longer wait.
 - a `422` for an upload has a `detail` and no `errors` array. The body has no properties to name.
 - the `PATCH` operation uses the JSON checks of decision 00004 and the spec validation of decision 00007
 - the response validation of decision 00007 checks the status and the headers of the file operation with `ExcludeResponseBody`. `headerCheckWriter` checks them before it writes them. The image bytes then go to the client without a buffer.
@@ -423,6 +432,9 @@ Go tests in `app/internal/publicapi`:
 - a PNG that claims 50,000 by 50,000 pixels: `422` without a decode
 - a text file sent as `image/jpeg`: `422`
 - two parallel uploads at the last free place: one `201` and one `409`
+- a body over the memory limit: `429` with `Retry-After: 5`. The next upload of the user gets `201`, also with an upload limit of 1.
+- the memory comes back after a `201`, a `422`, a cancel, and a `413`
+- a give back of the rate limit changes only the window that counted the request
 - the headers of the file operation, `304` for `If-None-Match`, and `404` after a delete
 - `/api/files` does not serve the files without a superuser
 - a 10 MB upload reaches the handler. `TestBodyLimit` already covers bodies over 32 MB.
@@ -467,6 +479,10 @@ End-to-end tests in `tests/e2e/photos.spec.ts`:
 | Upload directly from the browser to S3 with a signed URL | Not selected. The app cannot check or change the file before a client can get it. The project has no S3. |
 | A separate host for the files, as decision 00005 says | Not selected now. The new encode, `nosniff`, and the `sandbox` policy remove the risk on the same origin. A separate host needs a second name, TLS, and CORS. It can come with a CDN. |
 | Upload first and show the server `thumb` as the preview | Not selected. A new review has no ID until the save, so the create form cannot upload first. The `blob:` preview needs only an `img-src` change. |
+| A queue with a count of uploads after the read of the body | Not selected. The reads before the queue then have no limit. A client also sends 10 MB before it gets `429`. |
+| Take a place for 10 MB before the read of the body | Not selected. A few slow clients then block all uploads for up to 5 minutes. |
+| Wait for free memory | Not selected. Each waiting upload holds its body. The memory then has no limit. |
+| `503 Service Unavailable` for a full memory limit | Not selected. The spec and the SDKs need a new response. `429` already has `Retry-After`, and clients already handle it. |
 | WebP or AVIF output | Not selected. Go has no encoder in the standard library. A cgo library makes the build harder. |
 
 # Unresolved questions

@@ -12,23 +12,42 @@ func TestRateLimiterWindows(t *testing.T) {
 	l.now = func() time.Time { return now }
 
 	for i := range 2 {
-		if wait := l.allow("a"); wait != 0 {
+		if wait, _ := l.allow("a"); wait != 0 {
 			t.Fatalf("request %d waits %v", i, wait)
 		}
 	}
 	now = now.Add(20 * time.Second)
-	if wait := l.allow("a"); wait != 40*time.Second {
+	if wait, _ := l.allow("a"); wait != 40*time.Second {
 		t.Errorf("third request waits %v, want 40s", wait)
 	}
-	if wait := l.allow("b"); wait != 0 {
+	if wait, _ := l.allow("b"); wait != 0 {
 		t.Errorf("another key waits %v", wait)
 	}
 	now = now.Add(40 * time.Second)
-	if wait := l.allow("a"); wait != 0 {
+	if wait, _ := l.allow("a"); wait != 0 {
 		t.Errorf("request after the window waits %v", wait)
 	}
 	if len(l.keys) != 2 || l.order.Len() != 2 {
 		t.Errorf("%d keys and %d windows, want 2 and 2", len(l.keys), l.order.Len())
+	}
+}
+
+func TestRateLimiterGiveBack(t *testing.T) {
+	now := time.Unix(0, 0)
+	l := newRateLimiter(1, time.Minute)
+	l.now = func() time.Time { return now }
+
+	_, start := l.allow("a")
+	l.giveBack("a", start)
+	if wait, _ := l.allow("a"); wait != 0 {
+		t.Fatalf("request after give back waits %v", wait)
+	}
+	// A give back from the old window does not change the new window.
+	now = now.Add(time.Minute)
+	l.allow("a")
+	l.giveBack("a", start)
+	if wait, _ := l.allow("a"); wait == 0 {
+		t.Error("the old give back changed the new window")
 	}
 }
 
@@ -46,7 +65,7 @@ func TestRateLimiterKeepsAtMostMaxWindows(t *testing.T) {
 	if _, ok := l.keys["0"]; ok {
 		t.Error("the oldest window stays")
 	}
-	if wait := l.allow(strconv.Itoa(maxWindows + 4)); wait == 0 {
+	if wait, _ := l.allow(strconv.Itoa(maxWindows + 4)); wait == 0 {
 		t.Error("the newest window was removed")
 	}
 }

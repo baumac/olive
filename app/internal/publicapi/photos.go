@@ -18,10 +18,12 @@ import (
 
 const (
 	maxPhotosPerReview = 5
-	// maxParallelDecodes limits the memory of uploads. A decode of 25
+	// maxParallelDecodes limits the memory of the decodes. A decode of 25
 	// megapixels needs up to 100 MB.
 	maxParallelDecodes = 2
-	photoNotFound      = "The photo does not exist."
+	// memoryFullRetryAfter is in seconds.
+	memoryFullRetryAfter = 5
+	photoNotFound        = "The photo does not exist."
 )
 
 // AddReviewPhoto checks the review before it reads the body. A client that
@@ -63,6 +65,7 @@ func (s *Server) AddReviewPhoto(ctx context.Context, req reviewsapi.AddReviewPho
 	if response != nil || err != nil {
 		return response, err
 	}
+	defer s.photoMemory.give(photo.held)
 
 	var saved *core.Record
 	err = s.app.RunInTransaction(func(tx core.App) error {
@@ -102,8 +105,16 @@ func (s *Server) AddReviewPhoto(ctx context.Context, req reviewsapi.AddReviewPho
 
 // readPhoto reads and processes the body. The decodes semaphore holds it
 // only after the read. A slow client then cannot block the other uploads.
+// The returned photo holds its memory until the caller gives it back.
 func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string) (processedPhoto, reviewsapi.AddReviewPhotoResponseObject, error) {
-	data, err := io.ReadAll(body)
+	data, held, err := s.photoMemory.read(body)
+	if errors.Is(err, errPhotoMemoryFull) {
+		stateFrom(ctx).giveBackLimit()
+		return processedPhoto{}, reviewsapi.AddReviewPhoto429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: reviewsapi.TooManyRequestsApplicationProblemPlusJSONResponse{
+			Body:    newProblem(http.StatusTooManyRequests, "The server processes too many photos. Try again in a few seconds."),
+			Headers: reviewsapi.TooManyRequestsResponseHeaders{RetryAfter: memoryFullRetryAfter},
+		}}, nil
+	}
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
 		return processedPhoto{}, reviewsapi.AddReviewPhoto413ApplicationProblemPlusJSONResponse{ContentTooLargeApplicationProblemPlusJSONResponse: reviewsapi.ContentTooLargeApplicationProblemPlusJSONResponse(
@@ -115,10 +126,14 @@ func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string
 	select {
 	case s.decodes <- struct{}{}:
 	case <-ctx.Done():
+		s.photoMemory.give(held)
 		return processedPhoto{}, nil, ctx.Err()
 	}
 	photo, detail, err := processPhoto(data, mediaType)
 	<-s.decodes
+	if err != nil || detail != "" {
+		s.photoMemory.give(held)
+	}
 	if err != nil {
 		return processedPhoto{}, nil, err
 	}
@@ -126,6 +141,8 @@ func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string
 		return processedPhoto{}, reviewsapi.AddReviewPhoto422ApplicationProblemPlusJSONResponse{InvalidImageApplicationProblemPlusJSONResponse: reviewsapi.InvalidImageApplicationProblemPlusJSONResponse(
 			newProblem(http.StatusUnprocessableEntity, detail))}, nil
 	}
+	photo.held = int64(len(photo.full) + len(photo.thumb))
+	s.photoMemory.resize(held, photo.held)
 	return photo, nil, nil
 }
 

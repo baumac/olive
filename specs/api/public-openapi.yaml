@@ -1081,7 +1081,10 @@ components:
             status: 401
             detail: The email or password is not correct.
     TooManyRequests:
-      description: The client sent too many sign up, sign in, or photo upload requests in a short time.
+      description: |
+        The client sent too many sign up, sign in, or photo upload requests in a short time.
+        A photo upload also gets it when the server holds too many photos in memory.
+        This upload does not count for the rate limit of the user.
       headers:
         Retry-After:
           description: The number of seconds to wait before the next request.

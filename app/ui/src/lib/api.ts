@@ -43,6 +43,8 @@ export const usersApi = new UsersApi(configuration)
 export interface ApiFailure {
   status: number | null
   problem: Problem | null
+  // retryAfter is the Retry-After header in seconds, or null without it.
+  retryAfter: number | null
 }
 
 // apiFailure gives the status and the Problem Details body of a failed
@@ -55,10 +57,11 @@ export async function apiFailure(error: unknown): Promise<ApiFailure> {
     } catch {
       problem = null
     }
-    return { status: error.response.status, problem }
+    const retryAfter = Number.parseInt(error.response.headers.get('Retry-After') ?? '', 10)
+    return { status: error.response.status, problem, retryAfter: Number.isNaN(retryAfter) ? null : retryAfter }
   }
   if (error instanceof FetchError) {
-    return { status: null, problem: null }
+    return { status: null, problem: null, retryAfter: null }
   }
   throw error
 }

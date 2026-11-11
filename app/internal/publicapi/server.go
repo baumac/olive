@@ -3,6 +3,7 @@
 package publicapi
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -30,6 +31,9 @@ type Options struct {
 	// PhotoUploadWindow.
 	PhotoUploadLimit  int
 	PhotoUploadWindow time.Duration
+	// PhotoMemoryLimit is the number of bytes that all photo uploads can
+	// hold in memory. Zero uses 64 MB.
+	PhotoMemoryLimit int64
 	// SkipRequestValidation turns off the spec validation of the parameters
 	// and the body values. Invalid values then reach the handlers.
 	SkipRequestValidation bool
@@ -54,7 +58,8 @@ type Server struct {
 	opts     Options
 	limiters map[string]*rateLimiter
 	// decodes holds one token for each photo upload that decodes its image.
-	decodes chan struct{}
+	decodes     chan struct{}
+	photoMemory *photoMemory
 	// dummyHash lets sign in check a password hash for an unknown email.
 	// Sign in then takes the same time for all email addresses.
 	dummyHash []byte
@@ -116,8 +121,9 @@ func New(app core.App, opts Options) (*Server, error) {
 			"sign-in":      newRateLimiter(opts.SignInLimit, opts.SignInWindow),
 			"photo-upload": newRateLimiter(opts.PhotoUploadLimit, opts.PhotoUploadWindow),
 		},
-		decodes:   make(chan struct{}, maxParallelDecodes),
-		dummyHash: hash,
+		decodes:     make(chan struct{}, maxParallelDecodes),
+		photoMemory: &photoMemory{limit: cmp.Or(opts.PhotoMemoryLimit, defaultPhotoMemoryLimit)},
+		dummyHash:   hash,
 	}, nil
 }
 
@@ -180,6 +186,23 @@ type state struct {
 	props map[string]json.RawMessage
 	// request lets a file response read the Range and If-None-Match headers.
 	request *http.Request
+	// limited is the rate limit count of the request. It is nil without a
+	// limit.
+	limited *limitedRequest
+}
+
+type limitedRequest struct {
+	limiter *rateLimiter
+	key     string
+	start   time.Time
+}
+
+// giveBackLimit removes the request from its rate limit count. A request
+// that the server cannot do then does not use the limit of the client.
+func (st *state) giveBackLimit() {
+	if st.limited != nil {
+		st.limited.limiter.giveBack(st.limited.key, st.limited.start)
+	}
 }
 
 func stateFrom(ctx context.Context) *state {
@@ -257,7 +280,7 @@ func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *operation, in *openapi3filter.RequestValidationInput) {
 	r := in.Request
 	st := &state{request: r}
-	if op.limit != nil && op.limit.key == "ip" && !s.allow(w, op, clientKey(clientIP(r))) {
+	if op.limit != nil && op.limit.key == "ip" && !s.allow(w, op, st, clientKey(clientIP(r))) {
 		return
 	}
 
@@ -276,7 +299,7 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 		st.user, st.token = user, token
 	}
 	// The key is the user. The token check therefore runs first.
-	if op.limit != nil && op.limit.key == "user" && !s.allow(w, op, st.user.Id) {
+	if op.limit != nil && op.limit.key == "user" && !s.allow(w, op, st, st.user.Id) {
 		return
 	}
 
@@ -304,10 +327,14 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 	mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), stateKey{}, st)))
 }
 
-// allow counts the request of key. It writes 429 when key reaches the limit.
-func (s *Server) allow(w http.ResponseWriter, op *operation, key string) bool {
-	wait := s.limiters[op.limit.name].allow(op.pattern + " " + key)
+// allow counts the request of key in st. It writes 429 when key reaches the
+// limit.
+func (s *Server) allow(w http.ResponseWriter, op *operation, st *state, key string) bool {
+	limiter := s.limiters[op.limit.name]
+	key = op.pattern + " " + key
+	wait, start := limiter.allow(key)
 	if wait == 0 {
+		st.limited = &limitedRequest{limiter: limiter, key: key, start: start}
 		return true
 	}
 	w.Header().Set("Retry-After", retryAfter(wait))
