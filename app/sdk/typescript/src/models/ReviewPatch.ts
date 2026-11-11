@@ -51,10 +51,6 @@ export interface ReviewPatch {
      * 
      */
     feedback?: string | null;
-    /**
-     * Unique tags.
-     */
-    tags?: Set<string> | null;
 }
 
 /**
@@ -81,7 +77,6 @@ export function ReviewPatchFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'cleanliness': json['cleanliness'] == null ? undefined : json['cleanliness'],
         'title': json['title'] == null ? undefined : json['title'],
         'feedback': json['feedback'] === undefined ? undefined : json['feedback'] === null ? null : json['feedback'],
-        'tags': json['tags'] === undefined ? undefined : json['tags'] === null ? null : new Set(json['tags']),
     };
 }
 
@@ -103,7 +98,6 @@ export function ReviewPatchToJSONTyped(value?: ReviewPatch | null, ignoreDiscrim
         'cleanliness': value['cleanliness'],
         'title': value['title'],
         'feedback': value['feedback'],
-        'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
     };
 }
 

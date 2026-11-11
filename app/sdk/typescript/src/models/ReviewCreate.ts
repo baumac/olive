@@ -51,10 +51,6 @@ export interface ReviewCreate {
      * 
      */
     feedback?: string;
-    /**
-     * Unique tags.
-     */
-    tags?: Set<string>;
 }
 
 /**
@@ -87,7 +83,6 @@ export function ReviewCreateFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'cleanliness': json['cleanliness'],
         'title': json['title'],
         'feedback': json['feedback'] == null ? undefined : json['feedback'],
-        'tags': json['tags'] == null ? undefined : new Set(json['tags']),
     };
 }
 
@@ -109,7 +104,6 @@ export function ReviewCreateToJSONTyped(value?: ReviewCreate | null, ignoreDiscr
         'cleanliness': value['cleanliness'],
         'title': value['title'],
         'feedback': value['feedback'],
-        'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
     };
 }
 

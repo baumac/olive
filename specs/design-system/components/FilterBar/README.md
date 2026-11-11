@@ -5,7 +5,7 @@ Filters and sorts a list of restaurants or reviews. It turns the API's filter pa
 Project component built from `Button`, `Select`, `Popover` and chip buttons. Lives in `@/components/ui/filter-bar`. Props: `filters` (object), `sortOptions`. Events: `update:filters`, `update:sort`. The screen maps filters to query parameters and refetches from the first page.
 
 - Controls in a row: a search box for a `search` filter, a "Filters" button that opens a popover with the other filters, then sort.
-- Review filters: a full-text search (`search`), tags (`tags[has_any]`) and the five scores (`food[gte]` and so on). Restaurant filters: a full-text search (`search`), tags, and the overall average (`overall[gte]`). The overall filter says that restaurants without reviews do not match.
+- Review filters: a full-text search (`search`) and the five scores (`food[gte]` and so on). Restaurant filters: a full-text search (`search`), tags, and the overall average (`overall[gte]`). The overall filter says that restaurants without reviews do not match.
 - Each active filter shows as a removable chip: "Tag: italian". The remove button's label is "Remove filter tag italian". "Clear all" removes every chip.
 - Score filters say what they include: "Food: 8 or more".
 - After a change, show the result count in a polite `role="status"` region, and start again from the first page. A cursor works only with the filters that made it.

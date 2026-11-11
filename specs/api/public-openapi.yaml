@@ -345,9 +345,6 @@ paths:
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
         - $ref: '#/components/parameters/CleanlinessFilter'
-        - $ref: '#/components/parameters/TagsHas'
-        - $ref: '#/components/parameters/TagsHasAny'
-        - $ref: '#/components/parameters/TagsHasAll'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -391,9 +388,6 @@ paths:
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
         - $ref: '#/components/parameters/CleanlinessFilter'
-        - $ref: '#/components/parameters/TagsHas'
-        - $ref: '#/components/parameters/TagsHasAny'
-        - $ref: '#/components/parameters/TagsHasAll'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -825,10 +819,10 @@ components:
       name: search
       in: query
       description: |
-        Full-text search in `title`, `feedback`, `tags`, and `restaurant_name`.
+        Full-text search in `title`, `feedback`, and `restaurant_name`.
         A review matches when it has all words of the search. A word also matches longer words that start with it.
         The search ignores case and accents. `Cafe` matches `Café`.
-        Matches in `title` count most for the `relevance` sort, then `tags`, then `restaurant_name`, then `feedback`.
+        Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
         A search without a letter or a digit causes `400 Bad Request`.
       schema:
         type: string
@@ -1379,8 +1373,6 @@ components:
           $ref: '#/components/schemas/Title'
         feedback:
           $ref: '#/components/schemas/LongText'
-        tags:
-          $ref: '#/components/schemas/Tags'
         creator:
           $ref: '#/components/schemas/Creator'
         photos:
@@ -1404,7 +1396,6 @@ components:
           cleanliness: 8
           title: Great food, a bit expensive
           feedback: Friendly staff and great pasta
-          tags: [date-night]
           creator:
             id: u5n1c8r3t6y0b2e
             name: Ana
@@ -1455,8 +1446,6 @@ components:
           $ref: '#/components/schemas/Title'
         feedback:
           $ref: '#/components/schemas/LongText'
-        tags:
-          $ref: '#/components/schemas/Tags'
       examples:
         - space: 7
           service: 9
@@ -1485,10 +1474,6 @@ components:
         feedback:
           oneOf:
             - $ref: '#/components/schemas/LongText'
-            - type: 'null'
-        tags:
-          oneOf:
-            - $ref: '#/components/schemas/Tags'
             - type: 'null'
       examples:
         - price: 7

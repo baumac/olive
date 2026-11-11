@@ -68,7 +68,7 @@ func indexedFields(r *core.Record) []string {
 	if tableOf(r) == Restaurants {
 		return []string{"name", "description", "tags"}
 	}
-	return []string{"title", "feedback", "tags", "restaurant"}
+	return []string{"title", "feedback", "restaurant"}
 }
 
 func changed(original, r *core.Record, fields ...string) bool {
@@ -93,11 +93,9 @@ func Put(app core.App, r *core.Record) error {
 	if err := remove(app, table, r.Id); err != nil {
 		return err
 	}
-	row := dbx.Params{
-		"id":   r.Id,
-		"tags": tagText(r),
-	}
+	row := dbx.Params{"id": r.Id}
 	if table == Restaurants {
+		row["tags"] = tagText(r)
 		row["name"] = r.GetString("name")
 		row["description"] = r.GetString("description")
 	} else {

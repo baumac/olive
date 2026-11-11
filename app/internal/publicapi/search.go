@@ -22,7 +22,7 @@ type scoreColumn struct {
 // A write then moves the bm25 ranks under an open cursor.
 var (
 	restaurantScores = []scoreColumn{{"name", 10}, {"tags", 4}, {"description", 1}}
-	reviewScores     = []scoreColumn{{"title", 10}, {"tags", 4}, {"restaurant_name", 2}, {"feedback", 1}}
+	reviewScores     = []scoreColumn{{"title", 10}, {"restaurant_name", 2}, {"feedback", 1}}
 )
 
 // ftsQuery changes a search into an FTS5 query. Each word becomes a quoted

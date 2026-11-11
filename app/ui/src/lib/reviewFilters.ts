@@ -8,7 +8,6 @@ function scoreOptions(max: number): Option[] {
 
 export const reviewFilterDefs: FilterDef[] = [
   { key: 'search', label: 'Search reviews', type: 'search', placeholder: 'Search reviews', chip: (v) => `Search: ${v}` },
-  { key: 'tags', label: 'Tags', type: 'tags', help: 'Shows reviews with at least one of the tags.', chip: (v) => `Tag: ${v}` },
   { key: 'food', label: 'Food', type: 'select', options: scoreOptions(10), chip: (v) => `Food: ${v} or more` },
   { key: 'service', label: 'Service', type: 'select', options: scoreOptions(10), chip: (v) => `Service: ${v} or more` },
   { key: 'space', label: 'Space', type: 'select', options: scoreOptions(10), chip: (v) => `Space: ${v} or more` },
@@ -34,10 +33,8 @@ function atLeast(filters: Record<string, FilterValue>, key: string) {
 
 // reviewFilterParams changes the filters to the query parameters of the SDK.
 export function reviewFilterParams(f: Record<string, FilterValue>) {
-  const tags = f.tags as string[] | undefined
   return {
     search: typeof f.search === 'string' ? f.search : undefined,
-    tagsHasAny: tags?.length ? tags : undefined,
     food: atLeast(f, 'food'),
     service: atLeast(f, 'service'),
     space: atLeast(f, 'space'),

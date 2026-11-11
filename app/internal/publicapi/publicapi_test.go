@@ -566,7 +566,7 @@ func TestReviews(t *testing.T) {
 	other := e.createRestaurant(ana.Token, `{"name":"Other"}`)["id"].(string)
 	reviews := "/v1/restaurants/" + id + "/reviews"
 
-	good := e.createReview(joe.Token, id, `{"space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"Good","feedback":"Nice","tags":["pasta"]}`)
+	good := e.createReview(joe.Token, id, `{"space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"Good","feedback":"Nice"}`)
 	great := e.createReview(ana.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great food"}`)
 	goodPath := reviews + "/" + good["id"].(string)
 	otherReviews := "/v1/restaurants/" + other + "/reviews"
@@ -575,8 +575,10 @@ func TestReviews(t *testing.T) {
 		if good["space"] != float64(4) || good["price"] != float64(7) {
 			t.Errorf("scores: %v", good)
 		}
-		if _, ok := good["kind"]; ok {
-			t.Errorf("review has kind: %v", good)
+		for _, name := range []string{"kind", "tags"} {
+			if _, ok := good[name]; ok {
+				t.Errorf("review has %s: %v", name, good)
+			}
 		}
 		if good["restaurant"] != id || good["creator"].(map[string]any)["name"] != "Joe" {
 			t.Errorf("good: %v", good)
@@ -588,6 +590,10 @@ func TestReviews(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/restaurants/aaaaaaaaaaaaaaa/reviews", body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusNotFound)
 		e.expect(request{method: "POST", path: otherReviews, body: `{"kind":"joc_de_cartes","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "POST", path: otherReviews, body: `{"rating":3,"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
+		e.expect(request{method: "POST", path: otherReviews, body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X","tags":["pasta"]}`, token: joe.Token}, http.StatusBadRequest)
+		e.expect(request{method: "PATCH", path: goodPath, body: `{"tags":null}`, token: joe.Token}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: reviews + "?tags[has]=pasta"}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/reviews?tags[has_any]=pasta"}, http.StatusBadRequest)
 
 		for body, want := range map[string]string{
 			`{"space":7,"service":9,"food":8,"price":6,"cleanliness":0,"title":"X"}`:          "cleanliness",
@@ -1141,13 +1147,12 @@ func TestSearch(t *testing.T) {
 	})
 
 	t.Run("reviews", func(t *testing.T) {
-		e.createReview(joe.Token, pasta, `{"space":5,"service":5,"food":9,"price":5,"cleanliness":5,"title":"Great carbonara","feedback":"Creamy sauce","tags":["date-night"]}`)
+		e.createReview(joe.Token, pasta, `{"space":5,"service":5,"food":9,"price":5,"cleanliness":5,"title":"Great carbonara","feedback":"Creamy sauce"}`)
 		e.createReview(ana.Token, cafe, `{"space":5,"service":5,"food":5,"price":5,"cleanliness":5,"title":"Nice tea","feedback":"Carbonara was a special"}`)
 		for path, want := range map[string]string{
 			"/v1/reviews?search=carbonara":                          "Great carbonara,Nice tea",
 			"/v1/reviews?search=carbonara&limit=1":                  "Great carbonara,Nice tea",
 			"/v1/reviews?search=ole":                                "Nice tea",
-			"/v1/reviews?search=night":                              "Great carbonara",
 			"/v1/reviews?search=creamy":                             "Great carbonara",
 			"/v1/restaurants/" + cafe + "/reviews?search=carbonara": "Nice tea",
 		} {

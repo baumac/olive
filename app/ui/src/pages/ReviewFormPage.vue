@@ -13,13 +13,12 @@ import { Input } from '@/components/ui/input'
 import { PhotoUpload } from '@/components/ui/photo-upload'
 import { RatingInput } from '@/components/ui/rating-input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, restaurantsApi } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
-import { type ScoreField, scoreFields, scoresOf, tagList } from '@/lib/reviews'
+import { type ScoreField, scoreFields, scoresOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, maxPhotos } from '@/lib/validation'
 
@@ -33,7 +32,6 @@ interface Fields {
   scores: Record<string, number | null>
   title: string
   feedback: string
-  tags: string[]
 }
 
 const restaurant = ref<Restaurant | null>(null)
@@ -41,7 +39,6 @@ const fields = ref<Fields>({
   scores: { space: null, service: null, food: null, price: null, cleanliness: null },
   title: '',
   feedback: '',
-  tags: [],
 })
 const errors = ref<Record<string, string>>({})
 const alert = ref<{ title: string; description: string; link?: string } | null>(null)
@@ -76,7 +73,6 @@ onMounted(async () => {
       }
       fields.value.title = review.title
       fields.value.feedback = review.feedback ?? ''
-      fields.value.tags = tagList(review.tags)
     } else if (currentUser.value) {
       // A user has at most one review per restaurant. The API refuses a
       // second one with 409. The page opens the existing review instead.
@@ -103,7 +99,7 @@ onMounted(async () => {
       for (const s of scoreFields) {
         scores[s.name] = draft.scores?.[s.name] ?? scores[s.name] ?? null
       }
-      fields.value = { ...draft, scores }
+      fields.value = { title: draft.title, feedback: draft.feedback, scores }
     }
   } catch (error) {
     failed.value = { status: (await apiFailure(error)).status }
@@ -121,9 +117,8 @@ function validate(): boolean {
   }
   next.title = checkName(fields.value.title, 'Enter a title with at least one character that is not a space.')
   next.feedback = checkLongText(fields.value.feedback)
-  next.tags = errors.value.tags ?? ''
   errors.value = next
-  const order = [...scoreFields.map((s) => s.name), 'title', 'feedback', 'tags']
+  const order = [...scoreFields.map((s) => s.name), 'title', 'feedback']
   const first = order.find((k) => next[k])
   if (first) {
     focusField(`review-${first}`)
@@ -225,7 +220,7 @@ async function submit() {
   }
   saving.value = true
   saveDraft(draftKey.value, fields.value)
-  const { title, feedback, tags } = fields.value
+  const { title, feedback } = fields.value
   try {
     let result: Review
     if (props.reviewId) {
@@ -233,7 +228,6 @@ async function submit() {
         ...scoreValues(),
         title,
         feedback: feedback || null,
-        tags: tags.length ? new Set(tags) : null,
       }
       result = await restaurantsApi.updateReview({ restaurantId: props.restaurantId, reviewId: props.reviewId, reviewPatch })
     } else {
@@ -241,7 +235,6 @@ async function submit() {
         ...scoreValues(),
         title,
         feedback: feedback || undefined,
-        tags: tags.length ? new Set(tags) : undefined,
       }
       result = await restaurantsApi.createReview({ restaurantId: props.restaurantId, reviewCreate })
     }
@@ -336,18 +329,6 @@ async function submit() {
           <Textarea v-model="fields.feedback" name="feedback" maxlength="10000" rows="6" />
         </FormControl>
         <FormDescription>Optional. What did you like, and what not?</FormDescription>
-        <FormMessage />
-      </FormItem>
-      <FormItem id="review-tags" :error="errors.tags" description>
-        <FormLabel>Tags</FormLabel>
-        <TagInput
-          id="review-tags"
-          v-model="fields.tags"
-          :invalid="!!errors.tags"
-          :described-by="`review-tags-description${errors.tags ? ' review-tags-message' : ''}`"
-          @error="errors = { ...errors, tags: $event }"
-        />
-        <FormDescription>Optional. Press Enter or comma after each tag, for example date-night.</FormDescription>
         <FormMessage />
       </FormItem>
       <div class="flex flex-wrap gap-2">

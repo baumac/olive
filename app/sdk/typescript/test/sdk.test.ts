@@ -66,7 +66,7 @@ describe('query parameters', () => {
     await new RestaurantsApi(config).listReviews({
       restaurantId: 'k3x9m2p7q1w8z4a',
       food: { gte: 4, lt: 5 },
-      tagsHasAny: ['italian', 'pasta'],
+      creatorIn: ['u5n1c8r3t6y0b2e', 'u2g6k0m4o8q1s5w'],
       created: { gte: '2024-11-01 00:00:00.000Z' },
     })
     const q = sent[0].url.searchParams
@@ -74,7 +74,7 @@ describe('query parameters', () => {
     expect(q.get('food[gte]')).toBe('4')
     expect(q.get('food[lt]')).toBe('5')
     expect(q.has('food[eq]')).toBe(false)
-    expect(q.getAll('tags[has_any]')).toEqual(['italian', 'pasta'])
+    expect(q.getAll('creator[in]')).toEqual(['u5n1c8r3t6y0b2e', 'u2g6k0m4o8q1s5w'])
     expect(q.get('created[gte]')).toBe('2024-11-01 00:00:00.000Z')
   })
 })

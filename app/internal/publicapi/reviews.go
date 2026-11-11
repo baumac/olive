@@ -21,7 +21,6 @@ type reviewInput struct {
 	scores   map[string]int
 	title    *string
 	feedback nullable.Nullable[string]
-	tags     nullable.Nullable[[]string]
 }
 
 var reviewSorts = map[string]sortField{
@@ -43,7 +42,6 @@ func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsReques
 	all := reviewsapi.ListAllReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, RestaurantEq: &req.RestaurantId,
 		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price, Cleanliness: p.Cleanliness,
-		TagsHas: p.TagsHas, TagsHasAny: p.TagsHasAny, TagsHasAll: p.TagsHasAll,
 		Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
 	}
 	// The cursor keeps the fingerprint of the first version of this
@@ -134,7 +132,6 @@ func (s *Server) reviewPage(
 	} {
 		w.compare(column("reviews", name), scoreComparisons(r))
 	}
-	w.tagFilters("reviews", p.TagsHas, p.TagsHasAny, p.TagsHasAll)
 	w.idFilters("reviews", "creator", p.CreatorEq, p.CreatorIn)
 	w.compare(column("reviews", "created"), timestampComparisons(p.Created))
 	w.compare(column("reviews", "updated"), timestampComparisons(p.Updated))
@@ -380,12 +377,12 @@ func (s *Server) findReview(app core.App, restaurantID, reviewID string) (restau
 func createInput(body *reviewsapi.ReviewCreate) reviewInput {
 	return reviewInput{
 		scores: map[string]int{"space": body.Space, "service": body.Service, "food": body.Food, "price": body.Price, "cleanliness": body.Cleanliness},
-		title:  &body.Title, feedback: optional(body.Feedback), tags: optional(body.Tags),
+		title:  &body.Title, feedback: optional(body.Feedback),
 	}
 }
 
 func patchInput(body *reviewsapi.ReviewPatch) reviewInput {
-	in := reviewInput{scores: map[string]int{}, title: body.Title, feedback: body.Feedback, tags: body.Tags}
+	in := reviewInput{scores: map[string]int{}, title: body.Title, feedback: body.Feedback}
 	setScore(in.scores, "space", body.Space)
 	setScore(in.scores, "service", body.Service)
 	setScore(in.scores, "food", body.Food)
@@ -417,7 +414,6 @@ func (in reviewInput) apply(r *core.Record) bool {
 		ch.set("title", *in.title)
 	}
 	ch.patchText("feedback", in.feedback)
-	ch.patchTags(in.tags)
 	return ch.changed
 }
 
@@ -437,7 +433,7 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string, photo
 		Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName,
 		Space: r.GetInt("space"), Service: r.GetInt("service"), Food: r.GetInt("food"), Price: r.GetInt("price"),
 		Cleanliness: r.GetInt("cleanliness"),
-		Title:       r.GetString("title"), Feedback: optionalText(r, "feedback"), Tags: tagsOf(r),
+		Title:       r.GetString("title"), Feedback: optionalText(r, "feedback"),
 		Creator: toCreator(creator), Photos: photos, Created: r.GetDateTime("created").String(), Updated: r.GetDateTime("updated").String(),
 	}, nil
 }

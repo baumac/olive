@@ -107,7 +107,7 @@ func TestDeepObjectAndExplodedFilters(t *testing.T) {
 	}
 	rec := serve(t, f, http.MethodGet,
 		"/v1/restaurants/k3x9m2p7q1w8z4a/reviews?food[gte]=4&food[lt]=5"+
-			"&tags[has_any]=italian&tags[has_any]=pasta"+
+			"&creator[in]=u5n1c8r3t6y0b2e&creator[in]=u2g6k0m4o8q1s5w"+
 			"&created[gte]=2024-11-01%2000:00:00.000Z", "", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
@@ -115,8 +115,8 @@ func TestDeepObjectAndExplodedFilters(t *testing.T) {
 	if got.Food == nil || *got.Food.Gte != 4 || *got.Food.Lt != 5 || got.Food.Eq != nil {
 		t.Errorf("food: got %+v", got.Food)
 	}
-	if got.TagsHasAny == nil || strings.Join(*got.TagsHasAny, ",") != "italian,pasta" {
-		t.Errorf("tags[has_any]: got %v", got.TagsHasAny)
+	if got.CreatorIn == nil || strings.Join(*got.CreatorIn, ",") != "u5n1c8r3t6y0b2e,u2g6k0m4o8q1s5w" {
+		t.Errorf("creator[in]: got %v", got.CreatorIn)
 	}
 	if got.Created == nil || *got.Created.Gte != "2024-11-01 00:00:00.000Z" {
 		t.Errorf("created: got %+v", got.Created)

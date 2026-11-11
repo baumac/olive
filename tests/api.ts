@@ -37,10 +37,7 @@ export class TestApi {
     })
   }
 
-  // createReview takes tags as an array, like createRestaurant.
-  createReview(user: TestUser, restaurantId: string, review: WithTagArray<ReviewCreate>): Promise<Review> {
-    const { tags, ...rest } = review
-    const reviewCreate = { ...rest, tags: tags ? new Set(tags) : undefined } as ReviewCreate
+  createReview(user: TestUser, restaurantId: string, reviewCreate: ReviewCreate): Promise<Review> {
     return new RestaurantsApi(this.config(user.auth.token)).createReview({ restaurantId, reviewCreate })
   }
 

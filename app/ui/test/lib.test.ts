@@ -89,9 +89,8 @@ describe('fieldErrors', () => {
 
 describe('reviewFilterParams', () => {
   it('changes the filters to SDK parameters', () => {
-    expect(reviewFilterParams({ search: 'carbonara', tags: ['pasta'], food: '4' })).toEqual({
+    expect(reviewFilterParams({ search: 'carbonara', food: '4' })).toEqual({
       search: 'carbonara',
-      tagsHasAny: ['pasta'],
       food: { gte: 4 },
       service: undefined,
       space: undefined,

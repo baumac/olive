@@ -81,10 +81,6 @@ export interface Review {
      */
     feedback?: string;
     /**
-     * Unique tags.
-     */
-    tags?: Set<string>;
-    /**
      * 
      */
     creator: Creator;
@@ -142,7 +138,6 @@ export function ReviewFromJSONTyped(json: any, ignoreDiscriminator: boolean): Re
         'cleanliness': json['cleanliness'],
         'title': json['title'],
         'feedback': json['feedback'] == null ? undefined : json['feedback'],
-        'tags': json['tags'] == null ? undefined : new Set(json['tags']),
         'creator': CreatorFromJSON(json['creator']),
         'photos': ((json['photos'] as Array<any>).map(PhotoFromJSON)),
         'created': json['created'],
@@ -171,7 +166,6 @@ export function ReviewToJSONTyped(value?: Review | null, ignoreDiscriminator: bo
         'cleanliness': value['cleanliness'],
         'title': value['title'],
         'feedback': value['feedback'],
-        'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
         'creator': CreatorToJSON(value['creator']),
         'photos': ((value['photos'] as Array<any>).map(PhotoToJSON)),
         'created': value['created'],

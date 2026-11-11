@@ -215,10 +215,10 @@ export interface ListAllReviewsRequest {
      */
     sort?: string;
     /**
-     * Full-text search in `title`, `feedback`, `tags`, and `restaurant_name`.
+     * Full-text search in `title`, `feedback`, and `restaurant_name`.
      * A review matches when it has all words of the search. A word also matches longer words that start with it.
      * The search ignores case and accents. `Cafe` matches `Café`.
-     * Matches in `title` count most for the `relevance` sort, then `tags`, then `restaurant_name`, then `feedback`.
+     * Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
      * A search without a letter or a digit causes `400 Bad Request`.
      * 
      */
@@ -251,18 +251,6 @@ export interface ListAllReviewsRequest {
      * Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
      */
     cleanliness?: ScoreRange;
-    /**
-     * The `tags` contain the tag.
-     */
-    tagsHas?: string;
-    /**
-     * The `tags` contain at least one of the tags.
-     */
-    tagsHasAny?: Array<string>;
-    /**
-     * The `tags` contain all of the tags.
-     */
-    tagsHasAll?: Array<string>;
     /**
      * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
      */
@@ -379,10 +367,10 @@ export interface ListReviewsRequest {
      */
     sort?: string;
     /**
-     * Full-text search in `title`, `feedback`, `tags`, and `restaurant_name`.
+     * Full-text search in `title`, `feedback`, and `restaurant_name`.
      * A review matches when it has all words of the search. A word also matches longer words that start with it.
      * The search ignores case and accents. `Cafe` matches `Café`.
-     * Matches in `title` count most for the `relevance` sort, then `tags`, then `restaurant_name`, then `feedback`.
+     * Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
      * A search without a letter or a digit causes `400 Bad Request`.
      * 
      */
@@ -407,18 +395,6 @@ export interface ListReviewsRequest {
      * Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
      */
     cleanliness?: ScoreRange;
-    /**
-     * The `tags` contain the tag.
-     */
-    tagsHas?: string;
-    /**
-     * The `tags` contain at least one of the tags.
-     */
-    tagsHasAny?: Array<string>;
-    /**
-     * The `tags` contain all of the tags.
-     */
-    tagsHasAll?: Array<string>;
     /**
      * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
      */
@@ -727,7 +703,7 @@ export interface RestaurantsApiInterface {
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, &#x60;tags&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {string} [restaurantEq] The &#x60;restaurant&#x60; of the review is equal to the value.
      * @param {Array<string>} [restaurantIn] The &#x60;restaurant&#x60; of the review is equal to any of the values.
      * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
@@ -735,9 +711,6 @@ export interface RestaurantsApiInterface {
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
-     * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
-     * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
-     * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -753,7 +726,7 @@ export interface RestaurantsApiInterface {
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, &#x60;tags&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {string} [restaurantEq] The &#x60;restaurant&#x60; of the review is equal to the value.
      * @param {Array<string>} [restaurantIn] The &#x60;restaurant&#x60; of the review is equal to any of the values.
      * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
@@ -761,9 +734,6 @@ export interface RestaurantsApiInterface {
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
-     * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
-     * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
-     * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -831,15 +801,12 @@ export interface RestaurantsApiInterface {
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, &#x60;tags&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
-     * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
-     * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
-     * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -856,15 +823,12 @@ export interface RestaurantsApiInterface {
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, &#x60;tags&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
-     * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
-     * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
-     * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -1593,18 +1557,6 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             queryParameters['cleanliness'] = requestParameters['cleanliness'];
         }
 
-        if (requestParameters['tagsHas'] != null) {
-            queryParameters['tags[has]'] = requestParameters['tagsHas'];
-        }
-
-        if (requestParameters['tagsHasAny'] != null) {
-            queryParameters['tags[has_any]'] = requestParameters['tagsHasAny'];
-        }
-
-        if (requestParameters['tagsHasAll'] != null) {
-            queryParameters['tags[has_all]'] = requestParameters['tagsHasAll'];
-        }
-
         if (requestParameters['created'] != null) {
             queryParameters['created'] = requestParameters['created'];
         }
@@ -1802,18 +1754,6 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
 
         if (requestParameters['cleanliness'] != null) {
             queryParameters['cleanliness'] = requestParameters['cleanliness'];
-        }
-
-        if (requestParameters['tagsHas'] != null) {
-            queryParameters['tags[has]'] = requestParameters['tagsHas'];
-        }
-
-        if (requestParameters['tagsHasAny'] != null) {
-            queryParameters['tags[has_any]'] = requestParameters['tagsHasAny'];
-        }
-
-        if (requestParameters['tagsHasAll'] != null) {
-            queryParameters['tags[has_all]'] = requestParameters['tagsHasAll'];
         }
 
         if (requestParameters['created'] != null) {

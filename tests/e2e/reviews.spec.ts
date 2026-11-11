@@ -15,6 +15,7 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
   }
   await page.getByLabel('Title').fill('Great food, a bit expensive')
   await page.getByLabel('Feedback').fill('Friendly staff.\nGreat pasta.')
+  await expect(page.getByLabel('Tags')).toHaveCount(0)
   await page.getByRole('button', { name: 'Save review' }).click()
 
   await expect(page.getByText('Review saved')).toBeVisible()

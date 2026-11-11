@@ -193,6 +193,54 @@ func TestSearchIndexFillsExistingRecords(t *testing.T) {
 	}
 }
 
+func TestRemoveReviewTags(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268807_remove_review_tags.go")
+
+	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "tags": []string{"italian"}})
+	newRecord(t, app, "reviews", map[string]any{
+		"restaurant": restaurant.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "cleanliness": 4,
+		"title": "Good", "feedback": "Creamy carbonara", "tags": []string{"date-night"},
+	})
+
+	redo()
+	reviews, err := app.FindCollectionByNameOrId("reviews")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reviews.Fields.GetByName("tags") != nil {
+		t.Error("reviews still has tags")
+	}
+	count := func(table, match string) int {
+		t.Helper()
+		var n int
+		if err := app.DB().NewQuery("SELECT COUNT(*) FROM " + table + " WHERE " + table + " MATCH {:q}").Bind(map[string]any{"q": match}).Row(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	for match, want := range map[string]int{"carbonara ole": 1, "good": 1, "night": 0} {
+		if n := count("reviews_fts", match); n != want {
+			t.Errorf("reviews_fts MATCH %q: %d rows, want %d", match, n, want)
+		}
+	}
+	downTo(t, app, "1794268807_remove_review_tags.go")
+	if reviews, err = app.FindCollectionByNameOrId("reviews"); err != nil {
+		t.Fatal(err)
+	}
+	if reviews.Fields.GetByName("tags") == nil {
+		t.Error("down did not add tags")
+	}
+	if n := count("reviews_fts", "carbonara"); n != 1 {
+		t.Errorf("down: reviews_fts MATCH carbonara: %d rows, want 1", n)
+	}
+}
+
 func TestReviewPhotos(t *testing.T) {
 	app, err := tests.NewTestApp(t.TempDir())
 	if err != nil {

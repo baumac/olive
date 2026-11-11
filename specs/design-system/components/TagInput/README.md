@@ -1,6 +1,6 @@
 # TagInput
 
-Adds and removes tags on a restaurant or a review. Project component, not part of shadcn-vue.
+Adds and removes tags on a restaurant. Reviews have no tags. Project component, not part of shadcn-vue.
 
 Lives in `@/components/ui/tag-input`. Props: `v-model` (string array), `max` (default 20). Build it from `Badge`-like chips and an `Input`.
 

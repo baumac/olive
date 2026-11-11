@@ -9,14 +9,13 @@ import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import ReviewPhotos from '@/components/app/ReviewPhotos.vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
-import { scoresOf, tagList } from '@/lib/reviews'
+import { scoresOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string; reviewId: string }>()
@@ -74,9 +73,6 @@ async function remove() {
       </div>
       <p v-if="review.feedback" class="leading-7 whitespace-pre-line">{{ review.feedback }}</p>
       <ReviewPhotos :review="review" :editable="isCreator" @change="review.photos = $event" />
-      <ul v-if="tagList(review.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
-        <li v-for="tag in tagList(review.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
-      </ul>
       <div v-if="isCreator" class="flex flex-wrap gap-2 border-t pt-6">
         <Button variant="outline" as-child>
           <RouterLink :to="`${restaurantPath}/reviews/${reviewId}/edit`"><PencilIcon aria-hidden="true" />Edit review</RouterLink>

@@ -24,7 +24,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         tags: ['italian'],
       })
       const reviewer = await api.signUp('Ana')
-      await api.createReview(reviewer, restaurant.id, { space: 4, service: 4, food: 4, price: 4, cleanliness: 4, title: 'Good', tags: ['pasta'] })
+      await api.createReview(reviewer, restaurant.id, { space: 4, service: 4, food: 4, price: 4, cleanliness: 4, title: 'Good' })
       await api.createReview(owner, restaurant.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 6, title: 'Great food' })
 
       await page.goto('/restaurants')

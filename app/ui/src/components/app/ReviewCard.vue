@@ -2,10 +2,9 @@
 import type { Review } from '@reviews/sdk'
 import { computed } from 'vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { RatingDisplay } from '@/components/ui/rating-display'
-import { scoresOf, tagList } from '@/lib/reviews'
+import { scoresOf } from '@/lib/reviews'
 import DateText from './DateText.vue'
 import ReviewPhotos from './ReviewPhotos.vue'
 
@@ -16,7 +15,6 @@ const props = defineProps<{
 }>()
 
 const scores = computed(() => scoresOf(props.review))
-const tags = computed(() => tagList(props.review.tags))
 </script>
 
 <template>
@@ -39,8 +37,7 @@ const tags = computed(() => tagList(props.review.tags))
       <ReviewPhotos :review="review" />
     </CardContent>
     <CardFooter class="text-muted-foreground flex flex-wrap gap-2 text-sm">
-      <Badge v-for="tag in tags" :key="tag" variant="secondary">{{ tag }}</Badge>
-      <span class="flex items-center gap-2" :class="tags.length ? 'basis-full' : undefined">
+      <span class="flex items-center gap-2">
         <InitialsAvatar :name="review.creator.name" size="sm" />
         <span>{{ review.creator.name }} · <DateText :created="review.created" :updated="review.updated" /></span>
       </span>
