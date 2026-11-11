@@ -6,18 +6,7 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 # Backlog
 
-## High Priority
-
-- Add deploy folder and docker compose setup
-  - Key components
-    - the app will run as a single instance and deployment
-    - add the `make build-image` target and the `docker` CI job of decision 00010
-    - add the `docker` job to the `needs` of the `CI result` job\
-  - Include a backup plan for `pb_data`
-    - the database and the photo files in `pb_data/storage` need backups
-    - the photos of decision 00008 make `pb_data/storage` much larger than the database
-
-## Low Priority
+## Items for Claude
 - Add tests to `app/internal/searchindex`
   - the package has no test files. The tests of `publicapi` use it through the record hooks.
 - Sync the session between browser tabs
@@ -61,6 +50,19 @@ Each sub-bullet point contains notes about the incomplete decision.
   - sign out deletes the token only in the browser
   - a leaked token can be refreshed without end. Decision 00001 accepts this risk.
   - without a password change, the user cannot stop it
+
+## High Priority
+
+- Add deploy folder and docker compose setup
+  - Key components
+    - the app will run as a single instance and deployment
+    - add the `make build-image` target and the `docker` CI job of decision 00010
+    - add the `docker` job to the `needs` of the `CI result` job\
+  - Include a backup plan for `pb_data`
+    - the database and the photo files in `pb_data/storage` need backups
+    - the photos of decision 00008 make `pb_data/storage` much larger than the database
+
+## Low Priority
 - Add maps feature, add location to to each restaurant, and prevent duplicates
   - a restaurant has only a name, a description, and tags
   - two records of one place split its reviews
