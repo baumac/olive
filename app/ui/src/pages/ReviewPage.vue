@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
-import { scoresOf } from '@/lib/reviews'
+import { scoreLegend, scoresOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string; reviewId: string }>()
@@ -70,6 +70,7 @@ async function remove() {
       </div>
       <div class="grid gap-2">
         <RatingDisplay v-for="s in scoresOf(review)" :key="s.name" :value="s.value" :max="s.max" :label="s.label" />
+        <p class="text-muted-foreground text-sm">{{ scoreLegend }}</p>
       </div>
       <p v-if="review.feedback" class="leading-7 whitespace-pre-line">{{ review.feedback }}</p>
       <ReviewPhotos :review="review" :editable="isCreator" @change="review.photos = $event" />

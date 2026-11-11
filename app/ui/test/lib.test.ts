@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import spec from '../../../specs/api/public-openapi.yaml?raw'
 import { fieldErrors } from '@/lib/api'
 import { restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
-import { ratingScores } from '@/lib/reviews'
+import { ratingScores, scoreFields } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 
 describe('format', () => {
@@ -121,5 +122,15 @@ describe('restaurantFilterParams', () => {
       overall: { gte: 8 },
     })
     expect(restaurantFilterParams({})).toEqual({ search: undefined, tagsHasAny: undefined, overall: undefined })
+  })
+})
+
+describe('scoreFields', () => {
+  it('has the score descriptions of the API spec', () => {
+    for (const f of scoreFields) {
+      const schema = `${f.label}Score`
+      const match = new RegExp(`\\n {4}${schema}:\\n {6}description: (.+)\\n`).exec(spec)
+      expect(match?.[1], schema).toBe(f.description)
+    }
   })
 })

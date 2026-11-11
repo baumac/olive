@@ -41,6 +41,21 @@ describe('RatingInput', () => {
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([4])
     await expectAccessible(w.element)
   })
+
+  it('links its help text and the error message to the group', async () => {
+    const w = mount(RatingInput, {
+      props: { max: 10, label: 'Price', id: 'price', description: 'Value for money.', lowest: 'poor value', highest: 'great value', describedBy: 'price-error' },
+      attachTo: attach(),
+    })
+    expect(w.get('[role=radiogroup]').attributes('aria-describedby')).toBe('price-description price-error')
+    expect(w.get('#price-description').findAll('p').map((p) => p.text())).toEqual(['Value for money.', '1 means poor value. 10 means great value.'])
+    await expectAccessible(w.element)
+  })
+
+  it('has no description without help text', () => {
+    const w = mount(RatingInput, { props: { max: 10, label: 'Price' } })
+    expect(w.get('[role=radiogroup]').attributes('aria-describedby')).toBeUndefined()
+  })
 })
 
 describe('TagInput', () => {

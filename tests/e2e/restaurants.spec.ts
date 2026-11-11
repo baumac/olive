@@ -100,6 +100,7 @@ test('restaurants show the average scores of their reviews', async ({ page, api 
   const averages = page.getByRole('region', { name: 'Average of 2 reviews' })
   await expect(averages.getByRole('img', { name: 'Food: 9.5 out of 10' })).toBeVisible()
   await expect(averages.getByRole('img', { name: 'Price: 5.5 out of 10' })).toBeVisible()
+  await expect(averages).toHaveAccessibleDescription('A higher score is always better. A high price score means good value for money.')
 })
 
 test('restaurants filter and sort by the overall rating', async ({ page, api }) => {

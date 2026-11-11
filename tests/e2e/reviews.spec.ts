@@ -9,6 +9,9 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
   await expect(page.getByRole('tab')).toHaveCount(0)
   await page.getByRole('button', { name: 'Save review' }).click()
   await expect(page.getByText('Select a space score.')).toBeVisible()
+  await expect(page.getByRole('radiogroup', { name: 'Price' })).toHaveAccessibleDescription(
+    'Value for money, and whether the final bill matches the quality provided. 1 means poor value for money. 10 means great value for money. Select a price score.',
+  )
 
   for (const [label, score] of [['Space', 7], ['Service', 9], ['Food', 8], ['Price', 6], ['Cleanliness', 5]] as const) {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: `${score} out of 10` }).click()

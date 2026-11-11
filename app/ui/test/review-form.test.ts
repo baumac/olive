@@ -1,0 +1,64 @@
+import type { Restaurant } from '@reviews/sdk'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { restaurantsApi } from '@/lib/api'
+import ReviewFormPage from '@/pages/ReviewFormPage.vue'
+import { expectAccessible } from './axe'
+
+const restaurant: Restaurant = {
+  id: 'k3x9m2p7q1w8z4a',
+  name: 'Trattoria',
+  creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
+  reviewCount: 0,
+  rating: null,
+  created: '2024-11-06 19:02:11.120Z',
+  updated: '2024-11-06 19:02:11.120Z',
+}
+
+async function mountForm() {
+  vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue(restaurant)
+  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
+  const el = document.createElement('div')
+  document.body.appendChild(el)
+  const w = mount(ReviewFormPage, { props: { restaurantId: restaurant.id }, global: { plugins: [router] }, attachTo: el })
+  await flushPromises()
+  return w
+}
+
+function descriptionOf(group: Element): string {
+  const ids = group.getAttribute('aria-describedby')?.split(' ') ?? []
+  const parts = ids.flatMap((id) => {
+    const el = document.getElementById(id)
+    const paragraphs = el?.querySelectorAll('p')
+    return paragraphs?.length ? [...paragraphs] : el ? [el] : []
+  })
+  return parts.map((p) => p.textContent?.replace(/\s+/g, ' ').trim()).join(' ')
+}
+
+describe('ReviewFormPage scores', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('links the meaning of each score and its scale to the group', async () => {
+    const w = await mountForm()
+    const groups = w.findAll('[role=radiogroup]')
+    expect(groups.map((g) => g.attributes('aria-label'))).toEqual(['Space', 'Service', 'Food', 'Price', 'Cleanliness'])
+    const price = groups[3]!.element
+    expect(descriptionOf(price)).toBe(
+      'Value for money, and whether the final bill matches the quality provided. 1 means poor value for money. 10 means great value for money.',
+    )
+    for (const g of groups) {
+      expect(descriptionOf(g.element)).toMatch(/1 means .+\. 10 means .+\.$/)
+    }
+    await expectAccessible(w.element)
+  })
+
+  it('keeps the help text linked when a score has an error', async () => {
+    const w = await mountForm()
+    await w.get('form').trigger('submit')
+    const space = w.get('[role=radiogroup][aria-label=Space]')
+    expect(space.attributes('aria-describedby')).toBe('review-space-description review-space-message')
+    expect(descriptionOf(space.element)).toContain('Select a space score.')
+    expect(descriptionOf(space.element)).toContain('1 means uncomfortable, dull, and badly set up.')
+  })
+})

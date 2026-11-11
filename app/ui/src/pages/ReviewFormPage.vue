@@ -307,6 +307,9 @@ async function submit() {
             v-model="fields.scores[s.name]"
             :max="s.max"
             :label="s.label"
+            :description="s.description"
+            :lowest="s.lowest"
+            :highest="s.highest"
             :invalid="!!errors[s.name]"
             :described-by="errors[s.name] ? `review-${s.name}-message` : undefined"
           />
