@@ -25,12 +25,14 @@ make generate-sdk-go  # Generate only the Go SDK
 make generate-sdk-ts  # Generate only the TypeScript SDK. Needs Docker.
 make lint-go          # Run go vet and gofmt on the Go modules
 make check-generate   # Fail if the generated SDKs do not match the API spec
-make lint-ui          # Type-check the UI. Needs Node.js.
+make lint-ui          # Type-check the UI and the e2e tests. Needs Node.js.
+make lint-eslint      # Run ESLint on the UI and the e2e tests. Needs Node.js.
+make security-scan    # Check the Go modules for known vulnerabilities with govulncheck. Needs the network.
 make test             # Run the tests of the SDKs, the app, and the UI. Needs Node.js.
 make test-sdk         # Run the tests of both SDKs. Needs Node.js.
 make test-sdk-go      # Run the tests of the Go SDK
 make test-sdk-ts      # Run the tests of the TypeScript SDK. Needs Node.js.
-make test-app         # Run the Go tests of the app
+make test-app         # Run the Go tests of the app with the race detector. Needs a C compiler.
 make test-ui          # Run the UI tests. Needs Node.js.
 make build-sdk-ts     # Build the TypeScript SDK into app/sdk/typescript/dist. Needs Node.js.
 make build-ui         # Build the UI into app/internal/webui/dist. Needs Node.js.
@@ -57,6 +59,7 @@ Run one browser with `make test-e2e PROJECT=chromium`.
 
 `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. See decision 00010.
 The `lint` job runs `make lint`, and the `test` job runs `make test`.
+The `security-scan` job runs `make security-scan`.
 The `e2e` jobs run `make test-e2e` with one Playwright project each.
 A new Playwright project needs an entry in the `e2e` matrix. `make lint` fails without it.
 The `CI result` job passes only when all other jobs pass. Read it first.

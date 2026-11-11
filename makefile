@@ -12,6 +12,9 @@ VACUUM := $(TOOLS_BIN)/vacuum
 OAPI_CODEGEN_VERSION := v2.8.2
 OAPI_CODEGEN := $(TOOLS_BIN)/oapi-codegen
 
+GOVULNCHECK_VERSION := v1.9.0
+GOVULNCHECK := $(TOOLS_BIN)/govulncheck
+
 OPENAPI_GENERATOR_IMAGE := openapitools/openapi-generator-cli:v7.27.0
 
 APP_BIN := $(BIN)/reviews-app
@@ -21,9 +24,9 @@ UI_DIST := app/internal/webui/dist
 # npm ci runs again only when the lockfile changes.
 NODE_MODULES := node_modules/.package-lock.json
 
-.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app run-app dev-ui
+.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui lint-eslint security-scan generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app run-app dev-ui
 
-install-tools: $(VACUUM) $(OAPI_CODEGEN)
+install-tools: $(VACUUM) $(OAPI_CODEGEN) $(GOVULNCHECK)
 
 $(VACUUM):
 	GOBIN=$(TOOLS_BIN) GOTOOLCHAIN=$(TOOLS_GO) go install github.com/daveshanley/vacuum@$(VACUUM_VERSION)
@@ -31,7 +34,10 @@ $(VACUUM):
 $(OAPI_CODEGEN):
 	GOBIN=$(TOOLS_BIN) GOTOOLCHAIN=$(TOOLS_GO) go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION)
 
-lint: lint-spec lint-go lint-ui check-generate check-ci-matrix
+$(GOVULNCHECK):
+	GOBIN=$(TOOLS_BIN) GOTOOLCHAIN=$(TOOLS_GO) go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
+
+lint: lint-spec lint-go lint-ui lint-eslint check-generate check-ci-matrix
 
 lint-spec: $(VACUUM)
 	$(VACUUM) lint --details --fail-severity warn --ruleset specs/api/vacuum-ruleset.yaml $(SPEC)
@@ -43,6 +49,17 @@ lint-go:
 lint-ui: build-sdk-ts
 	npm run typecheck --workspace @reviews/ui
 	npm run typecheck --workspace @reviews/tests
+
+lint-eslint: $(NODE_MODULES)
+	npm run lint --workspace @reviews/ui
+	npm run lint --workspace @reviews/tests
+
+# security-scan is not part of lint. A new advisory in the database can fail
+# it without a code change. govulncheck reports only the code that the
+# modules call.
+security-scan: $(GOVULNCHECK)
+	$(GOVULNCHECK) -C app ./...
+	$(GOVULNCHECK) -C app/sdk/go ./...
 
 generate: generate-sdk-go generate-sdk-ts
 
@@ -87,7 +104,7 @@ test-sdk-ts: $(NODE_MODULES)
 	npm test --workspace @reviews/sdk
 
 test-app:
-	cd app && go test ./...
+	cd app && go test -race ./...
 
 test-ui: build-sdk-ts
 	npm test --workspace @reviews/ui

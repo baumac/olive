@@ -29,6 +29,16 @@ jobs:
       # Playwright projects.
       - run: make lint
 
+  security-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # make security-scan installs govulncheck. govulncheck gets its database
+      # from vuln.go.dev.
+      - run: make security-scan
+
   test:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -38,6 +48,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           save-cache: 'true'
+      # make test-app uses the race detector. It needs the gcc of the runner.
       - run: make test
 
   e2e:
@@ -73,7 +84,7 @@ jobs:
     name: CI result
     # A failed job does not skip this job. A cancelled run skips it.
     if: ${{ !cancelled() }}
-    needs: [lint, test, e2e]
+    needs: [lint, security-scan, test, e2e]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

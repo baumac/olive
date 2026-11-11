@@ -49,7 +49,7 @@ export interface ApiFailure {
 // call. A network error has a null status.
 export async function apiFailure(error: unknown): Promise<ApiFailure> {
   if (error instanceof ResponseError) {
-    let problem: Problem | null = null
+    let problem: Problem | null
     try {
       problem = (await error.response.clone().json()) as Problem
     } catch {

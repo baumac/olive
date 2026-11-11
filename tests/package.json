@@ -7,14 +7,20 @@
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.1",
     "@reviews/sdk": "*",
     "@types/node": "26.6.5",
+    "eslint": "10.13.0",
+    "eslint-plugin-playwright": "2.12.1",
+    "globals": "17.13.0",
     "playwright-core": "1.64.1",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
   }
 }

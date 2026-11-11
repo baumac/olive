@@ -1,4 +1,4 @@
-import { expect, signIn, test } from '../fixtures'
+import { expect, test } from '../fixtures'
 
 test('sign up signs the person in', async ({ page }) => {
   await page.goto('/sign-up')

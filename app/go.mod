@@ -2,6 +2,8 @@ module github.com/baumac/reviews-app/app
 
 go 1.27
 
+toolchain go1.27.4
+
 require (
 	github.com/baumac/reviews-app/app/sdk/go v0.0.0-00010101000000-000000000000
 	github.com/disintegration/imaging v1.6.2
@@ -38,7 +40,7 @@ require (
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.yaml.in/yaml/v4 v4.0.0 // indirect
-	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
