@@ -20,14 +20,20 @@ const (
 // cascade deletes also run them.
 func Register(app core.App) {
 	app.OnRecordCreateExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
-		return inTransaction(e, func(tx core.App) error {
+		return inTransaction(e, nil, func(tx core.App) error {
 			return Put(tx, e.Record)
 		})
 	})
 	app.OnRecordUpdateExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
-		return inTransaction(e, func(tx core.App) error {
-			original := e.Record.Original()
-			if !changed(original, e.Record, indexedFields(e.Record)...) {
+		// Original keeps the loaded values after a save of the same record.
+		// The stored record has the values of the index row.
+		var stored *core.Record
+		readStored := func(tx core.App) (err error) {
+			stored, err = tx.FindRecordById(e.Record.Collection(), e.Record.Id)
+			return err
+		}
+		return inTransaction(e, readStored, func(tx core.App) error {
+			if !changed(stored, e.Record, indexedFields(e.Record)...) {
 				return nil
 			}
 			if err := Put(tx, e.Record); err != nil {
@@ -35,27 +41,32 @@ func Register(app core.App) {
 			}
 			// The API keeps the name of a restaurant with reviews. A superuser
 			// can still change it in the dashboard.
-			if tableOf(e.Record) == Restaurants && changed(original, e.Record, "name") {
+			if tableOf(e.Record) == Restaurants && changed(stored, e.Record, "name") {
 				return renameInReviews(tx, e.Record)
 			}
 			return nil
 		})
 	})
 	app.OnRecordDeleteExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
-		return inTransaction(e, func(tx core.App) error {
+		return inTransaction(e, nil, func(tx core.App) error {
 			return remove(tx, tableOf(e.Record), e.Record.Id)
 		})
 	})
 }
 
-// inTransaction runs the next hooks and then index in one transaction.
+// inTransaction runs before, the next hooks, and index in one transaction.
 // PocketBase starts no transaction for a save without one. A failed index
 // change then also removes the record change.
-func inTransaction(e *core.RecordEvent, index func(tx core.App) error) error {
+func inTransaction(e *core.RecordEvent, before, index func(tx core.App) error) error {
 	app := e.App
 	defer func() { e.App = app }()
 	return app.RunInTransaction(func(tx core.App) error {
 		e.App = tx
+		if before != nil {
+			if err := before(tx); err != nil {
+				return err
+			}
+		}
 		if err := e.Next(); err != nil {
 			return err
 		}
@@ -87,12 +98,10 @@ func tableOf(r *core.Record) string {
 	return Reviews
 }
 
-// Put replaces the index row of a restaurant or a review.
+// Put replaces the index row of a restaurant or a review. A failed restaurant
+// lookup keeps the old row.
 func Put(app core.App, r *core.Record) error {
 	table := tableOf(r)
-	if err := remove(app, table, r.Id); err != nil {
-		return err
-	}
 	row := dbx.Params{"id": r.Id}
 	if table == Restaurants {
 		row["tags"] = tagText(r)
@@ -106,6 +115,9 @@ func Put(app core.App, r *core.Record) error {
 		row["title"] = r.GetString("title")
 		row["feedback"] = r.GetString("feedback")
 		row["restaurant_name"] = restaurant.GetString("name")
+	}
+	if err := remove(app, table, r.Id); err != nil {
+		return err
 	}
 	_, err := app.DB().Insert(table, row).Execute()
 	return err
