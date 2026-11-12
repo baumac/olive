@@ -8,20 +8,24 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// SQLite rounds all averages. The overall filter and sort then compare the
-// values that the responses show.
-const overallAverage = "ROUND(SUM([[space]] + [[service]] + [[food]] + [[price]] + [[cleanliness]]) * 1.0 / (5 * COUNT(*)), 1)"
+// The migrations make these tables. SQLite triggers keep them equal to the
+// records. See decision 00012.
+const (
+	overallTable = "restaurant_overall"
+	tagsTable    = "restaurant_tags"
+)
 
 // overallColumn is NULL for a restaurant without reviews. It needs
 // joinOverall.
-const overallColumn = "[[overall_of.overall]]"
+const overallColumn = "[[" + overallTable + ".overall]]"
 
-// joinOverall computes the averages of all restaurants in one grouped scan of
-// reviews. A correlated subquery runs again for each use in a row.
+// joinOverall reads the stored averages. Each restaurant has a row. The inner
+// join lets SQLite read restaurants in the order of an overall index.
 func (w *where) joinOverall() {
 	w.joins = append(w.joins, join{
-		table: "(SELECT [[restaurant]], " + overallAverage + " AS [[overall]] FROM {{reviews}} GROUP BY [[restaurant]]) [[overall_of]]",
-		on:    dbx.NewExp("[[overall_of.restaurant]] = [[restaurants.id]]"),
+		inner: true,
+		table: "{{" + overallTable + "}}",
+		on:    dbx.NewExp(column(overallTable, "restaurant") + " = [[restaurants.id]]"),
 	})
 }
 
@@ -37,7 +41,8 @@ type restaurantRating struct {
 }
 
 // ratings runs one query for all restaurants. A restaurant without reviews
-// has no entry.
+// has no entry. The overall is the stored value. The overall sort and filter
+// then use the value that the response shows.
 func (s *Server) ratings(restaurants ...*core.Record) (map[string]restaurantRating, error) {
 	if len(restaurants) == 0 {
 		return map[string]restaurantRating{}, nil
@@ -46,7 +51,7 @@ func (s *Server) ratings(restaurants ...*core.Record) (map[string]restaurantRati
 	for i, r := range restaurants {
 		ids[i] = r.Id
 	}
-	columns := []string{"[[restaurant]]", "COUNT(*) AS [[count]]", overallAverage + " AS [[overall]]"}
+	columns := []string{"[[reviews.restaurant]] AS [[restaurant]]", "COUNT(*) AS [[count]]", "MAX(" + overallColumn + ") AS [[overall]]"}
 	for _, name := range []string{"space", "service", "food", "price", "cleanliness"} {
 		columns = append(columns, fmt.Sprintf("ROUND(AVG([[%s]]), 1) AS [[%s]]", name, name))
 	}
@@ -54,8 +59,9 @@ func (s *Server) ratings(restaurants ...*core.Record) (map[string]restaurantRati
 	err := s.app.DB().
 		Select(columns...).
 		From("reviews").
-		Where(dbx.In("restaurant", ids...)).
-		GroupBy("restaurant").
+		LeftJoin(overallTable, dbx.NewExp(column(overallTable, "restaurant")+" = [[reviews.restaurant]]")).
+		Where(dbx.In("reviews.restaurant", ids...)).
+		GroupBy("reviews.restaurant").
 		All(&rows)
 	if err != nil {
 		return nil, err
@@ -75,11 +81,17 @@ func (r restaurantRating) toAPI() reviewsapi.RestaurantRating {
 }
 
 // overallSort puts restaurants without reviews last in both directions. Its
-// first key is 1 for them and 0 for the others. They have 0 as the second key.
+// first key puts them last. All keys have one direction. They are the
+// columns of one index of the migrations.
 func overallSort(desc bool) []sortKey {
+	missing := column(overallTable, "unrated")
+	if desc {
+		missing = column(overallTable, "rated")
+	}
 	return []sortKey{
-		{"(" + overallColumn + " IS NULL)", false},
-		{"COALESCE(" + overallColumn + ", 0)", desc},
+		{expr: missing, desc: desc},
+		{expr: column(overallTable, "overall_or_0"), desc: desc},
+		{expr: column(overallTable, "restaurant"), desc: desc, unique: true},
 	}
 }
 

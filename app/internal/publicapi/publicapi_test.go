@@ -1003,7 +1003,7 @@ func TestListRestaurantsByOverall(t *testing.T) {
 	e.createReview(ana.Token, high, scores(9))
 	e.createReview(joe.Token, high, scores(8))
 	e.createReview(ana.Token, mid, `{"space":7,"service":7,"food":7,"price":7,"cleanliness":6,"title":"T"}`)
-	e.createReview(ana.Token, low, scores(2))
+	lowReview := e.createReview(ana.Token, low, scores(2))["id"].(string)
 
 	names := func(query string) string {
 		t.Helper()
@@ -1040,6 +1040,19 @@ func TestListRestaurantsByOverall(t *testing.T) {
 			t.Errorf("%s: %s, want %s", query, got, want)
 		}
 	}
+	lowPath := "/v1/restaurants/" + low + "/reviews/" + lowReview
+	e.expect(request{method: "PATCH", path: lowPath, body: scores(10), token: ana.Token}, http.StatusOK)
+	if got := names("sort=-overall"); got != "Low,High,Mid,None" {
+		t.Errorf("after update: %s", got)
+	}
+	e.expect(request{method: "DELETE", path: lowPath, token: ana.Token}, http.StatusNoContent)
+	if got := names("sort=-overall"); got != "High,Mid,Low,None" && got != "High,Mid,None,Low" {
+		t.Errorf("after delete: %s", got)
+	}
+	if got := names("sort=name&overall[gte]=1"); got != "High,Mid" {
+		t.Errorf("filter after delete: %s", got)
+	}
+
 	for _, query := range []string{"overall[gte]=0", "overall[gte]=11", "overall[gte]=x", "overall[gte]=NaN", "overall[lt]=Inf", "overall[gt]=-Inf", "sort=rating"} {
 		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
 	}

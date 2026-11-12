@@ -122,7 +122,7 @@ func (p *searchPage) filter(w *where) {
 // relevanceSort puts the highest score first. -relevance puts it last. It
 // needs the join of searchPage.filter.
 func relevanceSort(desc bool) []sortKey {
-	return []sortKey{{"[[search_hits.score]]", !desc}}
+	return []sortKey{{expr: "[[search_hits.score]]", desc: !desc}}
 }
 
 // sortWithSearch gives the sort to parse. Without a sort, a search sorts by

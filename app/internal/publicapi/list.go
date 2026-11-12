@@ -24,10 +24,11 @@ const (
 var comparisonOps = []string{"<", "<=", "=", ">=", ">"}
 
 // sortKey is one ORDER BY term. The page query also selects it for the
-// cursor.
+// cursor. A unique key orders all rows. parseSort adds no key after it.
 type sortKey struct {
-	expr string
-	desc bool
+	expr   string
+	desc   bool
+	unique bool
 }
 
 type sortField func(desc bool) []sortKey
@@ -40,13 +41,13 @@ func column(table, name string) string {
 // collation.
 func textSort(table, name string) sortField {
 	return func(desc bool) []sortKey {
-		return []sortKey{{column(table, name) + " COLLATE NOCASE", desc}}
+		return []sortKey{{expr: column(table, name) + " COLLATE NOCASE", desc: desc}}
 	}
 }
 
 func columnSort(table, name string) sortField {
 	return func(desc bool) []sortKey {
-		return []sortKey{{column(table, name), desc}}
+		return []sortKey{{expr: column(table, name), desc: desc}}
 	}
 }
 
@@ -70,9 +71,13 @@ func parseSort(raw *string, table string, fields map[string]sortField) ([]sortKe
 			return nil, "", fmt.Sprintf("The sort property %q occurs more than one time.", name)
 		}
 		seen[name] = true
-		keys = append(keys, field(desc)...)
+		if len(keys) == 0 || !keys[len(keys)-1].unique {
+			keys = append(keys, field(desc)...)
+		}
 	}
-	keys = append(keys, sortKey{column(table, "id"), keys[len(keys)-1].desc})
+	if last := keys[len(keys)-1]; !last.unique {
+		keys = append(keys, sortKey{expr: column(table, "id"), desc: last.desc, unique: true})
+	}
 	return keys, spec, ""
 }
 
@@ -150,20 +155,17 @@ func (w *where) in(expr string, values []string) {
 	w.add(expr + " IN (" + strings.Join(ps, ", ") + ")")
 }
 
-// hasTags adds a condition that the tags have at least one of tags. It
-// compares whole items with json_each. The PocketBase ~ operator compares
-// parts of the JSON text.
-func (w *where) hasTags(table string, tags []string) {
+// hasTags adds a condition that the restaurant has at least one of tags.
+func (w *where) hasTags(tags []string) {
 	ps := make([]string, len(tags))
 	for i, t := range tags {
 		ps[i] = w.param(t)
 	}
-	c := column(table, "tags")
-	w.add(fmt.Sprintf("EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(%s) THEN %s ELSE '[]' END) WHERE value IN (%s))",
-		c, c, strings.Join(ps, ", ")))
+	w.add(fmt.Sprintf("[[restaurants.id]] IN (SELECT [[restaurant]] FROM {{%s}} WHERE [[tag]] IN (%s))",
+		tagsTable, strings.Join(ps, ", ")))
 }
 
-func (w *where) tagFilters(table string, has *string, hasAny, hasAll *[]string) {
+func (w *where) tagFilters(has *string, hasAny, hasAll *[]string) {
 	all := []string{}
 	if has != nil {
 		all = append(all, *has)
@@ -172,10 +174,10 @@ func (w *where) tagFilters(table string, has *string, hasAny, hasAll *[]string) 
 		all = append(all, *hasAll...)
 	}
 	for _, tag := range all {
-		w.hasTags(table, []string{tag})
+		w.hasTags([]string{tag})
 	}
 	if hasAny != nil {
-		w.hasTags(table, *hasAny)
+		w.hasTags(*hasAny)
 	}
 }
 
@@ -308,6 +310,27 @@ func (s *Server) page(collection string, w *where, keys []sortKey, limit int, qu
 // sortValues gets the values of the sort keys for at most n rows in the sort
 // order. The last value of a row is the record ID.
 func (s *Server) sortValues(collection string, w *where, keys []sortKey, n int) ([][]any, error) {
+	rows, err := s.sortQuery(collection, w, keys, n).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out [][]any
+	for rows.Next() {
+		values := make([]any, len(keys))
+		ptrs := make([]any, len(keys))
+		for i := range values {
+			ptrs[i] = &values[i]
+		}
+		if err := rows.Scan(ptrs...); err != nil {
+			return nil, err
+		}
+		out = append(out, values)
+	}
+	return out, rows.Err()
+}
+
+func (s *Server) sortQuery(collection string, w *where, keys []sortKey, n int) *dbx.SelectQuery {
 	columns := make([]string, len(keys))
 	for i, k := range keys {
 		columns[i] = fmt.Sprintf("%s AS [[k%d]]", k.expr, i)
@@ -332,26 +355,7 @@ func (s *Server) sortValues(collection string, w *where, keys []sortKey, n int) 
 		}
 		q.AndOrderBy(k.expr + dir)
 	}
-	q.Limit(int64(n))
-
-	rows, err := q.Rows()
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out [][]any
-	for rows.Next() {
-		values := make([]any, len(keys))
-		ptrs := make([]any, len(keys))
-		for i := range values {
-			ptrs[i] = &values[i]
-		}
-		if err := rows.Scan(ptrs...); err != nil {
-			return nil, err
-		}
-		out = append(out, values)
-	}
-	return out, rows.Err()
+	return q.Limit(int64(n))
 }
 
 // recordsInOrder gets the records in the order of ids. A record that is

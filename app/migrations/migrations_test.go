@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -269,4 +270,43 @@ func TestReviewPhotos(t *testing.T) {
 		t.Error("down kept review_photos")
 	}
 	redo()
+}
+
+func TestRestaurantIndexFillsExistingRecords(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268808_add_restaurant_index.go")
+
+	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	rated := newRecord(t, app, "restaurants", map[string]any{"name": "Rated", "tags": []any{"italian", "italian", 3, "pasta"}})
+	unrated := newRecord(t, app, "restaurants", map[string]any{"name": "Unrated", "tags": "italian"})
+	newRecord(t, app, "reviews", map[string]any{
+		"restaurant": rated.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "cleanliness": 4, "title": "Good",
+	})
+
+	redo()
+	var overall []struct {
+		Restaurant string   `db:"restaurant"`
+		Overall    *float64 `db:"overall"`
+	}
+	if err := app.DB().NewQuery("SELECT restaurant, overall FROM restaurant_overall").All(&overall); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]*float64{}
+	for _, row := range overall {
+		got[row.Restaurant] = row.Overall
+	}
+	if len(got) != 2 || got[rated.Id] == nil || *got[rated.Id] != 6 || got[unrated.Id] != nil {
+		t.Errorf("restaurant_overall: %v", overall)
+	}
+	var tags []string
+	if err := app.DB().NewQuery("SELECT tag || ' ' || (restaurant = {:id}) FROM restaurant_tags ORDER BY tag").Bind(map[string]any{"id": rated.Id}).Column(&tags); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(tags, ",") != "italian 1,pasta 1" {
+		t.Errorf("restaurant_tags: %v", tags)
+	}
 }

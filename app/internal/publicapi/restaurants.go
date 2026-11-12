@@ -48,7 +48,13 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		return bad("The overall filter values must be numbers.")
 	}
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
-	query, err := fingerprint("restaurants", p)
+	parts := []any{"restaurants", p}
+	// The overall sort keys changed in decision 00012. The version rejects
+	// the cursors of the old keys.
+	if sortsBy(sort, "overall") {
+		parts = append(parts, 2)
+	}
+	query, err := fingerprint(parts...)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +69,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		w.joinOverall()
 	}
 	w.compare(overallColumn, averageComparisons(p.Overall))
-	w.tagFilters("restaurants", p.TagsHas, p.TagsHasAny, p.TagsHasAll)
+	w.tagFilters(p.TagsHas, p.TagsHasAny, p.TagsHasAll)
 	w.idFilters("restaurants", "creator", p.CreatorEq, p.CreatorIn)
 	w.compare(column("restaurants", "created"), timestampComparisons(p.Created))
 	w.compare(column("restaurants", "updated"), timestampComparisons(p.Updated))
