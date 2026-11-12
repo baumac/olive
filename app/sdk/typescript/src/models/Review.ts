@@ -44,7 +44,7 @@ export interface Review {
     restaurant: string;
     /**
      * The `name` of the reviewed restaurant.
-     * The name of a restaurant with reviews cannot change, so this value stays correct.
+     * It is the current name. A rename of the restaurant changes it.
      * 
      */
     restaurantName: string;

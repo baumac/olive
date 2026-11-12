@@ -42,7 +42,10 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog', { name: 'Filters' })).toBeHidden()
 
-  // A restaurant with reviews cannot be deleted. The UI shows an error toast.
+  // The page does not know the new review of another user. The delete gets
+  // 409, and the UI shows an error toast.
+  const reviewer = await api.signUp('Joe')
+  await api.createReview(reviewer, restaurant.id, { space: 7, service: 7, food: 7, price: 7, cleanliness: 7, title: 'Late' })
   await page.getByRole('button', { name: 'Delete restaurant' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete restaurant' }).click()
   await expect(page.getByText('Restaurant not deleted')).toBeVisible()

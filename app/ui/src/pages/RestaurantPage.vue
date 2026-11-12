@@ -17,6 +17,7 @@ import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
+import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
 import { scoreLegend, scoresOf, tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
@@ -27,10 +28,6 @@ const restaurant = useLoad<Restaurant>(() => restaurantsApi.getRestaurant({ rest
 watch(() => props.restaurantId, () => void restaurant.load(), { immediate: true })
 
 usePageTitle(() => restaurant.data.value?.name ?? '')
-
-const isCreator = computed(
-  () => !!currentUser.value && restaurant.data.value?.creator?.id === currentUser.value.id,
-)
 
 // ownReviewId is the review of the signed in user, if any. A user can have
 // at most one review per restaurant.
@@ -43,14 +40,24 @@ watch(
       return
     }
     try {
-      const page = await restaurantsApi.listReviews({ restaurantId, creatorEq: user.id, limit: 1 })
-      ownReviewId.value = page.items[0]?.id ?? null
+      ownReviewId.value = await findOwnReviewId(restaurantId, user.id)
     } catch {
       ownReviewId.value = null
     }
   },
   { immediate: true },
 )
+
+const access = computed(() =>
+  restaurant.data.value
+    ? restaurantAccess(restaurant.data.value, currentUser.value?.id, !!ownReviewId.value)
+    : { canChange: false, otherReviews: 0 },
+)
+
+const deleteDescription = computed(() => {
+  const text = `${restaurant.data.value?.name} will be deleted permanently.`
+  return ownReviewId.value ? `${text} Your review and its photos will be deleted too.` : text
+})
 
 const writePath = computed(() =>
   ownReviewId.value
@@ -68,7 +75,9 @@ async function remove() {
     const { status } = await apiFailure(error)
     const description =
       status === 409
-        ? 'A restaurant with reviews cannot be deleted.'
+        ? 'A restaurant with reviews of other people cannot be deleted.'
+        : status === 403
+          ? 'Only the person who added it can delete it.'
         : status === 401
           ? 'Sign in again, then try again.'
           : 'Try again in a moment.'
@@ -89,16 +98,22 @@ async function remove() {
       <section class="flex flex-col gap-4">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ restaurant.data.value.name }}</h1>
-          <div v-if="isCreator" class="flex flex-wrap gap-2">
-            <Button variant="outline" as-child>
-              <RouterLink :to="`/restaurants/${restaurantId}/edit`"><PencilIcon aria-hidden="true" />Edit restaurant</RouterLink>
-            </Button>
-            <ConfirmDelete
-              label="Delete restaurant"
-              title="Delete this restaurant?"
-              :description="`${restaurant.data.value.name} will be deleted permanently. A restaurant with reviews cannot be deleted.`"
-              @confirm="remove"
-            />
+          <div v-if="access.canChange" class="flex flex-col gap-2 sm:items-end">
+            <div class="flex flex-wrap gap-2">
+              <Button variant="outline" as-child>
+                <RouterLink :to="`/restaurants/${restaurantId}/edit`"><PencilIcon aria-hidden="true" />Edit restaurant</RouterLink>
+              </Button>
+              <ConfirmDelete
+                v-if="access.otherReviews === 0"
+                label="Delete restaurant"
+                title="Delete this restaurant?"
+                :description="deleteDescription"
+                @confirm="remove"
+              />
+            </div>
+            <p v-if="access.otherReviews > 0" class="text-muted-foreground text-sm">
+              Other people have reviewed this restaurant. You cannot delete it.
+            </p>
           </div>
         </div>
         <p v-if="restaurant.data.value.description" class="text-muted-foreground max-w-2xl text-xl whitespace-pre-line">

@@ -39,8 +39,8 @@ func Register(app core.App) {
 			if err := Put(tx, e.Record); err != nil {
 				return err
 			}
-			// The API keeps the name of a restaurant with reviews. A superuser
-			// can still change it in the dashboard.
+			// The API and the dashboard can change the name of a restaurant
+			// that has reviews.
 			if tableOf(e.Record) == Restaurants && changed(stored, e.Record, "name") {
 				return renameInReviews(tx, e.Record)
 			}

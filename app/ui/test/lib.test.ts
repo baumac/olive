@@ -4,6 +4,7 @@ import { fieldErrors } from '@/lib/api'
 import { restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
+import { restaurantAccess } from '@/lib/restaurants'
 import { scoreFields, scoresOf } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 
@@ -134,5 +135,22 @@ describe('scoreFields', () => {
       const match = new RegExp(`\\n {4}${schema}:\\n {6}description: (.+)\\n`).exec(spec)
       expect(match?.[1], schema).toBe(f.description)
     }
+  })
+})
+
+describe('restaurantAccess', () => {
+  const creator = { id: 'u5n1c8r3t6y0b2e', name: 'Ana' }
+
+  it('lets the creator change the restaurant', () => {
+    expect(restaurantAccess({ creator, reviewCount: 0 }, creator.id, false)).toEqual({ canChange: true, otherReviews: 0 })
+    expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, otherReviews: 0 })
+    expect(restaurantAccess({ creator, reviewCount: 2 }, creator.id, true)).toEqual({ canChange: true, otherReviews: 1 })
+    expect(restaurantAccess({ creator, reviewCount: 1 }, 'u2g6k0m4o8q1s5w', true).canChange).toBe(false)
+    expect(restaurantAccess({ creator, reviewCount: 0 }, undefined, false).canChange).toBe(false)
+  })
+
+  it('lets a reviewer change a restaurant without a creator', () => {
+    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, otherReviews: 0 })
+    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: false, otherReviews: 1 })
   })
 })

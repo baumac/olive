@@ -100,8 +100,8 @@ The checks run in this order:
 | 7 | the body properties against the spec | `422` |
 | 8 | the sort, the search, and the cursor rules that the spec cannot describe | `400` |
 | 9 | the restaurant and the review exist | `404` |
-| 10 | the user is the creator | `403` |
-| 11 | duplicate reviews, and restaurants with reviews | `409` |
+| 10 | the user is the creator. Decision 00016 has the rule for a restaurant without a creator. | `403` |
+| 11 | duplicate reviews, and restaurants with reviews of other users | `409` |
 
 - checks 1 to 7 are in `prepare`. Checks 8 to 11 are in the operation handlers.
 - after the handler, `prepare` checks the response against the spec. An invalid response gets `500`.
@@ -182,7 +182,7 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
   - the hooks also run for saves in the PocketBase dashboard and for cascade deletes, because these go through `app.Save` and `app.Delete`
   - SQL triggers were not selected. A trigger blocks a later `DROP COLUMN` of a column that it uses.
   - an external-content FTS5 table was not selected. It needs a stable `rowid`, and PocketBase uses text IDs.
-- `reviews_fts` also has the restaurant name. The API keeps the name of a restaurant with reviews. A dashboard change of the name updates the review rows.
+- `reviews_fts` also has the restaurant name. A change of the name updates the review rows. The API and the dashboard can change it.
 - a migration makes the tables and fills them from the existing records
 - the API changes a search into an FTS5 query. Each word with a letter or a digit becomes a quoted term, such as `"carb"*`. A quote in a word is doubled. FTS5 syntax in the search is then plain text, and no search causes an FTS5 syntax error.
 - a word of one character is a whole-word term without `*`. The prefix indexes do not cover one character, so a prefix of one character reads all index terms that start with it.

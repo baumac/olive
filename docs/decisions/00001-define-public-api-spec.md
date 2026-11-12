@@ -130,12 +130,13 @@ The operations of the restaurants API are as follows:
 - `GET /restaurants/{restaurantId}` to retrieve a single restaurant
 - `PATCH /restaurants/{restaurantId}` to update a single restaurant
     - `description` and `tags` can always be changed
-    - `name` can be changed only while the restaurant has no reviews. Otherwise the API returns `409 Conflict`.
+    - `name` can be changed only while no other user has a review of the restaurant. Otherwise the API returns `409 Conflict`. Decision 00016 changed this rule.
     - a `name` value that is equal to the stored value is not a change. It does not cause `409 Conflict`.
     - this prevents one user from changing what the reviews of other users are about
 - `DELETE /restaurants/{restaurantId}` to delete a single restaurant
-    - a restaurant that has reviews cannot be deleted. The API returns `409 Conflict`.
+    - a restaurant that has a review of another user cannot be deleted. The API returns `409 Conflict`.
     - this prevents one user from deleting the reviews of other users
+    - the review of the user is deleted with the restaurant. Decision 00016 changed this rule.
 
 ## Reviews API
 
@@ -169,7 +170,7 @@ The `space` score covered cleanliness before, so the migration gives existing re
     - `tags`: see [Tags](#tags)
 - read-only properties maintained by the API:
     - `restaurant`: id of the reviewed restaurant. The API sets it from the request path.
-    - `restaurant_name`: the `name` of the reviewed restaurant. The name of a restaurant with reviews cannot change, so the value stays correct. A list of reviews from many restaurants can then show the restaurant without more requests.
+    - `restaurant_name`: the `name` of the reviewed restaurant. It is the current name. A rename of the restaurant changes it. A list of reviews from many restaurants can then show the restaurant without more requests.
     - `created`: timestamp
     - `updated`: timestamp
     - `creator`: the user who created the review, see [Creator](#creator)
@@ -340,6 +341,7 @@ Sign up and sign in ignore the `Authorization` header.
 - anonymous and authenticated users can read all restaurants and reviews
 - any authenticated user can create restaurants and reviews
 - only the creator of a restaurant or review can update or delete it. Other users get `403 Forbidden`.
+- a restaurant without a creator can be updated or deleted by each user who has a review of it. See decision 00016.
 - PocketBase superusers manage all records through the PocketBase API, not the Public API
 
 ## Text that hides characters
@@ -377,7 +379,7 @@ The backlog has this change.
 When a user is deleted:
 - the reviews of that user are deleted
 - the restaurants of that user stay. Their `creator` becomes `null`.
-- a restaurant with a `null` creator can be changed or deleted only by PocketBase superusers
+- a restaurant with a `null` creator can be changed or deleted by each user who has a review of it. See decision 00016.
 
 Restaurants stay because the reviews of other users can refer to them.
 
@@ -549,9 +551,9 @@ Example:
 | --- | --- |
 | `400 Bad Request` | malformed request, invalid query parameters, or unknown or read-only properties in the body |
 | `401 Unauthorized` | missing bearer token on a create, update, delete, or token refresh request, an invalid bearer token on any request, or a wrong email or password on sign in |
-| `403 Forbidden` | the user is not the creator of the resource |
+| `403 Forbidden` | the user is not the creator of the resource. For a restaurant without a creator, the user has no review of it. |
 | `404 Not Found` | the resource or the restaurant in the path does not exist, or the review belongs to a different restaurant |
-| `409 Conflict` | sign up with an email that another user has, duplicate review for a restaurant, delete of a restaurant that has reviews, change of `name` on a restaurant that has reviews, or a photo over the count limit |
+| `409 Conflict` | sign up with an email that another user has, duplicate review for a restaurant, delete of a restaurant that has a review of another user, change of `name` on a restaurant that has a review of another user, or a photo over the count limit |
 | `413 Content Too Large` | a request body over the size limit, such as a photo over 10 MB |
 | `415 Unsupported Media Type` | wrong request content type |
 | `422 Unprocessable Content` | the request body has invalid property values |

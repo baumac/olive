@@ -143,7 +143,8 @@ tests/
 - the list shows restaurants. A tag filter in the URL selects them. "Load more" adds the next page.
 - a signed in user adds a restaurant, edits it, and deletes it
 - the edit and delete buttons show only to the creator
-- a restaurant with reviews cannot change its name or be deleted. The UI shows the error.
+- a restaurant with a review of another user has a locked name and no delete button
+- the creator renames and deletes a restaurant that has only the own review
 
 `reviews.spec.ts`:
 - a signed in user writes a review with the five scores

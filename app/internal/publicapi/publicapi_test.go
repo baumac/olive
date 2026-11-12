@@ -799,7 +799,89 @@ func TestReviews(t *testing.T) {
 			t.Errorf("creator %v, want null", c)
 		}
 		e.expect(request{method: "GET", path: reviews + "/" + great["id"].(string)}, http.StatusNotFound)
-		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + id, body: `{"description":"x"}`, token: joe.Token}, http.StatusForbidden)
+	})
+}
+
+func TestRestaurantOwnership(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+	eva := e.signUp("eva@example.com", "Eva")
+	const review = `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`
+	count := func(table string) int {
+		t.Helper()
+		var n int
+		if err := e.app.DB().NewQuery("SELECT COUNT(*) FROM " + table).Row(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+
+	t.Run("the review of the creator does not block", func(t *testing.T) {
+		id := e.createRestaurant(ana.Token, `{"name":"Luigis"}`)["id"].(string)
+		path := "/v1/restaurants/" + id
+		own := e.createReview(ana.Token, id, review)["id"].(string)
+
+		got := e.expect(request{method: "PATCH", path: path, body: `{"name":"Trattoria Roma"}`, token: ana.Token}, http.StatusOK).object(t)
+		if got["name"] != "Trattoria Roma" {
+			t.Errorf("name %v", got["name"])
+		}
+		var found struct {
+			Items []map[string]any `json:"items"`
+		}
+		e.expect(request{method: "GET", path: "/v1/reviews?search=trattoria"}, http.StatusOK).decode(t, &found)
+		if len(found.Items) != 1 || found.Items[0]["id"] != own || found.Items[0]["restaurant_name"] != "Trattoria Roma" {
+			t.Errorf("search by the new name: %v", found.Items)
+		}
+
+		other := e.createReview(joe.Token, id, review)["id"].(string)
+		e.expect(request{method: "PATCH", path: path, body: `{"name":"New name"}`, token: ana.Token}, http.StatusConflict)
+		e.expect(request{method: "PATCH", path: path, body: `{"description":"x","tags":["italian"]}`, token: ana.Token}, http.StatusOK)
+		e.expect(request{method: "DELETE", path: path, token: ana.Token}, http.StatusConflict)
+		e.expect(request{method: "GET", path: path + "/reviews/" + own}, http.StatusOK)
+
+		e.expect(request{method: "DELETE", path: path + "/reviews/" + other, token: joe.Token}, http.StatusNoContent)
+		e.expect(request{method: "DELETE", path: path, token: ana.Token}, http.StatusNoContent)
+		e.expect(request{method: "GET", path: path}, http.StatusNotFound)
+		for _, table := range []string{"reviews", "reviews_fts", "restaurants_fts", "restaurant_overall", "restaurant_tags"} {
+			if n := count(table); n != 0 {
+				t.Errorf("%d rows in %s after the delete", n, table)
+			}
+		}
+	})
+
+	t.Run("a restaurant without a creator", func(t *testing.T) {
+		tom := e.signUp("tom@example.com", "Tom")
+		id := e.createRestaurant(tom.Token, `{"name":"Can Sole"}`)["id"].(string)
+		empty := e.createRestaurant(tom.Token, `{"name":"Empty"}`)["id"].(string)
+		path := "/v1/restaurants/" + id
+		e.createReview(joe.Token, id, review)
+		user, err := e.app.FindRecordById("users", tom.User.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := e.app.Delete(user); err != nil {
+			t.Fatal(err)
+		}
+
+		e.expect(request{method: "PATCH", path: path, body: `{"description":"x"}`, token: eva.Token}, http.StatusForbidden)
+		e.expect(request{method: "DELETE", path: path, token: eva.Token}, http.StatusForbidden)
+		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + empty, body: `{"description":"x"}`, token: joe.Token}, http.StatusForbidden)
+		e.expect(request{method: "DELETE", path: "/v1/restaurants/" + empty, token: joe.Token}, http.StatusForbidden)
+
+		got := e.expect(request{method: "PATCH", path: path, body: `{"name":"Can Solé","description":"x"}`, token: joe.Token}, http.StatusOK).object(t)
+		if got["name"] != "Can Solé" || got["creator"] != nil {
+			t.Errorf("patch: %v", got)
+		}
+
+		e.createReview(eva.Token, id, review)
+		e.expect(request{method: "PATCH", path: path, body: `{"tags":["catalan"]}`, token: eva.Token}, http.StatusOK)
+		e.expect(request{method: "PATCH", path: path, body: `{"name":"Other"}`, token: eva.Token}, http.StatusConflict)
+		e.expect(request{method: "DELETE", path: path, token: joe.Token}, http.StatusConflict)
+
+		e.createReview(joe.Token, empty, review)
+		e.expect(request{method: "DELETE", path: "/v1/restaurants/" + empty, token: joe.Token}, http.StatusNoContent)
+		e.expect(request{method: "GET", path: "/v1/restaurants/" + empty}, http.StatusNotFound)
 	})
 }
 

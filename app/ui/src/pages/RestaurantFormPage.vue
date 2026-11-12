@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, restaurantsApi } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
+import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName } from '@/lib/validation'
@@ -35,6 +36,7 @@ const fields = ref<Fields>({ name: '', description: '', tags: [] })
 const errors = ref<Record<string, string>>({})
 const alert = ref<{ title: string; description: string } | null>(null)
 const saving = ref(false)
+const nameLocked = ref(false)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `restaurant:${props.restaurantId ?? 'new'}`)
@@ -44,10 +46,14 @@ onMounted(async () => {
   if (props.restaurantId) {
     try {
       const r: Restaurant = await restaurantsApi.getRestaurant({ restaurantId: props.restaurantId })
-      if (r.creator?.id !== currentUser.value?.id) {
+      const userId = currentUser.value?.id
+      const hasOwnReview = !!userId && !!(await findOwnReviewId(props.restaurantId, userId))
+      const access = restaurantAccess(r, userId, hasOwnReview)
+      if (!access.canChange) {
         failed.value = { status: 403 }
         return
       }
+      nameLocked.value = access.otherReviews > 0
       fields.value = { name: r.name, description: r.description ?? '', tags: tagList(r.tags) }
     } catch (error) {
       failed.value = { status: (await apiFailure(error)).status }
@@ -58,7 +64,7 @@ onMounted(async () => {
   }
   const draft = takeDraft<Fields>(draftKey.value)
   if (draft) {
-    fields.value = draft
+    fields.value = nameLocked.value ? { ...draft, name: fields.value.name } : draft
   }
 })
 
@@ -104,9 +110,9 @@ async function submit() {
     if (status === 422) {
       errors.value = fieldErrors(problem)
     } else if (status === 409) {
-      errors.value = { name: 'The name cannot change because the restaurant has reviews.' }
+      errors.value = { name: 'The name cannot change because other people have reviewed this restaurant.' }
     } else if (status === 403) {
-      alert.value = { title: 'You cannot change this restaurant', description: 'Only the person who added it can change it.' }
+      alert.value = { title: 'You cannot change this restaurant', description: 'Only the person who added it can change it. If that person has no account now, write a review first.' }
     } else if (status === 404) {
       alert.value = { title: 'This restaurant no longer exists', description: 'Someone deleted it. Go back to the restaurants.' }
     } else if (status !== 401) {
@@ -131,11 +137,21 @@ async function submit() {
         <AlertTitle>{{ alert.title }}</AlertTitle>
         <AlertDescription>{{ alert.description }}</AlertDescription>
       </Alert>
-      <FormItem id="restaurant-name" :error="errors.name">
+      <FormItem id="restaurant-name" :error="errors.name" :description="nameLocked">
         <FormLabel>Name</FormLabel>
         <FormControl>
-          <Input v-model="fields.name" name="name" maxlength="255" required placeholder="Luigi's Trattoria" />
+          <Input
+            v-model="fields.name"
+            name="name"
+            maxlength="255"
+            required
+            placeholder="Luigi's Trattoria"
+            :disabled="nameLocked"
+          />
         </FormControl>
+        <FormDescription v-if="nameLocked">
+          The name cannot change because other people have reviewed this restaurant.
+        </FormDescription>
         <FormMessage />
       </FormItem>
       <FormItem id="restaurant-description" :error="errors.description" description>

@@ -360,11 +360,21 @@ func (p photoEnv) waitForNoFiles(photoID string) {
 	p.t.Errorf("the files of photo %s are still in %s", photoID, dir)
 }
 
-func TestPhotosOfDeletedReviewsAndUsers(t *testing.T) {
+func TestPhotosOfDeletedReviewsRestaurantsAndUsers(t *testing.T) {
 	t.Run("review", func(t *testing.T) {
 		p := newPhotoEnv(t, testOptions)
 		photo := p.addPhoto()
 		p.expect(request{method: "DELETE", path: p.reviews, token: p.ana.Token}, http.StatusNoContent)
+		if _, err := p.app.FindRecordById("review_photos", photo["id"].(string)); err == nil {
+			t.Error("the photo record stays")
+		}
+		p.waitForNoFiles(photo["id"].(string))
+	})
+	t.Run("restaurant", func(t *testing.T) {
+		p := newPhotoEnv(t, testOptions)
+		photo := p.addPhoto()
+		restaurant, _, _ := strings.Cut(p.reviews, "/reviews/")
+		p.expect(request{method: "DELETE", path: restaurant, token: p.ana.Token}, http.StatusNoContent)
 		if _, err := p.app.FindRecordById("review_photos", photo["id"].(string)); err == nil {
 			t.Error("the photo record stays")
 		}

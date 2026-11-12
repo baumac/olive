@@ -64,21 +64,42 @@ test('only the creator sees edit and delete', async ({ page, api }) => {
   await expect(page.getByRole('heading', { name: 'You cannot open this page' })).toBeVisible()
 })
 
-test('a restaurant with reviews keeps its name and cannot be deleted', async ({ page, api, user }) => {
+test('a restaurant with a review of another user keeps its name and cannot be deleted', async ({ page, api, user }) => {
   const restaurant = await api.createRestaurant(user, { name: "Luigi's" })
   const reviewer = await api.signUp('Joe')
   await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
 
   await page.goto(`/restaurants/${restaurant.id}/edit`)
-  await page.getByLabel('Name').fill("Luigi's Trattoria")
+  await expect(page.getByLabel('Name')).toBeDisabled()
+  await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
+  await page.getByLabel('Description').fill('Family run')
   await page.getByRole('button', { name: 'Save restaurant' }).click()
-  await expect(page.getByText('The name cannot change because the restaurant has reviews.')).toBeVisible()
 
-  await page.goto(`/restaurants/${restaurant.id}`)
+  await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}$`))
+  await expect(page.getByText('Family run')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Edit restaurant' })).toBeVisible()
+  await expect(page.getByText('Other people have reviewed this restaurant. You cannot delete it.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Delete restaurant' })).toHaveCount(0)
+})
+
+test('the creator renames and deletes a restaurant that has only the own review', async ({ page, api, user }) => {
+  const restaurant = await api.createRestaurant(user, { name: 'Luigis' })
+  await api.createReview(user, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
+
+  await page.goto(`/restaurants/${restaurant.id}/edit`)
+  await page.getByLabel('Name').fill("Luigi's")
+  await page.getByRole('button', { name: 'Save restaurant' }).click()
+  await expect(page.getByRole('heading', { name: "Luigi's", level: 1 })).toBeVisible()
+
   await page.getByRole('button', { name: 'Delete restaurant' }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete restaurant' }).click()
-  await expect(page.getByText('Restaurant not deleted')).toBeVisible()
-  await expect(page.getByText('A restaurant with reviews cannot be deleted.', { exact: true })).toBeVisible()
+  const dialog = page.getByRole('alertdialog')
+  await expect(dialog).toContainText('Your review and its photos will be deleted too.')
+  await dialog.getByRole('button', { name: 'Delete restaurant' }).click()
+  await expect(page.getByText('Restaurant deleted')).toBeVisible()
+  await expect(page).toHaveURL(/\/restaurants$/)
+
+  await page.goto('/my-reviews')
+  await expect(page.getByText('You have no reviews yet')).toBeVisible()
 })
 
 test('restaurants show the average scores of their reviews', async ({ page, api }) => {

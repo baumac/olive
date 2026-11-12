@@ -248,7 +248,8 @@ paths:
       summary: Update a restaurant
       description: |
         Only the creator of the restaurant can update it.
-        `name` can change only while the restaurant has no reviews.
+        A restaurant without a creator can be updated by each user who has a review of it.
+        `name` can change only while no other user has a review of the restaurant.
         A value that is equal to the stored value is not a change.
       tags: [restaurants]
       security:
@@ -288,7 +289,9 @@ paths:
       summary: Delete a restaurant
       description: |
         Only the creator of the restaurant can delete it.
-        A restaurant that has reviews cannot be deleted.
+        A restaurant without a creator can be deleted by each user who has a review of it.
+        A restaurant that has a review of another user cannot be deleted.
+        The review of the user is deleted with the restaurant.
       tags: [restaurants]
       security:
         - bearerAuth: []
@@ -1117,7 +1120,7 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     Forbidden:
-      description: The user is not the creator of the resource.
+      description: The user is not the creator of the resource. For a restaurant without a creator, the user has no review of it.
       content:
         application/problem+json:
           schema:
@@ -1132,7 +1135,8 @@ components:
       description: |
         The request conflicts with the current state.
         Examples are a sign up with an email that another user has, a duplicate review for a restaurant,
-        a delete of a restaurant that has reviews, a change of `name` on a restaurant that has reviews,
+        a delete of a restaurant that has a review of another user,
+        a change of `name` on a restaurant that has a review of another user,
         or a sixth photo of a review.
       content:
         application/problem+json:
@@ -1486,7 +1490,7 @@ components:
         restaurant_name:
           description: |
             The `name` of the reviewed restaurant.
-            The name of a restaurant with reviews cannot change, so this value stays correct.
+            It is the current name. A rename of the restaurant changes it.
           type: string
           $ref: '#/components/schemas/Name'
         overall:

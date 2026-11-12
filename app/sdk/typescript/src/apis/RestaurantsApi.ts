@@ -561,7 +561,7 @@ export interface RestaurantsApiInterface {
     deleteRestaurantRequestOpts(requestParameters: DeleteRestaurantRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Only the creator of the restaurant can delete it. A restaurant that has reviews cannot be deleted. 
+     * Only the creator of the restaurant can delete it. A restaurant without a creator can be deleted by each user who has a review of it. A restaurant that has a review of another user cannot be deleted. The review of the user is deleted with the restaurant. 
      * @summary Delete a restaurant
      * @param {string} restaurantId The ID of the restaurant.
      * @param {*} [options] Override http request option.
@@ -571,7 +571,7 @@ export interface RestaurantsApiInterface {
     deleteRestaurantRaw(requestParameters: DeleteRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
 
     /**
-     * Only the creator of the restaurant can delete it. A restaurant that has reviews cannot be deleted. 
+     * Only the creator of the restaurant can delete it. A restaurant without a creator can be deleted by each user who has a review of it. A restaurant that has a review of another user cannot be deleted. The review of the user is deleted with the restaurant. 
      * Delete a restaurant
      */
     deleteRestaurant(requestParameters: DeleteRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
@@ -868,7 +868,7 @@ export interface RestaurantsApiInterface {
     updateRestaurantRequestOpts(requestParameters: UpdateRestaurantRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Only the creator of the restaurant can update it. `name` can change only while the restaurant has no reviews. A value that is equal to the stored value is not a change. 
+     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A value that is equal to the stored value is not a change. 
      * @summary Update a restaurant
      * @param {string} restaurantId The ID of the restaurant.
      * @param {RestaurantPatch} restaurantPatch The restaurant properties to change.
@@ -879,7 +879,7 @@ export interface RestaurantsApiInterface {
     updateRestaurantRaw(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Restaurant>>;
 
     /**
-     * Only the creator of the restaurant can update it. `name` can change only while the restaurant has no reviews. A value that is equal to the stored value is not a change. 
+     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A value that is equal to the stored value is not a change. 
      * Update a restaurant
      */
     updateRestaurant(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant>;
@@ -1178,7 +1178,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the restaurant can delete it. A restaurant that has reviews cannot be deleted. 
+     * Only the creator of the restaurant can delete it. A restaurant without a creator can be deleted by each user who has a review of it. A restaurant that has a review of another user cannot be deleted. The review of the user is deleted with the restaurant. 
      * Delete a restaurant
      */
     async deleteRestaurantRaw(requestParameters: DeleteRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -1189,7 +1189,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the restaurant can delete it. A restaurant that has reviews cannot be deleted. 
+     * Only the creator of the restaurant can delete it. A restaurant without a creator can be deleted by each user who has a review of it. A restaurant that has a review of another user cannot be deleted. The review of the user is deleted with the restaurant. 
      * Delete a restaurant
      */
     async deleteRestaurant(requestParameters: DeleteRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -1880,7 +1880,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the restaurant can update it. `name` can change only while the restaurant has no reviews. A value that is equal to the stored value is not a change. 
+     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A value that is equal to the stored value is not a change. 
      * Update a restaurant
      */
     async updateRestaurantRaw(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Restaurant>> {
@@ -1891,7 +1891,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the restaurant can update it. `name` can change only while the restaurant has no reviews. A value that is equal to the stored value is not a change. 
+     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A value that is equal to the stored value is not a change. 
      * Update a restaurant
      */
     async updateRestaurant(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant> {

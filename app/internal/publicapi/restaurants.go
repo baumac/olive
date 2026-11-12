@@ -158,18 +158,20 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 		if err != nil {
 			return err
 		}
-		if r.GetString("creator") != user.Id {
-			response = reviewsapi.UpdateRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden("Only the creator of the restaurant can change it.")}
+		if detail, err := restaurantChangeForbidden(tx, r, user.Id); err != nil {
+			return err
+		} else if detail != "" {
+			response = reviewsapi.UpdateRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden(detail)}
 			return nil
 		}
 
 		if b.Name != nil && *b.Name != r.GetString("name") {
-			n, err := tx.CountRecords("reviews", dbx.HashExp{"restaurant": r.Id})
+			n, err := countReviewsOfOtherUsers(tx, r.Id, user.Id)
 			if err != nil {
 				return err
 			}
 			if n > 0 {
-				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The name cannot change because the restaurant has reviews.")}
+				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The name cannot change because the restaurant has reviews of other users.")}
 				return nil
 			}
 		}
@@ -199,6 +201,7 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 }
 
 // DeleteRestaurant runs the review check and the delete in one transaction.
+// It also deletes the review of the user.
 func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRestaurantRequestObject) (reviewsapi.DeleteRestaurantResponseObject, error) {
 	user := stateFrom(ctx).user
 
@@ -212,17 +215,28 @@ func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRest
 		if err != nil {
 			return err
 		}
-		if r.GetString("creator") != user.Id {
-			response = reviewsapi.DeleteRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden("Only the creator of the restaurant can delete it.")}
+		if detail, err := restaurantChangeForbidden(tx, r, user.Id); err != nil {
+			return err
+		} else if detail != "" {
+			response = reviewsapi.DeleteRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden(detail)}
 			return nil
 		}
-		n, err := tx.CountRecords("reviews", dbx.HashExp{"restaurant": r.Id})
+		n, err := countReviewsOfOtherUsers(tx, r.Id, user.Id)
 		if err != nil {
 			return err
 		}
 		if n > 0 {
-			response = reviewsapi.DeleteRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The restaurant has reviews. Only a restaurant without reviews can be deleted.")}
+			response = reviewsapi.DeleteRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The restaurant has reviews of other users. It cannot be deleted.")}
 			return nil
+		}
+		own, err := tx.FindAllRecords("reviews", dbx.HashExp{"restaurant": r.Id})
+		if err != nil {
+			return err
+		}
+		for _, review := range own {
+			if err := tx.Delete(review); err != nil {
+				return err
+			}
 		}
 		return tx.Delete(r)
 	})
@@ -233,6 +247,30 @@ func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRest
 }
 
 const restaurantNotFound = "The restaurant does not exist."
+
+// restaurantChangeForbidden returns a detail for the 403 response if the user
+// cannot change or delete the restaurant. A restaurant without a creator
+// belongs to each user who has a review of it.
+func restaurantChangeForbidden(app core.App, r *core.Record, userID string) (string, error) {
+	if creator := r.GetString("creator"); creator != "" {
+		if creator != userID {
+			return "Only the creator of the restaurant can change or delete it.", nil
+		}
+		return "", nil
+	}
+	n, err := app.CountRecords("reviews", dbx.HashExp{"restaurant": r.Id, "creator": userID})
+	if err != nil {
+		return "", err
+	}
+	if n == 0 {
+		return "The restaurant has no creator. Only a user with a review of it can change or delete it.", nil
+	}
+	return "", nil
+}
+
+func countReviewsOfOtherUsers(app core.App, restaurantID, userID string) (int64, error) {
+	return app.CountRecords("reviews", dbx.HashExp{"restaurant": restaurantID}, dbx.Not(dbx.HashExp{"creator": userID}))
+}
 
 func (s *Server) findRestaurant(app core.App, id string) (*core.Record, error) {
 	return app.FindRecordById("restaurants", id)
