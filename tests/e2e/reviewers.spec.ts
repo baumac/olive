@@ -1,0 +1,44 @@
+import { expect, test } from '../fixtures'
+
+test('a review card shows the overall score and links the reviewer page', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const ana = await api.signUp('Ana')
+  const first = await api.createRestaurant(owner, { name: 'Overall Kitchen' })
+  const second = await api.createRestaurant(owner, { name: 'Overall Grill' })
+  await api.createReview(ana, first.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 8, title: 'Ana likes it' })
+  await api.createReview(ana, second.id, { space: 2, service: 2, food: 2, price: 2, cleanliness: 2, title: 'Ana does not' })
+  await api.createReview(owner, first.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'Joe at his place' })
+
+  await page.goto(`/restaurants/${first.id}`)
+  const card = page.getByRole('listitem').filter({ hasText: 'Ana likes it' })
+  await expect(card.getByRole('img', { name: 'Overall: 7.6 out of 10' })).toBeVisible()
+  await card.getByRole('link', { name: 'Ana', exact: true }).click()
+
+  await expect(page).toHaveURL(new RegExp(`/reviewers/${ana.auth.user.id}$`))
+  await expect(page.getByRole('heading', { name: 'Ana', level: 1 })).toBeVisible()
+  await expect(page.getByRole('paragraph').filter({ hasText: /^2 reviews$/ })).toBeVisible()
+  const titles = page.getByRole('heading', { level: 3 })
+  await expect(titles).toHaveText(['Ana does not', 'Ana likes it'])
+  await expect(page.locator('body')).not.toContainText(ana.email)
+  await expect(page.getByRole('main').getByRole('link', { name: 'Ana', exact: true })).toHaveCount(0)
+
+  await page.goto(`/reviewers/${ana.auth.user.id}?sort=-overall`)
+  await expect(titles).toHaveText(['Ana likes it', 'Ana does not'])
+  await page.goto(`/reviewers/${ana.auth.user.id}?overall=5`)
+  await expect(titles).toHaveText(['Ana likes it'])
+  await expect(page.getByText('Overall: 5 or more')).toBeVisible()
+})
+
+test('a reviewer page names a reviewer without reviews', async ({ page, api }) => {
+  const sam = await api.signUp('Sam')
+  await page.goto(`/reviewers/${sam.auth.user.id}`)
+  await expect(page.getByRole('heading', { name: 'Sam', level: 1 })).toBeVisible()
+  await expect(page.getByText('Sam has not reviewed a restaurant yet.')).toBeVisible()
+})
+
+for (const id of ['aaaaaaaaaaaaaaa', 'BAD']) {
+  test(`the reviewer ID ${id} has the not found page`, async ({ page }) => {
+    await page.goto(`/reviewers/${id}`)
+    await expect(page.getByRole('heading', { name: 'We cannot find this page' })).toBeVisible()
+  })
+}

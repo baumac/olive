@@ -1,6 +1,6 @@
 import type { FilterDef, FilterValue, Option } from '@/components/ui/filter-bar'
 
-// The review filters and sorts of the restaurant page and the my reviews page.
+// The review filters and sorts of the restaurant page and the reviewer pages.
 
 function scoreOptions(max: number): Option[] {
   return Array.from({ length: max }, (_, i) => max - i).map((n) => ({ value: String(n), label: `${n} or more` }))
@@ -8,6 +8,7 @@ function scoreOptions(max: number): Option[] {
 
 export const reviewFilterDefs: FilterDef[] = [
   { key: 'search', label: 'Search reviews', type: 'search', placeholder: 'Search reviews', chip: (v) => `Search: ${v}` },
+  { key: 'overall', label: 'Overall', type: 'select', options: scoreOptions(10), chip: (v) => `Overall: ${v} or more` },
   { key: 'food', label: 'Food', type: 'select', options: scoreOptions(10), chip: (v) => `Food: ${v} or more` },
   { key: 'service', label: 'Service', type: 'select', options: scoreOptions(10), chip: (v) => `Service: ${v} or more` },
   { key: 'space', label: 'Space', type: 'select', options: scoreOptions(10), chip: (v) => `Space: ${v} or more` },
@@ -18,6 +19,7 @@ export const reviewFilterDefs: FilterDef[] = [
 export const reviewSortOptions: Option[] = [
   { value: '-created', label: 'Newest' },
   { value: 'created', label: 'Oldest' },
+  { value: '-overall', label: 'Best overall' },
   { value: '-food', label: 'Best food' },
   { value: '-service', label: 'Best service' },
   { value: '-space', label: 'Best space' },
@@ -35,6 +37,7 @@ function atLeast(filters: Record<string, FilterValue>, key: string) {
 export function reviewFilterParams(f: Record<string, FilterValue>) {
   return {
     search: typeof f.search === 'string' ? f.search : undefined,
+    overall: atLeast(f, 'overall'),
     food: atLeast(f, 'food'),
     service: atLeast(f, 'service'),
     space: atLeast(f, 'space'),

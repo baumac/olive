@@ -17,6 +17,7 @@ export * from './Review.js';
 export * from './ReviewCreate.js';
 export * from './ReviewList.js';
 export * from './ReviewPatch.js';
+export * from './Reviewer.js';
 export * from './ScoreRange.js';
 export * from './TimestampRange.js';
 export * from './User.js';

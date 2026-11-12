@@ -4,7 +4,7 @@ import { fieldErrors } from '@/lib/api'
 import { restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
-import { ratingScores, scoreFields } from '@/lib/reviews'
+import { scoreFields, scoresOf } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 
 describe('format', () => {
@@ -92,12 +92,14 @@ describe('reviewFilterParams', () => {
   it('changes the filters to SDK parameters', () => {
     expect(reviewFilterParams({ search: 'carbonara', food: '4' })).toEqual({
       search: 'carbonara',
+      overall: undefined,
       food: { gte: 4 },
       service: undefined,
       space: undefined,
       price: undefined,
       cleanliness: undefined,
     })
+    expect(reviewFilterParams({ overall: '8' }).overall).toEqual({ gte: 8 })
   })
 })
 
@@ -108,7 +110,7 @@ describe('ratings', () => {
 
   it('puts overall first', () => {
     const rating = { overall: 7.6, space: 7.5, service: 8.5, food: 9, price: 5.5, cleanliness: 7.5 }
-    expect(ratingScores(rating).map((s) => `${s.label} ${s.value}`)).toEqual([
+    expect(scoresOf(rating).map((s) => `${s.label} ${s.value}`)).toEqual([
       'Overall 7.6', 'Space 7.5', 'Service 8.5', 'Food 9', 'Price 5.5', 'Cleanliness 7.5',
     ])
   })

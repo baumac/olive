@@ -194,6 +194,16 @@ func TestPageMeta(t *testing.T) {
 		{"GET", restaurantPath + "/edit", 200, []string{`content="Default"`}},
 		{"GET", reviewPath + "/edit", 200, []string{`content="Default"`}},
 		{"GET", "/restaurants", 200, []string{`content="Default"`}},
+		{"GET", "/reviewers/" + user.Id, 200, []string{
+			`<title>Ana · Sponga47 Reviews</title>`,
+			`<meta name="description" content="Reviews by Ana on Sponga47 Reviews." />`,
+			`<meta property="og:type" content="profile" />`,
+			`<meta property="og:url" content="https://reviews.example.com/reviewers/` + user.Id + `" />`,
+			`<meta property="og:image" content="https://site.example.com/og-image.png" />`,
+		}},
+		{"GET", "/Reviewers/" + user.Id + "/", 200, []string{`<title>Ana · Sponga47 Reviews</title>`}},
+		{"GET", "/reviewers/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
+		{"GET", "/reviewers/BAD", 200, []string{`content="Default"`}},
 	} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest(tc.method, tc.path, nil))
@@ -214,6 +224,9 @@ func TestPageMeta(t *testing.T) {
 		}
 		if strings.Contains(body, "<script>") || strings.Contains(body, "<b>") {
 			t.Errorf("%s %s: a value is not escaped:\n%s", tc.method, tc.path, body)
+		}
+		if strings.Contains(body, user.GetString("email")) {
+			t.Errorf("%s %s: the page has the email address", tc.method, tc.path)
 		}
 	}
 

@@ -1,5 +1,6 @@
 .openapi-generator-ignore
 apis/RestaurantsApi.ts
+apis/ReviewersApi.ts
 apis/UsersApi.ts
 apis/index.ts
 index.ts
@@ -20,6 +21,7 @@ models/Review.ts
 models/ReviewCreate.ts
 models/ReviewList.ts
 models/ReviewPatch.ts
+models/Reviewer.ts
 models/ScoreRange.ts
 models/TimestampRange.ts
 models/User.ts

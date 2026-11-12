@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"math"
 	"slices"
 	"strings"
 
@@ -43,9 +42,8 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if detail != "" {
 		return bad(detail)
 	}
-	// The spec validation can be off. The fingerprint cannot marshal NaN.
-	if slices.ContainsFunc(averageComparisons(p.Overall), func(c comparison) bool { return math.IsNaN(c.value.(float64)) }) {
-		return bad("The overall filter values must be numbers.")
+	if detail := overallDetail(p.Overall); detail != "" {
+		return bad(detail)
 	}
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
 	parts := []any{"restaurants", p}

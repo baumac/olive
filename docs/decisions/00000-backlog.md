@@ -7,9 +7,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## Items for Claude
-- Add an overall score to a review, and a page for each reviewer
-  - a review card shows five scores and no single value
-  - a person can list only their own reviews
 - Sessions, Sign In, and Sign Out
   - Sync the session between browser tabs
     - `app/ui/src/lib/session.ts` has no `storage` listener

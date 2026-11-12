@@ -49,6 +49,13 @@ export interface Review {
      */
     restaurantName: string;
     /**
+     * The average of the five scores. The API computes it. A client cannot set it.
+     * Each value is exact with one decimal.
+     * The average of the `overall` values of the reviews of a restaurant is its `rating.overall` before the rounding.
+     * 
+     */
+    overall: number;
+    /**
      * 
      */
     space: any;
@@ -105,6 +112,7 @@ export function instanceOfReview(value: object): value is Review {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('restaurant' in value) || value['restaurant'] === undefined) return false;
     if ((!('restaurantName' in (value as Record<string, any>)) && !('restaurant_name' in (value as Record<string, any>))) || ((value as Record<string, any>)['restaurantName'] === undefined && (value as Record<string, any>)['restaurant_name'] === undefined)) return false;
+    if (!('overall' in value) || value['overall'] === undefined) return false;
     if (!('space' in value) || value['space'] === undefined) return false;
     if (!('service' in value) || value['service'] === undefined) return false;
     if (!('food' in value) || value['food'] === undefined) return false;
@@ -131,6 +139,7 @@ export function ReviewFromJSONTyped(json: any, ignoreDiscriminator: boolean): Re
         'id': json['id'],
         'restaurant': json['restaurant'],
         'restaurantName': json['restaurant_name'],
+        'overall': json['overall'],
         'space': json['space'],
         'service': json['service'],
         'food': json['food'],
@@ -159,6 +168,7 @@ export function ReviewToJSONTyped(value?: Review | null, ignoreDiscriminator: bo
         'id': value['id'],
         'restaurant': value['restaurant'],
         'restaurant_name': value['restaurantName'],
+        'overall': value['overall'],
         'space': value['space'],
         'service': value['service'],
         'food': value['food'],

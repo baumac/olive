@@ -2,6 +2,8 @@ package publicapi
 
 import (
 	"fmt"
+	"math"
+	"slices"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/pocketbase/dbx"
@@ -93,6 +95,15 @@ func overallSort(desc bool) []sortKey {
 		{expr: column(overallTable, "overall_or_0"), desc: desc},
 		{expr: column(overallTable, "restaurant"), desc: desc, unique: true},
 	}
+}
+
+// overallDetail returns the detail of a 400 for a NaN value. The spec
+// validation can be off. The fingerprint cannot marshal NaN.
+func overallDetail(r *reviewsapi.AverageRange) string {
+	if slices.ContainsFunc(averageComparisons(r), func(c comparison) bool { return math.IsNaN(c.value.(float64)) }) {
+		return "The overall filter values must be numbers."
+	}
+	return ""
 }
 
 func averageComparisons(r *reviewsapi.AverageRange) []comparison {

@@ -6,12 +6,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { scoresOf } from '@/lib/reviews'
 import DateText from './DateText.vue'
+import ReviewerLink from './ReviewerLink.vue'
 import ReviewPhotos from './ReviewPhotos.vue'
 
 const props = defineProps<{
   review: Review
   // showRestaurant names the restaurant. Lists of many restaurants need it.
   showRestaurant?: boolean
+  // linkCreator links the creator name to the reviewer page.
+  linkCreator?: boolean
 }>()
 
 const scores = computed(() => scoresOf(props.review))
@@ -39,7 +42,7 @@ const scores = computed(() => scoresOf(props.review))
     <CardFooter class="text-muted-foreground flex flex-wrap gap-2 text-sm">
       <span class="flex items-center gap-2">
         <InitialsAvatar :name="review.creator.name" size="sm" />
-        <span>{{ review.creator.name }} · <DateText :created="review.created" :updated="review.updated" /></span>
+        <span><ReviewerLink v-if="linkCreator" :creator="review.creator" /><template v-else>{{ review.creator.name }}</template> · <DateText :created="review.created" :updated="review.updated" /></span>
       </span>
     </CardFooter>
   </Card>

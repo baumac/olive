@@ -72,6 +72,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading reviews')
       await expectNoViolations(page)
+
+      await page.goto(`/reviewers/${owner.auth.user.id}`)
+      await expect(page.getByRole('heading', { name: 'Joe', level: 1 })).toBeVisible()
+      await expect(page.getByRole('status')).not.toHaveText('Loading reviews')
+      await expectNoViolations(page)
     })
   })
 }

@@ -160,15 +160,22 @@ func (p indexPage) pageTitle(title string) string {
 	return title + " · " + p.siteName
 }
 
-// errNoRecord tells that the path names a restaurant or a review that does
-// not exist.
+// errNoRecord tells that the path names a restaurant, a review, or a user
+// that does not exist.
 var errNoRecord = errors.New("no record")
 
-// metaFor returns false for a path that is not a restaurant or review page.
-// appURL is the Application URL of the PocketBase settings. The literal
-// path parts ignore case like Vue Router.
+// metaFor returns false for a path that is not a restaurant, review, or
+// reviewer page. appURL is the Application URL of the PocketBase settings.
+// The literal path parts ignore case like Vue Router.
 func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, error) {
 	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
+	if len(parts) == 2 && strings.EqualFold(parts[0], "reviewers") && recordID.MatchString(parts[1]) {
+		user, err := app.FindRecordById("users", parts[1])
+		if err != nil {
+			return pageMeta{}, true, notFound(err)
+		}
+		return p.reviewerMeta(user, publicBaseURL(appURL)), true, nil
+	}
 	if len(parts) < 2 || !strings.EqualFold(parts[0], "restaurants") || !recordID.MatchString(parts[1]) {
 		return pageMeta{}, false, nil
 	}
@@ -232,6 +239,18 @@ func (p indexPage) restaurantMeta(restaurant *core.Record, baseURL string) pageM
 	meta.Description = description
 	meta.Type = "website"
 	meta.URL = pageURL(baseURL, "/restaurants/"+restaurant.Id)
+	return meta
+}
+
+// reviewerMeta has only the public fields of the user.
+func (p indexPage) reviewerMeta(user *core.Record, baseURL string) pageMeta {
+	name := user.GetString("name")
+	meta := p.siteImage
+	meta.Title = p.pageTitle(name)
+	meta.OGTitle = name
+	meta.Description = "Reviews by " + name + " on " + p.siteName + "."
+	meta.Type = "profile"
+	meta.URL = pageURL(baseURL, "/reviewers/"+user.Id)
 	return meta
 }
 

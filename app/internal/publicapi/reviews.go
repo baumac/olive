@@ -23,7 +23,12 @@ type reviewInput struct {
 	feedback nullable.Nullable[string]
 }
 
+// reviewOverall divides in a double like toReview. The overall filter then
+// compares the values that the responses show.
+const reviewOverall = "(([[reviews.space]] + [[reviews.service]] + [[reviews.food]] + [[reviews.price]] + [[reviews.cleanliness]]) / 5.0)"
+
 var reviewSorts = map[string]sortField{
+	"overall":     func(desc bool) []sortKey { return []sortKey{{expr: reviewOverall, desc: desc}} },
 	"space":       columnSort("reviews", "space"),
 	"service":     columnSort("reviews", "service"),
 	"food":        columnSort("reviews", "food"),
@@ -42,7 +47,7 @@ func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsReques
 	all := reviewsapi.ListAllReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, RestaurantEq: &req.RestaurantId,
 		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price, Cleanliness: p.Cleanliness,
-		Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
+		Overall: p.Overall, Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
 	}
 	// The cursor keeps the fingerprint of the first version of this
 	// operation. Open pages can then still load more after a deploy.
@@ -109,6 +114,9 @@ func (s *Server) reviewPage(
 	if detail != "" {
 		return reviewPageResult{bad: detail}, nil
 	}
+	if detail := overallDetail(p.Overall); detail != "" {
+		return reviewPageResult{bad: detail}, nil
+	}
 	cursor := p.Cursor
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
 	parts := []any{"reviews", p}
@@ -132,6 +140,7 @@ func (s *Server) reviewPage(
 	} {
 		w.compare(column("reviews", name), scoreComparisons(r))
 	}
+	w.compare(reviewOverall, averageComparisons(p.Overall))
 	w.idFilters("reviews", "creator", p.CreatorEq, p.CreatorIn)
 	w.compare(column("reviews", "created"), timestampComparisons(p.Created))
 	w.compare(column("reviews", "updated"), timestampComparisons(p.Updated))
@@ -429,11 +438,12 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string, photo
 	if photos == nil {
 		photos = []reviewsapi.Photo{}
 	}
+	space, service, food, price, cleanliness := r.GetInt("space"), r.GetInt("service"), r.GetInt("food"), r.GetInt("price"), r.GetInt("cleanliness")
 	return reviewsapi.Review{
 		Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName,
-		Space: r.GetInt("space"), Service: r.GetInt("service"), Food: r.GetInt("food"), Price: r.GetInt("price"),
-		Cleanliness: r.GetInt("cleanliness"),
-		Title:       r.GetString("title"), Feedback: optionalText(r, "feedback"),
+		Overall: float64(space+service+food+price+cleanliness) / 5,
+		Space:   space, Service: service, Food: food, Price: price, Cleanliness: cleanliness,
+		Title: r.GetString("title"), Feedback: optionalText(r, "feedback"),
 		Creator: toCreator(creator), Photos: photos, Created: r.GetDateTime("created").String(), Updated: r.GetDateTime("updated").String(),
 	}, nil
 }

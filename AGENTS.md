@@ -83,6 +83,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
     - the `users` tag has the sign up, sign in, and token refresh operations
+    - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`

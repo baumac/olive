@@ -18,7 +18,7 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, restaurantsApi } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
-import { type ScoreField, scoreFields, scoresOf } from '@/lib/reviews'
+import { type ScoreField, scoreFields } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, maxPhotos } from '@/lib/validation'
 
@@ -70,8 +70,8 @@ onMounted(async () => {
         return
       }
       saved.value = review
-      for (const s of scoresOf(review)) {
-        fields.value.scores[s.name] = s.value
+      for (const f of scoreFields) {
+        fields.value.scores[f.name] = review[f.name]
       }
       fields.value.title = review.title
       fields.value.feedback = review.feedback ?? ''

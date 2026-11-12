@@ -7,21 +7,23 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { FilterBar } from '@/components/ui/filter-bar'
 import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
-import { restaurantsApi } from '@/lib/api'
+import { restaurantsApi, reviewersApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { reviewFilterDefs, reviewFilterParams, reviewSortOptions } from '@/lib/reviewFilters'
 import PagedList from './PagedList.vue'
 import ReviewCard from './ReviewCard.vue'
 
-// Without a restaurant, the list has the reviews of the creator at all
-// restaurants.
+// Give a restaurant or a creator. Without a restaurant, the list has the
+// reviews of the creator at all restaurants.
 const props = withDefaults(
   defineProps<{
     restaurant?: Restaurant
     writePath?: string
     creator?: string
+    // reviewerName is the name of a creator who is not the signed in user.
+    reviewerName?: string
   }>(),
-  { restaurant: undefined, writePath: undefined, creator: undefined },
+  { restaurant: undefined, writePath: undefined, creator: undefined, reviewerName: undefined },
 )
 
 const limit = 20
@@ -32,7 +34,7 @@ const list = usePagedList<Review>(async (cursor) => {
   const params = { limit, cursor, sort: sort.value, ...reviewFilterParams(filters.value) }
   const page = props.restaurant
     ? await restaurantsApi.listReviews({ restaurantId: props.restaurant.id, ...params })
-    : await restaurantsApi.listAllReviews({ creatorEq: props.creator, ...params })
+    : await reviewersApi.listReviewerReviews({ reviewerId: props.creator ?? '', ...params })
   return { items: page.items, nextCursor: page.nextCursor }
 })
 
@@ -61,7 +63,7 @@ const status = computed(() => {
     />
 
     <PagedList :list="list" noun="reviews" skeleton-class="h-44 rounded-xl" :skeleton-count="3">
-      <template #item="{ item }"><ReviewCard :review="item" :show-restaurant="!restaurant" /></template>
+      <template #item="{ item }"><ReviewCard :review="item" :show-restaurant="!restaurant" :link-creator="!!restaurant" /></template>
       <template #empty>
         <EmptyState
           v-if="active"
@@ -83,6 +85,12 @@ const status = computed(() => {
             <Button as-child><RouterLink :to="writePath ?? `/restaurants/${restaurant.id}/reviews/new`">Write a review</RouterLink></Button>
           </template>
         </EmptyState>
+        <EmptyState
+          v-else-if="reviewerName"
+          :icon="MessageSquareIcon"
+          title="No reviews yet"
+          :description="`${reviewerName} has not reviewed a restaurant yet.`"
+        />
         <EmptyState
           v-else
           :icon="MessageSquareIcon"

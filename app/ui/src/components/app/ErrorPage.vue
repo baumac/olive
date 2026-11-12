@@ -19,7 +19,7 @@ const text = computed(() => {
   if (props.status === 404) {
     return {
       title: 'We cannot find this page',
-      description: 'The restaurant or review may have been deleted, or the link has a typo.',
+      description: 'The page may have been deleted, or the link has a typo.',
     }
   }
   if (props.status === 403) {

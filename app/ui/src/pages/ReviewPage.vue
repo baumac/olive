@@ -7,6 +7,7 @@ import { toast } from 'vue-sonner'
 import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import ReviewerLink from '@/components/app/ReviewerLink.vue'
 import ReviewPhotos from '@/components/app/ReviewPhotos.vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -65,7 +66,7 @@ async function remove() {
         <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ review.title }}</h1>
         <p class="text-muted-foreground flex items-center gap-2 text-sm">
           <InitialsAvatar :name="review.creator.name" size="sm" />
-          <span>{{ review.creator.name }} · <DateText :created="review.created" :updated="review.updated" /></span>
+          <span><ReviewerLink :creator="review.creator" /> · <DateText :created="review.created" :updated="review.updated" /></span>
         </p>
       </div>
       <div class="grid gap-2">

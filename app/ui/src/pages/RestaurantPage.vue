@@ -17,7 +17,7 @@ import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { ratingScores, scoreLegend, tagList } from '@/lib/reviews'
+import { scoreLegend, scoresOf, tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string }>()
@@ -112,7 +112,7 @@ async function remove() {
             Average of {{ formatCount(restaurant.data.value.reviewCount, 'review') }}
           </h2>
           <RatingDisplay
-            v-for="s in ratingScores(restaurant.data.value.rating)"
+            v-for="s in scoresOf(restaurant.data.value.rating)"
             :key="s.name"
             :value="s.value"
             :max="s.max"

@@ -1056,7 +1056,7 @@ func TestListRestaurantsByOverall(t *testing.T) {
 	for _, query := range []string{"overall[gte]=0", "overall[gte]=11", "overall[gte]=x", "overall[gte]=NaN", "overall[lt]=Inf", "overall[gt]=-Inf", "sort=rating"} {
 		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
 	}
-	e.expect(request{method: "GET", path: "/v1/reviews?overall[gte]=5"}, http.StatusBadRequest)
+	e.expect(request{method: "GET", path: "/v1/reviews?overall[gte]=0"}, http.StatusBadRequest)
 }
 
 func TestSearch(t *testing.T) {

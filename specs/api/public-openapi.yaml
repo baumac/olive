@@ -25,6 +25,8 @@ tags:
     description: Sign up, sign in, and refresh the auth token of a user.
   - name: restaurants
     description: Restaurants and their reviews.
+  - name: reviewers
+    description: The public profiles of users and their reviews.
 
 paths:
   /users:
@@ -345,6 +347,7 @@ paths:
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
         - $ref: '#/components/parameters/CleanlinessFilter'
+        - $ref: '#/components/parameters/ReviewOverallFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -372,6 +375,7 @@ paths:
       description: |
         The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants.
         `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user.
+        `listReviewerReviews` also gives the reviews of one user. It returns `404` for an unknown user.
       tags: [restaurants]
       security:
         - {}
@@ -388,6 +392,7 @@ paths:
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
         - $ref: '#/components/parameters/CleanlinessFilter'
+        - $ref: '#/components/parameters/ReviewOverallFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -405,6 +410,73 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /reviewers/{reviewerId}:
+    parameters:
+      - $ref: '#/components/parameters/ReviewerId'
+    get:
+      operationId: getReviewer
+      summary: Get the public profile of a user
+      description: The profile has no private data such as the email address.
+      tags: [reviewers]
+      security:
+        - {}
+        - bearerAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The public profile of the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reviewer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviewers/{reviewerId}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/ReviewerId'
+    get:
+      operationId: listReviewerReviews
+      summary: List the reviews of a user
+      description: The same filters, sorts, and pages as `listAllReviews`, for the reviews of one user.
+      tags: [reviewers]
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/ReviewSort'
+        - $ref: '#/components/parameters/ReviewSearch'
+        - $ref: '#/components/parameters/RestaurantEq'
+        - $ref: '#/components/parameters/RestaurantIn'
+        - $ref: '#/components/parameters/SpaceFilter'
+        - $ref: '#/components/parameters/ServiceFilter'
+        - $ref: '#/components/parameters/FoodFilter'
+        - $ref: '#/components/parameters/PriceFilter'
+        - $ref: '#/components/parameters/CleanlinessFilter'
+        - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/CreatedFilter'
+        - $ref: '#/components/parameters/UpdatedFilter'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of reviews.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /restaurants/{restaurantId}/reviews/{reviewId}:
     parameters:
@@ -729,6 +801,13 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/RecordId'
+    ReviewerId:
+      name: reviewerId
+      in: path
+      description: The ID of the user.
+      required: true
+      schema:
+        $ref: '#/components/schemas/RecordId'
     PhotoId:
       name: photoId
       in: path
@@ -792,12 +871,13 @@ components:
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+        The `overall` sort uses the `overall` value of the review.
         The `relevance` sort puts the best matches of `search` first. It needs `search`.
         With `search`, the default sort is `relevance`.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(space|service|food|price|cleanliness|relevance|title|created|updated)(,-?(space|service|food|price|cleanliness|relevance|title|created|updated))*$'
+        pattern: '^-?(overall|space|service|food|price|cleanliness|relevance|title|created|updated)(,-?(overall|space|service|food|price|cleanliness|relevance|title|created|updated))*$'
         default: '-created'
       example: '-food,title'
 
@@ -919,6 +999,16 @@ components:
         Compares `rating.overall`, the rounded value of the response.
         Each key is an operator, for example `overall[gte]=`.
         A restaurant without reviews matches no `overall` filter.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/AverageRange'
+      example: {gte: 7.5}
+
+    ReviewOverallFilter:
+      name: overall
+      in: query
+      description: Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
       style: deepObject
       explode: true
       schema:
@@ -1164,6 +1254,23 @@ components:
           $ref: '#/components/schemas/RecordId'
         name:
           $ref: '#/components/schemas/Name'
+    Reviewer:
+      description: The public profile of a user. It has the fields of `Creator` and no private data.
+      type: object
+      required: [id, name, review_count]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        name:
+          $ref: '#/components/schemas/Name'
+        review_count:
+          description: The number of reviews of the user.
+          type: integer
+          minimum: 0
+      examples:
+        - id: u5n1c8r3t6y0b2e
+          name: Ana
+          review_count: 12
 
     ScoreRange:
       description: Comparisons for a score. All comparisons must match.
@@ -1350,7 +1457,7 @@ components:
     Review:
       description: A review of a restaurant. It scores the space, service, food, price, and cleanliness.
       type: object
-      required: [id, restaurant, restaurant_name, space, service, food, price, cleanliness, title, creator, photos, created, updated]
+      required: [id, restaurant, restaurant_name, overall, space, service, food, price, cleanliness, title, creator, photos, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -1362,6 +1469,13 @@ components:
             The name of a restaurant with reviews cannot change, so this value stays correct.
           type: string
           $ref: '#/components/schemas/Name'
+        overall:
+          description: |
+            The average of the five scores. The API computes it. A client cannot set it.
+            Each value is exact with one decimal.
+            The average of the `overall` values of the reviews of a restaurant is its `rating.overall` before the rounding.
+          type: number
+          $ref: '#/components/schemas/AverageScore'
         space:
           $ref: '#/components/schemas/SpaceScore'
         service:
@@ -1392,6 +1506,7 @@ components:
         - id: r1b8c5e2g9i6k3m
           restaurant: k3x9m2p7q1w8z4a
           restaurant_name: Luigi's Trattoria
+          overall: 7.6
           space: 7
           service: 9
           food: 8
@@ -1498,6 +1613,7 @@ components:
             - id: r7d4f0h2j9l5s3v
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
+              overall: 9
               space: 8
               service: 10
               food: 10
@@ -1513,6 +1629,7 @@ components:
             - id: r1b8c5e2g9i6k3m
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
+              overall: 7.6
               space: 7
               service: 9
               food: 8

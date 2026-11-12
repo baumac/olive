@@ -60,14 +60,10 @@ export interface Score extends Pick<ScoreField, 'label' | 'max'> {
   value: number
 }
 
-export function scoresOf(review: Review): Score[] {
-  return scoreFields.map((f) => ({ ...f, value: review[f.name] }))
-}
-
-// ratingScores puts overall first. The other averages follow in the order of
-// the review scores.
-export function ratingScores(rating: RestaurantRating): Score[] {
-  return [{ name: 'overall', label: 'Overall', max: 10, value: rating.overall }, ...scoreFields.map((f) => ({ ...f, value: rating[f.name] }))]
+// scoresOf puts overall first. The other values follow in the order of the
+// review scores.
+export function scoresOf(scores: Review | RestaurantRating): Score[] {
+  return [{ name: 'overall', label: 'Overall', max: 10, value: scores.overall }, ...scoreFields.map((f) => ({ ...f, value: scores[f.name] }))]
 }
 
 export function tagList(tags: Set<string> | undefined | null): string[] {

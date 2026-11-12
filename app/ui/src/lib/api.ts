@@ -1,5 +1,5 @@
 import type { Middleware, Problem } from '@reviews/sdk'
-import { Configuration, FetchError, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
+import { Configuration, FetchError, ResponseError, RestaurantsApi, ReviewersApi, UsersApi } from '@reviews/sdk'
 import { clearSession, sessionToken } from './session'
 
 type SessionEndedHandler = () => void
@@ -39,6 +39,7 @@ const configuration = new Configuration({
 
 export const restaurantsApi = new RestaurantsApi(configuration)
 export const usersApi = new UsersApi(configuration)
+export const reviewersApi = new ReviewersApi(configuration)
 
 export interface ApiFailure {
   status: number | null
