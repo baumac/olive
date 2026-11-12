@@ -32,27 +32,33 @@ usePageTitle(() => restaurant.data.value?.name ?? '')
 // ownReviewId is the review of the signed in user, if any. A user can have
 // at most one review per restaurant.
 const ownReviewId = ref<string | null>(null)
+const ownReviewLookup = ref<'loading' | 'done' | 'failed'>('loading')
 watch(
   [() => props.restaurantId, currentUser],
   async ([restaurantId, user]) => {
     ownReviewId.value = null
+    ownReviewLookup.value = 'done'
     if (!user) {
       return
     }
+    ownReviewLookup.value = 'loading'
     try {
       ownReviewId.value = await findOwnReviewId(restaurantId, user.id)
+      ownReviewLookup.value = 'done'
     } catch {
-      ownReviewId.value = null
+      ownReviewLookup.value = 'failed'
     }
   },
   { immediate: true },
 )
 
-const access = computed(() =>
-  restaurant.data.value
-    ? restaurantAccess(restaurant.data.value, currentUser.value?.id, !!ownReviewId.value)
-    : { canChange: false, otherReviews: 0 },
-)
+const access = computed(() => {
+  if (!restaurant.data.value || ownReviewLookup.value === 'loading') {
+    return null
+  }
+  const hasOwnReview = ownReviewLookup.value === 'failed' ? null : !!ownReviewId.value
+  return restaurantAccess(restaurant.data.value, currentUser.value?.id, hasOwnReview)
+})
 
 const deleteDescription = computed(() => {
   const text = `${restaurant.data.value?.name} will be deleted permanently.`
@@ -77,7 +83,7 @@ async function remove() {
       status === 409
         ? 'A restaurant with reviews of other people cannot be deleted.'
         : status === 403
-          ? 'Only the person who added it can delete it.'
+          ? 'You do not have permission to delete it.'
         : status === 401
           ? 'Sign in again, then try again.'
           : 'Try again in a moment.'
@@ -98,20 +104,20 @@ async function remove() {
       <section class="flex flex-col gap-4">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ restaurant.data.value.name }}</h1>
-          <div v-if="access.canChange" class="flex flex-col gap-2 sm:items-end">
+          <div v-if="access?.canChange" class="flex flex-col gap-2 sm:items-end">
             <div class="flex flex-wrap gap-2">
               <Button variant="outline" as-child>
                 <RouterLink :to="`/restaurants/${restaurantId}/edit`"><PencilIcon aria-hidden="true" />Edit restaurant</RouterLink>
               </Button>
               <ConfirmDelete
-                v-if="access.otherReviews === 0"
+                v-if="!access.hasOtherReviews"
                 label="Delete restaurant"
                 title="Delete this restaurant?"
                 :description="deleteDescription"
                 @confirm="remove"
               />
             </div>
-            <p v-if="access.otherReviews > 0" class="text-muted-foreground text-sm">
+            <p v-if="access.hasOtherReviews" class="text-muted-foreground text-sm">
               Other people have reviewed this restaurant. You cannot delete it.
             </p>
           </div>

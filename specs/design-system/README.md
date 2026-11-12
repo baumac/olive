@@ -28,7 +28,7 @@ The system is shadcn-vue with Tailwind CSS v4, as ADR 00002 decides. The tokens 
 
 **Borders and shadows.** Hairlines are `border`. Control boundaries are `input`. Shadows are light: `shadow-xs` on controls, `shadow-sm` on cards, `shadow-lg` on dialogs only.
 
-**States.** Hover darkens a fill to 90% or adds `accent`. Disabled is 50% opacity. Invalid fields get a `destructive` border and a `FormMessage`. Loading uses `Skeleton` on first load and a spinner in `LoadMore`.
+**States.** Hover darkens a fill to 90% or adds `accent`. Disabled is 50% opacity. A read-only field has the `muted` fill. Invalid fields get a `destructive` border and a `FormMessage`. Loading uses `Skeleton` on first load and a spinner in `LoadMore`.
 
 **Focus.** Every interactive element shows a solid 2px outline in `ring` with a 2px offset when it has keyboard focus. Do not use stock shadcn's `ring/50` at 3px: it is too faint.
 

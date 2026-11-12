@@ -142,15 +142,23 @@ describe('restaurantAccess', () => {
   const creator = { id: 'u5n1c8r3t6y0b2e', name: 'Ana' }
 
   it('lets the creator change the restaurant', () => {
-    expect(restaurantAccess({ creator, reviewCount: 0 }, creator.id, false)).toEqual({ canChange: true, otherReviews: 0 })
-    expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, otherReviews: 0 })
-    expect(restaurantAccess({ creator, reviewCount: 2 }, creator.id, true)).toEqual({ canChange: true, otherReviews: 1 })
+    expect(restaurantAccess({ creator, reviewCount: 0 }, creator.id, false)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(restaurantAccess({ creator, reviewCount: 2 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(restaurantAccess({ creator, reviewCount: 0 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
     expect(restaurantAccess({ creator, reviewCount: 1 }, 'u2g6k0m4o8q1s5w', true).canChange).toBe(false)
     expect(restaurantAccess({ creator, reviewCount: 0 }, undefined, false).canChange).toBe(false)
   })
 
   it('lets a reviewer change a restaurant without a creator', () => {
-    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, otherReviews: 0 })
-    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: false, otherReviews: 1 })
+    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: false, hasOtherReviews: true })
+  })
+
+  it('leaves the decision to the API after a failed lookup', () => {
+    expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(restaurantAccess({ creator, reviewCount: 2 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, null).canChange).toBe(false)
   })
 })

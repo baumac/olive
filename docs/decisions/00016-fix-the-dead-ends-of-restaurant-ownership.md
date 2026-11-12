@@ -65,7 +65,7 @@ The confirm dialog of the UI says "Your review and its photos will be deleted to
 
 Joe then writes a review of a second restaurant of Ana.
 Ana can still change its description and its tags. She cannot change its name or delete it.
-The form shows the name field as disabled with the reason. The page shows the reason in place of the delete button.
+The form shows the name field as read-only with the reason. The page shows the reason in place of the delete button.
 
 ## The answers to the open questions
 
@@ -119,9 +119,12 @@ Alternatives that this decision does not use:
 ## UI
 
 - `restaurantAccess` in `app/ui/src/lib/restaurants.ts` has the rules. It needs the restaurant, the user, and whether the user has a review.
-- the count of the reviews of other users is `review_count` minus the review of the user
-- `RestaurantPage` already gets the review of the user for the "Write a review" button. `RestaurantFormPage` gets it with one more request.
-- the name field is disabled when other users have reviews. A `FormDescription` gives the reason.
+- another user has a review when `review_count` minus the review of the user is more than 0
+- `RestaurantPage` already gets the review of the user for the "Write a review" button. `RestaurantFormPage` gets it at the same time as the restaurant.
+- this request can fail. The UI then counts as if the user has a review, so it does not lock more than the API. The API decides.
+  A restaurant without a creator needs the request. The form then shows the error page with "Try again".
+- the name field is read-only when other users have reviews. A `FormDescription` gives the reason. Focus can still reach the field.
+  `Input` shows a read-only field with the `muted` fill. The form does not send the `name` then.
 - the page shows "Other people have reviewed this restaurant. You cannot delete it." in place of the delete button
 - the page can be older than a new review of another user. The API then answers `409`, and the UI shows the error as before.
 
@@ -130,7 +133,7 @@ Alternatives that this decision does not use:
 - `TestRestaurantOwnership` in `app/internal/publicapi/publicapi_test.go` has the cases of the guide-level explanation. It also checks the index tables after a delete and the search by the new name after a rename.
 - `TestPhotosOfDeletedReviewsRestaurantsAndUsers` checks the photo files after the delete of a restaurant
 - `app/ui/test/lib.test.ts` tests `restaurantAccess`
-- `tests/e2e/restaurants.spec.ts` tests the locked name, the missing delete button, and the rename and delete with the own review
+- `tests/e2e/restaurants.spec.ts` tests the locked name, the missing delete button, the `409` of a late review, and the rename and delete with the own review
 - `tests/e2e/csp.spec.ts` adds a review of another user after the page loads. It checks the error toast of the `409`.
 - the end-to-end tests cannot delete a user. Only the Go tests have the restaurant without a creator.
 

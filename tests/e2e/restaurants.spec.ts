@@ -70,7 +70,7 @@ test('a restaurant with a review of another user keeps its name and cannot be de
   await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
 
   await page.goto(`/restaurants/${restaurant.id}/edit`)
-  await expect(page.getByLabel('Name')).toBeDisabled()
+  await expect(page.getByLabel('Name')).not.toBeEditable()
   await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
   await page.getByLabel('Description').fill('Family run')
   await page.getByRole('button', { name: 'Save restaurant' }).click()
@@ -80,6 +80,19 @@ test('a restaurant with a review of another user keeps its name and cannot be de
   await expect(page.getByRole('link', { name: 'Edit restaurant' })).toBeVisible()
   await expect(page.getByText('Other people have reviewed this restaurant. You cannot delete it.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Delete restaurant' })).toHaveCount(0)
+})
+
+test('a review that arrives after the form opens blocks the rename', async ({ page, api, user }) => {
+  const restaurant = await api.createRestaurant(user, { name: "Luigi's" })
+  await page.goto(`/restaurants/${restaurant.id}/edit`)
+  await expect(page.getByLabel('Name')).toHaveValue("Luigi's")
+
+  const reviewer = await api.signUp('Joe')
+  await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
+  await page.getByLabel('Name').fill("Luigi's Trattoria")
+  await page.getByRole('button', { name: 'Save restaurant' }).click()
+  await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}/edit$`))
 })
 
 test('the creator renames and deletes a restaurant that has only the own review', async ({ page, api, user }) => {

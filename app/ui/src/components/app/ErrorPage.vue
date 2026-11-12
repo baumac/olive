@@ -23,7 +23,7 @@ const text = computed(() => {
     }
   }
   if (props.status === 403) {
-    return { title: 'You cannot open this page', description: 'Sign in with the account that created this record.' }
+    return { title: 'You cannot open this page', description: 'Your account has no permission for it. If you have another account, sign in with it.' }
   }
   return { title: 'Something went wrong', description: 'This is a problem on our side. Try again in a moment.' }
 })

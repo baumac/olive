@@ -45,15 +45,23 @@ const cancelPath = computed(() => (props.restaurantId ? `/restaurants/${props.re
 onMounted(async () => {
   if (props.restaurantId) {
     try {
-      const r: Restaurant = await restaurantsApi.getRestaurant({ restaurantId: props.restaurantId })
       const userId = currentUser.value?.id
-      const hasOwnReview = !!userId && !!(await findOwnReviewId(props.restaurantId, userId))
+      const [r, hasOwnReview]: [Restaurant, boolean | null] = await Promise.all([
+        restaurantsApi.getRestaurant({ restaurantId: props.restaurantId }),
+        userId
+          ? findOwnReviewId(props.restaurantId, userId).then(
+              (id) => !!id,
+              () => null,
+            )
+          : false,
+      ])
       const access = restaurantAccess(r, userId, hasOwnReview)
       if (!access.canChange) {
-        failed.value = { status: 403 }
+        // Without a creator, the access depends on the failed lookup.
+        failed.value = { status: !r.creator && hasOwnReview === null ? null : 403 }
         return
       }
-      nameLocked.value = access.otherReviews > 0
+      nameLocked.value = access.hasOtherReviews
       fields.value = { name: r.name, description: r.description ?? '', tags: tagList(r.tags) }
     } catch (error) {
       failed.value = { status: (await apiFailure(error)).status }
@@ -93,7 +101,11 @@ async function submit() {
     const saved = props.restaurantId
       ? await restaurantsApi.updateRestaurant({
           restaurantId: props.restaurantId,
-          restaurantPatch: { name, description: description || null, tags: tags.length ? new Set(tags) : null },
+          restaurantPatch: {
+            name: nameLocked.value ? undefined : name,
+            description: description || null,
+            tags: tags.length ? new Set(tags) : null,
+          },
         })
       : await restaurantsApi.createRestaurant({
           restaurantCreate: { name, description: description || undefined, tags: tags.length ? new Set(tags) : undefined },
@@ -146,7 +158,7 @@ async function submit() {
             maxlength="255"
             required
             placeholder="Luigi's Trattoria"
-            :disabled="nameLocked"
+            :readonly="nameLocked"
           />
         </FormControl>
         <FormDescription v-if="nameLocked">

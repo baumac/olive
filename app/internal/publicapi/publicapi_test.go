@@ -808,10 +808,11 @@ func TestRestaurantOwnership(t *testing.T) {
 	joe := e.signUp("joe@example.com", "Joe")
 	eva := e.signUp("eva@example.com", "Eva")
 	const review = `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`
-	count := func(table string) int {
+	count := func(table, column, id string) int {
 		t.Helper()
 		var n int
-		if err := e.app.DB().NewQuery("SELECT COUNT(*) FROM " + table).Row(&n); err != nil {
+		q := e.app.DB().NewQuery("SELECT COUNT(*) FROM " + table + " WHERE " + column + " = {:id}").Bind(dbx.Params{"id": id})
+		if err := q.Row(&n); err != nil {
 			t.Fatal(err)
 		}
 		return n
@@ -843,9 +844,12 @@ func TestRestaurantOwnership(t *testing.T) {
 		e.expect(request{method: "DELETE", path: path + "/reviews/" + other, token: joe.Token}, http.StatusNoContent)
 		e.expect(request{method: "DELETE", path: path, token: ana.Token}, http.StatusNoContent)
 		e.expect(request{method: "GET", path: path}, http.StatusNotFound)
-		for _, table := range []string{"reviews", "reviews_fts", "restaurants_fts", "restaurant_overall", "restaurant_tags"} {
-			if n := count(table); n != 0 {
-				t.Errorf("%d rows in %s after the delete", n, table)
+		for _, row := range [][3]string{
+			{"reviews", "restaurant", id}, {"reviews_fts", "id", own}, {"restaurants_fts", "id", id},
+			{"restaurant_overall", "restaurant", id}, {"restaurant_tags", "restaurant", id},
+		} {
+			if n := count(row[0], row[1], row[2]); n != 0 {
+				t.Errorf("%d rows in %s after the delete", n, row[0])
 			}
 		}
 	})
