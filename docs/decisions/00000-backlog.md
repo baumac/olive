@@ -10,11 +10,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Add an overall score to a review, and a page for each reviewer
   - a review card shows five scores and no single value
   - a person can list only their own reviews
-- Fix the dead ends of restaurant ownership
-  - todo decide permissions for who can do what with restaurants
-    - who can create restaurants? can only the only the creator can change a restaurant?
-    - who can edit and delete restaurants? should one review of any user blocks the delete and the rename? can the creator still replace the description and the tags after reviews exist?
-    - do restaurants become immutable once its creator is deleted?
 - Sessions, Sign In, and Sign Out
   - Sync the session between browser tabs
     - `app/ui/src/lib/session.ts` has no `storage` listener
@@ -30,6 +25,11 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## High Priority
 
+- Fix the dead ends of restaurant ownership
+  - todo decide permissions for who can do what with restaurants
+    - who can create restaurants? can only the only the creator can change a restaurant?
+    - who can edit and delete restaurants? should one review of any user blocks the delete and the rename? can the creator still replace the description and the tags after reviews exist?
+    - do restaurants become immutable once its creator is deleted?
 - Add deploy folder and docker compose setup
   - Deployment details
     - the app will run as a single instance and deployment
