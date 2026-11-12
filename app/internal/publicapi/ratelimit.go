@@ -3,10 +3,12 @@ package publicapi
 import (
 	"container/list"
 	"math"
+	"net/http"
 	"net/netip"
-	"strconv"
 	"sync"
 	"time"
+
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 )
 
 // rateLimiter counts requests per key in fixed time windows.
@@ -16,6 +18,9 @@ type rateLimiter struct {
 	window time.Duration
 	now    func() time.Time
 	keys   map[string]*list.Element
+	// maxWindows is the most windows that the limiter keeps. Zero keeps all
+	// windows.
+	maxWindows int
 	// order has the windows from the oldest start to the newest start.
 	order *list.List
 }
@@ -26,12 +31,12 @@ type rateWindow struct {
 	count int
 }
 
-// maxWindows is the most windows that the limiter keeps. A new key then
-// removes the oldest window, also if that window did not end.
+// maxWindows is the default cap of a limiter. A new key then removes the
+// oldest window, also if that window did not end.
 const maxWindows = 10000
 
 func newRateLimiter(limit int, window time.Duration) *rateLimiter {
-	return &rateLimiter{limit: limit, window: window, now: time.Now, keys: map[string]*list.Element{}, order: list.New()}
+	return &rateLimiter{limit: limit, window: window, now: time.Now, keys: map[string]*list.Element{}, order: list.New(), maxWindows: maxWindows}
 }
 
 // allow returns 0 and the start of the window that counts the request if the
@@ -53,7 +58,7 @@ func (l *rateLimiter) allow(key string) (time.Duration, time.Time) {
 		w.count++
 		return 0, w.start
 	}
-	if l.order.Len() >= maxWindows {
+	if l.maxWindows > 0 && l.order.Len() >= l.maxWindows {
 		l.remove(l.order.Front())
 	}
 	l.keys[key] = l.order.PushBack(&rateWindow{key: key, start: now, count: 1})
@@ -93,12 +98,11 @@ func clientKey(ip string) string {
 	return prefix.String()
 }
 
-// retryAfter changes wait to whole seconds for the Retry-After header. The
-// minimum is 1.
-func retryAfter(wait time.Duration) string {
-	return strconv.Itoa(retryAfterSeconds(wait))
-}
-
-func retryAfterSeconds(wait time.Duration) int {
-	return max(1, int(math.Ceil(wait.Seconds())))
+// tooManyRequests changes wait to whole seconds for the Retry-After header.
+// The minimum is 1.
+func tooManyRequests(wait time.Duration, detail string) reviewsapi.TooManyRequestsApplicationProblemPlusJSONResponse {
+	return reviewsapi.TooManyRequestsApplicationProblemPlusJSONResponse{
+		Body:    newProblem(http.StatusTooManyRequests, detail),
+		Headers: reviewsapi.TooManyRequestsResponseHeaders{RetryAfter: max(1, int(math.Ceil(wait.Seconds())))},
+	}
 }

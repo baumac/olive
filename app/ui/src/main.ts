@@ -23,10 +23,12 @@ watchOtherTabs((before, after) => {
   if (!after) {
     clearAllDrafts()
   }
-  // force runs the route guards again for the same path. They move the
-  // tab away from a page that the new session cannot open.
-  const { path, query, hash } = router.currentRoute.value
-  void router.replace({ path, query, hash, force: true })
+  const { path, query, hash, meta } = router.currentRoute.value
+  if (after ? meta.guestOnly : meta.requiresAuth) {
+    // force runs the route guards again for the same path. They move the
+    // tab away from a page that the new session cannot open.
+    void router.replace({ path, query, hash, force: true })
+  }
 })
 
 startSessionRefresh()

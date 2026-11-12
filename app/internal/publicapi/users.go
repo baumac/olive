@@ -57,10 +57,9 @@ func (s *Server) SignIn(_ context.Context, req reviewsapi.SignInRequestObject) (
 	}
 	wait, window := s.signInFailures.allow(user.Id)
 	if wait > 0 {
-		return reviewsapi.SignIn429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: reviewsapi.TooManyRequestsApplicationProblemPlusJSONResponse{
-			Body:    newProblem(http.StatusTooManyRequests, "Too many wrong passwords for this user. Try again later."),
-			Headers: reviewsapi.TooManyRequestsResponseHeaders{RetryAfter: retryAfterSeconds(wait)},
-		}}, nil
+		return reviewsapi.SignIn429ApplicationProblemPlusJSONResponse{
+			TooManyRequestsApplicationProblemPlusJSONResponse: tooManyRequests(wait, "Too many wrong passwords for this user. Try again later."),
+		}, nil
 	}
 	if !user.ValidatePassword(req.Body.Password) {
 		return invalidCredentials(), nil
@@ -75,11 +74,12 @@ func (s *Server) SignIn(_ context.Context, req reviewsapi.SignInRequestObject) (
 }
 
 // SignOut changes the token key of the user. PocketBase signs each auth
-// token with this key, so all tokens of the user stop being valid.
+// token with this key. All tokens of the user then stop being valid.
 func (s *Server) SignOut(ctx context.Context, _ reviewsapi.SignOutRequestObject) (reviewsapi.SignOutResponseObject, error) {
 	user := stateFrom(ctx).user
 	user.RefreshTokenKey()
-	if err := s.app.Save(user); err != nil {
+	// A record that breaks a newer field rule must also be able to sign out.
+	if err := s.app.SaveNoValidate(user); err != nil {
 		return nil, err
 	}
 	return reviewsapi.SignOut204Response{}, nil

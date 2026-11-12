@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -62,8 +63,8 @@ type Server struct {
 	spec     *apiSpec
 	opts     Options
 	limiters map[string]*rateLimiter
-	// signInFailures counts the wrong passwords of each user ID. Requests
-	// for unknown email addresses cannot remove its windows.
+	// signInFailures counts the wrong passwords of each user ID. It has no
+	// window cap, so other keys cannot remove the window of a user.
 	signInFailures *rateLimiter
 	// decodes holds one token for each photo upload that decodes its image.
 	decodes     chan struct{}
@@ -121,6 +122,11 @@ func New(app core.App, opts Options) (*Server, error) {
 	case opts.SkipResponseValidation:
 		app.Logger().Warn("The spec validation of Public API responses is off")
 	}
+	signInFailures := newRateLimiter(
+		cmp.Or(opts.SignInFailureLimit, DefaultOptions.SignInFailureLimit),
+		cmp.Or(opts.SignInFailureWindow, DefaultOptions.SignInFailureWindow),
+	)
+	signInFailures.maxWindows = 0
 	return &Server{
 		app:  app,
 		spec: spec,
@@ -129,13 +135,10 @@ func New(app core.App, opts Options) (*Server, error) {
 			"sign-in":      newRateLimiter(opts.SignInLimit, opts.SignInWindow),
 			"photo-upload": newRateLimiter(opts.PhotoUploadLimit, opts.PhotoUploadWindow),
 		},
-		signInFailures: newRateLimiter(
-			cmp.Or(opts.SignInFailureLimit, DefaultOptions.SignInFailureLimit),
-			cmp.Or(opts.SignInFailureWindow, DefaultOptions.SignInFailureWindow),
-		),
-		decodes:     make(chan struct{}, maxParallelDecodes),
-		photoMemory: &photoMemory{limit: cmp.Or(opts.PhotoMemoryLimit, defaultPhotoMemoryLimit)},
-		dummyHash:   hash,
+		signInFailures: signInFailures,
+		decodes:        make(chan struct{}, maxParallelDecodes),
+		photoMemory:    &photoMemory{limit: cmp.Or(opts.PhotoMemoryLimit, defaultPhotoMemoryLimit)},
+		dummyHash:      hash,
 	}, nil
 }
 
@@ -349,8 +352,9 @@ func (s *Server) allow(w http.ResponseWriter, op *operation, st *state, key stri
 		st.limited = &limitedRequest{limiter: limiter, key: key, start: start}
 		return true
 	}
-	w.Header().Set("Retry-After", retryAfter(wait))
-	writeProblem(w, newProblem(http.StatusTooManyRequests, "Too many requests. Try again later."))
+	res := tooManyRequests(wait, "Too many requests. Try again later.")
+	w.Header().Set("Retry-After", strconv.Itoa(res.Headers.RetryAfter))
+	writeProblem(w, res.Body)
 	return false
 }
 

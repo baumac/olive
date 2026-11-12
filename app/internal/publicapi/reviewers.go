@@ -7,18 +7,19 @@ import (
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
 )
 
 const reviewerNotFound = "The user does not exist."
 
 // GetReviewer returns only the public fields of a user.
 func (s *Server) GetReviewer(_ context.Context, req reviewsapi.GetReviewerRequestObject) (reviewsapi.GetReviewerResponseObject, error) {
-	user, err := s.app.FindRecordById("users", req.ReviewerId)
-	if errors.Is(err, sql.ErrNoRows) {
-		return reviewsapi.GetReviewer404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(reviewerNotFound)}, nil
-	}
+	user, err := s.findUser(req.ReviewerId)
 	if err != nil {
 		return nil, err
+	}
+	if user == nil {
+		return reviewsapi.GetReviewer404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(reviewerNotFound)}, nil
 	}
 	n, err := s.app.CountRecords("reviews", dbx.HashExp{"creator": user.Id})
 	if err != nil {
@@ -46,7 +47,9 @@ func (s *Server) ListReviewerReviews(_ context.Context, req reviewsapi.ListRevie
 	page, err := s.reviewPage(all, fingerprintOf, nil)
 	if err == nil && page.bad == "" && len(page.list.Items) == 0 {
 		// A page with a review proves that the user exists.
-		page.notFound, err = s.userMissing(req.ReviewerId)
+		var user *core.Record
+		user, err = s.findUser(req.ReviewerId)
+		page.notFound = user == nil
 	}
 	switch {
 	case err != nil:
@@ -59,10 +62,11 @@ func (s *Server) ListReviewerReviews(_ context.Context, req reviewsapi.ListRevie
 	return reviewsapi.ListReviewerReviews200JSONResponse(page.list), nil
 }
 
-func (s *Server) userMissing(id string) (bool, error) {
-	_, err := s.app.FindRecordById("users", id)
+// findUser returns a nil record and no error when the user does not exist.
+func (s *Server) findUser(id string) (*core.Record, error) {
+	user, err := s.app.FindRecordById("users", id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return true, nil
+		return nil, nil
 	}
-	return false, err
+	return user, err
 }

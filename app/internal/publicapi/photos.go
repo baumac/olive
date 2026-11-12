@@ -20,9 +20,8 @@ const (
 	maxPhotosPerReview = 5
 	// maxParallelDecodes limits the memory of the decodes. A decode of 25
 	// megapixels needs up to 100 MB.
-	maxParallelDecodes = 2
-	// memoryFullRetryAfter is in seconds.
-	memoryFullRetryAfter = 5
+	maxParallelDecodes   = 2
+	memoryFullRetryAfter = 5 * time.Second
 	photoNotFound        = "The photo does not exist."
 )
 
@@ -110,10 +109,9 @@ func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string
 	data, held, err := s.photoMemory.read(body)
 	if errors.Is(err, errPhotoMemoryFull) {
 		stateFrom(ctx).giveBackLimit()
-		return processedPhoto{}, reviewsapi.AddReviewPhoto429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: reviewsapi.TooManyRequestsApplicationProblemPlusJSONResponse{
-			Body:    newProblem(http.StatusTooManyRequests, "The server processes too many photos. Try again in a few seconds."),
-			Headers: reviewsapi.TooManyRequestsResponseHeaders{RetryAfter: memoryFullRetryAfter},
-		}}, nil
+		return processedPhoto{}, reviewsapi.AddReviewPhoto429ApplicationProblemPlusJSONResponse{
+			TooManyRequestsApplicationProblemPlusJSONResponse: tooManyRequests(memoryFullRetryAfter, "The server processes too many photos. Try again in a few seconds."),
+		}, nil
 	}
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {

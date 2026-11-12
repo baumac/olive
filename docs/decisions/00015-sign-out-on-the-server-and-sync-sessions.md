@@ -81,12 +81,14 @@ A sign in with the correct password does not count.
 
 - PocketBase signs each auth token with the secret of the collection and the `tokenKey` of the record
 - `SignOut` calls `RefreshTokenKey` on the user record and saves it. No migration is necessary.
+- the save skips the field validation. A user record that breaks a newer field rule can then still sign out.
 - the save also changes `updated` of the user
 - a token without the `refreshable` claim can also sign out. A superuser makes such a token and can already change the record.
 - the UI deletes its session first and then sends the request. A slow server does not delay the sign out in the browser.
   - the request has the token in its own `Authorization` header, because the session is already empty
   - `keepalive` lets the request finish when the tab closes
-  - a `401` means that the token is already invalid. The UI treats it as success.
+  - the UI does not send an expired token. The server cannot use it to find the user. The UI shows the toast below.
+  - a `401` for a token that did not expire means that a sign out on another device already changed the token key. The UI treats it as success.
   - on another failure, a toast says that only this browser is signed out
 - another device learns of the sign out with its next request. The `401` handling of the UI then ends its session.
 
@@ -94,7 +96,7 @@ A sign in with the correct password does not count.
 
 - the session is in `localStorage`. The browser sends a `storage` event to the other tabs when it changes.
 - `watchOtherTabs` in `app/ui/src/lib/session.ts` loads the session again on this event
-- when the user changes, `main.ts` navigates to the current path again with `force`. The route guards then run again.
+- when the user changes, `main.ts` checks the meta of the current route. It navigates again with `force` only on a page that needs a session after a sign out, or on a guest page after a sign in. The route guards then move the tab. Other pages keep their scroll position.
 - when the user changes to a different user, the tab reloads. Its pages hold data of the first user.
 - drafts are in `sessionStorage`, so each tab has its own. A tab deletes them when another tab signs out.
 
@@ -103,7 +105,9 @@ A sign in with the correct password does not count.
 - a second `rateLimiter` counts with the user ID as the key. It is the limiter of decision 00004.
 - `SignIn` calls `allow` before the password check and `giveBack` after a correct password
 - the check comes before the bcrypt compare. A request over the limit does not use CPU time for the hash.
-- only an email address of a user makes a window. Requests with unknown email addresses cannot fill the 10,000 windows and remove the window of a user.
+- only an email address of a user makes a window. Requests with unknown email addresses make no window.
+- this limiter has no cap of 10,000 windows. With a cap, wrong passwords for many accounts of an attacker could remove the window of a user.
+  The number of windows is at most the number of users with a wrong password in the last 15 minutes.
 - the limit is not in the `x-rate-limit` extension. Its key comes from the body, and it counts only failures.
 - the PocketBase rate limit rules cannot do this. They count only per IP address.
 

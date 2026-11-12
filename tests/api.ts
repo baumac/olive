@@ -1,5 +1,5 @@
 import type { AuthToken, Photo, Restaurant, RestaurantCreate, Review, ReviewCreate } from '@reviews/sdk'
-import { Configuration, RestaurantsApi, UsersApi } from '@reviews/sdk'
+import { Configuration, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -33,11 +33,14 @@ export class TestApi {
   // refreshStatus gives the status of a token refresh. 200 means that the
   // token is valid.
   async refreshStatus(token: string): Promise<number> {
-    const response = await fetch(`${this.baseURL}/v1/users/tokens/refresh`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    return response.status
+    try {
+      return (await new UsersApi(this.config(token)).refreshTokenRaw()).raw.status
+    } catch (error) {
+      if (error instanceof ResponseError) {
+        return error.response.status
+      }
+      throw error
+    }
   }
 
   createRestaurant(user: TestUser, restaurant: WithTagArray<RestaurantCreate>): Promise<Restaurant> {

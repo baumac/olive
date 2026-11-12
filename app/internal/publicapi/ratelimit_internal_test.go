@@ -32,6 +32,18 @@ func TestRateLimiterWindows(t *testing.T) {
 	}
 }
 
+func TestRateLimiterWithoutCap(t *testing.T) {
+	l := newRateLimiter(1, time.Minute)
+	l.maxWindows = 0
+	l.allow("victim")
+	for i := range maxWindows + 5 {
+		l.allow(strconv.Itoa(i))
+	}
+	if wait, _ := l.allow("victim"); wait == 0 {
+		t.Error("other keys removed the window of victim")
+	}
+}
+
 func TestRateLimiterGiveBack(t *testing.T) {
 	now := time.Unix(0, 0)
 	l := newRateLimiter(1, time.Minute)

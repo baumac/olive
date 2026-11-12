@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Router } from 'vue-router'
+import { toast } from 'vue-sonner'
 import { refreshSession, signOut } from '@/composables/useAuth'
 import { handleSessionEnded, restaurantsApi } from '@/lib/api'
 import { saveDraft, takeDraft } from '@/lib/drafts'
@@ -8,6 +9,7 @@ import { clearSession, currentUser, saveSession, signedIn, watchOtherTabs } from
 const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '', updated: '' }
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   clearSession()
 })
@@ -83,9 +85,21 @@ describe('session', () => {
     })
   })
 
-  it('follows the session of the other tabs', () => {
+  it('sign out does not send an expired token and warns', async () => {
+    saveSession({ token: 'old-token', expires: '2000-01-01 00:00:00.000Z', user })
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
+    const warning = vi.spyOn(toast, 'warning')
+
+    signOut({ push: vi.fn() } as unknown as Router)
+    expect(signedIn.value).toBe(false)
+    await vi.waitFor(() => expect(warning).toHaveBeenCalledOnce())
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('follows the session of the other tabs', ({ onTestFinished }) => {
     const changes: (string | null)[][] = []
-    watchOtherTabs((before, after) => changes.push([before?.name ?? null, after?.name ?? null]))
+    onTestFinished(watchOtherTabs((before, after) => changes.push([before?.name ?? null, after?.name ?? null])))
     const fromOtherTab = (value: string | null) => {
       if (value === null) {
         localStorage.removeItem('reviews-session')
