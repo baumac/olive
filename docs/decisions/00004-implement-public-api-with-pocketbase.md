@@ -129,6 +129,7 @@ The checks run in this order:
 ## Rate limit
 
 - sign up and sign in each allow 10 requests per IP address per minute
+- sign in also allows 10 wrong passwords per user in 15 minutes. Decision 00015 has the details.
 - a photo upload allows 30 requests per user per hour. Decision 00008 has the details. The token check runs before it, because the key is the user.
 - an IPv6 address counts as its /64 network. One host often gets a full /64 network.
 - the count uses fixed windows in the memory of the server

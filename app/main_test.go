@@ -20,12 +20,13 @@ func TestOptions(t *testing.T) {
 	}
 
 	opts, err = options(env(map[string]string{
-		"REVIEWS_SIGN_IN_LIMIT":      "500",
-		"REVIEWS_PHOTO_UPLOAD_LIMIT": "400",
-		"REVIEWS_VALIDATE_REQUESTS":  "false",
-		"REVIEWS_VALIDATE_RESPONSES": "0",
+		"REVIEWS_SIGN_IN_LIMIT":         "500",
+		"REVIEWS_SIGN_IN_FAILURE_LIMIT": "7",
+		"REVIEWS_PHOTO_UPLOAD_LIMIT":    "400",
+		"REVIEWS_VALIDATE_REQUESTS":     "false",
+		"REVIEWS_VALIDATE_RESPONSES":    "0",
 	}))
-	if err != nil || opts.SignInLimit != 500 || opts.PhotoUploadLimit != 400 || !opts.SkipRequestValidation || !opts.SkipResponseValidation {
+	if err != nil || opts.SignInLimit != 500 || opts.SignInFailureLimit != 7 || opts.PhotoUploadLimit != 400 || !opts.SkipRequestValidation || !opts.SkipResponseValidation {
 		t.Errorf("all variables: %+v, %v", opts, err)
 	}
 
@@ -36,6 +37,7 @@ func TestOptions(t *testing.T) {
 
 	for _, vars := range []map[string]string{
 		{"REVIEWS_SIGN_IN_LIMIT": "0"},
+		{"REVIEWS_SIGN_IN_FAILURE_LIMIT": "-1"},
 		{"REVIEWS_PHOTO_UPLOAD_LIMIT": "many"},
 		{"REVIEWS_VALIDATE_REQUESTS": "off"},
 		{"REVIEWS_VALIDATE_RESPONSES": "yes"},

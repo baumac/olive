@@ -22,7 +22,7 @@ In scope:
 
 Out of scope:
 - All APIs provided by PocketBase. Clients use only the Public API.
-- Password reset, email verification, sign out on the server, and changes to a user after sign up
+- Password reset, email verification, and changes to a user after sign up. Decision 00015 added the sign out on the server.
 - Generating client libraries and documentation for the Public API
 - Implementation of the API spec
 - Reviews of things that are not restaurants, such as books or movies
@@ -296,6 +296,8 @@ The operations of the users API are as follows:
     - a wrong email address or password causes `401 Unauthorized`. The response does not say which one is wrong.
 - sign up and sign in ignore the `Authorization` header. A stored token that is not valid does not block them.
 - sign up and sign in have a rate limit. Too many requests cause `429 Too Many Requests` with a `Retry-After` header.
+- sign in also has a limit of wrong passwords per user. See decision 00015.
+- `DELETE /users/tokens` to sign out a user on all devices. See decision 00015.
 - `POST /users/tokens/refresh` to get a new auth token
     - it requires a valid auth token that is not expired
     - the response is `200 OK` with a new auth token
@@ -350,11 +352,10 @@ The zero-width joiners stay allowed, because emoji and some scripts use them.
 
 ## Token lifetime
 
-Tokens are valid until they expire. The API cannot revoke them. This is an accepted risk.
+Tokens are valid until they expire or until the user signs out.
 - each sign in and each refresh makes a new token. The tokens before it stay valid.
-- sign out deletes the token only in the client
-- a token that leaks works until it expires, at most the token duration of the `users` collection
-- a server-side sign out that changes the PocketBase `tokenKey` of the user can remove this risk later
+- `DELETE /users/tokens` signs out the user. It makes all tokens of the user invalid. Decision 00015 added it.
+- a token that leaks works until it expires or until the user signs out
 
 ## Account Enumeration
 

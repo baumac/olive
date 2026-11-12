@@ -158,7 +158,7 @@ tests/
 - a wrong password shows the error and keeps the email
 - a signed out person who opens a form signs in and comes back to it
 - a token that the API refuses ends the session. The form opens the sign in page with "Your session has ended". After sign in, the draft is back.
-- sign out deletes the session
+- sign out deletes the session, makes the token invalid on the server, and signs out the other tabs
 
 ## Accessibility
 

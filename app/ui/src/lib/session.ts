@@ -40,6 +40,24 @@ export function saveSession(auth: AuthToken) {
   }
 }
 
+// watchOtherTabs keeps the session equal to the session of the other tabs.
+// It runs onUserChange when another tab changes the signed in user. The
+// browser sends the storage event only to the other tabs.
+export function watchOtherTabs(onUserChange: (before: User | null, after: User | null) => void) {
+  window.addEventListener('storage', (event) => {
+    // A null key means that all keys were removed.
+    if (event.key !== null && event.key !== storageKey) {
+      return
+    }
+    const before = currentUser.value
+    session.value = load()
+    const after = currentUser.value
+    if (before?.id !== after?.id) {
+      onUserChange(before, after)
+    }
+  })
+}
+
 export function clearSession() {
   session.value = null
   try {

@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { refreshSession } from '@/composables/useAuth'
+import type { Router } from 'vue-router'
+import { refreshSession, signOut } from '@/composables/useAuth'
 import { handleSessionEnded, restaurantsApi } from '@/lib/api'
 import { saveDraft, takeDraft } from '@/lib/drafts'
-import { clearSession, saveSession, signedIn } from '@/lib/session'
+import { clearSession, currentUser, saveSession, signedIn, watchOtherTabs } from '@/lib/session'
 
 const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '', updated: '' }
 
@@ -63,6 +64,49 @@ describe('session', () => {
     saveSession({ token: 't', expires: '2099-01-01 00:00:00.000Z', user })
     saveDraft('review:x:new', { title: 'Mine' })
     expect(takeDraft('review:x:new')).toEqual({ title: 'Mine' })
+  })
+
+  it('sign out sends the token to the server and deletes the session', async () => {
+    saveSession({ token: 'old-token', expires: '2099-01-01 00:00:00.000Z', user })
+    const sent: { url: string; method?: string; auth: string | null }[] = []
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      sent.push({ url, method: init.method, auth: new Headers(init.headers).get('Authorization') })
+      return new Response(null, { status: 204 })
+    })
+    const push = vi.fn()
+
+    signOut({ push } as unknown as Router)
+    expect(signedIn.value).toBe(false)
+    expect(push).toHaveBeenCalledWith('/')
+    await vi.waitFor(() => {
+      expect(sent).toEqual([{ url: '/v1/users/tokens', method: 'DELETE', auth: 'Bearer old-token' }])
+    })
+  })
+
+  it('follows the session of the other tabs', () => {
+    const changes: (string | null)[][] = []
+    watchOtherTabs((before, after) => changes.push([before?.name ?? null, after?.name ?? null]))
+    const fromOtherTab = (value: string | null) => {
+      if (value === null) {
+        localStorage.removeItem('reviews-session')
+      } else {
+        localStorage.setItem('reviews-session', value)
+      }
+      window.dispatchEvent(new StorageEvent('storage', { key: 'reviews-session', newValue: value }))
+    }
+    const stored = (token: string) => JSON.stringify({ token, expires: '2099-01-01 00:00:00.000Z', user })
+
+    fromOtherTab(stored('t1'))
+    expect(currentUser.value?.name).toBe('Ana')
+    // A refresh in the other tab changes only the token.
+    fromOtherTab(stored('t2'))
+    fromOtherTab(null)
+    expect(signedIn.value).toBe(false)
+    window.dispatchEvent(new StorageEvent('storage', { key: 'other-key' }))
+    expect(changes).toEqual([
+      [null, 'Ana'],
+      ['Ana', null],
+    ])
   })
 
   it('keeps the session in localStorage', () => {

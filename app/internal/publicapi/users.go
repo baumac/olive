@@ -44,7 +44,8 @@ func (s *Server) SignUp(_ context.Context, req reviewsapi.SignUpRequestObject) (
 	return reviewsapi.SignUp201JSONResponse(token), nil
 }
 
-// SignIn checks a password hash also for an unknown email.
+// SignIn checks a password hash also for an unknown email. A user at the
+// wrong password limit gets 429 before the password check.
 func (s *Server) SignIn(_ context.Context, req reviewsapi.SignInRequestObject) (reviewsapi.SignInResponseObject, error) {
 	user, err := s.app.FindAuthRecordByEmail("users", string(req.Body.Email))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -54,15 +55,34 @@ func (s *Server) SignIn(_ context.Context, req reviewsapi.SignInRequestObject) (
 	if err != nil {
 		return nil, err
 	}
+	wait, window := s.signInFailures.allow(user.Id)
+	if wait > 0 {
+		return reviewsapi.SignIn429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: reviewsapi.TooManyRequestsApplicationProblemPlusJSONResponse{
+			Body:    newProblem(http.StatusTooManyRequests, "Too many wrong passwords for this user. Try again later."),
+			Headers: reviewsapi.TooManyRequestsResponseHeaders{RetryAfter: retryAfterSeconds(wait)},
+		}}, nil
+	}
 	if !user.ValidatePassword(req.Body.Password) {
 		return invalidCredentials(), nil
 	}
+	s.signInFailures.giveBack(user.Id, window)
 
 	token, err := newAuthToken(user)
 	if err != nil {
 		return nil, err
 	}
 	return reviewsapi.SignIn200JSONResponse(token), nil
+}
+
+// SignOut changes the token key of the user. PocketBase signs each auth
+// token with this key, so all tokens of the user stop being valid.
+func (s *Server) SignOut(ctx context.Context, _ reviewsapi.SignOutRequestObject) (reviewsapi.SignOutResponseObject, error) {
+	user := stateFrom(ctx).user
+	user.RefreshTokenKey()
+	if err := s.app.Save(user); err != nil {
+		return nil, err
+	}
+	return reviewsapi.SignOut204Response{}, nil
 }
 
 // RefreshToken returns a new token for the user of the bearer token.

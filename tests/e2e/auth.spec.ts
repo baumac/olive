@@ -76,3 +76,40 @@ test('sign out deletes the session', async ({ page, user }) => {
   await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('reviews-session'))).toBeNull()
 })
+
+test('sign out makes the token invalid on the server', async ({ page, user, api }) => {
+  await page.goto('/restaurants')
+  await page.getByRole('button', { name: `AN, account menu for ${user.name}` }).click()
+  const revoked = page.waitForResponse((r) => r.url().endsWith('/v1/users/tokens') && r.request().method() === 'DELETE')
+  await page.getByRole('menuitem', { name: 'Sign out' }).click()
+
+  expect((await revoked).status()).toBe(204)
+  expect(await api.refreshStatus(user.auth.token)).toBe(401)
+})
+
+test('sign out in one tab signs out the other tabs', async ({ page, user, context }) => {
+  await page.goto('/my-reviews')
+  await expect(page.getByRole('heading', { name: 'My reviews' })).toBeVisible()
+  const other = await context.newPage()
+  await other.goto('/restaurants')
+  await other.getByRole('button', { name: `AN, account menu for ${user.name}` }).click()
+  await other.getByRole('menuitem', { name: 'Sign out' }).click()
+  await expect(other.getByText('Signed out')).toBeVisible()
+
+  await expect(page).toHaveURL(/\/sign-in\?/)
+  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
+})
+
+test('sign in in one tab signs in the other tabs', async ({ page, api, context }) => {
+  const user = await api.signUp()
+  await page.goto('/sign-in?redirect=/my-reviews')
+  const other = await context.newPage()
+  await other.goto('/sign-in')
+  await other.getByLabel('Email').fill(user.email)
+  await other.getByLabel('Password', { exact: true }).fill(user.password)
+  await other.getByRole('button', { name: 'Sign in' }).click()
+  await expect(other).toHaveURL(/\/restaurants$/)
+
+  await expect(page).toHaveURL(/\/my-reviews$/)
+  await expect(page.getByRole('heading', { name: 'My reviews' })).toBeVisible()
+})

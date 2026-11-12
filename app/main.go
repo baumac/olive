@@ -38,8 +38,9 @@ func main() {
 func options(getenv func(string) string) (publicapi.Options, error) {
 	opts := publicapi.DefaultOptions
 	for name, limit := range map[string]*int{
-		"REVIEWS_SIGN_IN_LIMIT":      &opts.SignInLimit,
-		"REVIEWS_PHOTO_UPLOAD_LIMIT": &opts.PhotoUploadLimit,
+		"REVIEWS_SIGN_IN_LIMIT":         &opts.SignInLimit,
+		"REVIEWS_SIGN_IN_FAILURE_LIMIT": &opts.SignInFailureLimit,
+		"REVIEWS_PHOTO_UPLOAD_LIMIT":    &opts.PhotoUploadLimit,
 	} {
 		v := getenv(name)
 		if v == "" {

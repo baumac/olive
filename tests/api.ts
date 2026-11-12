@@ -30,6 +30,16 @@ export class TestApi {
     return { name, email, password, auth }
   }
 
+  // refreshStatus gives the status of a token refresh. 200 means that the
+  // token is valid.
+  async refreshStatus(token: string): Promise<number> {
+    const response = await fetch(`${this.baseURL}/v1/users/tokens/refresh`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return response.status
+  }
+
   createRestaurant(user: TestUser, restaurant: WithTagArray<RestaurantCreate>): Promise<Restaurant> {
     const { tags, ...rest } = restaurant
     return new RestaurantsApi(this.config(user.auth.token)).createRestaurant({

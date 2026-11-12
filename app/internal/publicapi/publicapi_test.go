@@ -459,6 +459,70 @@ func TestSignInRateLimit(t *testing.T) {
 	e.signUp("ana@example.com", "Ana")
 }
 
+func TestSignInFailureLimit(t *testing.T) {
+	opts := testOptions
+	opts.SignInFailureLimit, opts.SignInFailureWindow = 3, time.Minute
+	e := newEnv(t, opts)
+	e.signUp("ana@example.com", "Ana")
+	e.signUp("joe@example.com", "Joe")
+	signIn := func(email, password string, status int) response {
+		t.Helper()
+		return e.expect(request{method: "POST", path: "/v1/users/tokens",
+			body: fmt.Sprintf(`{"email":%q,"password":%q}`, email, password)}, status)
+	}
+
+	for range 2 {
+		signIn("ana@example.com", "wrong-password", http.StatusUnauthorized)
+	}
+	// A correct password does not count.
+	for range 5 {
+		signIn("ana@example.com", "correct-horse-battery", http.StatusOK)
+	}
+	signIn("ANA@example.com", "wrong-password", http.StatusUnauthorized)
+
+	res := signIn("ana@example.com", "correct-horse-battery", http.StatusTooManyRequests)
+	if got := res.header.Get("Retry-After"); got == "" || got == "0" {
+		t.Errorf("Retry-After %q", got)
+	}
+	signIn("ana@example.com", "wrong-password", http.StatusTooManyRequests)
+
+	signIn("joe@example.com", "correct-horse-battery", http.StatusOK)
+	for range 5 {
+		signIn("nobody@example.com", "wrong-password", http.StatusUnauthorized)
+	}
+}
+
+func TestSignOut(t *testing.T) {
+	e := newEnv(t, testOptions)
+	first := e.signUp("ana@example.com", "Ana")
+	var second authToken
+	e.expect(request{method: "POST", path: "/v1/users/tokens",
+		body: `{"email":"ana@example.com","password":"correct-horse-battery"}`}, http.StatusOK).decode(t, &second)
+	joe := e.signUp("joe@example.com", "Joe")
+	refresh := func(token string, status int) {
+		t.Helper()
+		e.expect(request{method: "POST", path: "/v1/users/tokens/refresh", token: token}, status)
+	}
+
+	e.expect(request{method: "DELETE", path: "/v1/users/tokens"}, http.StatusUnauthorized)
+	refresh(first.Token, http.StatusOK)
+
+	res := e.expect(request{method: "DELETE", path: "/v1/users/tokens", token: second.Token}, http.StatusNoContent)
+	if len(res.body) != 0 {
+		t.Errorf("body %s", res.body)
+	}
+	refresh(first.Token, http.StatusUnauthorized)
+	refresh(second.Token, http.StatusUnauthorized)
+	e.expect(request{method: "GET", path: "/v1/restaurants", token: first.Token}, http.StatusUnauthorized)
+	e.expect(request{method: "DELETE", path: "/v1/users/tokens", token: second.Token}, http.StatusUnauthorized)
+	refresh(joe.Token, http.StatusOK)
+
+	var third authToken
+	e.expect(request{method: "POST", path: "/v1/users/tokens",
+		body: `{"email":"ana@example.com","password":"correct-horse-battery"}`}, http.StatusOK).decode(t, &third)
+	refresh(third.Token, http.StatusOK)
+}
+
 func TestRestaurants(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")

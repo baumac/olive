@@ -72,6 +72,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
 - Environment variables of the app:
   - `REVIEWS_SIGN_IN_LIMIT` sets the sign up and sign in limit per minute. The end-to-end tests raise it. Their parallel sign ups come from one IP address.
+  - `REVIEWS_SIGN_IN_FAILURE_LIMIT` sets the wrong passwords of each user per 15 minutes. The default is 10. See decision 00015.
   - `REVIEWS_PHOTO_UPLOAD_LIMIT` sets the photo uploads of each user per hour. The default is 30. See decision 00008.
   - `REVIEWS_VALIDATE_RESPONSES=false` turns off the spec validation of responses. See decision 00007.
   - `REVIEWS_VALIDATE_REQUESTS=false` turns off the spec validation of parameters and body values. Invalid values can then be saved. Turn it off only with the response validation, or responses with these values get 500.
@@ -82,7 +83,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
-    - the `users` tag has the sign up, sign in, and token refresh operations
+    - the `users` tag has the sign up, sign in, sign out, and token refresh operations
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons

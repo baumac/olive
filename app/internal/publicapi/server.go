@@ -27,6 +27,10 @@ type Options struct {
 	// address can send in SignInWindow. Each operation has its own count.
 	SignInLimit  int
 	SignInWindow time.Duration
+	// SignInFailureLimit is the number of wrong passwords that one user can
+	// get in SignInFailureWindow. Zero uses 10 in 15 minutes.
+	SignInFailureLimit  int
+	SignInFailureWindow time.Duration
 	// PhotoUploadLimit is the number of photos that one user can add in
 	// PhotoUploadWindow.
 	PhotoUploadLimit  int
@@ -45,6 +49,7 @@ type Options struct {
 // DefaultOptions are the settings of a production server.
 var DefaultOptions = Options{
 	SignInLimit: 10, SignInWindow: time.Minute,
+	SignInFailureLimit: 10, SignInFailureWindow: 15 * time.Minute,
 	PhotoUploadLimit: 30, PhotoUploadWindow: time.Hour,
 }
 
@@ -57,6 +62,9 @@ type Server struct {
 	spec     *apiSpec
 	opts     Options
 	limiters map[string]*rateLimiter
+	// signInFailures counts the wrong passwords of each user ID. Requests
+	// for unknown email addresses cannot remove its windows.
+	signInFailures *rateLimiter
 	// decodes holds one token for each photo upload that decodes its image.
 	decodes     chan struct{}
 	photoMemory *photoMemory
@@ -121,6 +129,10 @@ func New(app core.App, opts Options) (*Server, error) {
 			"sign-in":      newRateLimiter(opts.SignInLimit, opts.SignInWindow),
 			"photo-upload": newRateLimiter(opts.PhotoUploadLimit, opts.PhotoUploadWindow),
 		},
+		signInFailures: newRateLimiter(
+			cmp.Or(opts.SignInFailureLimit, DefaultOptions.SignInFailureLimit),
+			cmp.Or(opts.SignInFailureWindow, DefaultOptions.SignInFailureWindow),
+		),
 		decodes:     make(chan struct{}, maxParallelDecodes),
 		photoMemory: &photoMemory{limit: cmp.Or(opts.PhotoMemoryLimit, defaultPhotoMemoryLimit)},
 		dummyHash:   hash,

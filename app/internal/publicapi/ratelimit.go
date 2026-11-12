@@ -96,5 +96,9 @@ func clientKey(ip string) string {
 // retryAfter changes wait to whole seconds for the Retry-After header. The
 // minimum is 1.
 func retryAfter(wait time.Duration) string {
-	return strconv.Itoa(max(1, int(math.Ceil(wait.Seconds()))))
+	return strconv.Itoa(retryAfterSeconds(wait))
+}
+
+func retryAfterSeconds(wait time.Duration) int {
+	return max(1, int(math.Ceil(wait.Seconds())))
 }

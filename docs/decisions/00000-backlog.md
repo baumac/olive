@@ -7,18 +7,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## Items for Claude
-- Sessions, Sign In, and Sign Out
-  - Sync the session between browser tabs
-    - `app/ui/src/lib/session.ts` has no `storage` listener
-    - a sign out in one tab leaves the other tabs signed in until a reload
-  - Add server-side sign out
-    - sign out deletes the token only in the browser
-    - a leaked token can be refreshed without end. Decision 00001 accepts this risk.
-    - without a password change, the user cannot stop it
-  - Limit sign in per account
-    - `serveOperation` in `app/internal/publicapi/server.go` counts sign in only per client network
-    - many IP addresses can guess the password of one account. No lockout stops them.
-    - the limiter is in memory. A restart resets all counts.
 
 ## High Priority
 

@@ -22,7 +22,7 @@ servers:
 
 tags:
   - name: users
-    description: Sign up, sign in, and refresh the auth token of a user.
+    description: Sign up, sign in, sign out, and refresh the auth token of a user.
   - name: restaurants
     description: Restaurants and their reviews.
   - name: reviewers
@@ -77,7 +77,10 @@ paths:
         key: ip
         name: sign-in
       summary: Sign in a user with email and password
-      description: The API ignores the `Authorization` header on this operation.
+      description: |
+        The API ignores the `Authorization` header on this operation.
+        Too many wrong passwords for one user cause `429 Too Many Requests` for this user.
+        A correct password then also gets `429` until the time of `Retry-After`.
       tags: [users]
       security:
         - {}
@@ -107,6 +110,22 @@ paths:
           $ref: '#/components/responses/UnprocessableContent'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+    delete:
+      operationId: signOut
+      summary: Sign out a user on all devices
+      description: |
+        Makes all auth tokens of the user of the current token invalid.
+        This includes the current token and the tokens of other devices.
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: All auth tokens of the user are invalid.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /users/tokens/refresh:
     post:
@@ -1173,6 +1192,7 @@ components:
     TooManyRequests:
       description: |
         The client sent too many sign up, sign in, or photo upload requests in a short time.
+        Sign in also gets it when one user has too many wrong passwords in a short time.
         A photo upload also gets it when the server holds too many photos in memory.
         This upload does not count for the rate limit of the user.
       headers:

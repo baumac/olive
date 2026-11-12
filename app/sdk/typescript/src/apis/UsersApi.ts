@@ -86,7 +86,7 @@ export interface UsersApiInterface {
     signInRequestOpts(requestParameters: SignInRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * The API ignores the `Authorization` header on this operation.
+     * The API ignores the `Authorization` header on this operation. Too many wrong passwords for one user cause `429 Too Many Requests` for this user. A correct password then also gets `429` until the time of `Retry-After`. 
      * @summary Sign in a user with email and password
      * @param {Credentials} credentials The email and password of the user.
      * @param {*} [options] Override http request option.
@@ -96,10 +96,32 @@ export interface UsersApiInterface {
     signInRaw(requestParameters: SignInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthToken>>;
 
     /**
-     * The API ignores the `Authorization` header on this operation.
+     * The API ignores the `Authorization` header on this operation. Too many wrong passwords for one user cause `429 Too Many Requests` for this user. A correct password then also gets `429` until the time of `Retry-After`. 
      * Sign in a user with email and password
      */
     signIn(requestParameters: SignInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthToken>;
+
+    /**
+     * Creates request options for signOut without sending the request
+     * @throws {RequiredError}
+     * @memberof UsersApiInterface
+     */
+    signOutRequestOpts(): Promise<runtime.RequestOpts>;
+
+    /**
+     * Makes all auth tokens of the user of the current token invalid. This includes the current token and the tokens of other devices. 
+     * @summary Sign out a user on all devices
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof UsersApiInterface
+     */
+    signOutRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+
+    /**
+     * Makes all auth tokens of the user of the current token invalid. This includes the current token and the tokens of other devices. 
+     * Sign out a user on all devices
+     */
+    signOut(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
 
     /**
      * Creates request options for signUp without sending the request
@@ -209,7 +231,7 @@ export class UsersApi extends runtime.BaseAPI implements UsersApiInterface {
     }
 
     /**
-     * The API ignores the `Authorization` header on this operation.
+     * The API ignores the `Authorization` header on this operation. Too many wrong passwords for one user cause `429 Too Many Requests` for this user. A correct password then also gets `429` until the time of `Retry-After`. 
      * Sign in a user with email and password
      */
     async signInRaw(requestParameters: SignInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthToken>> {
@@ -220,12 +242,58 @@ export class UsersApi extends runtime.BaseAPI implements UsersApiInterface {
     }
 
     /**
-     * The API ignores the `Authorization` header on this operation.
+     * The API ignores the `Authorization` header on this operation. Too many wrong passwords for one user cause `429 Too Many Requests` for this user. A correct password then also gets `429` until the time of `Retry-After`. 
      * Sign in a user with email and password
      */
     async signIn(requestParameters: SignInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthToken> {
         const response = await this.signInRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for signOut without sending the request
+     */
+    async signOutRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/users/tokens`;
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Makes all auth tokens of the user of the current token invalid. This includes the current token and the tokens of other devices. 
+     * Sign out a user on all devices
+     */
+    async signOutRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.signOutRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Makes all auth tokens of the user of the current token invalid. This includes the current token and the tokens of other devices. 
+     * Sign out a user on all devices
+     */
+    async signOut(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.signOutRaw(initOverrides);
     }
 
     /**
