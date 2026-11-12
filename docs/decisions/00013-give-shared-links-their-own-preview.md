@@ -34,6 +34,7 @@ Out of scope:
 - The average scores in the description of a restaurant. They need the rating query of the Public API in `app/internal/webui`.
 - Tags for the other screens, such as `/restaurants` and `/my-reviews`. They keep the tags of the site.
 - A sitemap
+- Showing average score in a restaurant's description
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -151,4 +152,4 @@ A later decision can add JSON-LD in the page-meta block. JSON-LD is a data block
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- Should the description of a restaurant show its average scores?
+None.

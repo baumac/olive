@@ -108,4 +108,4 @@ Alternatives:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- the response validation decodes each JSON response again. A load test can show if this cost matters. Until then, `REVIEWS_VALIDATE_RESPONSES=false` turns it off without a deploy.
+None.
