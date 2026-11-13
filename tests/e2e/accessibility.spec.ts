@@ -69,7 +69,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectNoViolations(page)
 
       await page.goto(`/restaurants?view=map&search=${encodeURIComponent("Luigi's")}`)
-      await expect(page.getByRole('region', { name: 'Map of the restaurants' }).first()).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Map of the restaurants' })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading restaurants')
       await expectNoViolations(page)
 

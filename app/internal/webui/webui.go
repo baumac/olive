@@ -24,21 +24,14 @@ import (
 //go:embed all:dist
 var dist embed.FS
 
-// contentSecurityPolicy allows only files of this origin and the map tiles.
-// Decision 00005 explains each directive. The UI has no inline scripts.
-//
-// blob: in img-src lets the photo upload show the selected file. Decision
-// 00008 has the details.
-//
-// The hash allows the inline style of Reka UI SelectViewport. A Reka UI
-// update can change its text. The end-to-end tests then fail.
-//
-// tiles is the origin of the map tiles, or empty without a map. Decision
-// 00018 has the details.
+// contentSecurityPolicy allows the files of this origin and the tiles origin.
+// Decisions 00005, 00008, and 00018 explain the directives.
 func contentSecurityPolicy(tiles string) string {
 	if tiles != "" {
 		tiles = " " + tiles
 	}
+	// The hash allows the inline style of Reka UI SelectViewport. A Reka UI
+	// update can change its text. The end-to-end tests then fail.
 	return "default-src 'self'; script-src 'self'; " +
 		"style-src 'self' 'sha256-60LHlRjW/B3CtzIoE/Lf1/NEDvko9efWMFaGVhHu/cs='; img-src 'self' blob:" + tiles + "; " +
 		"font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; " +
@@ -69,6 +62,10 @@ var tilePlaceholders = strings.NewReplacer("{z}", "0", "{x}", "0", "{y}", "0", "
 // TileOrigin returns the origin of a tile URL template for the Content
 // Security Policy. It returns an error for a URL that the map cannot use.
 func TileOrigin(tileURL string) (string, error) {
+	// A part in the host would give a different host for each tile.
+	if _, rest, _ := strings.Cut(tileURL, "://"); strings.Contains(strings.SplitN(rest, "/", 2)[0], "{") {
+		return "", errors.New("the tile URL must have a fixed host")
+	}
 	for _, part := range []string{"{z}", "{x}", "{y}"} {
 		if !strings.Contains(tileURL, part) {
 			return "", fmt.Errorf("the tile URL has no %s", part)

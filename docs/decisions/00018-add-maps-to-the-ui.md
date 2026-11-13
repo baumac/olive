@@ -104,6 +104,7 @@ GET /v1/restaurants?within[west]=2.1&within[south]=41.3&within[east]=2.2&within[
 - `webui.TileOrigin` checks the template and gives its origin. A URL without `{z}`, `{x}`, and `{y}`, or with other parts in braces such as `{s}`, stops the start of the app.
 - `img-src` of the Content Security Policy of decision 00005 gets this origin. Without a tile URL it stays `'self' blob:`.
 - a host with a space, a semicolon, or a quote is refused. It could add a source or a directive to the policy.
+- a part in braces in the host, such as `https://{z}.tiles.example.com`, is refused. The policy needs one fixed host.
 - the UI route serves `/map-config.json` with `tiles` and `attribution`. The UI build is the same for all settings, so the UI gets them at run time.
 - this file is not part of the Public API. Only the UI of this app needs it.
 
@@ -122,6 +123,11 @@ GET /v1/restaurants?within[west]=2.1&within[south]=41.3&within[east]=2.2&within[
 - the mouse wheel zooms only the map of the restaurants page. The other maps are in pages that scroll.
 - `mapBox` in `app/ui/src/lib/places.ts` changes the view of the map to the `within` box. A map can show longitudes outside of -180 to 180, and the world more than one time.
 - the restaurants page waits 0.3 seconds after a move before it loads. It ignores the answers of older requests.
+- the map view sends the selected sort. In a view with more than 100 restaurants, the sort selects the 100 that it shows.
+- `MapView` moves the map only when the coordinates of `center` change, not for a new object with the same point. Leaflet sends a move event also for a move to the same point. Each load would otherwise start the next one.
+- the restaurants page gives the map its start view one time. A link to the map view waits for the map config before the list loads.
+- the map of the fields by hand moves only after a blur of a typed point. A click on the map does not move it.
+- a failed request of the map config is not kept. The next map tries again.
 - `useListQuery` gets a list of query keys that a filter change keeps. The restaurants page keeps `view`.
 - a click on the map in the form rounds the coordinates to 6 decimals, about 0.1 meters
 
@@ -132,6 +138,7 @@ GET /v1/restaurants?within[west]=2.1&within[south]=41.3&within[east]=2.2&within[
 - `app/ui/test/location.test.ts` tests `mapBox`, the config loader, and the other helpers. jsdom has no layout, so it does not test `MapView`.
 - the fake server of `tests/photon.ts` gives one gray tile for each path under `/tiles`. The end-to-end tests need no network.
 - `tests/e2e/maps.spec.ts` tests the three maps: the pin and the credit, the map view with filters and the keyboard, and the click that sets the point
+- it also checks that an open map view sends no request without a move, and that a second click at one place gives the same point
 - the `noCspViolations` fixture of decision 00005 runs in each of these tests, also during a zoom
 - `accessibility.spec.ts` runs axe on the map view
 - one manual check with the real tiles of OpenStreetMap showed the map of Barcelona with both pins

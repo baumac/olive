@@ -15,7 +15,7 @@ const osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 let loading: Promise<MapConfig | null> | undefined
 
-// loadMapConfig returns null when the maps are off. The Vite dev server has
+// loadMapConfig returns null when the maps are off or the request fails. The Vite dev server has
 // no /map-config.json. It then uses the tiles of OpenStreetMap.
 export function loadMapConfig(): Promise<MapConfig | null> {
   loading ??= fetch('/map-config.json')
@@ -26,7 +26,14 @@ export function loadMapConfig(): Promise<MapConfig | null> {
       const config = (await res.json()) as Partial<MapConfig>
       return config.tiles ? { tiles: config.tiles, attribution: config.attribution ?? '' } : null
     })
-    .catch(() => (import.meta.env.DEV ? { tiles: osmTiles, attribution: '' } : null))
+    .catch(() => {
+      if (import.meta.env.DEV) {
+        return { tiles: osmTiles, attribution: '' }
+      }
+      // The next map loads the config again.
+      loading = undefined
+      return null
+    })
   return loading
 }
 

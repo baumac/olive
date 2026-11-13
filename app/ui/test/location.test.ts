@@ -93,6 +93,20 @@ describe('maps', () => {
     expect(fetch).toHaveBeenCalledWith('/map-config.json')
   })
 
+  it('loads the map config again after a failed request', async () => {
+    vi.stubEnv('DEV', false)
+    const tiles = 'https://tiles.example.com/{z}/{x}/{y}.png'
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('offline'))
+      .mockResolvedValue(new Response(JSON.stringify({ tiles, attribution: '' })))
+    vi.stubGlobal('fetch', fetch)
+    expect(await loadMapConfig()).toBeNull()
+    expect(await loadMapConfig()).toEqual({ tiles, attribution: '' })
+    expect(fetch).toHaveBeenCalledTimes(2)
+    vi.unstubAllEnvs()
+  })
+
   it('has no map config when the maps are off or the request fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ tiles: '', attribution: '' }))))
     expect(await loadMapConfig()).toBeNull()

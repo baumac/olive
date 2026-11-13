@@ -37,9 +37,8 @@ const el = ref<HTMLElement>()
 let map: L.Map | undefined
 const layer = L.layerGroup()
 
-// The Content Security Policy of decision 00005 blocks data: URLs. Leaflet
-// stops the load of a tile with a data: image. Tiles uses a blob in its
-// place. It replaces the three methods of L.TileLayer that use the image.
+// Leaflet stops the load of a tile with a data: image. The Content Security
+// Policy blocks data: URLs. Tiles replaces the three methods that use it.
 const emptyGif = Uint8Array.from(atob('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='), (c) => c.charCodeAt(0))
 let emptyImageURL: string | undefined
 
@@ -128,8 +127,8 @@ function draw() {
     if (!entry) {
       const marker = L.marker([m.latitude, m.longitude], { icon: icon(selected), draggable: props.pick })
       marker.on('click', () => emit('select', m.id))
-      // Leaflet opens only a popup with the keyboard. The marker has the
-      // button role, so Enter and Space select it.
+      // Leaflet opens only a popup with the keyboard. Enter and Space select
+      // the marker, like a button.
       marker.on('keypress', (e: L.LeafletKeyboardEvent) => {
         if (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ') {
           e.originalEvent.preventDefault()
@@ -197,9 +196,11 @@ onMounted(() => {
 })
 
 watch(() => [props.markers, props.selected, props.pick], draw, { deep: true })
+// The key is a string. A new center object with the same point then does
+// not move the map. A move of the map would start a new load of the page.
 watch(
-  () => [props.center.latitude, props.center.longitude] as const,
-  ([latitude, longitude]) => map?.setView([latitude, longitude], map.getZoom()),
+  () => `${props.center.latitude},${props.center.longitude}`,
+  () => map?.setView([props.center.latitude, props.center.longitude], map.getZoom()),
 )
 
 onBeforeUnmount(() => {

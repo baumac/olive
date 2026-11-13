@@ -15,7 +15,8 @@ import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { useMapConfig } from '@/lib/mapConfig'
+import type { MapConfig } from '@/lib/mapConfig'
+import { loadMapConfig } from '@/lib/mapConfig'
 import type { Box } from '@/lib/places'
 import { defaultCenter, mapBox } from '@/lib/places'
 import { restaurantFilterDefs, restaurantFilterParams, restaurantSortOptions } from '@/lib/restaurantFilters'
@@ -28,7 +29,12 @@ const mapLimit = 100
 
 const route = useRoute()
 const router = useRouter()
-const mapConfig = useMapConfig()
+const mapConfig = ref<MapConfig | null>(null)
+const mapConfigLoaded = ref(false)
+void loadMapConfig().then((config) => {
+  mapConfig.value = config
+  mapConfigLoaded.value = true
+})
 
 const { filters, sort, active, sortOptions } = useListQuery(restaurantFilterDefs, restaurantSortOptions, '-created', searchRelevance, ['view'])
 
@@ -55,7 +61,18 @@ const list = usePagedList<Restaurant>(async (cursor) => {
   return { items: page.items, nextCursor: page.nextCursor }
 })
 
-watch([filters, sort, mapView], () => !mapView.value && void list.reload(), { immediate: true })
+// A link to the map view waits for the map config. The list then does not
+// load a page that the map view hides.
+watch(
+  [filters, sort, mapView, mapConfigLoaded],
+  () => {
+    const waiting = route.query.view === 'map' && !mapConfigLoaded.value
+    if (!mapView.value && !waiting) {
+      void list.reload()
+    }
+  },
+  { immediate: true },
+)
 
 const onMap = ref<Restaurant[]>([])
 const mapLoading = ref(false)
@@ -76,6 +93,7 @@ async function loadMap() {
   try {
     const page = await restaurantsApi.listRestaurants({
       limit: mapLimit,
+      sort: sort.value,
       within: mapBox(box.value),
       ...restaurantFilterParams(filters.value),
     })
@@ -98,13 +116,18 @@ async function loadMap() {
 // The delay waits for the end of a pan or a zoom with more than one step.
 function moved(next: Box, center: MapPoint, zoom: number) {
   box.value = next
-  lastView = { center, zoom }
+  lastView.center = center
+  lastView.zoom = zoom
   clearTimeout(moveTimer)
   moveTimer = setTimeout(() => void loadMap(), 300)
 }
 
-watch(filters, () => mapView.value && void loadMap())
+watch([filters, sort], () => mapView.value && void loadMap())
 onBeforeUnmount(() => clearTimeout(moveTimer))
+
+// startView does not change while the page is open. A new center would move
+// the map and start a new load.
+const startView = { ...lastView }
 
 const markers = computed(() =>
   onMap.value.flatMap((r) => (r.location ? [{ id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name }] : [])),
@@ -129,7 +152,7 @@ const status = computed(() => {
 <script lang="ts">
 // lastView is the view of the map before the user left the page. The map
 // opens with it again until a reload.
-let lastView: { center: { latitude: number; longitude: number }; zoom: number } = { center: defaultCenter, zoom: 13 }
+const lastView: { center: { latitude: number; longitude: number }; zoom: number } = { center: defaultCenter, zoom: 13 }
 </script>
 
 <template>
@@ -159,12 +182,12 @@ let lastView: { center: { latitude: number; longitude: number }; zoom: number } 
       </Button>
     </div>
 
-    <section v-if="mapView && mapConfig" class="grid gap-4" aria-label="Map of the restaurants">
+    <div v-if="mapView && mapConfig" class="grid gap-4">
       <MapView
         :config="mapConfig"
         label="Map of the restaurants"
-        :center="lastView.center"
-        :zoom="lastView.zoom"
+        :center="startView.center"
+        :zoom="startView.zoom"
         :markers="markers"
         :selected="selectedId"
         wheel-zoom
@@ -179,7 +202,7 @@ let lastView: { center: { latitude: number; longitude: number }; zoom: number } 
       <div class="max-w-md" aria-live="polite">
         <RestaurantCard v-if="selected" :restaurant="selected" />
       </div>
-    </section>
+    </div>
 
     <PagedList
       v-else

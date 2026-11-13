@@ -89,6 +89,8 @@ function enterByHand() {
   hand.value = l
     ? { address: l.address, latitude: String(l.latitude), longitude: String(l.longitude) }
     : { address: '', latitude: '', longitude: '' }
+  mapCenter.value = l ?? defaultCenter
+  mapZoom.value = l ? 17 : 13
   byHand.value = true
 }
 
@@ -99,6 +101,17 @@ const handPoint = computed<MapPoint | null>(() => {
   const longitude = parseCoordinate(hand.value.longitude, 180)
   return latitude !== null && longitude !== null ? { latitude, longitude } : null
 })
+
+// mapCenter moves only for a typed point after a blur. A click on the map
+// then does not move the map under the pointer.
+const mapCenter = ref<MapPoint>(defaultCenter)
+const mapZoom = ref(13)
+
+function centerOnPoint() {
+  if (handPoint.value) {
+    mapCenter.value = handPoint.value
+  }
+}
 
 function pick(point: MapPoint) {
   hand.value = { ...hand.value, latitude: String(roundCoordinate(point.latitude)), longitude: String(roundCoordinate(point.longitude)) }
@@ -169,19 +182,33 @@ watch(
       <div class="grid gap-3 sm:grid-cols-2">
         <div class="grid gap-2">
           <Label :for="`${id}-latitude`">Latitude</Label>
-          <Input :id="`${id}-latitude`" v-model="hand.latitude" name="latitude" inputmode="decimal" placeholder="41.3766" />
+          <Input
+            :id="`${id}-latitude`"
+            v-model="hand.latitude"
+            name="latitude"
+            inputmode="decimal"
+            placeholder="41.3766"
+            @blur="centerOnPoint"
+          />
         </div>
         <div class="grid gap-2">
           <Label :for="`${id}-longitude`">Longitude</Label>
-          <Input :id="`${id}-longitude`" v-model="hand.longitude" name="longitude" inputmode="decimal" placeholder="2.1893" />
+          <Input
+            :id="`${id}-longitude`"
+            v-model="hand.longitude"
+            name="longitude"
+            inputmode="decimal"
+            placeholder="2.1893"
+            @blur="centerOnPoint"
+          />
         </div>
       </div>
       <template v-if="mapConfig">
         <MapView
           :config="mapConfig"
           label="Map to set the point"
-          :center="handPoint ?? defaultCenter"
-          :zoom="handPoint ? 17 : 13"
+          :center="mapCenter"
+          :zoom="mapZoom"
           :markers="handPoint ? [{ id: 'point', ...handPoint, label: 'The point of the restaurant' }] : []"
           pick
           @pick="pick"

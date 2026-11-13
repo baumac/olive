@@ -35,8 +35,19 @@ test('the map view shows the restaurants of the filters', async ({ page, api }) 
   await page.getByRole('button', { name: 'Map', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`\\?tags=${tag}&view=map$`))
 
-  const map = page.getByRole('region', { name: 'Map of the restaurants' }).first()
+  const map = page.getByRole('region', { name: 'Map of the restaurants' })
   await expect(page.getByText('2 restaurants on the map')).toBeVisible()
+
+  // An open map does not load again without a move.
+  let loads = 0
+  page.on('request', (req) => {
+    if (req.url().includes('/v1/restaurants?') && req.url().includes('within')) {
+      loads++
+    }
+  })
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- The test checks that no load starts in this time.
+  await page.waitForTimeout(1500)
+  expect(loads).toBe(0)
   await expect(map.getByRole('button', { name: 'Bar Central' })).toBeVisible()
   await expect(map.getByRole('button', { name: 'Far Away' })).toHaveCount(0)
   await expect(map.getByRole('button', { name: 'Other Tag' })).toHaveCount(0)
@@ -73,7 +84,13 @@ test('a click on the map sets the point of a location by hand', async ({ page, u
   await expect(page.getByLabel('Longitude')).toHaveValue(/^2\.\d{1,6}$/)
   await expect(map.getByRole('button', { name: 'The point of the restaurant' })).toBeVisible()
 
-  // The typed numbers move the pin, and the form saves the point.
+  // A second click at the same place gives the same point. The map did not
+  // move under the pointer.
+  const latitude = await page.getByLabel('Latitude').inputValue()
+  await map.click({ position: { x: 200, y: 100 } })
+  await expect(page.getByLabel('Latitude')).toHaveValue(latitude)
+
+  // The form saves the typed numbers.
   await page.getByLabel('Latitude').fill('-45.5')
   await page.getByLabel('Longitude').fill('-140.25')
   await page.getByLabel('Address').fill('Harbor Road 9, Testville')
