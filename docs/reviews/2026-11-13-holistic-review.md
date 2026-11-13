@@ -8,6 +8,9 @@ Ran `./bin/reviews-app` on a scratch database with 3 users, 4 restaurants, 6 rev
 Looked at the list, map, restaurant, review form, reviewer, and sign up pages on desktop and on mobile in dark mode.
 Did not run the test suites. Did not test photo upload or the place search in the browser.
 
+Updated on 2026-11-14 for decision 00019, which made the UI simpler. The items that it completed are removed.
+It completed the compact score display, the "Value" label, the photos above the save button, and the map position on a narrow page.
+
 ## Product, highest value first
 
 1. The overall ranking has no confidence weight. `overallOf` in `app/migrations/1794268808_add_restaurant_index.go` is a plain average.
@@ -16,18 +19,19 @@ Did not run the test suites. Did not test photo upload or the place search in th
 3. Photos are only on review cards. The restaurant card and the top of the restaurant page have none. A cover photo and a gallery from the review photos need no new upload.
 4. The "Won't Do" list is one cluster: no email verification, no write rate limits, no reports, no password reset.
    Together they mean a public instance has no defence against spam and no recovery for a lost password. The cheapest slice is a report button that makes a record for the dashboard, plus per-user write limits.
+   Decision 00019 removed the "Confirm password" field of sign up. A typing error in the password now loses the account, so the password reset matters more.
 5. A restaurant has only name, description, tags, location. Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
 6. Reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
 7. Reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).
-8. "Price" where 10 is good needs a footnote on each page. Rename the label to "Value".
 
 ## UI/UX
 
-- Review cards show six dot rows each. Three reviews fill two screens. Show the overall and collapse the five scores, or show them as one compact row.
-- The review form has 50 score buttons, and the photos section is below the Save button. Move photos above Save. Show the computed overall live.
-- Mobile restaurant page: the map sits above the rating summary. The rating and "Write a review" are below the fold.
+- The review form still has 50 score buttons. It does not show the computed overall while the person selects the scores.
+- A review card shows only the overall score. A reader must open the review to see the five scores.
 - Map view has no marker clustering. Two pins overlap at Barceloneta in the test data. It loads at most 100 restaurants in the box with no cue except `mapHasMore`.
-- "Open in OpenStreetMap" only. Add a `geo:` or directions link for phones.
+- The address links only to OpenStreetMap. Add a `geo:` or directions link for phones.
+- The restaurants list has no visible heading and the header has no navigation links. A second top-level screen needs both again.
+- The UI has only three sorts for each list. A link with a removed sort, such as `?sort=-food`, shows the default sort.
 - `/` redirects to the list. There is no landing content for a first visitor who is signed out.
 - All text is English with `en-GB` dates fixed in `app/ui/src/lib/format.ts`. No i18n layer.
 
