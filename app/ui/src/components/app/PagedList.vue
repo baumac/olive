@@ -6,12 +6,15 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { LoadMore } from '@/components/ui/load-more'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 const props = defineProps<{
   list: PagedList<T>
   // noun names the items in plural, such as "reviews".
   noun: string
   listClass?: string
+  // itemClass sets the shape of the focus outline of an item.
+  itemClass?: string
   skeletonClass: string
   skeletonCount: number
 }>()
@@ -52,15 +55,15 @@ async function load(cursor: string) {
     </AlertDescription>
   </Alert>
 
-  <ul v-else-if="list.loading.value" aria-busy="true" :aria-label="`Loading ${noun}`" :class="['grid gap-4', listClass]">
+  <ul v-else-if="list.loading.value" aria-busy="true" :aria-label="`Loading ${noun}`" :class="cn('grid gap-4', listClass)">
     <li v-for="n in skeletonCount" :key="n"><Skeleton :class="skeletonClass" /></li>
   </ul>
 
   <slot v-else-if="list.items.value.length === 0" name="empty" />
 
   <template v-else>
-    <ul :class="['grid gap-4', listClass]">
-      <li v-for="item in list.items.value" :id="itemId(item)" :key="item.id" tabindex="-1" class="rounded-xl">
+    <ul :class="cn('grid gap-4', listClass)">
+      <li v-for="item in list.items.value" :id="itemId(item)" :key="item.id" tabindex="-1" :class="itemClass ?? 'rounded-xl'">
         <slot name="item" :item="item" />
       </li>
     </ul>

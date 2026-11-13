@@ -33,19 +33,17 @@ function attach() {
 
 describe('ReviewCard', () => {
   it('shows the overall score first and links the reviewer', async () => {
-    const w = mount(ReviewCard, { props: { review, linkCreator: true }, attachTo: attach() })
+    const w = mount(ReviewCard, { props: { review, showCreator: true }, attachTo: attach() })
     const labels = w.findAll('[role=img]').map((e) => e.attributes('aria-label'))
-    expect(labels[0]).toBe('Overall: 7.6 out of 10')
-    expect(labels).toHaveLength(6)
+    expect(labels).toEqual(['Overall: 7.6 out of 10'])
     const link = w.findAll('a').find((a) => a.text() === 'Ana')
     expect(link?.attributes('href')).toBe('/reviewers/u5n1c8r3t6y0b2e')
     await expectAccessible(w.element)
   })
 
-  it('shows the reviewer name without a link in a list of one reviewer', () => {
+  it('does not name the reviewer in a list of one reviewer', () => {
     const w = mount(ReviewCard, { props: { review } })
-    expect(w.text()).toContain('Ana')
-    expect(w.findAll('a').some((a) => a.text() === 'Ana')).toBe(false)
+    expect(w.text()).not.toContain('Ana')
   })
 })
 
@@ -73,7 +71,7 @@ describe('ReviewerPage', () => {
     const w = await mountPage('u5n1c8r3t6y0b2e')
     expect(w.get('h1').text()).toBe('Ana')
     expect(w.text()).toContain('1 review')
-    expect(w.text()).toContain('A higher score is always better.')
+    expect(w.find('[role=search], input[type=search]').exists()).toBe(false)
     expect(w.findAll('a').some((a) => a.text() === 'Ana')).toBe(false)
     expect(w.text()).toContain('Great food, a bit expensive')
     expect(w.text()).toContain("Luigi's Trattoria")

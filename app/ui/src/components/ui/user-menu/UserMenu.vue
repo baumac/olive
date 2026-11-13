@@ -9,9 +9,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { themeOptions, useTheme } from '@/composables/useTheme'
 
 defineProps<{
   user: User | null
@@ -22,6 +25,8 @@ defineProps<{
 }>()
 
 defineEmits<{ signOut: [] }>()
+
+const { choice } = useTheme()
 </script>
 
 <template>
@@ -47,6 +52,11 @@ defineEmits<{ signOut: [] }>()
           My reviews
         </RouterLink>
       </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel id="user-menu-theme" class="text-muted-foreground text-xs font-normal">Theme</DropdownMenuLabel>
+      <DropdownMenuRadioGroup v-model="choice" aria-labelledby="user-menu-theme">
+        <DropdownMenuRadioItem v-for="o in themeOptions" :key="o.value" :value="o.value">{{ o.label }}</DropdownMenuRadioItem>
+      </DropdownMenuRadioGroup>
       <DropdownMenuSeparator />
       <DropdownMenuItem @select="$emit('signOut')">
         <LogOutIcon aria-hidden="true" />

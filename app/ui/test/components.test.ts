@@ -7,6 +7,7 @@ import { RatingInput } from '@/components/ui/rating-input'
 import { SignInForm } from '@/components/ui/sign-in-form'
 import { SignUpForm } from '@/components/ui/sign-up-form'
 import { TagInput } from '@/components/ui/tag-input'
+import { checkPassword } from '@/lib/validation'
 import { MessageSquareIcon } from 'lucide-vue-next'
 import { expectAccessible } from './axe'
 
@@ -20,14 +21,19 @@ describe('RatingDisplay', () => {
   it('names the score for screen readers', async () => {
     const w = mount(RatingDisplay, { props: { value: 8, max: 10, label: 'Food' }, attachTo: attach() })
     expect(w.get('[role=img]').attributes('aria-label')).toBe('Food: 8 out of 10')
-    expect(w.text()).toContain('8 / 10')
+    expect(w.text()).toBe('8')
     await expectAccessible(w.element)
   })
 
   it('shows an average with its decimal', () => {
     const w = mount(RatingDisplay, { props: { value: 7.6, max: 10, label: 'Overall' }, attachTo: attach() })
     expect(w.get('[role=img]').attributes('aria-label')).toBe('Overall: 7.6 out of 10')
-    expect(w.text()).toContain('7.6 / 10')
+    expect(w.text()).toBe('7.6')
+  })
+
+  it('shows the label only on request', () => {
+    const w = mount(RatingDisplay, { props: { value: 8, max: 10, label: 'Food', showLabel: true } })
+    expect(w.text()).toBe('Food8')
   })
 })
 
@@ -44,11 +50,13 @@ describe('RatingInput', () => {
 
   it('links its help text and the error message to the group', async () => {
     const w = mount(RatingInput, {
-      props: { max: 10, label: 'Price', id: 'price', description: 'Value for money.', lowest: 'poor value', highest: 'great value', describedBy: 'price-error' },
+      props: { max: 10, label: 'Value', id: 'price', description: 'Value for money.', lowest: 'poor value', highest: 'great value', describedBy: 'price-error' },
       attachTo: attach(),
     })
-    expect(w.get('[role=radiogroup]').attributes('aria-describedby')).toBe('price-description price-error')
-    expect(w.get('#price-description').findAll('p').map((p) => p.text())).toEqual(['Value for money.', '1 means poor value. 10 means great value.'])
+    expect(w.get('[role=radiogroup]').attributes('aria-describedby')).toBe('price-description price-ends price-error')
+    expect(w.get('#price-description').text()).toBe('Value for money.')
+    expect(w.get('#price-ends .sr-only').text()).toBe('1 means poor value. 10 means great value.')
+    expect(w.findAll('#price-ends [aria-hidden=true]').map((s) => s.text())).toEqual(['poor value', 'great value'])
     await expectAccessible(w.element)
   })
 
@@ -131,11 +139,11 @@ describe('SignUpForm', () => {
       props: { loading: false, error: null, errors: {}, signInPath: '/sign-in' },
       attachTo: attach(),
     })
-    await w.get('#sign-up-password').setValue('correct-horse')
-    await w.get('#sign-up-confirm').setValue('different-horse')
+    await w.get('#sign-up-password').setValue('short')
     await w.get('form').trigger('submit')
     expect(w.text()).toContain('Enter your name.')
-    expect(w.text()).toContain('The passwords do not match.')
+    expect(w.text()).toContain(checkPassword('short'))
+    expect(w.find('#sign-up-confirm').exists()).toBe(false)
     expect(w.emitted('submit')).toBeUndefined()
 
     await w.setProps({ errors: { email: 'Enter an email address, for example ana@example.com.' } })

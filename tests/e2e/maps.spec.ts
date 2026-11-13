@@ -1,4 +1,5 @@
 import { uniqueTag } from '../api'
+import type { Page } from '@playwright/test'
 import { expect, test } from '../fixtures'
 
 // The fake server of photon.ts gives the map tiles. The noCspViolations
@@ -6,17 +7,29 @@ import { expect, test } from '../fixtures'
 const barceloneta = { latitude: 41.3766, longitude: 2.1893, address: 'Carrer de Sant Carles 4, Barcelona' }
 const eixample = { latitude: 41.39, longitude: 2.16, address: 'Carrer Nou 1, Barcelona' }
 
+// restaurantMap gives the map of the restaurant page. A narrow page shows
+// the map only after a click.
+async function restaurantMap(page: Page, name: string) {
+  const map = page.getByRole('region', { name: `Map of ${name}` })
+  const showMap = page.getByRole('button', { name: 'Show map' })
+  await expect(map.or(showMap)).toBeVisible()
+  if (await showMap.isVisible()) {
+    await showMap.click()
+  }
+  await expect(map).toBeVisible()
+  return map
+}
+
 test('the restaurant page shows the location on a map', async ({ page, api }) => {
   const restaurant = await api.createRestaurant(await api.signUp('Joe'), { name: 'Can Sole', location: barceloneta })
 
   const tiles = page.waitForResponse((res) => res.url().includes('/tiles/') && res.ok())
   await page.goto(`/restaurants/${restaurant.id}`)
-  const map = page.getByRole('region', { name: 'Map of Can Sole' })
-  await expect(map).toBeVisible()
+  const map = await restaurantMap(page, 'Can Sole')
   await tiles
   await expect(map.getByRole('button', { name: 'Can Sole' })).toBeVisible()
   await expect(map.getByRole('link', { name: '© OpenStreetMap contributors' })).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright')
-  await expect(page.getByRole('link', { name: 'Open in OpenStreetMap' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: /^Address: .+, open in OpenStreetMap$/ })).toHaveAttribute(
     'href',
     'https://www.openstreetmap.org/?mlat=41.3766&mlon=2.1893#map=18/41.3766/2.1893',
   )
@@ -97,5 +110,6 @@ test('a click on the map sets the point of a location by hand', async ({ page, u
   await page.getByLabel('Name').fill('Pinned')
   await page.getByRole('button', { name: 'Add restaurant' }).click()
   await expect(page.getByRole('heading', { name: 'Pinned', level: 1 })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Map of Pinned' }).getByRole('button', { name: 'Pinned' })).toBeVisible()
+  const pinnedMap = await restaurantMap(page, 'Pinned')
+  await expect(pinnedMap.getByRole('button', { name: 'Pinned' })).toBeVisible()
 })

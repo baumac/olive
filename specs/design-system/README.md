@@ -9,7 +9,7 @@ The system is shadcn-vue with Tailwind CSS v4, as ADR 00002 decides. The tokens 
 - Speak to the person as "you". Keep sentences short and in the present tense.
 - Error text says what to do next: "Enter a title with at least one character that is not a space."
 - Show data as the API stores it: tags in lowercase with hyphens (`wood-fired`), names and titles as typed.
-- Name the review scores in plain words: "Space", "Service", "Food", "Price", "Cleanliness".
+- Name the review scores in plain words: "Space", "Service", "Food", "Value", "Cleanliness". The API calls the value score `price`. "Value" tells that a high score is good.
 - No emoji and no exclamation marks.
 
 ## Visual foundations

@@ -7,7 +7,7 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
   const response = await page.goto('/restaurants')
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'")
 
-  await page.getByRole('button', { name: /^Theme:/ }).click()
+  await page.getByRole('button', { name: /account menu/ }).click()
   await page.getByRole('menuitemradio', { name: 'Dark' }).click()
   await expect(page.locator('html')).toHaveClass(/dark/)
 
@@ -23,17 +23,19 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
   await expect(page.getByLabel('Tags')).toBeVisible()
   await page.keyboard.press('Escape')
   await page.getByRole('combobox', { name: 'Sort by' }).click()
-  await page.getByRole('option', { name: 'Name, A to Z' }).click()
+  await page.getByRole('option', { name: 'Name' }).click()
 
   const restaurant = await api.createRestaurant(user, { name: 'Strict Place' })
   await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
-  for (const label of ['Space', 'Service', 'Food', 'Price', 'Cleanliness']) {
+  for (const label of ['Space', 'Service', 'Food', 'Value', 'Cleanliness']) {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: '7 out of 10' }).click()
   }
   await page.getByLabel('Title').fill('Fine')
   await page.getByRole('button', { name: 'Save review' }).click()
   await expect(page.getByText('Review saved')).toBeVisible()
 
+  // A short review list shows the filters only with a sort in the URL.
+  await page.goto(`/restaurants/${restaurant.id}?sort=overall`)
   await page.getByRole('button', { name: 'Filters' }).click()
   await page.getByRole('combobox', { name: 'Food' }).click()
   await page.getByRole('option', { name: '7 or more' }).click()

@@ -9,7 +9,6 @@ import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { reviewersApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { scoreLegend } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ reviewerId: string }>()
@@ -46,10 +45,7 @@ const failedStatus = computed(() => {
         </div>
       </section>
       <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">
-        <div class="flex flex-col gap-1">
-          <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>
-          <p class="text-muted-foreground text-sm">{{ scoreLegend }}</p>
-        </div>
+        <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>
         <ReviewList :creator="reviewerId" :reviewer-name="isSelf ? undefined : reviewer.data.value.name" />
       </section>
     </template>

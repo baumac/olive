@@ -175,9 +175,9 @@ function removeChip(chip: Chip) {
         </PopoverContent>
       </Popover>
       <div class="flex items-center gap-2">
-        <Label for="list-sort" class="text-muted-foreground font-normal">{{ sortLabel }}</Label>
+        <Label for="list-sort" class="sr-only">{{ sortLabel }}</Label>
         <Select v-model="sort">
-          <SelectTrigger id="list-sort" class="min-w-44">
+          <SelectTrigger id="list-sort" class="min-w-36">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -186,6 +186,7 @@ function removeChip(chip: Chip) {
         </Select>
       </div>
       <p role="status" class="text-muted-foreground ml-auto text-sm">{{ status }}</p>
+      <slot name="end" />
     </div>
     <ul v-if="chips.length" class="flex flex-wrap items-center gap-2" aria-label="Active filters">
       <li v-for="chip in chips" :key="`${chip.key}-${chip.value}`">

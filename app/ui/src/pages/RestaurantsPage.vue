@@ -157,12 +157,7 @@ const lastView: { center: { latitude: number; longitude: number }; zoom: number 
 
 <template>
   <main id="main" class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <h1 class="text-4xl font-extrabold tracking-tight">Restaurants</h1>
-      <Button as-child>
-        <RouterLink to="/restaurants/new"><PlusIcon aria-hidden="true" />Add restaurant</RouterLink>
-      </Button>
-    </div>
+    <h1 class="sr-only">Restaurants</h1>
 
     <FilterBar
       v-model:filters="filters"
@@ -171,16 +166,21 @@ const lastView: { center: { latitude: number; longitude: number }; zoom: number 
       :sort-options="sortOptions"
       sort-label="Sort by"
       :status="status"
-    />
-
-    <div v-if="mapConfig" class="flex gap-2" role="group" aria-label="View">
-      <Button :variant="mapView ? 'outline' : 'secondary'" size="sm" :aria-pressed="!mapView" @click="show('list')">
-        <ListIcon aria-hidden="true" />List
-      </Button>
-      <Button :variant="mapView ? 'secondary' : 'outline'" size="sm" :aria-pressed="mapView" @click="show('map')">
-        <MapIcon aria-hidden="true" />Map
-      </Button>
-    </div>
+    >
+      <template #end>
+        <div v-if="mapConfig" class="flex gap-1" role="group" aria-label="View">
+          <Button :variant="mapView ? 'ghost' : 'secondary'" size="icon" aria-label="List" title="List" :aria-pressed="!mapView" @click="show('list')">
+            <ListIcon aria-hidden="true" />
+          </Button>
+          <Button :variant="mapView ? 'secondary' : 'ghost'" size="icon" aria-label="Map" title="Map" :aria-pressed="mapView" @click="show('map')">
+            <MapIcon aria-hidden="true" />
+          </Button>
+        </div>
+        <Button as-child>
+          <RouterLink to="/restaurants/new"><PlusIcon aria-hidden="true" />Add restaurant</RouterLink>
+        </Button>
+      </template>
+    </FilterBar>
 
     <div v-if="mapView && mapConfig" class="grid gap-4">
       <MapView
@@ -209,7 +209,7 @@ const lastView: { center: { latitude: number; longitude: number }; zoom: number 
       :list="list"
       noun="restaurants"
       list-class="lg:grid-cols-2 xl:grid-cols-3"
-      skeleton-class="h-40 rounded-xl"
+      skeleton-class="h-36 rounded-xl"
       :skeleton-count="6"
     >
       <template #item="{ item }"><RestaurantCard :restaurant="item" /></template>

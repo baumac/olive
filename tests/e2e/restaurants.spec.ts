@@ -78,6 +78,7 @@ test('a restaurant with a review of another user keeps its name and cannot be de
   await expect(page.getByLabel('Name')).not.toBeEditable()
   await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
   await expect(page.getByText('The location cannot change because other people have reviewed this restaurant.')).toBeVisible()
+  await expect(page.getByText('Other people have reviewed this restaurant. You cannot delete it.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Enter the location by hand' })).toHaveCount(0)
   await expect(page.getByLabel('Location')).not.toBeEditable()
   await page.getByLabel('Description').fill('Family run')
@@ -86,7 +87,6 @@ test('a restaurant with a review of another user keeps its name and cannot be de
   await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}$`))
   await expect(page.getByText('Family run')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Edit restaurant' })).toBeVisible()
-  await expect(page.getByText('Other people have reviewed this restaurant. You cannot delete it.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Delete restaurant' })).toHaveCount(0)
 })
 
@@ -191,10 +191,11 @@ test('restaurants show the average scores of their reviews', async ({ page, api 
   await expect(page.getByRole('listitem').filter({ hasText: 'New Place' })).toContainText('No reviews yet')
 
   await page.getByRole('link', { name: 'Rated Place' }).click()
-  const averages = page.getByRole('region', { name: 'Average of 2 reviews' })
+  const averages = page.getByRole('region', { name: 'Average scores' })
+  await expect(averages.getByRole('img', { name: 'Overall: 7.7 out of 10' })).toBeVisible()
   await expect(averages.getByRole('img', { name: 'Food: 9.5 out of 10' })).toBeVisible()
-  await expect(averages.getByRole('img', { name: 'Price: 5.5 out of 10' })).toBeVisible()
-  await expect(averages).toHaveAccessibleDescription('A higher score is always better. A high price score means good value for money.')
+  await expect(averages.getByRole('img', { name: 'Value: 5.5 out of 10' })).toBeVisible()
+  await expect(averages).toContainText('out of 10 · 2 reviews')
 })
 
 test('restaurants filter and sort by the overall rating', async ({ page, api }) => {
@@ -209,9 +210,6 @@ test('restaurants filter and sort by the overall rating', async ({ page, api }) 
 
   await page.goto(`/restaurants?tags=${tag}&sort=-overall`)
   await expect(names).toHaveText(['Top Place', 'Fine Place', 'Unrated Place'])
-
-  await page.goto(`/restaurants?tags=${tag}&sort=overall`)
-  await expect(names).toHaveText(['Fine Place', 'Top Place', 'Unrated Place'])
 
   await page.goto(`/restaurants?tags=${tag}&overall=8`)
   await expect(names).toHaveText(['Top Place'])

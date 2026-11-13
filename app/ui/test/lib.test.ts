@@ -5,7 +5,7 @@ import { restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
 import { restaurantAccess } from '@/lib/restaurants'
-import { scoreFields, scoresOf } from '@/lib/reviews'
+import { scoreFields } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 
 describe('format', () => {
@@ -109,10 +109,9 @@ describe('ratings', () => {
     expect([formatScore(7.6), formatScore(9), formatScore(10)]).toEqual(['7.6', '9', '10'])
   })
 
-  it('puts overall first', () => {
-    const rating = { overall: 7.6, space: 7.5, service: 8.5, food: 9, price: 5.5, cleanliness: 7.5 }
-    expect(scoresOf(rating).map((s) => `${s.label} ${s.value}`)).toEqual([
-      'Overall 7.6', 'Space 7.5', 'Service 8.5', 'Food 9', 'Price 5.5', 'Cleanliness 7.5',
+  it('names the price score by its meaning', () => {
+    expect(scoreFields.map((f) => `${f.name} ${f.label}`)).toEqual([
+      'space Space', 'service Service', 'food Food', 'price Value', 'cleanliness Cleanliness',
     ])
   })
 })
@@ -131,7 +130,7 @@ describe('restaurantFilterParams', () => {
 describe('scoreFields', () => {
   it('has the score descriptions of the API spec', () => {
     for (const f of scoreFields) {
-      const schema = `${f.label}Score`
+      const schema = `${f.name.charAt(0).toUpperCase()}${f.name.slice(1)}Score`
       const match = new RegExp(`\\n {4}${schema}:\\n {6}description: (.+)\\n`).exec(spec)
       expect(match?.[1], schema).toBe(f.description)
     }

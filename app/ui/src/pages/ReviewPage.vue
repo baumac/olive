@@ -9,14 +9,12 @@ import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import ReviewerLink from '@/components/app/ReviewerLink.vue'
 import ReviewPhotos from '@/components/app/ReviewPhotos.vue'
-import { InitialsAvatar } from '@/components/ui/avatar'
+import ScoreSummary from '@/components/app/ScoreSummary.vue'
 import { Button } from '@/components/ui/button'
-import { RatingDisplay } from '@/components/ui/rating-display'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
-import { scoreLegend, scoresOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string; reviewId: string }>()
@@ -64,15 +62,11 @@ async function remove() {
       </RouterLink>
       <div class="flex flex-col gap-3">
         <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ review.title }}</h1>
-        <p class="text-muted-foreground flex items-center gap-2 text-sm">
-          <InitialsAvatar :name="review.creator.name" size="sm" />
-          <span><ReviewerLink :creator="review.creator" /> · <DateText :created="review.created" :updated="review.updated" /></span>
+        <p class="text-muted-foreground text-sm">
+          <ReviewerLink :creator="review.creator" /> · <DateText :created="review.created" :updated="review.updated" />
         </p>
       </div>
-      <div class="grid gap-2">
-        <RatingDisplay v-for="s in scoresOf(review)" :key="s.name" :value="s.value" :max="s.max" :label="s.label" />
-        <p class="text-muted-foreground text-sm">{{ scoreLegend }}</p>
-      </div>
+      <ScoreSummary :scores="review" />
       <p v-if="review.feedback" class="leading-7 whitespace-pre-line">{{ review.feedback }}</p>
       <ReviewPhotos :review="review" :editable="isCreator" @change="review.photos = $event" />
       <div v-if="isCreator" class="flex flex-wrap gap-2 border-t pt-6">

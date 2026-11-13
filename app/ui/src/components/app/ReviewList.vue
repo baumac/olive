@@ -27,8 +27,11 @@ const props = withDefaults(
 )
 
 const limit = 20
+// A shorter list shows without the search, the filters, and the sort.
+const toolbarMinimum = 10
+const defaultSort = '-created'
 
-const { filters, sort, active, sortOptions } = useListQuery(reviewFilterDefs, reviewSortOptions, '-created', searchRelevance)
+const { filters, sort, active, sortOptions } = useListQuery(reviewFilterDefs, reviewSortOptions, defaultSort, searchRelevance)
 
 const list = usePagedList<Review>(async (cursor) => {
   const params = { limit, cursor, sort: sort.value, ...reviewFilterParams(filters.value) }
@@ -42,6 +45,17 @@ watch([filters, sort, () => props.restaurant?.id, () => props.creator], () => vo
 
 defineExpose({ reload: list.reload })
 
+// A list of one creator has no count before it loads. Without a filter, the
+// loaded page has all reviews or it has a next page.
+const total = computed(() => {
+  if (props.restaurant) {
+    return props.restaurant.reviewCount
+  }
+  return list.cursor.value ? toolbarMinimum : list.items.value.length
+})
+// A filter or a sort in the URL keeps the toolbar. The user can then remove it.
+const showToolbar = computed(() => active.value || sort.value !== defaultSort || total.value >= toolbarMinimum)
+
 const status = computed(() => {
   if (list.loading.value) {
     return 'Loading reviews'
@@ -52,8 +66,9 @@ const status = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-4">
     <FilterBar
+      v-if="showToolbar"
       v-model:filters="filters"
       v-model:sort="sort"
       :defs="reviewFilterDefs"
@@ -61,9 +76,17 @@ const status = computed(() => {
       sort-label="Sort by"
       :status="status"
     />
+    <p v-else role="status" class="sr-only">{{ status }}</p>
 
-    <PagedList :list="list" noun="reviews" skeleton-class="h-44 rounded-xl" :skeleton-count="3">
-      <template #item="{ item }"><ReviewCard :review="item" :show-restaurant="!restaurant" :link-creator="!!restaurant" /></template>
+    <PagedList
+      :list="list"
+      noun="reviews"
+      list-class="gap-0 divide-y border-y"
+      item-class="rounded-sm"
+      skeleton-class="my-4 h-20 rounded-md"
+      :skeleton-count="3"
+    >
+      <template #item="{ item }"><ReviewCard :review="item" :show-restaurant="!restaurant" :show-creator="!!restaurant" /></template>
       <template #empty>
         <EmptyState
           v-if="active"

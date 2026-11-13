@@ -15,12 +15,8 @@ export const restaurantFilterDefs: FilterDef[] = [
 
 export const restaurantSortOptions: Option[] = [
   { value: '-created', label: 'Newest' },
-  { value: 'created', label: 'Oldest' },
   { value: '-overall', label: 'Highest rated' },
-  { value: 'overall', label: 'Lowest rated' },
-  { value: 'name', label: 'Name, A to Z' },
-  { value: '-name', label: 'Name, Z to A' },
-  { value: '-updated', label: 'Recently updated' },
+  { value: 'name', label: 'Name' },
 ]
 
 // restaurantFilterParams changes the filters to the query parameters of the

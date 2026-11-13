@@ -26,7 +26,7 @@ test('a user adds a photo on the create form of a review', async ({ page, api, u
   const restaurant = await api.createRestaurant(owner, { name: 'New Photos' })
 
   await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
-  for (const label of ['Space', 'Service', 'Food', 'Price', 'Cleanliness']) {
+  for (const label of ['Space', 'Service', 'Food', 'Value', 'Cleanliness']) {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: '7 out of 10' }).click()
   }
   await page.getByLabel('Title').fill('With a menu')

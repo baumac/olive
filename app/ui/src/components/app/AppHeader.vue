@@ -5,16 +5,13 @@ import lockupDark from '@/assets/logos/sponga47-reviews-lockup-dark.svg'
 import lockupLight from '@/assets/logos/sponga47-reviews-lockup-light.svg'
 import markDark from '@/assets/logos/sponga47-reviews-mark-dark.svg'
 import markLight from '@/assets/logos/sponga47-reviews-mark-light.svg'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { UserMenu } from '@/components/ui/user-menu'
 import { signInPath, signOut } from '@/composables/useAuth'
 import { currentUser } from '@/lib/session'
-import { cn } from '@/lib/utils'
 
 const route = useRoute()
 const router = useRouter()
 
-const onRestaurants = computed(() => route.path.startsWith('/restaurants'))
 const onAuthPage = computed(() => route.path === '/sign-in' || route.path === '/sign-up')
 const signIn = computed(() => {
   if (onAuthPage.value) {
@@ -40,21 +37,7 @@ const signIn = computed(() => {
         <img :src="markLight" alt="" class="h-9 md:hidden dark:hidden" />
         <img :src="markDark" alt="" class="hidden h-9 dark:block dark:md:hidden" />
       </RouterLink>
-      <nav aria-label="Main" class="flex-1">
-        <RouterLink
-          to="/restaurants"
-          :aria-current="onRestaurants ? 'page' : undefined"
-          :class="
-            cn(
-              'hover:bg-accent hover:text-accent-foreground inline-flex h-9 items-center rounded-md px-3 text-sm font-medium',
-              onRestaurants && 'bg-accent text-accent-foreground',
-            )
-          "
-        >
-          Restaurants
-        </RouterLink>
-      </nav>
-      <ThemeToggle />
+      <div class="flex-1" />
       <UserMenu :user="currentUser" :sign-in-path="signIn" my-reviews-path="/my-reviews" :sign-in-current="route.path === '/sign-in'" @sign-out="signOut(router)" />
     </div>
   </header>

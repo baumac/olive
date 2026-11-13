@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Restaurant } from '@reviews/sdk'
 import { MapPinIcon, PencilIcon } from 'lucide-vue-next'
+import { useMediaQuery } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -8,11 +9,10 @@ import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import ReviewList from '@/components/app/ReviewList.vue'
-import { InitialsAvatar } from '@/components/ui/avatar'
+import ScoreSummary from '@/components/app/ScoreSummary.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MapView } from '@/components/ui/map'
-import { RatingDisplay } from '@/components/ui/rating-display'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
@@ -21,7 +21,7 @@ import { formatCount } from '@/lib/format'
 import { useMapConfig } from '@/lib/mapConfig'
 import { osmLink } from '@/lib/places'
 import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
-import { scoreLegend, scoresOf, tagList } from '@/lib/reviews'
+import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string }>()
@@ -56,6 +56,14 @@ watch(
 )
 
 const mapConfig = useMapConfig()
+// The wide layout shows the map next to the summary. The narrow layout
+// shows it only after the person opens it.
+const wide = useMediaQuery('(min-width: 1024px)')
+const mapOpen = ref(false)
+const marker = computed(() => {
+  const r = restaurant.data.value
+  return r?.location ? { id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name } : null
+})
 
 const access = computed(() => {
   if (!restaurant.data.value || ownReviewLookup.value === 'loading') {
@@ -106,11 +114,11 @@ async function remove() {
       <Skeleton class="h-6 w-1/2" />
     </div>
     <template v-else-if="restaurant.data.value">
-      <section class="flex flex-col gap-4">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-          <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ restaurant.data.value.name }}</h1>
-          <div v-if="access?.canChange" class="flex flex-col gap-2 sm:items-end">
-            <div class="flex flex-wrap gap-2">
+      <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+        <div class="flex min-w-0 flex-col gap-4">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ restaurant.data.value.name }}</h1>
+            <div v-if="access?.canChange" class="flex flex-wrap gap-2">
               <Button variant="outline" as-child>
                 <RouterLink :to="`/restaurants/${restaurantId}/edit`"><PencilIcon aria-hidden="true" />Edit restaurant</RouterLink>
               </Button>
@@ -122,70 +130,73 @@ async function remove() {
                 @confirm="remove"
               />
             </div>
-            <p v-if="access.hasOtherReviews" class="text-muted-foreground text-sm">
-              Other people have reviewed this restaurant. You cannot delete it.
-            </p>
           </div>
-        </div>
-        <p v-if="restaurant.data.value.description" class="text-muted-foreground max-w-2xl text-xl whitespace-pre-line">
-          {{ restaurant.data.value.description }}
-        </p>
-        <p v-if="restaurant.data.value.location" class="flex items-start gap-2">
-          <MapPinIcon class="text-muted-foreground mt-1 size-4 shrink-0" aria-hidden="true" />
-          <span><span class="sr-only">Address: </span>{{ restaurant.data.value.location.address }}</span>
-        </p>
-        <div v-if="restaurant.data.value.location && mapConfig" class="grid max-w-2xl gap-2">
-          <MapView
-            :config="mapConfig"
-            :label="`Map of ${restaurant.data.value.name}`"
-            :center="restaurant.data.value.location"
-            :zoom="16"
-            :markers="[{ id: restaurant.data.value.id, ...restaurant.data.value.location, label: restaurant.data.value.name }]"
-            class="h-56"
-          />
-          <p class="text-sm">
+          <p v-if="restaurant.data.value.description" class="text-muted-foreground max-w-2xl text-xl whitespace-pre-line">
+            {{ restaurant.data.value.description }}
+          </p>
+          <p v-if="restaurant.data.value.location" class="flex flex-wrap items-start gap-x-4 gap-y-1">
             <a
               :href="osmLink(restaurant.data.value.location)"
               target="_blank"
               rel="noopener noreferrer"
-              class="font-medium underline underline-offset-4"
+              class="inline-flex items-start gap-2 underline underline-offset-4"
             >
-              Open in OpenStreetMap
+              <MapPinIcon class="text-muted-foreground mt-1 size-4 shrink-0" aria-hidden="true" />
+              <span>
+                <span class="sr-only">Address: </span>{{ restaurant.data.value.location.address
+                }}<span class="sr-only">, open in OpenStreetMap</span>
+              </span>
             </a>
+            <button
+              v-if="mapConfig && !wide"
+              type="button"
+              class="text-muted-foreground rounded-sm text-sm font-medium underline underline-offset-4"
+              :aria-expanded="mapOpen"
+              @click="mapOpen = !mapOpen"
+            >
+              {{ mapOpen ? 'Hide map' : 'Show map' }}
+            </button>
           </p>
-        </div>
-        <p v-else-if="!restaurant.data.value.location && access?.canChange" class="text-muted-foreground flex items-start gap-2">
-          <MapPinIcon class="mt-1 size-4 shrink-0" aria-hidden="true" />
-          <span>
-            This restaurant has no location.
-            <RouterLink :to="`/restaurants/${restaurantId}/edit`" class="text-foreground font-medium underline underline-offset-4">
-              Add the location
-            </RouterLink>
-          </span>
-        </p>
-        <ul v-if="tagList(restaurant.data.value.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
-          <li v-for="tag in tagList(restaurant.data.value.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
-        </ul>
-        <section v-if="restaurant.data.value.rating" class="grid gap-2" aria-labelledby="rating-heading" aria-describedby="rating-legend">
-          <h2 id="rating-heading" class="text-sm font-medium">
-            Average of {{ formatCount(restaurant.data.value.reviewCount, 'review') }}
-          </h2>
-          <RatingDisplay
-            v-for="s in scoresOf(restaurant.data.value.rating)"
-            :key="s.name"
-            :value="s.value"
-            :max="s.max"
-            :label="s.label"
+          <p v-else-if="access?.canChange" class="text-muted-foreground flex items-start gap-2">
+            <MapPinIcon class="mt-1 size-4 shrink-0" aria-hidden="true" />
+            <span>
+              This restaurant has no location.
+              <RouterLink :to="`/restaurants/${restaurantId}/edit`" class="text-foreground font-medium underline underline-offset-4">
+                Add the location
+              </RouterLink>
+            </span>
+          </p>
+          <MapView
+            v-if="marker && mapConfig && !wide && mapOpen"
+            :config="mapConfig"
+            :label="`Map of ${restaurant.data.value.name}`"
+            :center="marker"
+            :zoom="16"
+            :markers="[marker]"
+            class="h-56"
           />
-          <p id="rating-legend" class="text-muted-foreground text-sm">{{ scoreLegend }}</p>
-        </section>
-        <p class="text-muted-foreground flex items-center gap-2 text-sm">
-          <InitialsAvatar :name="restaurant.data.value.creator?.name ?? null" size="sm" />
-          <span>
+          <ul v-if="tagList(restaurant.data.value.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
+            <li v-for="tag in tagList(restaurant.data.value.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
+          </ul>
+          <section v-if="restaurant.data.value.rating" aria-label="Average scores">
+            <ScoreSummary :scores="restaurant.data.value.rating">
+              {{ formatCount(restaurant.data.value.reviewCount, 'review') }}
+            </ScoreSummary>
+          </section>
+          <p class="text-muted-foreground text-sm">
             Added by {{ restaurant.data.value.creator?.name ?? 'Deleted user' }} ·
             <DateText :created="restaurant.data.value.created" :updated="restaurant.data.value.updated" />
-          </span>
-        </p>
+          </p>
+        </div>
+        <MapView
+          v-if="marker && mapConfig && wide"
+          :config="mapConfig"
+          :label="`Map of ${restaurant.data.value.name}`"
+          :center="marker"
+          :zoom="16"
+          :markers="[marker]"
+          class="h-72"
+        />
       </section>
 
       <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">

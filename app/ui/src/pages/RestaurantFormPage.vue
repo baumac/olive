@@ -296,6 +296,9 @@ async function submit() {
         </Button>
         <Button variant="outline" as-child><RouterLink :to="cancelPath">Cancel</RouterLink></Button>
       </div>
+      <p v-if="nameLocked" class="text-muted-foreground text-sm">
+        Other people have reviewed this restaurant. You cannot delete it.
+      </p>
     </form>
   </main>
 </template>

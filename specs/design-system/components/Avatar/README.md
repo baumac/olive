@@ -8,4 +8,5 @@ From shadcn-vue (`@/components/ui/avatar`): `Avatar`, `AvatarImage`, `AvatarFall
 - `creator` is `null` after a user is deleted. Show "?" with an outline and the text "Deleted user".
 - Fill is `muted`, text is `foreground` (15.4:1 light, 13.8:1 dark).
 - When the name shows beside it, the avatar is decorative: `aria-hidden="true"`. Alone, it has `role="img"` and an `aria-label` with the name.
-- Use `sm` in card footers, `default` in `UserMenu`.
+- Use `default` in `UserMenu` and `lg` on the reviewer page.
+- Use it only in `UserMenu` and at the top of the reviewer page. Cards and bylines show the name as text. See decision 00019.

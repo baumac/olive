@@ -2,23 +2,34 @@
 import { formatScore } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-defineProps<{
-  value: number
-  max: number
-  label: string
-}>()
+const sizes = {
+  sm: 'text-sm',
+  md: 'text-base',
+  lg: 'text-5xl leading-none font-extrabold tracking-tight',
+}
+
+withDefaults(
+  defineProps<{
+    value: number
+    max: number
+    label: string
+    // showLabel shows the label before the number. The accessible name
+    // always has the label.
+    showLabel?: boolean
+    size?: 'sm' | 'md' | 'lg'
+  }>(),
+  { showLabel: false, size: 'sm' },
+)
 </script>
 
 <template>
-  <div role="img" :aria-label="`${label}: ${formatScore(value)} out of ${max}`" class="flex items-center gap-3">
-    <span class="text-muted-foreground w-16 shrink-0 text-sm" aria-hidden="true">{{ label }}</span>
-    <span class="flex gap-1" aria-hidden="true">
-      <span
-        v-for="n in max"
-        :key="n"
-        :class="cn('size-2.5 rounded-full', n <= value ? 'bg-primary' : 'bg-muted ring-input ring-1 ring-inset')"
-      />
+  <span role="img" :aria-label="`${label}: ${formatScore(value)} out of ${max}`" class="inline-flex items-baseline gap-1.5">
+    <span v-if="showLabel" class="text-muted-foreground text-sm" aria-hidden="true">{{ label }}</span>
+    <span
+      :class="cn('text-foreground font-semibold tabular-nums', sizes[size])"
+      aria-hidden="true"
+    >
+      {{ formatScore(value) }}
     </span>
-    <span class="text-sm font-medium tabular-nums" aria-hidden="true">{{ formatScore(value) }} / {{ max }}</span>
-  </div>
+  </span>
 </template>

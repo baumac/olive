@@ -24,41 +24,50 @@ const value = computed({
 })
 
 const fallbackId = useId()
-const helpId = `${props.id ?? fallbackId}-description`
-const hasHelp = computed(() => !!(props.description || (props.lowest && props.highest)))
-const ariaDescribedBy = computed(() => [hasHelp.value && helpId, props.describedBy].filter(Boolean).join(' ') || undefined)
+const baseId = props.id ?? fallbackId
+const descriptionId = `${baseId}-description`
+const endsId = `${baseId}-ends`
+const hasEnds = computed(() => !!(props.lowest && props.highest))
+const ariaDescribedBy = computed(
+  () => [props.description && descriptionId, hasEnds.value && endsId, props.describedBy].filter(Boolean).join(' ') || undefined,
+)
 </script>
 
 <template>
   <div class="grid gap-2">
-    <RadioGroupRoot
-      :id="props.id"
-      v-model="value"
-      orientation="horizontal"
-      :aria-label="label"
-      :aria-invalid="invalid ? 'true' : undefined"
-      :aria-describedby="ariaDescribedBy"
-      class="flex flex-wrap gap-1"
-    >
-      <RadioGroupItem
-        v-for="n in max"
-        :key="n"
-        :value="String(n)"
-        :aria-label="`${n} out of ${max}`"
-        :class="
-          cn(
-            'border-input bg-background hover:bg-accent hover:text-accent-foreground inline-flex size-8 items-center justify-center rounded-md border text-sm font-medium tabular-nums shadow-xs',
-            'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary',
-            invalid && 'border-destructive',
-          )
-        "
+    <p v-if="description" :id="descriptionId" class="text-muted-foreground text-sm">{{ description }}</p>
+    <div class="grid w-fit max-w-full gap-1">
+      <RadioGroupRoot
+        :id="props.id"
+        v-model="value"
+        orientation="horizontal"
+        :aria-label="label"
+        :aria-invalid="invalid ? 'true' : undefined"
+        :aria-describedby="ariaDescribedBy"
+        class="flex flex-wrap gap-1"
       >
-        {{ n }}
-      </RadioGroupItem>
-    </RadioGroupRoot>
-    <div v-if="hasHelp" :id="helpId" class="text-muted-foreground grid gap-1 text-sm">
-      <p v-if="description">{{ description }}</p>
-      <p v-if="lowest && highest">1 means {{ lowest }}. {{ max }} means {{ highest }}.</p>
+        <RadioGroupItem
+          v-for="n in max"
+          :key="n"
+          :value="String(n)"
+          :aria-label="`${n} out of ${max}`"
+          :class="
+            cn(
+              'border-input bg-background hover:bg-accent hover:text-accent-foreground inline-flex size-8 items-center justify-center rounded-md border text-sm font-medium tabular-nums shadow-xs',
+              'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary',
+              invalid && 'border-destructive',
+            )
+          "
+        >
+          {{ n }}
+        </RadioGroupItem>
+      </RadioGroupRoot>
+      <!-- A screen reader gets the sentence, not the two words. -->
+      <p v-if="hasEnds" :id="endsId" class="text-muted-foreground flex justify-between gap-4 text-xs">
+        <span aria-hidden="true">{{ lowest }}</span>
+        <span aria-hidden="true">{{ highest }}</span>
+        <span class="sr-only">1 means {{ lowest }}. {{ max }} means {{ highest }}.</span>
+      </p>
     </div>
   </div>
 </template>

@@ -9,11 +9,11 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
   await expect(page.getByRole('tab')).toHaveCount(0)
   await page.getByRole('button', { name: 'Save review' }).click()
   await expect(page.getByText('Select a space score.')).toBeVisible()
-  await expect(page.getByRole('radiogroup', { name: 'Price' })).toHaveAccessibleDescription(
-    'Value for money, and whether the final bill matches the quality provided. 1 means poor value for money. 10 means great value for money. Select a price score.',
+  await expect(page.getByRole('radiogroup', { name: 'Value' })).toHaveAccessibleDescription(
+    'Value for money, and whether the final bill matches the quality provided. 1 means poor value. 10 means great value. Select a value score.',
   )
 
-  for (const [label, score] of [['Space', 7], ['Service', 9], ['Food', 8], ['Price', 6], ['Cleanliness', 5]] as const) {
+  for (const [label, score] of [['Space', 7], ['Service', 9], ['Food', 8], ['Value', 6], ['Cleanliness', 5]] as const) {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: `${score} out of 10` }).click()
   }
   await page.getByLabel('Title').fill('Great food, a bit expensive')
@@ -23,8 +23,8 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
 
   await expect(page.getByText('Review saved')).toBeVisible()
   const card = page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').filter({ hasText: 'Great food, a bit expensive' })
-  await expect(card.getByRole('img', { name: 'Food: 8 out of 10' })).toBeVisible()
-  await expect(card.getByRole('img', { name: 'Cleanliness: 5 out of 10' })).toBeVisible()
+  await expect(card.getByRole('img', { name: 'Overall: 7 out of 10' })).toBeVisible()
+  await expect(card.getByRole('img')).toHaveCount(1)
   await expect(card).toContainText(user.name)
   await expect(page.getByRole('link', { name: 'Edit your review' })).toBeVisible()
 })
@@ -52,11 +52,15 @@ test('filters and score sorts select and order reviews', async ({ page, api }) =
 
   const titles = page.getByRole('heading', { level: 3 })
 
-  await page.goto(`/restaurants/${restaurant.id}?sort=-food`)
-  await expect(titles).toHaveText(['Best food', 'Good food', 'Poor food'])
+  await page.goto(`/restaurants/${restaurant.id}`)
+  await expect(titles).toHaveCount(3)
+  await expect(page.getByRole('searchbox', { name: 'Search reviews' })).toHaveCount(0)
 
-  await page.goto(`/restaurants/${restaurant.id}?sort=-price`)
-  await expect(titles).toHaveText(['Poor food', 'Good food', 'Best food'])
+  await page.goto(`/restaurants/${restaurant.id}?sort=-overall`)
+  await expect(titles).toHaveText(['Good food', 'Poor food', 'Best food'])
+
+  await page.goto(`/restaurants/${restaurant.id}?sort=overall`)
+  await expect(titles).toHaveText(['Best food', 'Poor food', 'Good food'])
 
   await page.goto(`/restaurants/${restaurant.id}?food=8`)
   await expect(titles).toHaveText(['Good food', 'Best food'])
@@ -75,7 +79,7 @@ test('the creator edits and deletes a review', async ({ page, api, user }) => {
   await expect(page.getByRole('radiogroup', { name: 'Food' }).getByRole('radio', { name: '3 out of 10' })).toBeChecked()
   await page.getByRole('radiogroup', { name: 'Food' }).getByRole('radio', { name: '9 out of 10' }).click()
   await page.getByRole('button', { name: 'Save review' }).click()
-  await expect(page.getByRole('region', { name: 'Reviews' }).getByRole('img', { name: 'Food: 9 out of 10' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Reviews' }).getByRole('img', { name: 'Overall: 4.2 out of 10' })).toBeVisible()
   await expect(page.getByText('edited')).toBeVisible()
 
   await page.getByRole('link', { name: 'Okay' }).click()
@@ -104,11 +108,12 @@ test('my reviews lists the reviews of the user at all restaurants', async ({ pag
   await expect(page.getByRole('heading', { name: 'First Place', level: 1 })).toBeVisible()
 })
 
-test('the main navigation has no reviews link', async ({ page }) => {
+test('the header has only the home link', async ({ page }) => {
   await page.goto('/restaurants')
-  const nav = page.getByRole('navigation', { name: 'Main' })
-  await expect(nav.getByRole('link', { name: 'Restaurants' })).toBeVisible()
-  await expect(nav.getByRole('link', { name: 'Reviews' })).toHaveCount(0)
+  const header = page.getByRole('banner')
+  await expect(header.getByRole('link', { name: 'Sponga47 Reviews, home' })).toBeVisible()
+  await expect(header.getByRole('navigation')).toHaveCount(0)
+  await expect(header.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0)
 })
 
 test('my reviews needs an account', async ({ page }) => {
@@ -130,7 +135,8 @@ test('the search box finds reviews by their text', async ({ page, api, user }) =
   await api.createReview(user, second.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'Fine', feedback: `Try the ${word}.` })
   await api.createReview(owner, first.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: `Not mine, also ${word}` })
 
-  await page.goto('/my-reviews')
+  // A short list shows the search box only with a filter in the URL.
+  await page.goto('/my-reviews?search=Fine')
   await page.getByRole('searchbox', { name: 'Search reviews' }).fill(word)
   await expect(page.getByRole('heading', { level: 3 })).toHaveText([`The ${word} was good`, 'Fine'])
 })

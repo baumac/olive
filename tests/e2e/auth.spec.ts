@@ -6,7 +6,6 @@ test('sign up signs the person in', async ({ page }) => {
   await page.getByLabel('Name').fill('Dana')
   await page.getByLabel('Email').fill(`dana-${Date.now()}@example.test`)
   await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
-  await page.getByLabel('Confirm password').fill('correct-horse-battery')
   await page.getByRole('button', { name: 'Create account' }).click()
 
   await expect(page).toHaveURL(/\/restaurants$/)

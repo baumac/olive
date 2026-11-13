@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import ReviewList from '@/components/app/ReviewList.vue'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { scoreLegend } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
 usePageTitle('My reviews')
@@ -9,10 +8,7 @@ usePageTitle('My reviews')
 
 <template>
   <main id="main" class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-4xl font-extrabold tracking-tight">My reviews</h1>
-      <p class="text-muted-foreground text-sm">{{ scoreLegend }}</p>
-    </div>
+    <h1 class="text-4xl font-extrabold tracking-tight">My reviews</h1>
     <ReviewList v-if="currentUser" :creator="currentUser.id" />
   </main>
 </template>

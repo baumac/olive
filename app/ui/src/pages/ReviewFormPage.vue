@@ -293,7 +293,7 @@ async function submit() {
     <div v-if="loading" aria-busy="true" aria-label="Loading review" class="grid gap-4">
       <Skeleton class="h-9 w-48" /><Skeleton class="h-16" /><Skeleton class="h-9" /><Skeleton class="h-24" />
     </div>
-    <form v-else class="grid gap-6" novalidate @submit.prevent="submit">
+    <form v-else id="review-form" class="grid gap-6" novalidate @submit.prevent="submit">
       <Alert v-if="alert" variant="destructive">
         <CircleAlertIcon aria-hidden="true" />
         <AlertTitle>{{ alert.title }}</AlertTitle>
@@ -340,10 +340,6 @@ async function submit() {
         <FormDescription>Optional. What did you like, and what not?</FormDescription>
         <FormMessage />
       </FormItem>
-      <div class="flex flex-wrap gap-2">
-        <Button type="submit" :disabled="saving || uploading">{{ saving ? 'Saving…' : 'Save review' }}</Button>
-        <Button variant="outline" as-child><RouterLink :to="restaurantPath">Cancel</RouterLink></Button>
-      </div>
     </form>
     <section v-if="!loading" class="grid gap-4 border-t pt-6" aria-labelledby="review-photos-title">
       <div class="grid gap-1">
@@ -378,5 +374,10 @@ async function submit() {
       />
       <p v-else class="text-muted-foreground text-sm">This review has {{ maxPhotos }} photos. Delete one to add another.</p>
     </section>
+    <!-- The buttons are after the photos. The form attribute joins them to the form. -->
+    <div v-if="!loading" class="flex flex-wrap gap-2 border-t pt-6">
+      <Button type="submit" form="review-form" :disabled="saving || uploading">{{ saving ? 'Saving…' : 'Save review' }}</Button>
+      <Button variant="outline" as-child><RouterLink :to="restaurantPath">Cancel</RouterLink></Button>
+    </div>
   </main>
 </template>

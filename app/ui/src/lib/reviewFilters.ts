@@ -12,20 +12,14 @@ export const reviewFilterDefs: FilterDef[] = [
   { key: 'food', label: 'Food', type: 'select', options: scoreOptions(10), chip: (v) => `Food: ${v} or more` },
   { key: 'service', label: 'Service', type: 'select', options: scoreOptions(10), chip: (v) => `Service: ${v} or more` },
   { key: 'space', label: 'Space', type: 'select', options: scoreOptions(10), chip: (v) => `Space: ${v} or more` },
-  { key: 'price', label: 'Price', type: 'select', options: scoreOptions(10), chip: (v) => `Price: ${v} or more` },
+  { key: 'price', label: 'Value', type: 'select', options: scoreOptions(10), chip: (v) => `Value: ${v} or more` },
   { key: 'cleanliness', label: 'Cleanliness', type: 'select', options: scoreOptions(10), chip: (v) => `Cleanliness: ${v} or more` },
 ]
 
 export const reviewSortOptions: Option[] = [
   { value: '-created', label: 'Newest' },
-  { value: 'created', label: 'Oldest' },
-  { value: '-overall', label: 'Best overall' },
-  { value: '-food', label: 'Best food' },
-  { value: '-service', label: 'Best service' },
-  { value: '-space', label: 'Best space' },
-  { value: '-price', label: 'Best value for money' },
-  { value: '-cleanliness', label: 'Cleanest' },
-  { value: 'title', label: 'Title, A to Z' },
+  { value: '-overall', label: 'Highest rated' },
+  { value: 'overall', label: 'Lowest rated' },
 ]
 
 function atLeast(filters: Record<string, FilterValue>, key: string) {

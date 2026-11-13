@@ -1,49 +1,40 @@
 <script setup lang="ts">
 import type { Review } from '@reviews/sdk'
-import { computed } from 'vue'
-import { InitialsAvatar } from '@/components/ui/avatar'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { RatingDisplay } from '@/components/ui/rating-display'
-import { scoresOf } from '@/lib/reviews'
 import DateText from './DateText.vue'
 import ReviewerLink from './ReviewerLink.vue'
 import ReviewPhotos from './ReviewPhotos.vue'
 
-const props = defineProps<{
+defineProps<{
   review: Review
   // showRestaurant names the restaurant. Lists of many restaurants need it.
   showRestaurant?: boolean
-  // linkCreator links the creator name to the reviewer page.
-  linkCreator?: boolean
+  // showCreator names the creator with a link to the reviewer page. A list
+  // of one reviewer does not need it.
+  showCreator?: boolean
 }>()
-
-const scores = computed(() => scoresOf(props.review))
 </script>
 
 <template>
-  <Card>
-    <CardHeader>
-      <CardTitle as="h3" class="text-base leading-snug">
-          <RouterLink :to="`/restaurants/${review.restaurant}/reviews/${review.id}`" class="rounded-sm hover:underline">
-            {{ review.title }}
-          </RouterLink>
-        </CardTitle>
-      <CardDescription v-if="showRestaurant">
+  <article class="grid gap-2 py-5">
+    <div class="flex items-baseline gap-3">
+      <RatingDisplay :value="review.overall" :max="10" label="Overall" size="md" class="w-8 shrink-0" />
+      <h3 class="min-w-0 leading-snug font-semibold break-words">
+        <RouterLink :to="`/restaurants/${review.restaurant}/reviews/${review.id}`" class="rounded-sm hover:underline">
+          {{ review.title }}
+        </RouterLink>
+      </h3>
+    </div>
+    <div class="grid gap-2 pl-11">
+      <p v-if="showRestaurant" class="text-muted-foreground text-sm">
         <RouterLink :to="`/restaurants/${review.restaurant}`" class="hover:underline">{{ review.restaurantName }}</RouterLink>
-      </CardDescription>
-    </CardHeader>
-    <CardContent class="grid gap-4">
-      <div class="grid gap-1.5">
-        <RatingDisplay v-for="s in scores" :key="s.name" :value="s.value" :max="s.max" :label="s.label" />
-      </div>
+      </p>
       <p v-if="review.feedback" class="line-clamp-3 whitespace-pre-line">{{ review.feedback }}</p>
       <ReviewPhotos :review="review" />
-    </CardContent>
-    <CardFooter class="text-muted-foreground flex flex-wrap gap-2 text-sm">
-      <span class="flex items-center gap-2">
-        <InitialsAvatar :name="review.creator.name" size="sm" />
-        <span><ReviewerLink v-if="linkCreator" :creator="review.creator" /><template v-else>{{ review.creator.name }}</template> · <DateText :created="review.created" :updated="review.updated" /></span>
-      </span>
-    </CardFooter>
-  </Card>
+      <p class="text-muted-foreground text-sm">
+        <template v-if="showCreator"><ReviewerLink :creator="review.creator" /> · </template>
+        <DateText :created="review.created" :updated="review.updated" />
+      </p>
+    </div>
+  </article>
 </template>

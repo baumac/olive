@@ -34,7 +34,13 @@ function descriptionOf(group: Element): string {
     const paragraphs = el?.querySelectorAll('p')
     return paragraphs?.length ? [...paragraphs] : el ? [el] : []
   })
-  return parts.map((p) => p.textContent?.replace(/\s+/g, ' ').trim()).join(' ')
+  return parts
+    .map((p) => {
+      const copy = p.cloneNode(true) as Element
+      copy.querySelectorAll('[aria-hidden=true]').forEach((hidden) => hidden.remove())
+      return copy.textContent?.replace(/\s+/g, ' ').trim()
+    })
+    .join(' ')
 }
 
 describe('ReviewFormPage scores', () => {
@@ -43,10 +49,10 @@ describe('ReviewFormPage scores', () => {
   it('links the meaning of each score and its scale to the group', async () => {
     const w = await mountForm()
     const groups = w.findAll('[role=radiogroup]')
-    expect(groups.map((g) => g.attributes('aria-label'))).toEqual(['Space', 'Service', 'Food', 'Price', 'Cleanliness'])
+    expect(groups.map((g) => g.attributes('aria-label'))).toEqual(['Space', 'Service', 'Food', 'Value', 'Cleanliness'])
     const price = groups[3]!.element
     expect(descriptionOf(price)).toBe(
-      'Value for money, and whether the final bill matches the quality provided. 1 means poor value for money. 10 means great value for money.',
+      'Value for money, and whether the final bill matches the quality provided. 1 means poor value. 10 means great value.',
     )
     for (const g of groups) {
       expect(descriptionOf(g.element)).toMatch(/1 means .+\. 10 means .+\.$/)
@@ -58,8 +64,8 @@ describe('ReviewFormPage scores', () => {
     const w = await mountForm()
     await w.get('form').trigger('submit')
     const space = w.get('[role=radiogroup][aria-label=Space]')
-    expect(space.attributes('aria-describedby')).toBe('review-space-description review-space-message')
+    expect(space.attributes('aria-describedby')).toBe('review-space-description review-space-ends review-space-message')
     expect(descriptionOf(space.element)).toContain('Select a space score.')
-    expect(descriptionOf(space.element)).toContain('1 means uncomfortable, dull, and badly set up.')
+    expect(descriptionOf(space.element)).toContain('1 means uncomfortable.')
   })
 })
