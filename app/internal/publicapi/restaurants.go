@@ -45,6 +45,9 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if detail := overallDetail(p.Overall); detail != "" {
 		return bad(detail)
 	}
+	if p.Within != nil && p.Within.South > p.Within.North {
+		return bad("The within[south] parameter must not be more than within[north].")
+	}
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
 	parts := []any{"restaurants", p}
 	// The overall sort keys changed in decision 00012. The version rejects
@@ -68,6 +71,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	}
 	w.compare(overallColumn, averageComparisons(p.Overall))
 	w.near(p.Near)
+	w.within(p.Within)
 	w.tagFilters(p.TagsHas, p.TagsHasAny, p.TagsHasAll)
 	w.idFilters("restaurants", "creator", p.CreatorEq, p.CreatorIn)
 	w.compare(column("restaurants", "created"), timestampComparisons(p.Created))

@@ -2,11 +2,22 @@ import { createHash } from 'node:crypto'
 import type { Server } from 'node:http'
 import { createServer } from 'node:http'
 
+// tile is a gray PNG of 1 by 1 pixel.
+const tile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGO4CwAA3wDeKXlwtgAAAABJRU5ErkJggg==', 'base64')
+
 // startPhoton starts a fake of the Photon geocoder of decision 00017. A
 // search with the word "nothing" finds no place. Each other search finds a
 // restaurant with the name of the search and then an address.
+//
+// Each path under /tiles gets one map tile for decision 00018.
 export async function startPhoton(port: number): Promise<{ url: string; stop: () => Promise<void> }> {
   const server: Server = createServer((req, res) => {
+    if (req.url?.startsWith('/tiles/')) {
+      res.setHeader('Content-Type', 'image/png')
+      res.setHeader('Cache-Control', 'max-age=3600')
+      res.end(tile)
+      return
+    }
     const q = new URL(req.url ?? '/', 'http://photon').searchParams.get('q') ?? ''
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ features: /\bnothing\b/i.test(q) ? [] : placesOf(q) }))

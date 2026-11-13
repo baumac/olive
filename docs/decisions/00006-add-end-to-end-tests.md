@@ -98,7 +98,7 @@ tests/
   app.ts                # starts ./bin/reviews-app with a new data folder
   fixtures.ts           # the api fixture and the signed in page fixture
   api.ts                # test data through @reviews/sdk
-  photon.ts             # the fake geocoder of decision 00017
+  photon.ts             # the fake geocoder of decision 00017 and the fake map tiles of decision 00018
   e2e/
     restaurants.spec.ts
     reviews.spec.ts

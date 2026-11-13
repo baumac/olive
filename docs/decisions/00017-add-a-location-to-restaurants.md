@@ -250,7 +250,7 @@ Environment variables:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- The map of the restaurants and its tile server. The plan is Leaflet with the tiles of `tile.openstreetmap.org`, loaded by the browser.
+- The map of the restaurants and its tile server. Decision 00018 added them.
 - A sort by distance. It needs a cursor with the distance.
 - OpenStreetMap can delete a place or give it a new ID. The restaurant keeps the old `place_id`, and a second restaurant at the place is then possible.
 - The restaurants from before this decision have no location until a user adds one.

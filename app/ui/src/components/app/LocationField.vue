@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import type { Location, Place } from '@reviews/sdk'
 import { MapPinIcon } from 'lucide-vue-next'
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MapView } from '@/components/ui/map'
+import type { MapPoint } from '@/components/ui/map'
 import { apiFailure, placesApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { defaultCenter, minPlaceSearch, parseCoordinate } from '@/lib/places'
+import { useMapConfig } from '@/lib/mapConfig'
+import { defaultCenter, minPlaceSearch, parseCoordinate, roundCoordinate } from '@/lib/places'
 
 defineProps<{
   id: string
@@ -20,6 +23,7 @@ defineProps<{
 const location = defineModel<Location | null>({ default: null })
 const emit = defineEmits<{ named: [name: string] }>()
 
+const mapConfig = useMapConfig()
 const byHand = ref(false)
 const text = ref('')
 const places = ref<Place[]>([])
@@ -88,6 +92,18 @@ function enterByHand() {
   byHand.value = true
 }
 
+// handPoint is the point of the fields by hand, or null if they are not
+// valid.
+const handPoint = computed<MapPoint | null>(() => {
+  const latitude = parseCoordinate(hand.value.latitude, 90)
+  const longitude = parseCoordinate(hand.value.longitude, 180)
+  return latitude !== null && longitude !== null ? { latitude, longitude } : null
+})
+
+function pick(point: MapPoint) {
+  hand.value = { ...hand.value, latitude: String(roundCoordinate(point.latitude)), longitude: String(roundCoordinate(point.longitude)) }
+}
+
 // A changed location by hand has no place ID. The fields must all be valid.
 watch(
   hand,
@@ -123,6 +139,15 @@ watch(
       <MapPinIcon class="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <span><span class="sr-only">Selected location: </span>{{ location.address }}</span>
     </p>
+    <MapView
+      v-if="location && mapConfig && (locked || !byHand)"
+      :config="mapConfig"
+      label="Map of the selected place"
+      :center="location"
+      :zoom="16"
+      :markers="[{ id: 'location', latitude: location.latitude, longitude: location.longitude, label: location.address }]"
+      class="h-48"
+    />
     <template v-if="!locked && byHand">
       <p v-if="state === 'failed'" class="text-sm" role="status">
         The place search does not answer. Enter the location by hand.
@@ -151,7 +176,21 @@ watch(
           <Input :id="`${id}-longitude`" v-model="hand.longitude" name="longitude" inputmode="decimal" placeholder="2.1893" />
         </div>
       </div>
-      <p class="text-muted-foreground text-sm">
+      <template v-if="mapConfig">
+        <MapView
+          :config="mapConfig"
+          label="Map to set the point"
+          :center="handPoint ?? defaultCenter"
+          :zoom="handPoint ? 17 : 13"
+          :markers="handPoint ? [{ id: 'point', ...handPoint, label: 'The point of the restaurant' }] : []"
+          pick
+          @pick="pick"
+        />
+        <p class="text-muted-foreground text-sm">
+          Click the map or drag the pin to set the point. You can also type the two numbers.
+        </p>
+      </template>
+      <p v-else class="text-muted-foreground text-sm">
         A map app shows the two numbers of a place. Latitude is from -90 to 90. Longitude is from -180 to 180.
       </p>
       <div>

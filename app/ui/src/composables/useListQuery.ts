@@ -22,6 +22,8 @@ export function useListQuery(
   baseSortOptions: Option[],
   baseDefaultSort: string,
   relevance?: RelevanceSort,
+  // keep has the query keys of the page that a filter change does not remove.
+  keep: string[] = [],
 ) {
   const route = useRoute()
   const router = useRouter()
@@ -66,6 +68,12 @@ export function useListQuery(
       }
       if (sort.value !== defaultSort.value) {
         query.sort = sort.value
+      }
+      for (const key of keep) {
+        const value = first(route.query[key])
+        if (value !== undefined) {
+          query[key] = value
+        }
       }
       void router.replace({ query })
     },

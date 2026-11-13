@@ -69,6 +69,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - Behind a reverse proxy, set the trusted proxy header in the PocketBase settings, such as `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign up and sign in rate limit counts all of them together. See decision 00004.
 - Set the Application URL in the PocketBase settings to the public URL of the site. The canonical links and link previews of restaurant and review pages start with it. See decision 00013.
 - The place search sends the search text of users to the public Photon server. This server has no guarantee and blocks heavy use. The app sends the Application URL in its `User-Agent`. See decision 00017.
+- The browsers of users load the map tiles from `tile.openstreetmap.org`. This server gets their IP address and the origin of the site. It has no guarantee and blocks heavy use. Do not set a `Referrer-Policy` of `no-referrer` on the UI. The tile server needs the `Referer` header. See decision 00018.
 - Set the superuser IP allow-list in the PocketBase settings, so only admin networks can open the dashboard at `/_/`.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
 - Environment variables of the app:
@@ -77,6 +78,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - `REVIEWS_PHOTO_UPLOAD_LIMIT` sets the photo uploads of each user per hour. The default is 30. See decision 00008.
   - `REVIEWS_PLACES_URL` sets the Photon geocoder of the place search. The default is the public server `https://photon.komoot.io`. `off` turns the search off. See decision 00017.
   - `REVIEWS_PLACE_SEARCH_LIMIT` sets the place searches of each user per minute. The default is 30.
+  - `REVIEWS_MAP_TILE_URL` sets the tile server of the maps. It is a URL template with `{z}`, `{x}`, and `{y}`. The default is the tile server of OpenStreetMap. `off` turns the maps off. See decision 00018.
+  - `REVIEWS_MAP_ATTRIBUTION` sets the credit of a tile server that is not from OpenStreetMap.
   - `REVIEWS_VALIDATE_RESPONSES=false` turns off the spec validation of responses. See decision 00007.
   - `REVIEWS_VALIDATE_REQUESTS=false` turns off the spec validation of parameters and body values. Invalid values can then be saved. Turn it off only with the response validation, or responses with these values get 500.
 
@@ -112,6 +115,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
     - It writes the title and link preview tags of restaurant and review pages into `index.html`. See decision 00013.
+    - It serves `/map-config.json` with the tile server of the maps and allows its origin in the Content Security Policy. See decision 00018.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
   - Calls the Public API only through `@reviews/sdk`
   - Written in TypeScript with Vue, Vue Router, and shadcn-vue on Tailwind CSS. See decision 00002.
@@ -121,7 +125,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name
   - **`tests/photos`** - the small test images of the photo tests
-  - **`tests/photon.ts`** - the fake geocoder of the place search. The tests need no network.
+  - **`tests/photon.ts`** - the fake geocoder of the place search and the fake map tiles. The tests need no network.
 
 ## Code Comment Style (Mandatory)
 

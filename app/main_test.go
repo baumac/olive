@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/baumac/reviews-app/app/internal/publicapi"
+	"github.com/baumac/reviews-app/app/internal/webui"
 )
 
 func TestOptions(t *testing.T) {
@@ -42,6 +43,22 @@ func TestOptions(t *testing.T) {
 	opts, err = options(env(map[string]string{"REVIEWS_PLACES_URL": "http://127.0.0.1:2322"}))
 	if err != nil || opts.PlacesURL != "http://127.0.0.1:2322" {
 		t.Errorf("place search URL: %+v, %v", opts, err)
+	}
+
+	ui, err := uiOptions(env(nil))
+	if err != nil || ui != (webui.Options{TileURL: webui.DefaultTileURL}) {
+		t.Errorf("no map variables: %+v, %v", ui, err)
+	}
+	ui, err = uiOptions(env(map[string]string{"REVIEWS_MAP_TILE_URL": "off"}))
+	if err != nil || ui.TileURL != "" {
+		t.Errorf("map off: %+v, %v", ui, err)
+	}
+	ui, err = uiOptions(env(map[string]string{"REVIEWS_MAP_TILE_URL": "https://t.example.com/{z}/{x}/{y}.png", "REVIEWS_MAP_ATTRIBUTION": "© Example"}))
+	if err != nil || ui.TileURL != "https://t.example.com/{z}/{x}/{y}.png" || ui.TileAttribution != "© Example" {
+		t.Errorf("map variables: %+v, %v", ui, err)
+	}
+	if _, err := uiOptions(env(map[string]string{"REVIEWS_MAP_TILE_URL": "https://t.example.com/"})); err == nil {
+		t.Error("a tile URL without the parts: no error")
 	}
 
 	for _, vars := range []map[string]string{

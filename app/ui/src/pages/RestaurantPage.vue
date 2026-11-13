@@ -11,12 +11,15 @@ import ReviewList from '@/components/app/ReviewList.vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { MapView } from '@/components/ui/map'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
+import { useMapConfig } from '@/lib/mapConfig'
+import { osmLink } from '@/lib/places'
 import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
 import { scoreLegend, scoresOf, tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
@@ -51,6 +54,8 @@ watch(
   },
   { immediate: true },
 )
+
+const mapConfig = useMapConfig()
 
 const access = computed(() => {
   if (!restaurant.data.value || ownReviewLookup.value === 'loading') {
@@ -129,7 +134,27 @@ async function remove() {
           <MapPinIcon class="text-muted-foreground mt-1 size-4 shrink-0" aria-hidden="true" />
           <span><span class="sr-only">Address: </span>{{ restaurant.data.value.location.address }}</span>
         </p>
-        <p v-else-if="access?.canChange" class="text-muted-foreground flex items-start gap-2">
+        <div v-if="restaurant.data.value.location && mapConfig" class="grid max-w-2xl gap-2">
+          <MapView
+            :config="mapConfig"
+            :label="`Map of ${restaurant.data.value.name}`"
+            :center="restaurant.data.value.location"
+            :zoom="16"
+            :markers="[{ id: restaurant.data.value.id, ...restaurant.data.value.location, label: restaurant.data.value.name }]"
+            class="h-56"
+          />
+          <p class="text-sm">
+            <a
+              :href="osmLink(restaurant.data.value.location)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium underline underline-offset-4"
+            >
+              Open in OpenStreetMap
+            </a>
+          </p>
+        </div>
+        <p v-else-if="!restaurant.data.value.location && access?.canChange" class="text-muted-foreground flex items-start gap-2">
           <MapPinIcon class="mt-1 size-4 shrink-0" aria-hidden="true" />
           <span>
             This restaurant has no location.

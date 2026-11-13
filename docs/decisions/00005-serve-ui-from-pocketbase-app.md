@@ -190,7 +190,7 @@ The app has these routes:
 | `default-src` | `'self'` | the base for all other types |
 | `script-src` | `'self'` | the Vite chunks and `theme.js`. No inline scripts. |
 | `style-src` | `'self'` and one hash | the Tailwind CSS file and the inline style of Reka UI `SelectViewport` |
-| `img-src` | `'self' blob:` | the logos, the icons, and the photos of `/v1`. `blob:` shows the preview of a selected photo. See decision 00008. |
+| `img-src` | `'self' blob:` and the origin of the map tiles | the logos, the icons, and the photos of `/v1`. `blob:` shows the preview of a selected photo. See decision 00008. Decision 00018 added the origin of the map tiles. |
 | `font-src` | `'self'` | the UI uses system fonts. No web fonts. |
 | `connect-src` | `'self'` | the Public API is on the same origin |
 | `manifest-src` | `'self'` | `site.webmanifest` |

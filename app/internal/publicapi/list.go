@@ -202,6 +202,22 @@ func (w *where) near(n *reviewsapi.NearFilter) {
 	w.add(fmt.Sprintf("(%s * %s + %s * %s) <= %s", dy, dy, dx, dx, w.param(float64(n.Radius)*float64(n.Radius))))
 }
 
+// within keeps the restaurants in the box. A box with west after east goes
+// across the 180th meridian.
+func (w *where) within(b *reviewsapi.WithinFilter) {
+	if b == nil {
+		return
+	}
+	lat, lon := column("restaurants", "latitude"), column("restaurants", "longitude")
+	w.add(column("restaurants", "address") + " != ''")
+	w.add(fmt.Sprintf("%s BETWEEN %s AND %s", lat, w.param(b.South), w.param(b.North)))
+	if b.West <= b.East {
+		w.add(fmt.Sprintf("%s BETWEEN %s AND %s", lon, w.param(b.West), w.param(b.East)))
+		return
+	}
+	w.add(fmt.Sprintf("(%s >= %s OR %s <= %s)", lon, w.param(b.West), lon, w.param(b.East)))
+}
+
 // idFilters adds the eq and in filters of an ID column.
 func (w *where) idFilters(table, name string, eq *string, in *[]string) {
 	if eq != nil {

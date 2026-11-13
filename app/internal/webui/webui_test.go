@@ -46,7 +46,9 @@ func TestRegister(t *testing.T) {
 	}
 	defer app.Cleanup()
 
-	Register(app)
+	if err := Register(app, Options{TileURL: DefaultTileURL}); err != nil {
+		t.Fatal(err)
+	}
 	router, err := apis.NewRouter(app)
 	if err != nil {
 		t.Fatal(err)
@@ -104,7 +106,9 @@ func TestRoutes(t *testing.T) {
 	}
 	defer app.Cleanup()
 
-	register(app, fstest.MapFS{"index.html": {Data: []byte(testIndex)}})
+	if err := register(app, fstest.MapFS{"index.html": {Data: []byte(testIndex)}}, Options{TileURL: "https://tiles.example.com/{z}/{x}/{y}{r}.png?key=k", TileAttribution: "© Example"}); err != nil {
+		t.Fatal(err)
+	}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.Any("/v1/{path...}", func(e *core.RequestEvent) error {
 			return e.String(http.StatusTeapot, "api")
@@ -130,6 +134,7 @@ func TestRoutes(t *testing.T) {
 	}{
 		{"GET", "/", 200, "<html"},
 		{"GET", "/restaurants/new", 200, "<html"},
+		{"GET", "/map-config.json", 200, `{"attribution":"© Example","tiles":"https://tiles.example.com/{z}/{x}/{y}{r}.png?key=k"}`},
 		{"GET", "/restaurants/k3x9m2p7q1w8z4a", http.StatusNotFound, "<html"},
 		{"GET", "/v1/restaurants", http.StatusTeapot, "api"},
 		{"POST", "/restaurants", http.StatusMethodNotAllowed, ""},
@@ -145,14 +150,54 @@ func TestRoutes(t *testing.T) {
 		if tc.status == 200 && w.Header().Get("Cache-Control") != "no-cache" {
 			t.Errorf("%s: Cache-Control %q", tc.path, w.Header().Get("Cache-Control"))
 		}
+		if csp := w.Header().Get("Content-Security-Policy"); tc.status == 200 && !strings.Contains(csp, "img-src 'self' blob: https://tiles.example.com;") {
+			t.Errorf("%s: Content-Security-Policy %q", tc.path, csp)
+		}
 		if tc.status == 200 && w.Header().Get("Reporting-Endpoints") != `csp="/csp-report"` {
 			t.Errorf("%s: Reporting-Endpoints %q", tc.path, w.Header().Get("Reporting-Endpoints"))
 		}
-		if tc.status == 200 && w.Header().Get("Content-Security-Policy") != contentSecurityPolicy {
+		if tc.status == 200 && w.Header().Get("Content-Security-Policy") != contentSecurityPolicy("https://tiles.example.com") {
 			t.Errorf("%s: Content-Security-Policy %q", tc.path, w.Header().Get("Content-Security-Policy"))
+		}
+		// The tile server of the maps needs the Referer header. See decision
+		// 00018.
+		if got := w.Header().Get("Referrer-Policy"); strings.Contains(got, "no-referrer") && got != "no-referrer-when-downgrade" {
+			t.Errorf("%s: Referrer-Policy %q", tc.path, got)
 		}
 		if strings.HasPrefix(tc.path, "/v1") && w.Header().Get("Content-Security-Policy") != "" {
 			t.Errorf("%s: the API has the UI policy", tc.path)
 		}
+	}
+}
+
+func TestTileOrigin(t *testing.T) {
+	for tileURL, want := range map[string]string{
+		DefaultTileURL: "https://tile.openstreetmap.org",
+		"http://127.0.0.1:8096/tiles/{z}/{x}/{y}.png":           "http://127.0.0.1:8096",
+		"https://tiles.example.com/{z}/{x}/{y}{r}.png?key=a1b2": "https://tiles.example.com",
+	} {
+		if got, err := TileOrigin(tileURL); err != nil || got != want {
+			t.Errorf("%s: %q, %v, want %q", tileURL, got, err, want)
+		}
+	}
+	for _, tileURL := range []string{
+		"", "https://tiles.example.com/", "https://tiles.example.com/{z}/{x}.png", "tiles.example.com/{z}/{x}/{y}.png",
+		"ftp://tiles.example.com/{z}/{x}/{y}.png", "https://{s}.tiles.example.com/{z}/{x}/{y}.png",
+		"https://tiles.example.com;script-src */{z}/{x}/{y}.png", "https://a b/{z}/{x}/{y}.png",
+	} {
+		if got, err := TileOrigin(tileURL); err == nil {
+			t.Errorf("%q: origin %q, want an error", tileURL, got)
+		}
+	}
+	if got := contentSecurityPolicy(""); !strings.Contains(got, "img-src 'self' blob:; ") {
+		t.Errorf("policy without tiles: %q", got)
+	}
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	if err := Register(app, Options{TileURL: "https://tiles.example.com/"}); err == nil {
+		t.Error("Register accepts a tile URL without the parts")
 	}
 }

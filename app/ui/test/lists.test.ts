@@ -14,20 +14,20 @@ const defs: FilterDef[] = [
 ]
 const sortOptions: Option[] = [{ value: '-created', label: 'Newest' }]
 
-async function queryAt(url: string, filterDefs: FilterDef[] | (() => FilterDef[]) = defs, relevance = false) {
+async function queryAt(url: string, filterDefs: FilterDef[] | (() => FilterDef[]) = defs, relevance = false, keep: string[] = []) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
   await router.push(url)
   let result!: ReturnType<typeof useListQuery>
   mount(
     defineComponent({
       setup() {
-        result = useListQuery(filterDefs, sortOptions, '-created', relevance ? searchRelevance : undefined)
+        result = useListQuery(filterDefs, sortOptions, '-created', relevance ? searchRelevance : undefined, keep)
         return () => null
       },
     }),
     { global: { plugins: [router] } },
   )
-  return result
+  return Object.assign(result, { router })
 }
 
 describe('useListQuery', () => {
@@ -71,6 +71,15 @@ describe('useListQuery relevance sort', () => {
     const q = await queryAt('/r?sort=relevance', search, true)
     expect(q.sort.value).toBe('-created')
     expect(q.sortOptions.value.map((o) => o.value)).toEqual(['-created'])
+  })
+})
+
+describe('useListQuery with other query keys', () => {
+  it('keeps the keys of the page when a filter changes', async () => {
+    const q = await queryAt('/r?view=map&other=1', defs, false, ['view'])
+    q.filters.value = { rating: '4' }
+    await flushPromises()
+    expect(q.router.currentRoute.value.query).toEqual({ view: 'map', rating: '4' })
   })
 })
 

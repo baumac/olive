@@ -207,6 +207,7 @@ paths:
         - $ref: '#/components/parameters/RestaurantSearch'
         - $ref: '#/components/parameters/OverallFilter'
         - $ref: '#/components/parameters/NearFilter'
+        - $ref: '#/components/parameters/WithinFilter'
         - $ref: '#/components/parameters/TagsHas'
         - $ref: '#/components/parameters/TagsHasAny'
         - $ref: '#/components/parameters/TagsHasAll'
@@ -1092,6 +1093,21 @@ components:
         $ref: '#/components/schemas/Near'
       example: {latitude: 41.3874, longitude: 2.1686, radius: 75}
 
+    WithinFilter:
+      name: within
+      in: query
+      description: |
+        Selects the restaurants with a `location` in a box of coordinates, such as the view of a map.
+        Each key is a side, for example `within[west]=2.1&within[south]=41.3&within[east]=2.2&within[north]=41.4`.
+        All four sides are required. `south` must not be more than `north`.
+        A box with `west` more than `east` goes across the 180th meridian.
+        A restaurant without a location matches no `within` filter.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/Box'
+      example: {west: 2.1, south: 41.3, east: 2.2, north: 41.4}
+
     PlaceSearch:
       name: search
       in: query
@@ -1428,6 +1444,20 @@ components:
           type: integer
           minimum: 1
           maximum: 50000
+    Box:
+      description: A box of coordinates. Its sides are part of the box.
+      type: object
+      additionalProperties: false
+      required: [west, south, east, north]
+      properties:
+        west:
+          $ref: '#/components/schemas/Longitude'
+        south:
+          $ref: '#/components/schemas/Latitude'
+        east:
+          $ref: '#/components/schemas/Longitude'
+        north:
+          $ref: '#/components/schemas/Latitude'
     Place:
       description: A place that the place search found.
       type: object

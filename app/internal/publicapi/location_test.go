@@ -345,3 +345,49 @@ func TestSearchPlacesOffAndBusy(t *testing.T) {
 		t.Errorf("%d geocoder calls, want 2", calls.Load())
 	}
 }
+
+func TestListRestaurantsWithin(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	for name, l := range map[string][2]float64{
+		"Barcelona": {41.3874, 2.1686}, "Madrid": {40.4168, -3.7038}, "Girona": {41.9794, 2.8214},
+		"Fiji": {-17.7134, 178.065}, "Samoa": {-13.8333, -171.75}, "Edge": {41.3, 2.1},
+	} {
+		e.createRestaurant(ana.Token, fmt.Sprintf(`{"name":%q,"location":%s}`, name, locationJSON(l[0], l[1], "Qwx 1", "")))
+	}
+	none := e.createRestaurant(ana.Token, `{"name":"No location"}`)["id"].(string)
+	if _, err := e.app.DB().NewQuery("UPDATE restaurants SET address = '', latitude = 41.35, longitude = 2.15 WHERE id = {:id}").
+		Bind(map[string]any{"id": none}).Execute(); err != nil {
+		t.Fatal(err)
+	}
+
+	box := func(west, south, east, north float64) string {
+		return fmt.Sprintf("within[west]=%v&within[south]=%v&within[east]=%v&within[north]=%v", west, south, east, north)
+	}
+	for query, want := range map[string]string{
+		box(2.1, 41.3, 2.2, 41.4):                       "Barcelona,Edge",
+		box(-10, 35, 5, 45):                             "Barcelona,Edge,Girona,Madrid",
+		box(170, -30, -160, 0):                          "Fiji,Samoa",
+		box(-180, -90, 180, 90):                         "Barcelona,Edge,Fiji,Girona,Madrid,Samoa",
+		box(2.1, 41.3, 2.2, 41.4) + "&search=barcelona": "Barcelona",
+		box(0, 0, 1, 1):                                 "",
+	} {
+		var page struct {
+			Items []map[string]any `json:"items"`
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?sort=name&" + query}, http.StatusOK).decode(t, &page)
+		var names []string
+		for _, it := range page.Items {
+			names = append(names, it["name"].(string))
+		}
+		if got := strings.Join(names, ","); got != want {
+			t.Errorf("%s: %q, want %q", query, got, want)
+		}
+	}
+	for _, query := range []string{
+		"within[west]=1&within[south]=1&within[east]=2", box(1, 2, 2, 1), box(-181, 1, 2, 2), box(1, 1, 2, 91),
+		box(1, 1, 2, 2) + "&within[up]=1",
+	} {
+		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
+	}
+}

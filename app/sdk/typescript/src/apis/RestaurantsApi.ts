@@ -19,6 +19,11 @@ import {
     AverageRangeToJSON,
 } from '../models/AverageRange.js';
 import {
+    type Box,
+    BoxFromJSON,
+    BoxToJSON,
+} from '../models/Box.js';
+import {
     type Near,
     NearFromJSON,
     NearToJSON,
@@ -328,6 +333,15 @@ export interface ListRestaurantsRequest {
      * 
      */
     near?: Near;
+    /**
+     * Selects the restaurants with a `location` in a box of coordinates, such as the view of a map.
+     * Each key is a side, for example `within[west]=2.1&within[south]=41.3&within[east]=2.2&within[north]=41.4`.
+     * All four sides are required. `south` must not be more than `north`.
+     * A box with `west` more than `east` goes across the 180th meridian.
+     * A restaurant without a location matches no `within` filter.
+     * 
+     */
+    within?: Box;
     /**
      * The `tags` contain the tag.
      */
@@ -785,6 +799,7 @@ export interface RestaurantsApiInterface {
      * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, &#x60;tags&#x60;, and &#x60;location.address&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;location.address&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant without reviews matches no &#x60;overall&#x60; filter. 
      * @param {Near} [near] Selects the restaurants with a &#x60;location&#x60; at most &#x60;radius&#x60; meters from a point. Each key is a property, for example &#x60;near[latitude]&#x3D;41.3874&amp;near[longitude]&#x3D;2.1686&amp;near[radius]&#x3D;75&#x60;. All three properties are required. A restaurant without a location matches no &#x60;near&#x60; filter. The distance is an approximation on a flat surface. Its error is small for the radii that the API allows. 
+     * @param {Box} [within] Selects the restaurants with a &#x60;location&#x60; in a box of coordinates, such as the view of a map. Each key is a side, for example &#x60;within[west]&#x3D;2.1&amp;within[south]&#x3D;41.3&amp;within[east]&#x3D;2.2&amp;within[north]&#x3D;41.4&#x60;. All four sides are required. &#x60;south&#x60; must not be more than &#x60;north&#x60;. A box with &#x60;west&#x60; more than &#x60;east&#x60; goes across the 180th meridian. A restaurant without a location matches no &#x60;within&#x60; filter. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -806,6 +821,7 @@ export interface RestaurantsApiInterface {
      * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, &#x60;tags&#x60;, and &#x60;location.address&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;location.address&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant without reviews matches no &#x60;overall&#x60; filter. 
      * @param {Near} [near] Selects the restaurants with a &#x60;location&#x60; at most &#x60;radius&#x60; meters from a point. Each key is a property, for example &#x60;near[latitude]&#x3D;41.3874&amp;near[longitude]&#x3D;2.1686&amp;near[radius]&#x3D;75&#x60;. All three properties are required. A restaurant without a location matches no &#x60;near&#x60; filter. The distance is an approximation on a flat surface. Its error is small for the radii that the API allows. 
+     * @param {Box} [within] Selects the restaurants with a &#x60;location&#x60; in a box of coordinates, such as the view of a map. Each key is a side, for example &#x60;within[west]&#x3D;2.1&amp;within[south]&#x3D;41.3&amp;within[east]&#x3D;2.2&amp;within[north]&#x3D;41.4&#x60;. All four sides are required. &#x60;south&#x60; must not be more than &#x60;north&#x60;. A box with &#x60;west&#x60; more than &#x60;east&#x60; goes across the 180th meridian. A restaurant without a location matches no &#x60;within&#x60; filter. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -1679,6 +1695,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
 
         if (requestParameters['near'] != null) {
             queryParameters['near'] = requestParameters['near'];
+        }
+
+        if (requestParameters['within'] != null) {
+            queryParameters['within'] = requestParameters['within'];
         }
 
         if (requestParameters['tagsHas'] != null) {

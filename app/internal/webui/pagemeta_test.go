@@ -211,7 +211,7 @@ func TestPageMeta(t *testing.T) {
 		if w.Code != tc.status {
 			t.Errorf("%s %s: status %d, want %d", tc.method, tc.path, w.Code, tc.status)
 		}
-		if w.Header().Get("Content-Security-Policy") != contentSecurityPolicy || w.Header().Get("Cache-Control") != "no-cache" {
+		if w.Header().Get("Content-Security-Policy") != contentSecurityPolicy("") || w.Header().Get("Cache-Control") != "no-cache" {
 			t.Errorf("%s %s: headers %v", tc.method, tc.path, w.Header())
 		}
 		if !strings.HasPrefix(w.Header().Get("Content-Type"), "text/html") {
@@ -245,7 +245,9 @@ func TestPageMeta(t *testing.T) {
 
 func newHandler(t *testing.T, app core.App, files fstest.MapFS) http.Handler {
 	t.Helper()
-	register(app, files)
+	if err := register(app, files, Options{}); err != nil {
+		t.Fatal(err)
+	}
 	router, err := apis.NewRouter(app)
 	if err != nil {
 		t.Fatal(err)

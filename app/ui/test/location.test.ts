@@ -8,7 +8,8 @@ import { fieldErrors, placesApi, restaurantsApi } from '@/lib/api'
 import { saveDraft } from '@/lib/drafts'
 import { clearSession, saveSession } from '@/lib/session'
 import RestaurantFormPage from '@/pages/RestaurantFormPage.vue'
-import { parseCoordinate, sameLocation } from '@/lib/places'
+import { loadMapConfig, resetMapConfig } from '@/lib/mapConfig'
+import { mapBox, osmLink, parseCoordinate, roundCoordinate, sameLocation } from '@/lib/places'
 import { expectAccessible } from './axe'
 
 const canSole: Place = {
@@ -52,6 +53,54 @@ describe('places', () => {
       ],
     }
     expect(fieldErrors(problem)).toEqual({ location: 'Must have 1 to 255 characters.' })
+  })
+})
+
+describe('maps', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    resetMapConfig()
+  })
+
+  it('changes the view of a map to a box of the API', () => {
+    expect(mapBox({ west: 2.1, south: 41.3, east: 2.2, north: 41.4 })).toEqual({ west: 2.1, south: 41.3, east: 2.2, north: 41.4 })
+    // The view goes across the 180th meridian.
+    expect(mapBox({ west: 170, south: -30, east: 200, north: 0 })).toEqual({ west: 170, south: -30, east: -160, north: 0 })
+    expect(mapBox({ west: -190, south: -30, east: -170, north: 0 })).toEqual({ west: 170, south: -30, east: -170, north: 0 })
+    // The view shows the world more than one time.
+    expect(mapBox({ west: -300, south: -95, east: 300, north: 95 })).toEqual({ west: -180, south: -90, east: 180, north: 90 })
+    expect(mapBox({ west: 100, south: 0, east: 180, north: 10 })).toEqual({ west: 100, south: 0, east: 180, north: 10 })
+    // A view that moved by one world is the same box.
+    expect(mapBox({ west: 362.1, south: 41.3, east: 362.2, north: 41.4 }).west).toBeCloseTo(2.1)
+  })
+
+  it('rounds a coordinate to 6 decimals', () => {
+    expect(roundCoordinate(41.390847123456)).toBe(41.390847)
+    expect(roundCoordinate(-2.1495444)).toBe(-2.149544)
+  })
+
+  it('makes a link to OpenStreetMap', () => {
+    expect(osmLink({ latitude: 41.3766, longitude: 2.1893 })).toBe('https://www.openstreetmap.org/?mlat=41.3766&mlon=2.1893#map=18/41.3766/2.1893')
+  })
+
+  it('loads the map config one time', async () => {
+    const tiles = 'https://tiles.example.com/{z}/{x}/{y}.png'
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ tiles, attribution: '© Example' })))
+    vi.stubGlobal('fetch', fetch)
+    expect(await loadMapConfig()).toEqual({ tiles, attribution: '© Example' })
+    expect(await loadMapConfig()).toEqual({ tiles, attribution: '© Example' })
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledWith('/map-config.json')
+  })
+
+  it('has no map config when the maps are off or the request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ tiles: '', attribution: '' }))))
+    expect(await loadMapConfig()).toBeNull()
+    resetMapConfig()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('no', { status: 500 })))
+    vi.stubEnv('DEV', false)
+    expect(await loadMapConfig()).toBeNull()
+    vi.unstubAllEnvs()
   })
 })
 

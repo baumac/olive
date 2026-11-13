@@ -28,10 +28,32 @@ func main() {
 	searchindex.Register(app)
 	publicapi.Register(app, opts)
 	photocleanup.Register(app)
-	webui.Register(app)
+	ui, err := uiOptions(os.Getenv)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := webui.Register(app, ui); err != nil {
+		log.Fatal(err)
+	}
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// uiOptions reads the settings of the UI from the environment. The
+// Production section of AGENTS.md lists the variables.
+func uiOptions(getenv func(string) string) (webui.Options, error) {
+	opts := webui.Options{TileURL: webui.DefaultTileURL, TileAttribution: getenv("REVIEWS_MAP_ATTRIBUTION")}
+	switch v := getenv("REVIEWS_MAP_TILE_URL"); {
+	case v == "off":
+		opts.TileURL = ""
+	case v != "":
+		if _, err := webui.TileOrigin(v); err != nil {
+			return opts, fmt.Errorf("REVIEWS_MAP_TILE_URL: %w", err)
+		}
+		opts.TileURL = v
+	}
+	return opts, nil
 }
 
 // options reads the settings of the Public API from the environment. The

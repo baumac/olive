@@ -2,6 +2,7 @@
 /* eslint-disable */
 export * from './AuthToken.js';
 export * from './AverageRange.js';
+export * from './Box.js';
 export * from './Creator.js';
 export * from './Credentials.js';
 export * from './Location.js';

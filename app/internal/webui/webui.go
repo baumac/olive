@@ -4,10 +4,13 @@ package webui
 
 import (
 	"embed"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"testing/fstest"
@@ -21,18 +24,66 @@ import (
 //go:embed all:dist
 var dist embed.FS
 
-// contentSecurityPolicy allows only files of this origin. Decision 00005
-// explains each directive. The UI has no inline scripts.
+// contentSecurityPolicy allows only files of this origin and the map tiles.
+// Decision 00005 explains each directive. The UI has no inline scripts.
 //
 // blob: in img-src lets the photo upload show the selected file. Decision
 // 00008 has the details.
 //
 // The hash allows the inline style of Reka UI SelectViewport. A Reka UI
 // update can change its text. The end-to-end tests then fail.
-const contentSecurityPolicy = "default-src 'self'; script-src 'self'; " +
-	"style-src 'self' 'sha256-60LHlRjW/B3CtzIoE/Lf1/NEDvko9efWMFaGVhHu/cs='; img-src 'self' blob:; " +
-	"font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; " +
-	"form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; report-to csp"
+//
+// tiles is the origin of the map tiles, or empty without a map. Decision
+// 00018 has the details.
+func contentSecurityPolicy(tiles string) string {
+	if tiles != "" {
+		tiles = " " + tiles
+	}
+	return "default-src 'self'; script-src 'self'; " +
+		"style-src 'self' 'sha256-60LHlRjW/B3CtzIoE/Lf1/NEDvko9efWMFaGVhHu/cs='; img-src 'self' blob:" + tiles + "; " +
+		"font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; " +
+		"form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; report-to csp"
+}
+
+// DefaultTileURL is the tile server of OpenStreetMap. Its usage policy has
+// rules for the map. Decision 00018 lists them.
+const DefaultTileURL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+
+// mapConfigPath gives the UI the settings of the map.
+const mapConfigPath = "map-config.json"
+
+// Options are the settings of the UI.
+type Options struct {
+	// TileURL is the URL template of the map tiles with {z}, {x}, and {y}.
+	// An empty value turns the maps off.
+	TileURL string
+	// TileAttribution is the credit of a tile server that is not from
+	// OpenStreetMap. The map shows it before the OpenStreetMap credit.
+	TileAttribution string
+}
+
+// tilePlaceholders are the parts of a tile URL that Leaflet replaces. {r}
+// is the suffix for screens with a high resolution.
+var tilePlaceholders = strings.NewReplacer("{z}", "0", "{x}", "0", "{y}", "0", "{r}", "")
+
+// TileOrigin returns the origin of a tile URL template for the Content
+// Security Policy. It returns an error for a URL that the map cannot use.
+func TileOrigin(tileURL string) (string, error) {
+	for _, part := range []string{"{z}", "{x}", "{y}"} {
+		if !strings.Contains(tileURL, part) {
+			return "", fmt.Errorf("the tile URL has no %s", part)
+		}
+	}
+	u, err := url.Parse(tilePlaceholders.Replace(tileURL))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || strings.ContainsAny(u.String(), "{}") {
+		return "", errors.New("the tile URL must be an http or https URL with only the {z}, {x}, {y}, and {r} parts")
+	}
+	// A space or a semicolon would add a source or a directive to the policy.
+	if strings.ContainsAny(u.Host, " ;,'\"") {
+		return "", errors.New("the tile URL has a host that is not valid")
+	}
+	return u.Scheme + "://" + u.Host, nil
+}
 
 // reportPath gets the violation reports of the browsers. The log then shows
 // a violation that the tests did not find.
@@ -78,11 +129,23 @@ func (f noDotFiles) Open(name string) (fs.File, error) {
 
 // Register serves the UI on all paths that no other route has. A path that
 // is not a file gets index.html. The UI router then shows the screen.
-func Register(app core.App) {
-	register(app, Files())
+func Register(app core.App, opts Options) error {
+	return register(app, Files(), opts)
 }
 
-func register(app core.App, files fs.FS) {
+func register(app core.App, files fs.FS, opts Options) error {
+	tileOrigin := ""
+	if opts.TileURL != "" {
+		var err error
+		if tileOrigin, err = TileOrigin(opts.TileURL); err != nil {
+			return err
+		}
+	}
+	policy := contentSecurityPolicy(tileOrigin)
+	mapConfig, err := json.Marshal(map[string]string{"tiles": opts.TileURL, "attribution": opts.TileAttribution})
+	if err != nil {
+		return err
+	}
 	index, hasMetaBlock := readIndex(files)
 	if _, built := files.(noDotFiles); built && !hasMetaBlock {
 		app.OnServe().BindFunc(func(se *core.ServeEvent) error {
@@ -108,8 +171,11 @@ func register(app core.App, files fs.FS) {
 				return e.NoContent(http.StatusMethodNotAllowed)
 			}
 			e.Response.Header().Set("Cache-Control", cacheControl(files, path))
-			e.Response.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+			e.Response.Header().Set("Content-Security-Policy", policy)
 			e.Response.Header().Set("Reporting-Endpoints", `csp="`+reportPath+`"`)
+			if path == mapConfigPath {
+				return e.Blob(http.StatusOK, "application/json", mapConfig)
+			}
 			if hasMetaBlock {
 				if page, status, ok := renderPage(e, index, path); ok {
 					return e.HTML(status, string(page))
@@ -119,6 +185,7 @@ func register(app core.App, files fs.FS) {
 		}).Bind(apis.Gzip())
 		return se.Next()
 	})
+	return nil
 }
 
 // watchAppURL warns when the app starts to serve with a private Application

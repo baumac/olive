@@ -21,12 +21,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - Document support for oauth2 logins
 
 ## Low Priority
-- Add maps to the UI
-  - decision 00017 gave each restaurant a location. Its unresolved questions have the plan.
-  - Leaflet with the tiles of `tile.openstreetmap.org`, loaded by the browser. The CSP `img-src` needs the tile host.
-  - the tile policy needs a visible "© OpenStreetMap contributors", a Referer, and no prefetch
-  - the map opens on Barcelona. The list filter needs a bounding box.
-  - a pin on a map can replace the latitude and longitude fields of the restaurant form
 - Add IOS app
 - Add load tests
 - Add test coverage make command, and ci check

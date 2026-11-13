@@ -99,6 +99,7 @@ Project components that shadcn-vue does not have:
 - `SignInForm`: gets the email and the password.
 - `FilterBar`: sets the filters and the sort order of a list. It shows each active filter as a chip.
 - `EmptyState`: fills the place of a list with no items.
+- `MapView`: a map with pins. Decision 00018 added it. It is the only component that uses Leaflet.
 
 App components that know the routes. They live in `app/ui/src/components/app/`:
 - `AppHeader`: the logo, the main navigation, `ThemeToggle`, and `UserMenu`

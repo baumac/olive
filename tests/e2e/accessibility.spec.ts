@@ -68,6 +68,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('heading', { name: 'Photos' })).toBeVisible()
       await expectNoViolations(page)
 
+      await page.goto(`/restaurants?view=map&search=${encodeURIComponent("Luigi's")}`)
+      await expect(page.getByRole('region', { name: 'Map of the restaurants' }).first()).toBeVisible()
+      await expect(page.getByRole('status')).not.toHaveText('Loading restaurants')
+      await expectNoViolations(page)
+
       await page.goto('/restaurants/new')
       await page.getByLabel('Location').fill(`axe ${colorScheme}`)
       await expect(page.getByRole('list', { name: 'Places' })).toBeVisible()
