@@ -63,8 +63,8 @@ func TestRestaurantLocation(t *testing.T) {
 	t.Run("a second restaurant with the place gets 409", func(t *testing.T) {
 		res := e.expect(request{method: "POST", path: "/v1/restaurants",
 			body: `{"name":"Can Solé","location":` + locationJSON(41.3767, 2.1894, "Sant Carles 4", "osm:N1") + `}`, token: joe.Token}, http.StatusConflict)
-		if got := res.object(t)["restaurant"]; got != id {
-			t.Errorf("restaurant %v, want %s", got, id)
+		if got := res.object(t); got["restaurant"] != id || got["property"] != "location" {
+			t.Errorf("problem %v, want restaurant %s and property location", got, id)
 		}
 		other := e.createRestaurant(joe.Token, `{"name":"Next door","location":`+locationJSON(41.3767, 2.1894, "Sant Carles 6", "osm:N2")+`}`)
 		res = e.expect(request{method: "PATCH", path: "/v1/restaurants/" + other["id"].(string),
@@ -100,8 +100,12 @@ func TestRestaurantLocation(t *testing.T) {
 		e.expect(request{method: "PATCH", path: path, body: `{"location":` + locationJSON(41.3766, 2.1893, "Sant Carles 4", "osm:N1") + `}`, token: ana.Token}, http.StatusOK)
 		e.createReview(joe.Token, id, review)
 		res := e.expect(request{method: "PATCH", path: path, body: `{"location":` + barceloneta + `}`, token: ana.Token}, http.StatusConflict)
-		if _, ok := res.object(t)["restaurant"]; ok {
-			t.Errorf("the lock conflict names a restaurant: %s", res.body)
+		if got := res.object(t); got["restaurant"] != nil || got["property"] != "location" {
+			t.Errorf("lock conflict %s", res.body)
+		}
+		res = e.expect(request{method: "PATCH", path: path, body: `{"name":"Other"}`, token: ana.Token}, http.StatusConflict)
+		if got := res.object(t)["property"]; got != "name" {
+			t.Errorf("name conflict %s", res.body)
 		}
 		e.expect(request{method: "PATCH", path: path, body: `{"description":"x","location":` + locationJSON(41.3766, 2.1893, "Sant Carles 4", "osm:N1") + `}`, token: ana.Token}, http.StatusOK)
 	})

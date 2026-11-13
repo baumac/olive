@@ -1982,6 +1982,11 @@ components:
         instance:
           type: string
           format: uri-reference
+        property:
+          description: |
+            The request property that causes a conflict, such as `name` or `location`.
+            Only a conflict of one property has it.
+          type: string
         restaurant:
           description: The ID of the restaurant that has the `location.place_id` of the request. Only this conflict has the property.
           type: string

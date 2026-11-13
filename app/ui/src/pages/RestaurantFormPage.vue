@@ -46,6 +46,8 @@ const nameLocked = ref(false)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `restaurant:${props.restaurantId ?? 'new'}`)
+// The reviews of other users lock a stored location, like the name.
+const locationLocked = computed(() => nameLocked.value && stored.value !== null)
 const cancelPath = computed(() => (props.restaurantId ? `/restaurants/${props.restaurantId}` : '/restaurants'))
 
 onMounted(async () => {
@@ -79,12 +81,14 @@ onMounted(async () => {
   }
   const draft = takeDraft<Fields>(draftKey.value)
   if (draft) {
-    fields.value = nameLocked.value ? { ...draft, name: fields.value.name, location: fields.value.location } : draft
+    fields.value = {
+      ...draft,
+      name: nameLocked.value ? fields.value.name : draft.name,
+      location: locationLocked.value ? fields.value.location : draft.location,
+    }
   }
 })
 
-// The reviews of other users lock a stored location, like the name.
-const locationLocked = computed(() => nameLocked.value && stored.value !== null)
 
 // A restaurant near the new location can be the same restaurant. The check
 // is a hint. A failed check shows nothing.
@@ -123,8 +127,9 @@ function validate(): boolean {
     description: checkLongText(fields.value.description),
     tags: errors.value.tags ?? '',
     // A restaurant from before locations can stay without one.
-    location:
-      fields.value.location || (editing.value && !stored.value)
+    location: fields.value.location
+      ? checkName(fields.value.location.address, 'Enter the address.')
+      : editing.value && !stored.value
         ? ''
         : 'Search for the place and select it, or enter the location by hand.',
   }
@@ -180,9 +185,11 @@ async function submit() {
         description: 'Add your review to it, or select a different place.',
         restaurant: problem.restaurant,
       }
-    } else if (status === 409) {
-      const field = problem?.detail?.includes('location') ? 'location' : 'name'
+    } else if (status === 409 && (problem?.property === 'name' || problem?.property === 'location')) {
+      const field = problem.property
       errors.value = { [field]: `The ${field} cannot change because other people have reviewed this restaurant.` }
+    } else if (status === 409) {
+      alert.value = { title: 'Restaurant not saved', description: 'Reload the page and try again.' }
     } else if (status === 403) {
       alert.value = { title: 'You cannot change this restaurant', description: 'Only the person who added it can change it. If that person has no account now, write a review first.' }
     } else if (status === 404) {

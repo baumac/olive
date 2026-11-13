@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"net/http"
 	"net/url"
@@ -16,6 +17,7 @@ import (
 	"unicode"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -36,11 +38,15 @@ var placeKinds = map[string]bool{
 
 // placeSearch gets places from a Photon geocoder and keeps the answers.
 type placeSearch struct {
-	baseURL   string
-	userAgent string
+	baseURL string
+	// userAgent reads the settings on each request. A change of the
+	// Application URL then needs no restart.
+	userAgent func() string
 	client    *http.Client
 	// upstream counts the requests of all users to the geocoder.
 	upstream *rateLimiter
+	// fetches sends one geocoder request for equal searches at one time.
+	fetches singleflight.Group
 
 	mu    sync.Mutex
 	cache map[string]placeAnswer
@@ -52,7 +58,7 @@ type placeAnswer struct {
 	expires time.Time
 }
 
-func newPlaceSearch(baseURL, userAgent string, limit int, window time.Duration) *placeSearch {
+func newPlaceSearch(baseURL string, userAgent func() string, limit int, window time.Duration) *placeSearch {
 	return &placeSearch{
 		baseURL:   strings.TrimRight(baseURL, "/"),
 		userAgent: userAgent,
@@ -67,8 +73,8 @@ func newPlaceSearch(baseURL, userAgent string, limit int, window time.Duration) 
 // requests to the geocoder.
 var errPlaceSearchBusy = errors.New("the geocoder request limit is reached")
 
-// search returns the places for the text. The point is optional. Its
-// coordinates have one decimal, so near users share a cache entry.
+// search returns the places for the text. The point is optional. Near users
+// share a cache entry because the point has one decimal.
 func (p *placeSearch) search(ctx context.Context, text string, point *[2]float64) ([]reviewsapi.Place, error) {
 	query := url.Values{"q": {strings.Join(strings.Fields(text), " ")}, "limit": {strconv.Itoa(maxPlaces)}}
 	if point != nil {
@@ -77,27 +83,60 @@ func (p *placeSearch) search(ctx context.Context, text string, point *[2]float64
 	}
 	key := strings.ToLower(query.Encode())
 
-	p.mu.Lock()
-	answer, ok := p.cache[key]
-	p.mu.Unlock()
-	if ok && p.now().Before(answer.expires) {
-		return answer.places, nil
+	if places, ok := p.cached(key); ok {
+		return places, nil
 	}
-	if wait, _ := p.upstream.allow(""); wait > 0 {
-		return nil, errPlaceSearchBusy
-	}
-	places, err := p.fetch(ctx, query)
+	// The first request of a search does the fetch for all equal requests.
+	// Its cancel does not stop the fetch of the others.
+	v, err, _ := p.fetches.Do(key, func() (any, error) {
+		if places, ok := p.cached(key); ok {
+			return places, nil
+		}
+		if wait, _ := p.upstream.allow(""); wait > 0 {
+			return nil, errPlaceSearchBusy
+		}
+		places, err := p.fetch(context.WithoutCancel(ctx), query)
+		if err != nil {
+			return nil, err
+		}
+		p.store(key, places)
+		return places, nil
+	})
 	if err != nil {
 		return nil, err
 	}
+	return v.([]reviewsapi.Place), nil
+}
 
+func (p *placeSearch) cached(key string) ([]reviewsapi.Place, bool) {
 	p.mu.Lock()
-	if len(p.cache) >= placeCacheSize {
-		clear(p.cache)
+	defer p.mu.Unlock()
+	answer, ok := p.cache[key]
+	if !ok || !p.now().Before(answer.expires) {
+		return nil, false
 	}
-	p.cache[key] = placeAnswer{places: places, expires: p.now().Add(placeCacheTTL)}
-	p.mu.Unlock()
-	return places, nil
+	return answer.places, true
+}
+
+// store removes the expired answers of a full cache. If it is still full,
+// it removes the answer that expires first.
+func (p *placeSearch) store(key string, places []reviewsapi.Place) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	now := p.now()
+	if len(p.cache) >= placeCacheSize {
+		maps.DeleteFunc(p.cache, func(_ string, a placeAnswer) bool { return !now.Before(a.expires) })
+	}
+	if len(p.cache) >= placeCacheSize {
+		oldest := ""
+		for k, a := range p.cache {
+			if oldest == "" || a.expires.Before(p.cache[oldest].expires) {
+				oldest = k
+			}
+		}
+		delete(p.cache, oldest)
+	}
+	p.cache[key] = placeAnswer{places: places, expires: now.Add(placeCacheTTL)}
 }
 
 func (p *placeSearch) fetch(ctx context.Context, query url.Values) ([]reviewsapi.Place, error) {
@@ -105,7 +144,7 @@ func (p *placeSearch) fetch(ctx context.Context, query url.Values) ([]reviewsapi
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", p.userAgent)
+	req.Header.Set("User-Agent", p.userAgent())
 	res, err := p.client.Do(req)
 	if err != nil {
 		return nil, err

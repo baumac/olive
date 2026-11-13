@@ -1,9 +1,13 @@
-import type { Place } from '@reviews/sdk'
+import type { Location, Place, Restaurant } from '@reviews/sdk'
 import { ResponseError } from '@reviews/sdk'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import LocationField from '@/components/app/LocationField.vue'
-import { fieldErrors, placesApi } from '@/lib/api'
+import { fieldErrors, placesApi, restaurantsApi } from '@/lib/api'
+import { saveDraft } from '@/lib/drafts'
+import { clearSession, saveSession } from '@/lib/session'
+import RestaurantFormPage from '@/pages/RestaurantFormPage.vue'
 import { parseCoordinate, sameLocation } from '@/lib/places'
 import { expectAccessible } from './axe'
 
@@ -117,9 +121,88 @@ describe('LocationField', () => {
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([{ address: 'Carrer Nou 1', latitude: 41.3766, longitude: 2.1893 }])
   })
 
-  it('shows only the location when it is locked', () => {
-    const w = mountField({ modelValue: canSole.location, locked: true })
-    expect(w.text()).toContain('Carrer de Sant Carles 4, 08003 Barcelona')
-    expect(w.findAll('input, button')).toHaveLength(0)
+  it('shows only the location when it is locked', async () => {
+    const w = mountField({ modelValue: canSole.location, locked: true, describedBy: 'reason' })
+    const input = w.get('input')
+    expect(w.findAll('input, button')).toHaveLength(1)
+    expect(input.attributes('id')).toBe('location')
+    expect(input.attributes('readonly')).toBeDefined()
+    expect(input.attributes('aria-describedby')).toBe('reason')
+    expect((input.element as HTMLInputElement).value).toBe(canSole.location.address)
+  })
+
+  it('names the address field only Address', async () => {
+    const w = mountField()
+    await w.get('button').trigger('click')
+    const input = w.get('input[name=address]')
+    expect(input.attributes('id')).toBe('location')
+    expect(document.getElementById(input.attributes('aria-labelledby')!)?.textContent).toBe('Address')
+  })
+
+  it('keeps the search after a 429', async () => {
+    vi.spyOn(placesApi, 'searchPlaces').mockRejectedValue(
+      new ResponseError(new Response('{}', { status: 429, headers: { 'Retry-After': '12' } })),
+    )
+    const w = mountField()
+    await w.get('input[type=search]').setValue('can sole')
+    await vi.advanceTimersByTimeAsync(1000)
+    await flushPromises()
+    expect(w.text()).toContain('Too many searches. Try again in 12 seconds.')
+    expect(w.find('input[type=search]').exists()).toBe(true)
+    expect(w.find('input[name=address]').exists()).toBe(false)
+  })
+
+  it('stops searching after a 401', async () => {
+    vi.spyOn(placesApi, 'searchPlaces').mockRejectedValue(new ResponseError(new Response('{}', { status: 401 })))
+    const w = mountField()
+    await w.get('input[type=search]').setValue('can sole')
+    await vi.advanceTimersByTimeAsync(1000)
+    await flushPromises()
+    expect(w.text()).not.toContain('Searching')
+    expect(w.find('input[name=address]').exists()).toBe(false)
+  })
+})
+
+describe('RestaurantFormPage drafts', () => {
+  const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '2024-11-04 01:26:55.002Z', updated: '2024-11-04 01:26:55.002Z' }
+  const restaurant: Restaurant = {
+    id: 'k3x9m2p7q1w8z4a',
+    name: 'Old Place',
+    location: null,
+    creator: { id: user.id, name: 'Ana' },
+    reviewCount: 2,
+    rating: null,
+    created: user.created,
+    updated: user.updated,
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    clearSession()
+  })
+
+  async function mountWithDraft(stored: Location | null) {
+    saveSession({ token: 't', expires: '2099-01-01 00:00:00.000Z', user })
+    vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue({ ...restaurant, location: stored })
+    vi.spyOn(restaurantsApi, 'listReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
+    saveDraft(`restaurant:${restaurant.id}`, { name: 'Renamed', description: 'Draft', tags: [], location: canSole.location })
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
+    const w = mount(RestaurantFormPage, { props: { restaurantId: restaurant.id }, global: { plugins: [router] }, attachTo: document.body })
+    await flushPromises()
+    return w
+  }
+
+  it('keeps the drafted location of a restaurant without one', async () => {
+    const w = await mountWithDraft(null)
+    expect((w.get('input[name=name]').element as HTMLInputElement).value).toBe('Old Place')
+    expect(w.text()).toContain('Selected location: Carrer de Sant Carles 4, 08003 Barcelona')
+    w.unmount()
+  })
+
+  it('keeps the stored location when it is locked', async () => {
+    const w = await mountWithDraft(house.location)
+    expect((w.get('input[name=address]').element as HTMLInputElement).value).toBe(house.location.address)
+    w.unmount()
   })
 })

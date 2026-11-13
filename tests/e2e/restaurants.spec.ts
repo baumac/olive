@@ -79,6 +79,7 @@ test('a restaurant with a review of another user keeps its name and cannot be de
   await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
   await expect(page.getByText('The location cannot change because other people have reviewed this restaurant.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Enter the location by hand' })).toHaveCount(0)
+  await expect(page.getByLabel('Location')).not.toBeEditable()
   await page.getByLabel('Description').fill('Family run')
   await page.getByRole('button', { name: 'Save restaurant' }).click()
 

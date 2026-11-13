@@ -197,11 +197,12 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 				return err
 			}
 			if n > 0 {
-				detail := "The name cannot change because the restaurant has reviews of other users."
+				property := "name"
 				if !renames {
-					detail = "The location cannot change because the restaurant has reviews of other users."
+					property = "location"
 				}
-				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(detail)}
+				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: propertyConflict(
+					property, "The "+property+" cannot change because the restaurant has reviews of other users.")}
 				return nil
 			}
 		}

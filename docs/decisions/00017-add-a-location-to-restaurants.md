@@ -72,7 +72,7 @@ The rules extend decision 00016.
 | Change a stored location | the creator | no other user has a review of the restaurant |
 
 For a restaurant without a creator, "the creator" is each user who has a review of it.
-A change that fails the condition gets `409 Conflict`, like a change of the name.
+A change that fails the condition gets `409 Conflict`, like a change of the name. The problem has `"property": "location"`.
 The reviews of other users are about the restaurant at this place.
 
 ## The place search
@@ -131,7 +131,7 @@ An address, a building, a street, or a city has no `place_id`. One building can 
 Hard rule:
 - only one restaurant can have a `place_id`
 - a create or an update with the `place_id` of a different restaurant gets `409 Conflict`
-- the problem then has the ID of that restaurant in `restaurant`. The UI shows a link to it.
+- the problem then has the ID of that restaurant in `restaurant` and `"property": "location"`. The UI shows a link to it.
 
 ```json
 {
@@ -168,7 +168,7 @@ GET /v1/restaurants?near[latitude]=41.3766&near[longitude]=2.1893&near[radius]=7
 - the name of the selected place goes into an empty "Name" field
 - "Enter the location by hand" shows the fields "Address", "Latitude", and "Longitude". The form opens them when the search fails.
 - a link under the search credits OpenStreetMap. The OpenStreetMap attribution guidelines require it for an app with such a search.
-- the edit form of a restaurant with reviews of other users shows the location without the search, with the reason
+- the edit form of a restaurant with reviews of other users shows the address in a read-only field, with the reason. Focus can reach it.
 - a restaurant without a location shows "Add the location" on its page to the user who can change it
 
 # Implementation Details
@@ -182,7 +182,7 @@ GET /v1/restaurants?near[latitude]=41.3766&near[longitude]=2.1893&near[radius]=7
 - `RestaurantPatch` is a JSON Merge Patch, but a `location` replaces the complete object. A location without `place_id` removes the stored one. A merge of single coordinates has no use.
 - `near` is a `deepObject` parameter, like the comparison filters
 - `searchPlaces` has the new tag `places` and the new response `503 ServiceUnavailable`
-- `Problem` gets the optional property `restaurant`
+- `Problem` gets the optional properties `restaurant` and `property`. `property` names the request property of a conflict, such as `name` or `location`. The UI uses it, not the `detail` text.
 - `x-rate-limit` gets the name `place-search` with the key `user`
 
 ## Data
@@ -210,12 +210,13 @@ GET /v1/restaurants?near[latitude]=41.3766&near[longitude]=2.1893&near[radius]=7
 
 - it sends `GET <url>/api?q=<search>&limit=10` to Photon, with `lat` and `lon` for the point
 - the point has one decimal, about 11 km. Users in one city then share the cache entries.
-- the `User-Agent` is `reviews-app` with the Application URL of the PocketBase settings. The operator of the geocoder can then find the operator of the app.
+- the `User-Agent` is `reviews-app` with the Application URL of the PocketBase settings. The operator of the geocoder can then find the operator of the app. The app reads the setting for each request, so a change needs no restart.
 - the request has a timeout of 5 seconds. The app reads at most 1 MB of the answer.
 - the address is the street with the house number, the postcode with the city, the state, and the country. Parts that Photon does not give are left out.
 - the app removes the characters that the `Address` schema refuses and cuts the text to 255 characters. A response then cannot fail the response validation of decision 00007.
 - a place without a point or without text is left out. Equal places are returned one time.
-- the cache keeps 1,000 answers for 24 hours in memory. A full cache is emptied.
+- the cache keeps 1,000 answers for 24 hours in memory. A full cache removes its expired answers. If it is still full, it removes the answer that expires first.
+- equal searches at one time cause one request to the geocoder. A canceled request does not stop it for the others.
 - all users together cause at most 60 requests to the geocoder per minute. More searches that are not in the cache get `503`.
 - a search that gets `503` does not count for the limit of the user
 - the search text goes to the operator of the geocoder. It has no data of the user.
@@ -228,6 +229,9 @@ Environment variables:
 
 - `LocationField` in `app/ui/src/components/app` has the search and the fields by hand. It calls `searchPlaces`, so it is an app component.
 - the fields by hand accept a comma or a point in a number. A changed location by hand has no `place_id`.
+- the form checks the address with the rules of a name before it sends it
+- a `429` of the search shows the wait and keeps the search. Other failures open the fields by hand.
+- a draft keeps its location unless the location is locked
 - `RestaurantFormPage` sends the `location` in a patch only when it changed and is not locked
 - the check for near restaurants runs for each new location. A failed check shows nothing.
 - `fieldErrors` maps an error of `location.address` to the `location` field

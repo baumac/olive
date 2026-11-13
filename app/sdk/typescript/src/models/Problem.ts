@@ -48,6 +48,12 @@ export interface Problem {
      */
     instance?: string;
     /**
+     * The request property that causes a conflict, such as `name` or `location`.
+     * Only a conflict of one property has it.
+     * 
+     */
+    property?: string;
+    /**
      * The ID of the restaurant that has the `location.place_id` of the request. Only this conflict has the property.
      */
     restaurant?: string;
@@ -82,6 +88,7 @@ export function ProblemFromJSONTyped(json: any, ignoreDiscriminator: boolean): P
         'status': json['status'],
         'detail': json['detail'] == null ? undefined : json['detail'],
         'instance': json['instance'] == null ? undefined : json['instance'],
+        'property': json['property'] == null ? undefined : json['property'],
         'restaurant': json['restaurant'] == null ? undefined : json['restaurant'],
         'errors': json['errors'] == null ? undefined : ((json['errors'] as Array<any>).map(ValidationErrorFromJSON)),
     };
@@ -103,6 +110,7 @@ export function ProblemToJSONTyped(value?: Problem | null, ignoreDiscriminator: 
         'status': value['status'],
         'detail': value['detail'],
         'instance': value['instance'],
+        'property': value['property'],
         'restaurant': value['restaurant'],
         'errors': value['errors'] == null ? undefined : ((value['errors'] as Array<any>).map(ValidationErrorToJSON)),
     };

@@ -5,8 +5,8 @@ import (
 	m "github.com/pocketbase/pocketbase/migrations"
 )
 
-// A restaurant without a location has an empty address. See decision 00017.
-// FTS5 cannot add a column. The migration makes restaurants_fts again.
+// A restaurant without a location has an empty address. The migration makes
+// restaurants_fts again for its new address column.
 func init() {
 	m.Register(func(app core.App) error {
 		restaurants, err := app.FindCollectionByNameOrId("restaurants")

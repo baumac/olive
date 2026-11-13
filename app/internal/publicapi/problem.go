@@ -40,11 +40,18 @@ func conflict(detail string) reviewsapi.ConflictApplicationProblemPlusJSONRespon
 	return reviewsapi.ConflictApplicationProblemPlusJSONResponse(newProblem(http.StatusConflict, detail))
 }
 
+// propertyConflict names the request property that causes the conflict.
+func propertyConflict(property, detail string) reviewsapi.ConflictApplicationProblemPlusJSONResponse {
+	p := newProblem(http.StatusConflict, detail)
+	p.Property = &property
+	return reviewsapi.ConflictApplicationProblemPlusJSONResponse(p)
+}
+
 // placeConflict names the restaurant that has the place ID of the request.
 func placeConflict(restaurantID string) reviewsapi.ConflictApplicationProblemPlusJSONResponse {
-	p := newProblem(http.StatusConflict, "Another restaurant has this place.")
+	p := propertyConflict("location", "Another restaurant has this place.")
 	p.Restaurant = &restaurantID
-	return reviewsapi.ConflictApplicationProblemPlusJSONResponse(p)
+	return p
 }
 
 func unprocessable(errs fieldErrors) reviewsapi.UnprocessableContentApplicationProblemPlusJSONResponse {

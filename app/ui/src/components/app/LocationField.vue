@@ -23,7 +23,9 @@ const emit = defineEmits<{ named: [name: string] }>()
 const byHand = ref(false)
 const text = ref('')
 const places = ref<Place[]>([])
-const state = ref<'idle' | 'loading' | 'done' | 'failed'>('idle')
+const state = ref<'idle' | 'loading' | 'done' | 'limited' | 'failed'>('idle')
+// retryAfter is the wait in seconds after a 429.
+const retryAfter = ref(0)
 const hand = ref({ address: '', latitude: '', longitude: '' })
 
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -49,9 +51,18 @@ watch(text, (value) => {
         state.value = 'done'
       }
     } catch (error) {
-      const { status } = await apiFailure(error)
-      if (current === request && status !== 401) {
-        places.value = []
+      const failure = await apiFailure(error)
+      if (current !== request) {
+        return
+      }
+      places.value = []
+      // A 401 opens the sign in page.
+      if (failure.status === 401) {
+        state.value = 'idle'
+      } else if (failure.status === 429) {
+        retryAfter.value = failure.retryAfter ?? 60
+        state.value = 'limited'
+      } else {
         state.value = 'failed'
         enterByHand()
       }
@@ -100,7 +111,15 @@ watch(
 
 <template>
   <div class="grid gap-3">
-    <p v-if="location && (locked || !byHand)" class="flex items-start gap-2 text-sm">
+    <Input
+      v-if="locked"
+      :id="id"
+      :model-value="location?.address ?? ''"
+      name="address"
+      readonly
+      :aria-describedby="describedBy"
+    />
+    <p v-else-if="location && !byHand" class="flex items-start gap-2 text-sm">
       <MapPinIcon class="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <span><span class="sr-only">Selected location: </span>{{ location.address }}</span>
     </p>
@@ -109,10 +128,12 @@ watch(
         The place search does not answer. Enter the location by hand.
       </p>
       <div class="grid gap-2">
-        <Label :for="id">Address</Label>
+        <Label :id="`${id}-address-label`" :for="id">Address</Label>
+        <!-- The form label of the field also targets this input. Its name is only Address. -->
         <Input
           :id="id"
           v-model="hand.address"
+          :aria-labelledby="`${id}-address-label`"
           name="address"
           maxlength="255"
           placeholder="Carrer de Sant Carles 4, 08003 Barcelona"
@@ -149,6 +170,9 @@ watch(
         :aria-invalid="invalid ? 'true' : undefined"
         :aria-describedby="describedBy"
       />
+      <p v-if="state === 'limited'" class="text-sm" role="status">
+        Too many searches. Try again in {{ formatCount(retryAfter, 'second') }}.
+      </p>
       <p class="sr-only" role="status">
         <template v-if="state === 'loading'">Searching</template>
         <template v-else-if="state === 'done'">{{ places.length ? `${formatCount(places.length, 'place')} found` : 'No places found' }}</template>

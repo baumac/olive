@@ -2,9 +2,8 @@ import { createHash } from 'node:crypto'
 import type { Server } from 'node:http'
 import { createServer } from 'node:http'
 
-// startPhoton starts a fake of the Photon geocoder of decision 00017. The
-// app of the tests gets its places from it. The tests then need no network.
-// A search with the word "nothing" finds no place. Each other search finds a
+// startPhoton starts a fake of the Photon geocoder of decision 00017. A
+// search with the word "nothing" finds no place. Each other search finds a
 // restaurant with the name of the search and then an address.
 export async function startPhoton(port: number): Promise<{ url: string; stop: () => Promise<void> }> {
   const server: Server = createServer((req, res) => {

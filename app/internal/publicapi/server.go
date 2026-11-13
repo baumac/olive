@@ -144,7 +144,7 @@ func New(app core.App, opts Options) (*Server, error) {
 	var places *placeSearch
 	if opts.PlacesURL != "" {
 		// The geocoder can use the URL to contact the operator of the app.
-		userAgent := "reviews-app (" + app.Settings().Meta.AppURL + ")"
+		userAgent := func() string { return "reviews-app (" + app.Settings().Meta.AppURL + ")" }
 		places = newPlaceSearch(opts.PlacesURL, userAgent,
 			cmp.Or(opts.PlaceUpstreamLimit, DefaultOptions.PlaceUpstreamLimit),
 			cmp.Or(opts.PlaceSearchWindow, DefaultOptions.PlaceSearchWindow))
