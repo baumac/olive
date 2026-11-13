@@ -25,6 +25,8 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Add load tests
 - Add test coverage make command, and ci check
 - Add renovate on a once per month scheudle that groups all updates into a single PR
+- Allow users to set preferred city and incorporate that into the maps feature
+- Allow users to favorite restaurants and retrieve their list of favorites
 
 ## Won't Do
 - Add rate limits to the write operations
