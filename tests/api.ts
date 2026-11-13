@@ -1,4 +1,4 @@
-import type { AuthToken, Photo, Restaurant, RestaurantCreate, Review, ReviewCreate } from '@reviews/sdk'
+import type { AuthToken, Location, Photo, Restaurant, RestaurantCreate, Review, ReviewCreate } from '@reviews/sdk'
 import { Configuration, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -6,6 +6,16 @@ import { fileURLToPath } from 'node:url'
 
 // WithTagArray changes the tags of an SDK body from a Set to an array.
 type WithTagArray<T> = T extends unknown ? Omit<T, 'tags'> & { tags?: string[] } : never
+
+// TestRestaurant is a create body with an optional location.
+type TestRestaurant = Omit<WithTagArray<RestaurantCreate>, 'location'> & { location?: Location }
+
+// randomLocation is a point in the South Pacific. Restaurants of different
+// tests are then not near each other.
+export function randomLocation(): Location {
+  const part = () => Math.round(Math.random() * 1e6) / 1e6
+  return { latitude: -40 - part() * 10, longitude: -150 + part() * 40, address: 'Test Street 1, Testville' }
+}
 
 export interface TestUser {
   name: string
@@ -43,10 +53,11 @@ export class TestApi {
     }
   }
 
-  createRestaurant(user: TestUser, restaurant: WithTagArray<RestaurantCreate>): Promise<Restaurant> {
-    const { tags, ...rest } = restaurant
+  // createRestaurant gives a restaurant without a location a random one.
+  createRestaurant(user: TestUser, restaurant: TestRestaurant): Promise<Restaurant> {
+    const { tags, location, ...rest } = restaurant
     return new RestaurantsApi(this.config(user.auth.token)).createRestaurant({
-      restaurantCreate: { ...rest, tags: tags ? new Set(tags) : undefined },
+      restaurantCreate: { ...rest, tags: tags ? new Set(tags) : undefined, location: location ?? randomLocation() },
     })
   }
 

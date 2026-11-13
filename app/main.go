@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -41,6 +42,7 @@ func options(getenv func(string) string) (publicapi.Options, error) {
 		"REVIEWS_SIGN_IN_LIMIT":         &opts.SignInLimit,
 		"REVIEWS_SIGN_IN_FAILURE_LIMIT": &opts.SignInFailureLimit,
 		"REVIEWS_PHOTO_UPLOAD_LIMIT":    &opts.PhotoUploadLimit,
+		"REVIEWS_PLACE_SEARCH_LIMIT":    &opts.PlaceSearchLimit,
 	} {
 		v := getenv(name)
 		if v == "" {
@@ -65,6 +67,16 @@ func options(getenv func(string) string) (publicapi.Options, error) {
 			return opts, fmt.Errorf("%s must be true or false, not %q", name, v)
 		}
 		*skip = !validate
+	}
+	switch v := getenv("REVIEWS_PLACES_URL"); {
+	case v == "off":
+		opts.PlacesURL = ""
+	case v != "":
+		u, err := url.Parse(v)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return opts, fmt.Errorf("REVIEWS_PLACES_URL must be an http or https URL or off, not %q", v)
+		}
+		opts.PlacesURL = v
 	}
 	return opts, nil
 }

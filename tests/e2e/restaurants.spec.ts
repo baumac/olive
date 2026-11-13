@@ -1,5 +1,5 @@
-import { uniqueTag } from '../api'
-import { expect, signIn, test } from '../fixtures'
+import { randomLocation, uniqueTag } from '../api'
+import { expect, selectPlace, signIn, test } from '../fixtures'
 
 test('the list shows restaurants, filters by tag, and loads more', async ({ page, api }) => {
   const owner = await api.signUp('Joe')
@@ -27,6 +27,10 @@ test('a signed in user adds, edits, and deletes a restaurant', async ({ page, us
   await page.goto('/restaurants')
   await page.getByRole('link', { name: 'Add restaurant' }).first().click()
 
+  // The name of the selected place goes into the empty name field.
+  const place = uniqueTag('taqueria')
+  await selectPlace(page, place)
+  await expect(page.getByLabel('Name')).toHaveValue(place)
   await page.getByLabel('Name').fill('Taqueria Sol')
   await page.getByLabel('Description').fill('Tacos al pastor.')
   await page.getByLabel('Tags').fill('mexican')
@@ -36,6 +40,7 @@ test('a signed in user adds, edits, and deletes a restaurant', async ({ page, us
   await expect(page.getByRole('heading', { name: 'Taqueria Sol', level: 1 })).toBeVisible()
   await expect(page.getByText('Restaurant added')).toBeVisible()
   await expect(page.getByText(`Added by ${user.name}`)).toBeVisible()
+  await expect(page.getByText('Test Street 4, 08003 Testville, Testland')).toBeVisible()
 
   await page.getByRole('link', { name: 'Edit restaurant' }).click()
   await expect(page.getByLabel('Name')).toHaveValue('Taqueria Sol')
@@ -72,6 +77,8 @@ test('a restaurant with a review of another user keeps its name and cannot be de
   await page.goto(`/restaurants/${restaurant.id}/edit`)
   await expect(page.getByLabel('Name')).not.toBeEditable()
   await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
+  await expect(page.getByText('The location cannot change because other people have reviewed this restaurant.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Enter the location by hand' })).toHaveCount(0)
   await page.getByLabel('Description').fill('Family run')
   await page.getByRole('button', { name: 'Save restaurant' }).click()
 
@@ -93,6 +100,58 @@ test('a review that arrives after the form opens blocks the rename', async ({ pa
   await page.getByRole('button', { name: 'Save restaurant' }).click()
   await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}/edit$`))
+})
+
+test('a restaurant needs a location', async ({ page, user: _user }) => {
+  await page.goto('/restaurants/new')
+  await page.getByLabel('Name').fill('No Place')
+  await page.getByRole('button', { name: 'Add restaurant' }).click()
+  await expect(page.getByText('Search for the place and select it, or enter the location by hand.')).toBeVisible()
+  await expect(page.getByLabel('Location')).toBeFocused()
+  await expect(page).toHaveURL(/\/restaurants\/new$/)
+})
+
+test('a second restaurant at a place shows the first one', async ({ page, user: _user }) => {
+  const place = uniqueTag('duplicate')
+  await page.goto('/restaurants/new')
+  await selectPlace(page, place)
+  await page.getByLabel('Name').fill('First Diner')
+  await page.getByRole('button', { name: 'Add restaurant' }).click()
+  await expect(page.getByRole('heading', { name: 'First Diner', level: 1 })).toBeVisible()
+  const first = new URL(page.url()).pathname
+
+  await page.goto('/restaurants/new')
+  await selectPlace(page, place)
+  const hint = page.getByRole('link', { name: 'First Diner' })
+  await expect(page.getByText('Is it one of these?')).toBeVisible()
+  await expect(hint).toHaveAttribute('href', first)
+
+  await page.getByLabel('Name').fill('Second Diner')
+  await page.getByRole('button', { name: 'Add restaurant' }).click()
+  await expect(page.getByText('This restaurant is already here')).toBeVisible()
+  await expect(page.getByText('Another restaurant has this place.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open the restaurant' })).toHaveAttribute('href', first)
+})
+
+test('a user enters a location by hand', async ({ page, api, user: _user }) => {
+  const location = randomLocation()
+  const neighbor = await api.createRestaurant(await api.signUp('Joe'), { name: 'Neighbor', location })
+
+  await page.goto('/restaurants/new')
+  await page.getByLabel('Location').fill('nothing here')
+  await expect(page.getByText('No places found. Change the search, or enter the location by hand.')).toBeVisible()
+  await page.getByRole('button', { name: 'Enter the location by hand' }).click()
+  await page.getByLabel('Address').fill('Harbor Road 2, Testville')
+  await page.getByLabel('Latitude').fill(String(location.latitude))
+  await page.getByLabel('Longitude').fill(String(location.longitude))
+
+  await expect(page.getByText('Is it one of these?')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Neighbor' })).toHaveAttribute('href', `/restaurants/${neighbor.id}`)
+
+  await page.getByLabel('Name').fill('By Hand')
+  await page.getByRole('button', { name: 'Add restaurant' }).click()
+  await expect(page.getByRole('heading', { name: 'By Hand', level: 1 })).toBeVisible()
+  await expect(page.getByText('Harbor Road 2, Testville')).toBeVisible()
 })
 
 test('the creator renames and deletes a restaurant that has only the own review', async ({ page, api, user }) => {

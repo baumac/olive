@@ -67,6 +67,7 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 		w.joinOverall()
 	}
 	w.compare(overallColumn, averageComparisons(p.Overall))
+	w.near(p.Near)
 	w.tagFilters(p.TagsHas, p.TagsHasAny, p.TagsHasAll)
 	w.idFilters("restaurants", "creator", p.CreatorEq, p.CreatorIn)
 	w.compare(column("restaurants", "created"), timestampComparisons(p.Created))
@@ -98,7 +99,8 @@ func sortsBy(sort, field string) bool {
 	return slices.ContainsFunc(strings.Split(sort, ","), func(f string) bool { return strings.TrimPrefix(f, "-") == field })
 }
 
-// CreateRestaurant sets the user of the bearer token as the creator.
+// CreateRestaurant sets the user of the bearer token as the creator. The
+// place check and the save run in one transaction.
 func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRestaurantRequestObject) (reviewsapi.CreateRestaurantResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
@@ -114,9 +116,20 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 	if b.Tags != nil {
 		r.Set("tags", *b.Tags)
 	}
+	setLocation(r, b.Location)
 	r.Set("creator", user.Id)
-	if err := s.app.Save(r); err != nil {
+	var duplicate string
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		if duplicate, err = restaurantWithPlace(tx, r); err != nil || duplicate != "" {
+			return err
+		}
+		return tx.Save(r)
+	})
+	if err != nil {
 		return nil, err
+	}
+	if duplicate != "" {
+		return reviewsapi.CreateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: placeConflict(duplicate)}, nil
 	}
 
 	location := basePath + "/restaurants/" + r.Id
@@ -165,22 +178,43 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 			return nil
 		}
 
-		if b.Name != nil && *b.Name != r.GetString("name") {
-			n, err := countReviewsOfOtherUsers(tx, r.Id, user.Id)
-			if err != nil {
-				return err
-			}
-			if n > 0 {
-				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The name cannot change because the restaurant has reviews of other users.")}
-				return nil
-			}
-		}
+		hadLocation := r.GetString("address") != ""
+		renames := b.Name != nil && *b.Name != r.GetString("name")
 		ch := &changes{r: r}
 		if b.Name != nil {
 			ch.set("name", *b.Name)
 		}
 		ch.patchText("description", b.Description)
 		ch.patchTags(b.Tags)
+		moves := b.Location != nil && !sameLocation(r, *b.Location)
+		if moves {
+			setLocation(r, *b.Location)
+			ch.changed = true
+		}
+		if renames || (moves && hadLocation) {
+			n, err := countReviewsOfOtherUsers(tx, r.Id, user.Id)
+			if err != nil {
+				return err
+			}
+			if n > 0 {
+				detail := "The name cannot change because the restaurant has reviews of other users."
+				if !renames {
+					detail = "The location cannot change because the restaurant has reviews of other users."
+				}
+				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(detail)}
+				return nil
+			}
+		}
+		if moves {
+			duplicate, err := restaurantWithPlace(tx, r)
+			if err != nil {
+				return err
+			}
+			if duplicate != "" {
+				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: placeConflict(duplicate)}
+				return nil
+			}
+		}
 		saved = r
 		if !ch.changed {
 			return nil
@@ -248,6 +282,58 @@ func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRest
 
 const restaurantNotFound = "The restaurant does not exist."
 
+// setLocation replaces the complete location. A location without a place
+// ID clears the stored place ID.
+func setLocation(r *core.Record, l reviewsapi.Location) {
+	r.Set("latitude", l.Latitude)
+	r.Set("longitude", l.Longitude)
+	r.Set("address", l.Address)
+	r.Set("place_id", placeIDOf(l))
+}
+
+func sameLocation(r *core.Record, l reviewsapi.Location) bool {
+	return r.GetFloat("latitude") == l.Latitude && r.GetFloat("longitude") == l.Longitude &&
+		r.GetString("address") == l.Address && r.GetString("place_id") == placeIDOf(l)
+}
+
+func placeIDOf(l reviewsapi.Location) string {
+	if l.PlaceId == nil {
+		return ""
+	}
+	return *l.PlaceId
+}
+
+// restaurantWithPlace returns the ID of a different restaurant that has the
+// place ID of r. It returns an empty string if no restaurant has it.
+func restaurantWithPlace(app core.App, r *core.Record) (string, error) {
+	placeID := r.GetString("place_id")
+	if placeID == "" {
+		return "", nil
+	}
+	var id string
+	err := app.DB().Select("id").From("restaurants").
+		Where(dbx.HashExp{"place_id": placeID}).AndWhere(dbx.Not(dbx.HashExp{"id": r.Id})).
+		Limit(1).Row(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return id, err
+}
+
+// locationOf returns null for a restaurant without an address. Such a
+// restaurant is from before decision 00017.
+func locationOf(r *core.Record) nullable.Nullable[reviewsapi.Location] {
+	address := r.GetString("address")
+	if address == "" {
+		return nullable.NewNullNullable[reviewsapi.Location]()
+	}
+	l := reviewsapi.Location{Latitude: r.GetFloat("latitude"), Longitude: r.GetFloat("longitude"), Address: address}
+	if id := r.GetString("place_id"); id != "" {
+		l.PlaceId = &id
+	}
+	return nullable.NewNullableWithValue(l)
+}
+
 // restaurantChangeForbidden returns a detail for the 403 response if the user
 // cannot change or delete the restaurant. A restaurant without a creator
 // belongs to each user who has a review of it.
@@ -295,6 +381,7 @@ func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[str
 		Name:        r.GetString("name"),
 		Description: optionalText(r, "description"),
 		Tags:        tagsOf(r),
+		Location:    locationOf(r),
 		Creator:     nullable.NewNullNullable[reviewsapi.Creator](),
 		Rating:      nullable.NewNullNullable[reviewsapi.RestaurantRating](),
 		Created:     r.GetDateTime("created").String(),

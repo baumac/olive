@@ -85,7 +85,7 @@ app/
 
 A `prepare` middleware runs before the generated strict handler. The spec gives the checks of each operation. Decision 00007 explains the spec validation.
 - the `security` of an operation gives the token check. Only `{}` ignores the `Authorization` header. `{}` with `bearerAuth` makes the token optional. `bearerAuth` alone makes it required.
-- `x-rate-limit` on an operation turns on a rate limit. Its `key` is `ip` or `user`. Its `name` selects the settings: `sign-in` or `photo-upload`. Decision 00008 added the extension in place of `x-rate-limited: true`.
+- `x-rate-limit` on an operation turns on a rate limit. Its `key` is `ip` or `user`. Its `name` selects the settings: `sign-in`, `photo-upload`, or `place-search`. Decision 00017 added the last one. Decision 00008 added the extension in place of `x-rate-limited: true`.
 - an operation without a spec operation gets `500`. A test checks that each generated operation has a spec operation.
 The checks run in this order:
 

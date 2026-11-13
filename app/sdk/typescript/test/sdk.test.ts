@@ -53,12 +53,15 @@ const restaurant = {
   id: 'k3x9m2p7q1w8z4a',
   name: "Luigi's Trattoria",
   tags: ['italian', 'pasta'],
+  location: { latitude: 41.3766, longitude: 2.1893, address: 'Carrer de Sant Carles 4, 08003 Barcelona', place_id: 'osm:N1' },
   creator: null,
   review_count: 0,
   rating: null,
   created: '2024-11-04 01:26:55.002Z',
   updated: '2024-11-04 01:26:55.002Z',
 }
+
+const location = { latitude: 41.3766, longitude: 2.1893, address: 'Carrer de Sant Carles 4, 08003 Barcelona', placeId: 'osm:N1' }
 
 describe('query parameters', () => {
   it('sends deepObject and exploded array filters', async () => {
@@ -76,6 +79,14 @@ describe('query parameters', () => {
     expect(q.has('food[eq]')).toBe(false)
     expect(q.getAll('creator[in]')).toEqual(['u5n1c8r3t6y0b2e', 'u2g6k0m4o8q1s5w'])
     expect(q.get('created[gte]')).toBe('2024-11-01 00:00:00.000Z')
+  })
+
+  it('sends the near filter as a deepObject', async () => {
+    const { sent, config } = fakeFetch(200, { items: [restaurant], next_cursor: null })
+    const page = await new RestaurantsApi(config).listRestaurants({ near: { latitude: 41.3766, longitude: 2.1893, radius: 75 } })
+    const q = sent[0].url.searchParams
+    expect([q.get('near[latitude]'), q.get('near[longitude]'), q.get('near[radius]')]).toEqual(['41.3766', '2.1893', '75'])
+    expect(page.items[0].location).toEqual(location)
   })
 })
 
@@ -147,7 +158,7 @@ describe('errors and headers', () => {
   it('gives the Location header through the raw response', async () => {
     const { config } = fakeFetch(201, restaurant, { Location: '/v1/restaurants/k3x9m2p7q1w8z4a' })
     const raw = await new RestaurantsApi(config).createRestaurantRaw({
-      restaurantCreate: { name: "Luigi's Trattoria" },
+      restaurantCreate: { name: "Luigi's Trattoria", location },
     })
     expect(raw.raw.headers.get('Location')).toBe('/v1/restaurants/k3x9m2p7q1w8z4a')
     expect((await raw.value()).name).toBe("Luigi's Trattoria")
@@ -167,7 +178,7 @@ describe('auth', () => {
 
   it('sends the token as a bearer token on create', async () => {
     const { sent, config } = fakeFetch(201, restaurant)
-    await new RestaurantsApi(config).createRestaurant({ restaurantCreate: { name: "Luigi's Trattoria" } })
+    await new RestaurantsApi(config).createRestaurant({ restaurantCreate: { name: "Luigi's Trattoria", location } })
     expect(sent[0].headers.get('Authorization')).toBe('Bearer stored-token')
   })
 })

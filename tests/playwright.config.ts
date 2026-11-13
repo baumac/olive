@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 export const port = 8097
 export const baseURL = `http://127.0.0.1:${port}`
+// photonPort is the port of the fake geocoder. See photon.ts.
+export const photonPort = 8096
 // appURL is the Application URL of the test app. The link previews use it.
 // The app does not serve it.
 export const appURL = 'https://reviews.example.com'

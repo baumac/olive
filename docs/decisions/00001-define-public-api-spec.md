@@ -28,7 +28,7 @@ Out of scope:
 - Reviews of things that are not restaurants, such as books or movies
 - Filters and sorts on the category averages and on `review_count` of restaurants. These can be added later without a breaking change.
 - Search, such as matching part of a `name`. Filters compare whole values only.
-- Preventing or merging duplicate restaurants. Two restaurants can have the same `name`. PocketBase superusers clean up duplicates.
+- Preventing or merging duplicate restaurants. Two restaurants can have the same `name`. PocketBase superusers clean up duplicates. Decision 00017 added locations and stops a second restaurant at one place.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -65,6 +65,7 @@ The restaurants API exists on the base path `/restaurants`.
 The properties of a restaurant are as follows:
 - required properties:
     - `name`: string with a length of 1 to 255 characters. It must contain at least one character that is not ASCII whitespace.
+    - `location`: the point and the address of the restaurant. Decision 00017 added it. It is `null` for a restaurant from before that decision.
 - optional properties:
     - `description`: string with a maximum length of 10,000 characters
     - `tags`: see [Tags](#tags)
@@ -474,7 +475,7 @@ For example, `tags[has]=italian` does not match the tag `south-italian`.
 ### Search
 
 `GET /restaurants`, `GET /restaurants/{restaurantId}/reviews`, and `GET /reviews` take a `search` query parameter for full-text search.
-- restaurants: `name`, `description`, and `tags`
+- restaurants: `name`, `description`, `tags`, and the address of the location. Decision 00017 added the address.
 - reviews: `title`, `feedback`, `tags`, and `restaurant_name`
 - an item matches when it has all words of the search. Each word of two or more characters also matches longer words that start with it. For example, `carb` matches "carbonara". A one-character word matches only that word.
 - the search ignores case and accents in all languages. For example, `cafe` matches "Café".
@@ -553,11 +554,12 @@ Example:
 | `401 Unauthorized` | missing bearer token on a create, update, delete, or token refresh request, an invalid bearer token on any request, or a wrong email or password on sign in |
 | `403 Forbidden` | the user is not the creator of the resource. For a restaurant without a creator, the user has no review of it. |
 | `404 Not Found` | the resource or the restaurant in the path does not exist, or the review belongs to a different restaurant |
-| `409 Conflict` | sign up with an email that another user has, duplicate review for a restaurant, delete of a restaurant that has a review of another user, change of `name` on a restaurant that has a review of another user, or a photo over the count limit |
+| `409 Conflict` | sign up with an email that another user has, duplicate review for a restaurant, delete of a restaurant that has a review of another user, change of `name` or `location` on a restaurant that has a review of another user, a place that another restaurant has, or a photo over the count limit |
 | `413 Content Too Large` | a request body over the size limit, such as a photo over 10 MB |
 | `415 Unsupported Media Type` | wrong request content type |
 | `422 Unprocessable Content` | the request body has invalid property values |
-| `429 Too Many Requests` | too many sign up, sign in, or photo upload requests in a short time |
+| `429 Too Many Requests` | too many sign up, sign in, photo upload, or place search requests in a short time |
+| `503 Service Unavailable` | the place search of decision 00017 is off or its geocoder does not answer |
 
 ## OAS Mapping
 

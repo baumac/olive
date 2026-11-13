@@ -1,5 +1,5 @@
 import type { Middleware, Problem } from '@reviews/sdk'
-import { Configuration, FetchError, ResponseError, RestaurantsApi, ReviewersApi, UsersApi } from '@reviews/sdk'
+import { Configuration, FetchError, PlacesApi, ResponseError, RestaurantsApi, ReviewersApi, UsersApi } from '@reviews/sdk'
 import { clearSession, sessionToken } from './session'
 
 type SessionEndedHandler = () => void
@@ -40,6 +40,7 @@ const configuration = new Configuration({
 export const restaurantsApi = new RestaurantsApi(configuration)
 export const usersApi = new UsersApi(configuration)
 export const reviewersApi = new ReviewersApi(configuration)
+export const placesApi = new PlacesApi(configuration)
 
 export interface ApiFailure {
   status: number | null
@@ -68,11 +69,12 @@ export async function apiFailure(error: unknown): Promise<ApiFailure> {
 }
 
 // fieldErrors maps the property of each 422 error to its API message. An
-// array item, such as tags[2], maps to its array property.
+// array item, such as tags[2], maps to its array property. A nested
+// property, such as location.address, maps to its object property.
 export function fieldErrors(problem: Problem | null): Record<string, string> {
   const out: Record<string, string> = {}
   for (const e of problem?.errors ?? []) {
-    const key = e.property.replace(/\[\d+\]$/, '')
+    const key = e.property.replace(/(\[\d+\]|\..*)$/, '')
     const message = e.message.charAt(0).toUpperCase() + e.message.slice(1)
     out[key] ??= message.endsWith('.') ? message : `${message}.`
   }

@@ -9,6 +9,7 @@ info:
     They return an auth token.
     Read operations do not require authentication.
     Create, update, and delete operations of restaurants and reviews require an auth token.
+    The place search also requires an auth token.
     A request with an invalid token gets `401 Unauthorized`, also on read operations.
 
     Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`.
@@ -27,6 +28,8 @@ tags:
     description: Restaurants and their reviews.
   - name: reviewers
     description: The public profiles of users and their reviews.
+  - name: places
+    description: The search for the place of a restaurant.
 
 paths:
   /users:
@@ -154,6 +157,10 @@ paths:
     post:
       operationId: createRestaurant
       summary: Create a restaurant
+      description: |
+        A restaurant needs a `location`.
+        A `location.place_id` that another restaurant has causes `409 Conflict`.
+        The problem then has the ID of that restaurant in `restaurant`.
       tags: [restaurants]
       security:
         - bearerAuth: []
@@ -180,6 +187,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
@@ -197,6 +206,7 @@ paths:
         - $ref: '#/components/parameters/RestaurantSort'
         - $ref: '#/components/parameters/RestaurantSearch'
         - $ref: '#/components/parameters/OverallFilter'
+        - $ref: '#/components/parameters/NearFilter'
         - $ref: '#/components/parameters/TagsHas'
         - $ref: '#/components/parameters/TagsHasAny'
         - $ref: '#/components/parameters/TagsHasAll'
@@ -250,7 +260,10 @@ paths:
         Only the creator of the restaurant can update it.
         A restaurant without a creator can be updated by each user who has a review of it.
         `name` can change only while no other user has a review of the restaurant.
+        A stored `location` has the same rule. A restaurant without a location can always get one.
         A value that is equal to the stored value is not a change.
+        A `location.place_id` that another restaurant has causes `409 Conflict`.
+        The problem then has the ID of that restaurant in `restaurant`.
       tags: [restaurants]
       security:
         - bearerAuth: []
@@ -432,6 +445,43 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /places:
+    get:
+      operationId: searchPlaces
+      x-rate-limit:
+        key: user
+        name: place-search
+      summary: Search for places
+      description: |
+        Finds places by name or address for the `location` of a restaurant.
+        The API gets the places from a geocoder with OpenStreetMap data. A client that shows them must credit OpenStreetMap.
+        A place of a restaurant, a cafe, or a bar has a `location.place_id`. An address or a building has none.
+        The search can be off. It then returns `503 Service Unavailable`. A client can still send a location without it.
+      tags: [places]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PlaceSearch'
+        - $ref: '#/components/parameters/PlaceLatitude'
+        - $ref: '#/components/parameters/PlaceLongitude'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The places, with the best match first.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /reviewers/{reviewerId}:
     parameters:
@@ -907,10 +957,10 @@ components:
       name: search
       in: query
       description: |
-        Full-text search in `name`, `description`, and `tags`.
+        Full-text search in `name`, `description`, `tags`, and `location.address`.
         A restaurant matches when it has all words of the search. A word also matches longer words that start with it.
         The search ignores case and accents. `Cafe` matches `Café`.
-        Matches in `name` count most for the `relevance` sort, then `tags`, then `description`.
+        Matches in `name` count most for the `relevance` sort, then `tags`, then `location.address`, then `description`.
         A search without a letter or a digit causes `400 Bad Request`.
       schema:
         type: string
@@ -1027,6 +1077,46 @@ components:
         $ref: '#/components/schemas/AverageRange'
       example: {gte: 7.5}
 
+    NearFilter:
+      name: near
+      in: query
+      description: |
+        Selects the restaurants with a `location` at most `radius` meters from a point.
+        Each key is a property, for example `near[latitude]=41.3874&near[longitude]=2.1686&near[radius]=75`.
+        All three properties are required.
+        A restaurant without a location matches no `near` filter.
+        The distance is an approximation on a flat surface. Its error is small for the radii that the API allows.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/Near'
+      example: {latitude: 41.3874, longitude: 2.1686, radius: 75}
+
+    PlaceSearch:
+      name: search
+      in: query
+      required: true
+      description: The name or the address of a place. It needs at least 3 characters.
+      schema:
+        type: string
+        minLength: 3
+        maxLength: 255
+      example: Can Sole Barcelona
+    PlaceLatitude:
+      name: latitude
+      in: query
+      description: The search prefers places near this point. It needs `longitude`.
+      schema:
+        $ref: '#/components/schemas/Latitude'
+      example: 41.3874
+    PlaceLongitude:
+      name: longitude
+      in: query
+      description: The search prefers places near this point. It needs `latitude`.
+      schema:
+        $ref: '#/components/schemas/Longitude'
+      example: 2.1686
+
     ReviewOverallFilter:
       name: overall
       in: query
@@ -1136,8 +1226,15 @@ components:
         The request conflicts with the current state.
         Examples are a sign up with an email that another user has, a duplicate review for a restaurant,
         a delete of a restaurant that has a review of another user,
-        a change of `name` on a restaurant that has a review of another user,
+        a change of `name` or `location` on a restaurant that has a review of another user,
+        a `location.place_id` that another restaurant has,
         or a sixth photo of a review.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ServiceUnavailable:
+      description: The place search is off, or its geocoder does not answer.
       content:
         application/problem+json:
           schema:
@@ -1195,7 +1292,7 @@ components:
             detail: The email or password is not correct.
     TooManyRequests:
       description: |
-        The client sent too many sign up, sign in, or photo upload requests in a short time.
+        The client sent too many sign up, sign in, photo upload, or place search requests in a short time.
         Sign in also gets it when one user has too many wrong passwords in a short time.
         A photo upload also gets it when the server holds too many photos in memory.
         This upload does not count for the rate limit of the user.
@@ -1269,6 +1366,103 @@ components:
       items:
         $ref: '#/components/schemas/Tag'
       examples: [[italian, pasta]]
+    Latitude:
+      description: A latitude in degrees. North is positive.
+      type: number
+      format: double
+      minimum: -90
+      maximum: 90
+    Longitude:
+      description: A longitude in degrees. East is positive.
+      type: number
+      format: double
+      minimum: -180
+      maximum: 180
+    Address:
+      description: |
+        The address of a place in one line. It has the rules of a name.
+      type: string
+      minLength: 1
+      maxLength: 255
+      pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
+      x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters
+    PlaceId:
+      description: |
+        The ID of a place at the geocoder. It starts with the source of the ID, for example `osm` for OpenStreetMap.
+        Only one restaurant can have a place ID.
+      type: string
+      maxLength: 80
+      pattern: '^[a-z0-9]{1,15}:[A-Za-z0-9_-]{1,64}$'
+      x-pattern-message: must be a source, a colon, and an ID
+    Location:
+      description: The place of a restaurant.
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude, address]
+      properties:
+        latitude:
+          $ref: '#/components/schemas/Latitude'
+        longitude:
+          $ref: '#/components/schemas/Longitude'
+        address:
+          $ref: '#/components/schemas/Address'
+        place_id:
+          $ref: '#/components/schemas/PlaceId'
+      examples:
+        - latitude: 41.3766
+          longitude: 2.1893
+          address: Carrer de Sant Carles 4, 08003 Barcelona, España
+          place_id: osm:N1234567890
+    Near:
+      description: A point and a radius in meters.
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude, radius]
+      properties:
+        latitude:
+          $ref: '#/components/schemas/Latitude'
+        longitude:
+          $ref: '#/components/schemas/Longitude'
+        radius:
+          description: The radius in meters.
+          type: integer
+          minimum: 1
+          maximum: 50000
+    Place:
+      description: A place that the place search found.
+      type: object
+      required: [location]
+      properties:
+        name:
+          description: The name of the place. An address has no name.
+          type: string
+        location:
+          $ref: '#/components/schemas/Location'
+      examples:
+        - name: Can Solé
+          location:
+            latitude: 41.3766
+            longitude: 2.1893
+            address: Carrer de Sant Carles 4, 08003 Barcelona, España
+            place_id: osm:N1234567890
+    PlaceList:
+      description: The places of one search. It has no pages.
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/Place'
+      examples:
+        - items:
+            - name: Can Solé
+              location:
+                latitude: 41.3766
+                longitude: 2.1893
+                address: Carrer de Sant Carles 4, 08003 Barcelona, España
+                place_id: osm:N1234567890
     Creator:
       description: The public fields of a user.
       type: object
@@ -1345,7 +1539,7 @@ components:
     Restaurant:
       description: A restaurant that can be reviewed.
       type: object
-      required: [id, name, creator, review_count, rating, created, updated]
+      required: [id, name, location, creator, review_count, rating, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -1355,6 +1549,11 @@ components:
           $ref: '#/components/schemas/LongText'
         tags:
           $ref: '#/components/schemas/Tags'
+        location:
+          description: The place of the restaurant. It is `null` for a restaurant from before locations.
+          oneOf:
+            - $ref: '#/components/schemas/Location'
+            - type: 'null'
         creator:
           description: The user who created the restaurant. It is `null` after that user is deleted.
           oneOf:
@@ -1378,6 +1577,10 @@ components:
           name: Luigi's Trattoria
           description: A family-run Italian restaurant
           tags: [italian, pasta]
+          location:
+            latitude: 41.3766
+            longitude: 2.1893
+            address: Carrer de Sant Carles 4, 08003 Barcelona, España
           creator:
             id: u5n1c8r3t6y0b2e
             name: Ana
@@ -1422,7 +1625,7 @@ components:
       description: The properties of a new restaurant.
       type: object
       additionalProperties: false
-      required: [name]
+      required: [name, location]
       properties:
         name:
           $ref: '#/components/schemas/Name'
@@ -1430,12 +1633,20 @@ components:
           $ref: '#/components/schemas/LongText'
         tags:
           $ref: '#/components/schemas/Tags'
+        location:
+          $ref: '#/components/schemas/Location'
       examples:
         - name: Luigi's Trattoria
           description: A family-run Italian restaurant
           tags: [italian, pasta]
+          location:
+            latitude: 41.3766
+            longitude: 2.1893
+            address: Carrer de Sant Carles 4, 08003 Barcelona, España
     RestaurantPatch:
-      description: A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+      description: |
+        A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+        A `location` replaces the complete stored location. A location without `place_id` removes the stored `place_id`.
       type: object
       additionalProperties: false
       properties:
@@ -1449,6 +1660,8 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Tags'
             - type: 'null'
+        location:
+          $ref: '#/components/schemas/Location'
       examples:
         - description: A family-run Italian restaurant since 1987
           tags: null
@@ -1769,6 +1982,10 @@ components:
         instance:
           type: string
           format: uri-reference
+        restaurant:
+          description: The ID of the restaurant that has the `location.place_id` of the request. Only this conflict has the property.
+          type: string
+          $ref: '#/components/schemas/RecordId'
         errors:
           description: The invalid properties. Only validation errors have this property.
           type: array

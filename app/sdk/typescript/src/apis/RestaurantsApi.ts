@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. They return an auth token. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`. This format is not RFC 3339.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. 
+ * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. They return an auth token. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`. This format is not RFC 3339.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -18,6 +18,11 @@ import {
     AverageRangeFromJSON,
     AverageRangeToJSON,
 } from '../models/AverageRange.js';
+import {
+    type Near,
+    NearFromJSON,
+    NearToJSON,
+} from '../models/Near.js';
 import {
     type Photo,
     PhotoFromJSON,
@@ -299,10 +304,10 @@ export interface ListRestaurantsRequest {
      */
     sort?: string;
     /**
-     * Full-text search in `name`, `description`, and `tags`.
+     * Full-text search in `name`, `description`, `tags`, and `location.address`.
      * A restaurant matches when it has all words of the search. A word also matches longer words that start with it.
      * The search ignores case and accents. `Cafe` matches `Café`.
-     * Matches in `name` count most for the `relevance` sort, then `tags`, then `description`.
+     * Matches in `name` count most for the `relevance` sort, then `tags`, then `location.address`, then `description`.
      * A search without a letter or a digit causes `400 Bad Request`.
      * 
      */
@@ -314,6 +319,15 @@ export interface ListRestaurantsRequest {
      * 
      */
     overall?: AverageRange;
+    /**
+     * Selects the restaurants with a `location` at most `radius` meters from a point.
+     * Each key is a property, for example `near[latitude]=41.3874&near[longitude]=2.1686&near[radius]=75`.
+     * All three properties are required.
+     * A restaurant without a location matches no `near` filter.
+     * The distance is an approximation on a flat surface. Its error is small for the radii that the API allows.
+     * 
+     */
+    near?: Near;
     /**
      * The `tags` contain the tag.
      */
@@ -512,7 +526,7 @@ export interface RestaurantsApiInterface {
     createRestaurantRequestOpts(requestParameters: CreateRestaurantRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * 
+     * A restaurant needs a `location`. A `location.place_id` that another restaurant has causes `409 Conflict`. The problem then has the ID of that restaurant in `restaurant`. 
      * @summary Create a restaurant
      * @param {RestaurantCreate} restaurantCreate The restaurant to create.
      * @param {*} [options] Override http request option.
@@ -522,6 +536,7 @@ export interface RestaurantsApiInterface {
     createRestaurantRaw(requestParameters: CreateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Restaurant>>;
 
     /**
+     * A restaurant needs a `location`. A `location.place_id` that another restaurant has causes `409 Conflict`. The problem then has the ID of that restaurant in `restaurant`. 
      * Create a restaurant
      */
     createRestaurant(requestParameters: CreateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant>;
@@ -767,8 +782,9 @@ export interface RestaurantsApiInterface {
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. It puts restaurants without reviews last in both directions. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, and &#x60;tags&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, &#x60;tags&#x60;, and &#x60;location.address&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;location.address&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant without reviews matches no &#x60;overall&#x60; filter. 
+     * @param {Near} [near] Selects the restaurants with a &#x60;location&#x60; at most &#x60;radius&#x60; meters from a point. Each key is a property, for example &#x60;near[latitude]&#x3D;41.3874&amp;near[longitude]&#x3D;2.1686&amp;near[radius]&#x3D;75&#x60;. All three properties are required. A restaurant without a location matches no &#x60;near&#x60; filter. The distance is an approximation on a flat surface. Its error is small for the radii that the API allows. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -787,8 +803,9 @@ export interface RestaurantsApiInterface {
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. It puts restaurants without reviews last in both directions. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, and &#x60;tags&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, &#x60;tags&#x60;, and &#x60;location.address&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;location.address&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
      * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant without reviews matches no &#x60;overall&#x60; filter. 
+     * @param {Near} [near] Selects the restaurants with a &#x60;location&#x60; at most &#x60;radius&#x60; meters from a point. Each key is a property, for example &#x60;near[latitude]&#x3D;41.3874&amp;near[longitude]&#x3D;2.1686&amp;near[radius]&#x3D;75&#x60;. All three properties are required. A restaurant without a location matches no &#x60;near&#x60; filter. The distance is an approximation on a flat surface. Its error is small for the radii that the API allows. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
      * @param {Array<string>} [tagsHasAll] The &#x60;tags&#x60; contain all of the tags.
@@ -868,7 +885,7 @@ export interface RestaurantsApiInterface {
     updateRestaurantRequestOpts(requestParameters: UpdateRestaurantRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A value that is equal to the stored value is not a change. 
+     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A stored `location` has the same rule. A restaurant without a location can always get one. A value that is equal to the stored value is not a change. A `location.place_id` that another restaurant has causes `409 Conflict`. The problem then has the ID of that restaurant in `restaurant`. 
      * @summary Update a restaurant
      * @param {string} restaurantId The ID of the restaurant.
      * @param {RestaurantPatch} restaurantPatch The restaurant properties to change.
@@ -879,7 +896,7 @@ export interface RestaurantsApiInterface {
     updateRestaurantRaw(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Restaurant>>;
 
     /**
-     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A value that is equal to the stored value is not a change. 
+     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A stored `location` has the same rule. A restaurant without a location can always get one. A value that is equal to the stored value is not a change. A `location.place_id` that another restaurant has causes `409 Conflict`. The problem then has the ID of that restaurant in `restaurant`. 
      * Update a restaurant
      */
     updateRestaurant(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant>;
@@ -1060,6 +1077,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
+     * A restaurant needs a `location`. A `location.place_id` that another restaurant has causes `409 Conflict`. The problem then has the ID of that restaurant in `restaurant`. 
      * Create a restaurant
      */
     async createRestaurantRaw(requestParameters: CreateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Restaurant>> {
@@ -1070,6 +1088,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
+     * A restaurant needs a `location`. A `location.place_id` that another restaurant has causes `409 Conflict`. The problem then has the ID of that restaurant in `restaurant`. 
      * Create a restaurant
      */
     async createRestaurant(requestParameters: CreateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant> {
@@ -1658,6 +1677,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             queryParameters['overall'] = requestParameters['overall'];
         }
 
+        if (requestParameters['near'] != null) {
+            queryParameters['near'] = requestParameters['near'];
+        }
+
         if (requestParameters['tagsHas'] != null) {
             queryParameters['tags[has]'] = requestParameters['tagsHas'];
         }
@@ -1880,7 +1903,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A value that is equal to the stored value is not a change. 
+     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A stored `location` has the same rule. A restaurant without a location can always get one. A value that is equal to the stored value is not a change. A `location.place_id` that another restaurant has causes `409 Conflict`. The problem then has the ID of that restaurant in `restaurant`. 
      * Update a restaurant
      */
     async updateRestaurantRaw(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Restaurant>> {
@@ -1891,7 +1914,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A value that is equal to the stored value is not a change. 
+     * Only the creator of the restaurant can update it. A restaurant without a creator can be updated by each user who has a review of it. `name` can change only while no other user has a review of the restaurant. A stored `location` has the same rule. A restaurant without a location can always get one. A value that is equal to the stored value is not a change. A `location.place_id` that another restaurant has causes `409 Conflict`. The problem then has the ID of that restaurant in `restaurant`. 
      * Update a restaurant
      */
     async updateRestaurant(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant> {

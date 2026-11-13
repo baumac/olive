@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. They return an auth token. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`. This format is not RFC 3339.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. 
+ * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. They return an auth token. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`. This format is not RFC 3339.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -27,6 +27,13 @@ import {
     RestaurantRatingToJSON,
     RestaurantRatingToJSONTyped,
 } from './RestaurantRating.js';
+import type { Location } from './Location.js';
+import {
+    LocationFromJSON,
+    LocationFromJSONTyped,
+    LocationToJSON,
+    LocationToJSONTyped,
+} from './Location.js';
 
 /**
  * A restaurant that can be reviewed.
@@ -55,6 +62,10 @@ export interface Restaurant {
      */
     tags?: Set<string>;
     /**
+     * The place of the restaurant. It is `null` for a restaurant from before locations.
+     */
+    location: Location | null;
+    /**
      * The user who created the restaurant. It is `null` after that user is deleted.
      */
     creator: Creator | null;
@@ -82,6 +93,7 @@ export interface Restaurant {
 export function instanceOfRestaurant(value: object): value is Restaurant {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
+    if (!('location' in value) || value['location'] === undefined) return false;
     if (!('creator' in value) || value['creator'] === undefined) return false;
     if ((!('reviewCount' in (value as Record<string, any>)) && !('review_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['reviewCount'] === undefined && (value as Record<string, any>)['review_count'] === undefined)) return false;
     if (!('rating' in value) || value['rating'] === undefined) return false;
@@ -104,6 +116,7 @@ export function RestaurantFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         'name': json['name'],
         'description': json['description'] == null ? undefined : json['description'],
         'tags': json['tags'] == null ? undefined : new Set(json['tags']),
+        'location': LocationFromJSON(json['location']),
         'creator': CreatorFromJSON(json['creator']),
         'reviewCount': json['review_count'],
         'rating': RestaurantRatingFromJSON(json['rating']),
@@ -127,6 +140,7 @@ export function RestaurantToJSONTyped(value?: Restaurant | null, ignoreDiscrimin
         'name': value['name'],
         'description': value['description'],
         'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
+        'location': LocationToJSON(value['location']),
         'creator': CreatorToJSON(value['creator']),
         'review_count': value['reviewCount'],
         'rating': RestaurantRatingToJSON(value['rating']),

@@ -40,6 +40,13 @@ func conflict(detail string) reviewsapi.ConflictApplicationProblemPlusJSONRespon
 	return reviewsapi.ConflictApplicationProblemPlusJSONResponse(newProblem(http.StatusConflict, detail))
 }
 
+// placeConflict names the restaurant that has the place ID of the request.
+func placeConflict(restaurantID string) reviewsapi.ConflictApplicationProblemPlusJSONResponse {
+	p := newProblem(http.StatusConflict, "Another restaurant has this place.")
+	p.Restaurant = &restaurantID
+	return reviewsapi.ConflictApplicationProblemPlusJSONResponse(p)
+}
+
 func unprocessable(errs fieldErrors) reviewsapi.UnprocessableContentApplicationProblemPlusJSONResponse {
 	p := newProblem(http.StatusUnprocessableEntity, "The request body has invalid properties.")
 	list := []reviewsapi.ValidationError(errs)

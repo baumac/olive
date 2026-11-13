@@ -151,8 +151,15 @@ func (e *env) signUp(email, name string) authToken {
 	return tok
 }
 
+// testLocation has no word that a search test uses.
+const testLocation = `{"latitude":41.3766,"longitude":2.1893,"address":"Qwx 1"}`
+
+// createRestaurant adds testLocation to a body without a location.
 func (e *env) createRestaurant(token, body string) map[string]any {
 	e.t.Helper()
+	if !strings.Contains(body, `"location"`) {
+		body = strings.TrimSuffix(body, "}") + `,"location":` + testLocation + "}"
+	}
 	return e.expect(request{method: "POST", path: "/v1/restaurants", body: body, token: token}, http.StatusCreated).object(e.t)
 }
 
@@ -536,7 +543,7 @@ func TestRestaurants(t *testing.T) {
 	path := "/v1/restaurants/" + id
 
 	t.Run("create sets Location", func(t *testing.T) {
-		res := e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"Other"}`, token: ana.Token}, http.StatusCreated)
+		res := e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"Other","location":` + testLocation + `}`, token: ana.Token}, http.StatusCreated)
 		if loc := res.header.Get("Location"); !strings.HasPrefix(loc, "/v1/restaurants/") {
 			t.Errorf("Location %q", loc)
 		}
@@ -550,21 +557,21 @@ func TestRestaurants(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","id":"k3x9m2p7q1w8z4a"}`, token: ana.Token}, http.StatusBadRequest)
 		res := e.expect(request{method: "POST", path: "/v1/restaurants",
 			body: `{"description":null,"tags":["ok","Bad","ok"]}`, token: ana.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "description,name,tags,tags[1]" {
+		if got := strings.Join(errorProperties(t, res), ","); got != "description,location,name,tags,tags[1]" {
 			t.Errorf("properties %q", got)
 		}
 		many := `["` + strings.Repeat(`Bad","`, 999) + `Bad"]`
-		res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","tags":` + many + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
+		res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","location":` + testLocation + `,"tags":` + many + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
 		if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
 			t.Errorf("properties %q", got)
 		}
 		numbers := "[" + strings.Repeat("0,", 999) + "0]"
-		res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","tags":` + numbers + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
+		res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","location":` + testLocation + `,"tags":` + numbers + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
 		if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
 			t.Errorf("properties %q", got)
 		}
 		for _, name := range []string{"Luigi\u061cs", "Piz\u00adza", "\u3164\u3164", "A\u2063B"} {
-			res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"` + name + `"}`, token: ana.Token}, http.StatusUnprocessableEntity)
+			res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"` + name + `","location":` + testLocation + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
 			if got := strings.Join(errorProperties(t, res), ","); got != "name" {
 				t.Errorf("%q: properties %q", name, got)
 			}
@@ -1372,7 +1379,7 @@ func TestSearch(t *testing.T) {
 		rename("restaurants_fts", "restaurants_fts_off")
 		defer rename("restaurants_fts_off", "restaurants_fts")
 
-		e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"Not Indexed"}`, token: ana.Token}, http.StatusInternalServerError)
+		e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"Not Indexed","location":` + testLocation + `}`, token: ana.Token}, http.StatusInternalServerError)
 		restaurants, err := e.app.FindCollectionByNameOrId("restaurants")
 		if err != nil {
 			t.Fatal(err)

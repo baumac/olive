@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { Restaurant } from '@reviews/sdk'
-import { CircleAlertIcon } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import type { Location, Restaurant } from '@reviews/sdk'
+import { CircleAlertIcon, MapPinIcon } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import LocationField from '@/components/app/LocationField.vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FormControl, FormDescription, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -15,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, restaurantsApi } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
+import { nearbyRadius, sameLocation } from '@/lib/places'
 import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
@@ -30,11 +32,15 @@ interface Fields {
   name: string
   description: string
   tags: string[]
+  location: Location | null
 }
 
-const fields = ref<Fields>({ name: '', description: '', tags: [] })
+const fields = ref<Fields>({ name: '', description: '', tags: [], location: null })
 const errors = ref<Record<string, string>>({})
-const alert = ref<{ title: string; description: string } | null>(null)
+const alert = ref<{ title: string; description: string; restaurant?: string } | null>(null)
+// stored is the location of the restaurant before the edit.
+const stored = ref<Location | null>(null)
+const nearby = ref<Restaurant[]>([])
 const saving = ref(false)
 const nameLocked = ref(false)
 const loading = ref(editing.value)
@@ -62,7 +68,8 @@ onMounted(async () => {
         return
       }
       nameLocked.value = access.hasOtherReviews
-      fields.value = { name: r.name, description: r.description ?? '', tags: tagList(r.tags) }
+      stored.value = r.location
+      fields.value = { name: r.name, description: r.description ?? '', tags: tagList(r.tags), location: r.location }
     } catch (error) {
       failed.value = { status: (await apiFailure(error)).status }
       return
@@ -72,17 +79,56 @@ onMounted(async () => {
   }
   const draft = takeDraft<Fields>(draftKey.value)
   if (draft) {
-    fields.value = nameLocked.value ? { ...draft, name: fields.value.name } : draft
+    fields.value = nameLocked.value ? { ...draft, name: fields.value.name, location: fields.value.location } : draft
   }
 })
+
+// The reviews of other users lock a stored location, like the name.
+const locationLocked = computed(() => nameLocked.value && stored.value !== null)
+
+// A restaurant near the new location can be the same restaurant. The check
+// is a hint. A failed check shows nothing.
+let nearbyCheck = 0
+watch(
+  () => fields.value.location,
+  async (location) => {
+    const check = ++nearbyCheck
+    nearby.value = []
+    if (!location || sameLocation(location, stored.value)) {
+      return
+    }
+    try {
+      const page = await restaurantsApi.listRestaurants({
+        near: { latitude: location.latitude, longitude: location.longitude, radius: nearbyRadius },
+        limit: 6,
+      })
+      if (check === nearbyCheck) {
+        nearby.value = page.items.filter((r) => r.id !== props.restaurantId).slice(0, 5)
+      }
+    } catch {
+      nearby.value = []
+    }
+  },
+)
+
+function useName(name: string) {
+  if (!editing.value && fields.value.name.trim() === '') {
+    fields.value.name = name
+  }
+}
 
 function validate(): boolean {
   errors.value = {
     name: checkName(fields.value.name, 'Enter a name with at least one character that is not a space.'),
     description: checkLongText(fields.value.description),
     tags: errors.value.tags ?? '',
+    // A restaurant from before locations can stay without one.
+    location:
+      fields.value.location || (editing.value && !stored.value)
+        ? ''
+        : 'Search for the place and select it, or enter the location by hand.',
   }
-  const first = ['name', 'description', 'tags'].find((k) => errors.value[k])
+  const first = ['name', 'location', 'description', 'tags'].find((k) => errors.value[k])
   if (first) {
     document.getElementById(`restaurant-${first}`)?.focus()
   }
@@ -96,7 +142,7 @@ async function submit() {
   }
   saving.value = true
   saveDraft(draftKey.value, fields.value)
-  const { name, description, tags } = fields.value
+  const { name, description, tags, location } = fields.value
   try {
     const saved = props.restaurantId
       ? await restaurantsApi.updateRestaurant({
@@ -105,10 +151,16 @@ async function submit() {
             name: nameLocked.value ? undefined : name,
             description: description || null,
             tags: tags.length ? new Set(tags) : null,
+            location: !location || locationLocked.value || sameLocation(location, stored.value) ? undefined : location,
           },
         })
       : await restaurantsApi.createRestaurant({
-          restaurantCreate: { name, description: description || undefined, tags: tags.length ? new Set(tags) : undefined },
+          restaurantCreate: {
+            name,
+            description: description || undefined,
+            tags: tags.length ? new Set(tags) : undefined,
+            location: location!,
+          },
         })
     clearDraft(draftKey.value)
     toast.success(editing.value ? 'Restaurant saved' : 'Restaurant added', { description: saved.name })
@@ -121,8 +173,16 @@ async function submit() {
     }
     if (status === 422) {
       errors.value = fieldErrors(problem)
+    } else if (status === 409 && problem?.restaurant) {
+      errors.value = { location: 'Another restaurant has this place.' }
+      alert.value = {
+        title: 'This restaurant is already here',
+        description: 'Add your review to it, or select a different place.',
+        restaurant: problem.restaurant,
+      }
     } else if (status === 409) {
-      errors.value = { name: 'The name cannot change because other people have reviewed this restaurant.' }
+      const field = problem?.detail?.includes('location') ? 'location' : 'name'
+      errors.value = { [field]: `The ${field} cannot change because other people have reviewed this restaurant.` }
     } else if (status === 403) {
       alert.value = { title: 'You cannot change this restaurant', description: 'Only the person who added it can change it. If that person has no account now, write a review first.' }
     } else if (status === 404) {
@@ -147,7 +207,12 @@ async function submit() {
       <Alert v-if="alert" variant="destructive">
         <CircleAlertIcon aria-hidden="true" />
         <AlertTitle>{{ alert.title }}</AlertTitle>
-        <AlertDescription>{{ alert.description }}</AlertDescription>
+        <AlertDescription>
+          {{ alert.description }}
+          <RouterLink v-if="alert.restaurant" :to="`/restaurants/${alert.restaurant}`" class="font-medium underline underline-offset-4">
+            Open the restaurant
+          </RouterLink>
+        </AlertDescription>
       </Alert>
       <FormItem id="restaurant-name" :error="errors.name" :description="nameLocked">
         <FormLabel>Name</FormLabel>
@@ -166,6 +231,38 @@ async function submit() {
         </FormDescription>
         <FormMessage />
       </FormItem>
+      <FormItem id="restaurant-location" :error="errors.location" description>
+        <FormLabel>Location</FormLabel>
+        <LocationField
+          id="restaurant-location"
+          v-model="fields.location"
+          :locked="locationLocked"
+          :invalid="!!errors.location"
+          :described-by="`restaurant-location-description${errors.location ? ' restaurant-location-message' : ''}`"
+          @named="useName"
+        />
+        <FormDescription>
+          {{
+            locationLocked
+              ? 'The location cannot change because other people have reviewed this restaurant.'
+              : 'Search for the restaurant or its address and select it. You can also enter the location by hand.'
+          }}
+        </FormDescription>
+        <FormMessage />
+      </FormItem>
+      <Alert v-if="nearby.length">
+        <MapPinIcon aria-hidden="true" />
+        <AlertTitle>Is it one of these?</AlertTitle>
+        <AlertDescription>
+          <p>These restaurants are at this location. Open one to add your review to it.</p>
+          <ul class="list-disc pl-5">
+            <li v-for="r in nearby" :key="r.id">
+              <RouterLink :to="`/restaurants/${r.id}`" class="font-medium underline underline-offset-4">{{ r.name }}</RouterLink>
+              <template v-if="r.location">, {{ r.location.address }}</template>
+            </li>
+          </ul>
+        </AlertDescription>
+      </Alert>
       <FormItem id="restaurant-description" :error="errors.description" description>
         <FormLabel>Description</FormLabel>
         <FormControl>

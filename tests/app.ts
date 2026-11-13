@@ -30,7 +30,8 @@ export async function startApp(port: number, env: Record<string, string> = {}, a
   }
   const baseURL = `http://127.0.0.1:${port}`
   const child: ChildProcess = spawn(binary, ['serve', '--dir', dir, '--http', `127.0.0.1:${port}`], {
-    env: { ...process.env, ...env },
+    // Only an app with the fake geocoder of photon.ts has the place search.
+    env: { ...process.env, REVIEWS_PLACES_URL: 'off', ...env },
     stdio: ['ignore', 'ignore', 'pipe'],
   })
   let stderr = ''

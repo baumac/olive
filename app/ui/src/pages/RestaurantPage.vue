@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Restaurant } from '@reviews/sdk'
-import { PencilIcon } from 'lucide-vue-next'
+import { MapPinIcon, PencilIcon } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -124,6 +124,19 @@ async function remove() {
         </div>
         <p v-if="restaurant.data.value.description" class="text-muted-foreground max-w-2xl text-xl whitespace-pre-line">
           {{ restaurant.data.value.description }}
+        </p>
+        <p v-if="restaurant.data.value.location" class="flex items-start gap-2">
+          <MapPinIcon class="text-muted-foreground mt-1 size-4 shrink-0" aria-hidden="true" />
+          <span><span class="sr-only">Address: </span>{{ restaurant.data.value.location.address }}</span>
+        </p>
+        <p v-else-if="access?.canChange" class="text-muted-foreground flex items-start gap-2">
+          <MapPinIcon class="mt-1 size-4 shrink-0" aria-hidden="true" />
+          <span>
+            This restaurant has no location.
+            <RouterLink :to="`/restaurants/${restaurantId}/edit`" class="text-foreground font-medium underline underline-offset-4">
+              Add the location
+            </RouterLink>
+          </span>
         </p>
         <ul v-if="tagList(restaurant.data.value.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
           <li v-for="tag in tagList(restaurant.data.value.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>

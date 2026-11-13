@@ -9,6 +9,7 @@ import { expectAccessible } from './axe'
 const restaurant: Restaurant = {
   id: 'k3x9m2p7q1w8z4a',
   name: 'Trattoria',
+  location: null,
   creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
   reviewCount: 0,
   rating: null,

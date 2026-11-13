@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"strings"
 
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -179,6 +181,25 @@ func (w *where) tagFilters(has *string, hasAny, hasAll *[]string) {
 	if hasAny != nil {
 		w.hasTags(*hasAny)
 	}
+}
+
+// metersPerDegree is the length of one degree of latitude.
+const metersPerDegree = 111320.0
+
+// near keeps the restaurants at most the radius from the point. It uses a
+// flat surface. The longitude difference is the short way around the earth.
+func (w *where) near(n *reviewsapi.NearFilter) {
+	if n == nil {
+		return
+	}
+	lat, lon := column("restaurants", "latitude"), column("restaurants", "longitude")
+	reach := float64(n.Radius) / metersPerDegree
+	w.add(column("restaurants", "address") + " != ''")
+	w.add(fmt.Sprintf("%s BETWEEN %s AND %s", lat, w.param(n.Latitude-reach), w.param(n.Latitude+reach)))
+	dy := fmt.Sprintf("((%s - %s) * %s)", lat, w.param(n.Latitude), w.param(metersPerDegree))
+	dx := fmt.Sprintf("((180 - abs(abs(%s - %s) - 180)) * %s)", lon, w.param(n.Longitude),
+		w.param(metersPerDegree*math.Cos(n.Latitude*math.Pi/180)))
+	w.add(fmt.Sprintf("(%s * %s + %s * %s) <= %s", dy, dy, dx, dx, w.param(float64(n.Radius)*float64(n.Radius))))
 }
 
 // idFilters adds the eq and in filters of an ID column.

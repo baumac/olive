@@ -1,4 +1,5 @@
-import { expect, test } from '../fixtures'
+import { uniqueTag } from '../api'
+import { expect, selectPlace, test } from '../fixtures'
 
 test('sign up signs the person in', async ({ page }) => {
   await page.goto('/sign-up')
@@ -39,6 +40,7 @@ test('a signed out person signs in and comes back to the form', async ({ page, a
 
 test('a refused token ends the session and the draft comes back', async ({ page, user }) => {
   await page.goto('/restaurants/new')
+  await selectPlace(page, uniqueTag('draft'))
   await page.getByLabel('Name').fill('Draft Diner')
 
   // The API refuses the token of the first create request.
@@ -65,6 +67,7 @@ test('a refused token ends the session and the draft comes back', async ({ page,
 
   await expect(page.getByRole('heading', { name: 'Add a restaurant' })).toBeVisible()
   await expect(page.getByLabel('Name')).toHaveValue('Draft Diner')
+  await expect(page.getByText('Selected location: Test Street 4, 08003 Testville, Testland')).toBeAttached()
 })
 
 test('sign out deletes the session', async ({ page, user }) => {

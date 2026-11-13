@@ -77,7 +77,7 @@ func inTransaction(e *core.RecordEvent, before, index func(tx core.App) error) e
 // indexedFields are the record fields that the index row uses.
 func indexedFields(r *core.Record) []string {
 	if tableOf(r) == Restaurants {
-		return []string{"name", "description", "tags"}
+		return []string{"name", "description", "tags", "address"}
 	}
 	return []string{"title", "feedback", "restaurant"}
 }
@@ -107,6 +107,7 @@ func Put(app core.App, r *core.Record) error {
 		row["tags"] = tagText(r)
 		row["name"] = r.GetString("name")
 		row["description"] = r.GetString("description")
+		row["address"] = r.GetString("address")
 	} else {
 		restaurant, err := app.FindRecordById("restaurants", r.GetString("restaurant"))
 		if err != nil {

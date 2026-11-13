@@ -68,6 +68,14 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('heading', { name: 'Photos' })).toBeVisible()
       await expectNoViolations(page)
 
+      await page.goto('/restaurants/new')
+      await page.getByLabel('Location').fill(`axe ${colorScheme}`)
+      await expect(page.getByRole('list', { name: 'Places' })).toBeVisible()
+      await expectNoViolations(page)
+      await page.getByRole('button', { name: 'Enter the location by hand' }).click()
+      await expect(page.getByLabel('Latitude')).toBeVisible()
+      await expectNoViolations(page)
+
       await page.goto('/my-reviews')
       await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading reviews')

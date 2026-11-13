@@ -103,6 +103,7 @@ Project components that shadcn-vue does not have:
 App components that know the routes. They live in `app/ui/src/components/app/`:
 - `AppHeader`: the logo, the main navigation, `ThemeToggle`, and `UserMenu`
 - `ErrorPage`: the full page for `404`, `403`, and `500` errors
+- `LocationField`: the place search and the location fields of the restaurant form. Decision 00017 added it. It calls the API.
 
 A new component goes into the set only when a screen needs it.
 

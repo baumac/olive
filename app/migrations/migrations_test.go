@@ -310,3 +310,57 @@ func TestRestaurantIndexFillsExistingRecords(t *testing.T) {
 		t.Errorf("restaurant_tags: %v", tags)
 	}
 }
+
+func TestRestaurantLocation(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268809_add_restaurant_location.go")
+
+	restaurants, err := app.FindCollectionByNameOrId("restaurants")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restaurants.Fields.GetByName("address") != nil {
+		t.Fatal("down keeps the address field")
+	}
+	old := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "tags": []string{"date-night"}})
+	if _, err := app.DB().Insert("restaurants_fts", map[string]any{"id": old.Id, "name": "Café Olé", "description": "", "tags": "date-night"}).Execute(); err != nil {
+		t.Fatal(err)
+	}
+
+	redo()
+	old, err = app.FindRecordById("restaurants", old.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if old.GetString("address") != "" || old.GetString("place_id") != "" {
+		t.Errorf("the old restaurant has a location: %v", old.FieldsData())
+	}
+	count := func(match string) int {
+		t.Helper()
+		var n int
+		if err := app.DB().NewQuery("SELECT COUNT(*) FROM restaurants_fts WHERE restaurants_fts MATCH {:q}").Bind(map[string]any{"q": match}).Row(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if n := count("ole night"); n != 1 {
+		t.Errorf("the old restaurant has %d index rows", n)
+	}
+
+	// Two restaurants without a place ID do not break the unique index.
+	newRecord(t, app, "restaurants", map[string]any{"name": "A", "latitude": 41.3766, "longitude": 2.1893, "address": "Carrer Nou 1", "place_id": "osm:N1"})
+	newRecord(t, app, "restaurants", map[string]any{"name": "B", "address": "Carrer Nou 2"})
+	c, err := app.FindCollectionByNameOrId("restaurants")
+	if err != nil {
+		t.Fatal(err)
+	}
+	same := core.NewRecord(c)
+	same.Load(map[string]any{"name": "C", "address": "Carrer Nou 3", "place_id": "osm:N1"})
+	if err := app.Save(same); err == nil {
+		t.Error("two restaurants have one place ID")
+	}
+}

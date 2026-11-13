@@ -35,7 +35,19 @@ func TestOptions(t *testing.T) {
 		t.Errorf("true: %+v, %v", opts, err)
 	}
 
+	opts, err = options(env(map[string]string{"REVIEWS_PLACES_URL": "off", "REVIEWS_PLACE_SEARCH_LIMIT": "5"}))
+	if err != nil || opts.PlacesURL != "" || opts.PlaceSearchLimit != 5 {
+		t.Errorf("place search off: %+v, %v", opts, err)
+	}
+	opts, err = options(env(map[string]string{"REVIEWS_PLACES_URL": "http://127.0.0.1:2322"}))
+	if err != nil || opts.PlacesURL != "http://127.0.0.1:2322" {
+		t.Errorf("place search URL: %+v, %v", opts, err)
+	}
+
 	for _, vars := range []map[string]string{
+		{"REVIEWS_PLACES_URL": "photon.komoot.io"},
+		{"REVIEWS_PLACES_URL": "ftp://photon.komoot.io"},
+		{"REVIEWS_PLACE_SEARCH_LIMIT": "0"},
 		{"REVIEWS_SIGN_IN_LIMIT": "0"},
 		{"REVIEWS_SIGN_IN_FAILURE_LIMIT": "-1"},
 		{"REVIEWS_PHOTO_UPLOAD_LIMIT": "many"},

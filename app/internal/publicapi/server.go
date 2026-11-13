@@ -36,6 +36,16 @@ type Options struct {
 	// PhotoUploadWindow.
 	PhotoUploadLimit  int
 	PhotoUploadWindow time.Duration
+	// PlacesURL is the base URL of the Photon geocoder of the place search.
+	// An empty value turns the place search off.
+	PlacesURL string
+	// PlaceSearchLimit is the number of place searches that one user can
+	// send in PlaceSearchWindow.
+	PlaceSearchLimit  int
+	PlaceSearchWindow time.Duration
+	// PlaceUpstreamLimit is the number of requests that all users together
+	// can cause at the geocoder in PlaceSearchWindow.
+	PlaceUpstreamLimit int
 	// PhotoMemoryLimit is the number of bytes that all photo uploads can
 	// hold in memory. Zero uses 64 MB.
 	PhotoMemoryLimit int64
@@ -52,10 +62,12 @@ var DefaultOptions = Options{
 	SignInLimit: 10, SignInWindow: time.Minute,
 	SignInFailureLimit: 10, SignInFailureWindow: 15 * time.Minute,
 	PhotoUploadLimit: 30, PhotoUploadWindow: time.Hour,
+	PlacesURL:        "https://photon.komoot.io",
+	PlaceSearchLimit: 30, PlaceSearchWindow: time.Minute, PlaceUpstreamLimit: 60,
 }
 
 // rateLimitNames are the values of the name in the x-rate-limit extension.
-var rateLimitNames = []string{"sign-in", "photo-upload"}
+var rateLimitNames = []string{"sign-in", "photo-upload", "place-search"}
 
 // Server implements reviewsapi.StrictServerInterface.
 type Server struct {
@@ -69,6 +81,8 @@ type Server struct {
 	// decodes holds one token for each photo upload that decodes its image.
 	decodes     chan struct{}
 	photoMemory *photoMemory
+	// places is nil when the place search is off.
+	places *placeSearch
 	// dummyHash lets sign in check a password hash for an unknown email.
 	// Sign in then takes the same time for all email addresses.
 	dummyHash []byte
@@ -127,6 +141,14 @@ func New(app core.App, opts Options) (*Server, error) {
 		cmp.Or(opts.SignInFailureWindow, DefaultOptions.SignInFailureWindow),
 	)
 	signInFailures.maxWindows = 0
+	var places *placeSearch
+	if opts.PlacesURL != "" {
+		// The geocoder can use the URL to contact the operator of the app.
+		userAgent := "reviews-app (" + app.Settings().Meta.AppURL + ")"
+		places = newPlaceSearch(opts.PlacesURL, userAgent,
+			cmp.Or(opts.PlaceUpstreamLimit, DefaultOptions.PlaceUpstreamLimit),
+			cmp.Or(opts.PlaceSearchWindow, DefaultOptions.PlaceSearchWindow))
+	}
 	return &Server{
 		app:  app,
 		spec: spec,
@@ -134,10 +156,14 @@ func New(app core.App, opts Options) (*Server, error) {
 		limiters: map[string]*rateLimiter{
 			"sign-in":      newRateLimiter(opts.SignInLimit, opts.SignInWindow),
 			"photo-upload": newRateLimiter(opts.PhotoUploadLimit, opts.PhotoUploadWindow),
+			"place-search": newRateLimiter(
+				cmp.Or(opts.PlaceSearchLimit, DefaultOptions.PlaceSearchLimit),
+				cmp.Or(opts.PlaceSearchWindow, DefaultOptions.PlaceSearchWindow)),
 		},
 		signInFailures: signInFailures,
 		decodes:        make(chan struct{}, maxParallelDecodes),
 		photoMemory:    &photoMemory{limit: cmp.Or(opts.PhotoMemoryLimit, defaultPhotoMemoryLimit)},
+		places:         places,
 		dummyHash:      hash,
 	}, nil
 }

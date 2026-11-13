@@ -68,12 +68,15 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 
 - Behind a reverse proxy, set the trusted proxy header in the PocketBase settings, such as `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign up and sign in rate limit counts all of them together. See decision 00004.
 - Set the Application URL in the PocketBase settings to the public URL of the site. The canonical links and link previews of restaurant and review pages start with it. See decision 00013.
+- The place search sends the search text of users to the public Photon server. This server has no guarantee and blocks heavy use. The app sends the Application URL in its `User-Agent`. See decision 00017.
 - Set the superuser IP allow-list in the PocketBase settings, so only admin networks can open the dashboard at `/_/`.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
 - Environment variables of the app:
   - `REVIEWS_SIGN_IN_LIMIT` sets the sign up and sign in limit per minute. The end-to-end tests raise it. Their parallel sign ups come from one IP address.
   - `REVIEWS_SIGN_IN_FAILURE_LIMIT` sets the wrong passwords of each user per 15 minutes. The default is 10. See decision 00015.
   - `REVIEWS_PHOTO_UPLOAD_LIMIT` sets the photo uploads of each user per hour. The default is 30. See decision 00008.
+  - `REVIEWS_PLACES_URL` sets the Photon geocoder of the place search. The default is the public server `https://photon.komoot.io`. `off` turns the search off. See decision 00017.
+  - `REVIEWS_PLACE_SEARCH_LIMIT` sets the place searches of each user per minute. The default is 30.
   - `REVIEWS_VALIDATE_RESPONSES=false` turns off the spec validation of responses. See decision 00007.
   - `REVIEWS_VALIDATE_REQUESTS=false` turns off the spec validation of parameters and body values. Invalid values can then be saved. Turn it off only with the response validation, or responses with these values get 500.
 
@@ -85,6 +88,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `restaurants` tag has the restaurant and review operations
     - the `users` tag has the sign up, sign in, sign out, and token refresh operations
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
+    - the `places` tag has the place search for the location of a restaurant
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`
@@ -103,6 +107,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
     - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00007.
     - It checks, changes, and serves the photos of reviews. See decision 00008.
+    - It gets the places of the place search from a Photon geocoder. See decision 00017.
   - **`app/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
@@ -116,6 +121,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name
   - **`tests/photos`** - the small test images of the photo tests
+  - **`tests/photon.ts`** - the fake geocoder of the place search. The tests need no network.
 
 ## Code Comment Style (Mandatory)
 

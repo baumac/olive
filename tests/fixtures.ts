@@ -59,4 +59,12 @@ export const test = base.extend<{ api: TestApi; user: TestUser; noCspViolations:
   },
 })
 
+// selectPlace searches in the restaurant form and selects the first place.
+// The fake geocoder of photon.ts gives each search its own place.
+export async function selectPlace(page: Page, search: string) {
+  await page.getByLabel('Location').fill(search)
+  await page.getByRole('list', { name: 'Places' }).getByRole('button').first().click()
+  await expect(page.getByText('Selected location: Test Street 4, 08003 Testville, Testland')).toBeAttached()
+}
+
 export { expect }

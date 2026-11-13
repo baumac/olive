@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. They return an auth token. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`. This format is not RFC 3339.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. 
+ * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. They return an auth token. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`. This format is not RFC 3339.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -13,8 +13,18 @@
  */
 
 import { mapValues } from '../runtime.js';
+import type { Location } from './Location.js';
+import {
+    LocationFromJSON,
+    LocationFromJSONTyped,
+    LocationToJSON,
+    LocationToJSONTyped,
+} from './Location.js';
+
 /**
  * A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+ * A `location` replaces the complete stored location. A location without `place_id` removes the stored `place_id`.
+ * 
  * @export
  * @interface RestaurantPatch
  */
@@ -35,6 +45,10 @@ export interface RestaurantPatch {
      * Unique tags.
      */
     tags?: Set<string> | null;
+    /**
+     * 
+     */
+    location?: Location;
 }
 
 /**
@@ -57,6 +71,7 @@ export function RestaurantPatchFromJSONTyped(json: any, ignoreDiscriminator: boo
         'name': json['name'] == null ? undefined : json['name'],
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'tags': json['tags'] === undefined ? undefined : json['tags'] === null ? null : new Set(json['tags']),
+        'location': json['location'] == null ? undefined : LocationFromJSON(json['location']),
     };
 }
 
@@ -74,6 +89,7 @@ export function RestaurantPatchToJSONTyped(value?: RestaurantPatch | null, ignor
         'name': value['name'],
         'description': value['description'],
         'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
+        'location': LocationToJSON(value['location']),
     };
 }
 
