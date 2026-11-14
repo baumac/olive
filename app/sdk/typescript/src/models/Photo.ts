@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. They return an auth token. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`. This format is not RFC 3339.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. 
+ * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. They return an auth token. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -48,7 +48,7 @@ export interface Photo {
      */
     urls: PhotoUrls;
     /**
-     * A UTC timestamp with millisecond precision. This format is not RFC 3339.
+     * An RFC 3339 timestamp in UTC with millisecond precision.
      */
     created: string;
 }

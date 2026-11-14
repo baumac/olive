@@ -23,5 +23,12 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['test/**/*.test.ts'],
     setupFiles: ['test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      reporter: ['text-summary'],
+      // The end-to-end tests cover the pages. These limits stop a large fall.
+      thresholds: { statements: 55, lines: 55 },
+    },
   },
 })

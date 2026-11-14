@@ -1,0 +1,16 @@
+.git
+.claude
+.idea
+bin
+node_modules
+**/node_modules
+app/pb_data
+app/internal/webui/dist/*
+!app/internal/webui/dist/.gitkeep
+app/sdk/typescript/dist
+tests/*
+!tests/package.json
+docs
+deploy/backups
+deploy/.env
+.check-generate

@@ -51,6 +51,24 @@ jobs:
       # make test-app uses the race detector. It needs the gcc of the runner.
       - run: make test
 
+  coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # The target fails below the minimum of the makefile or of
+      # app/ui/vite.config.ts.
+      - run: make test-coverage
+
+  docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: make build-image
+      - run: docker compose -f deploy/compose.yaml --env-file deploy/.env.example config --quiet
+
   e2e:
     name: e2e (${{ matrix.project }})
     runs-on: ubuntu-24.04
@@ -84,7 +102,7 @@ jobs:
     name: CI result
     # A failed job does not skip this job. A cancelled run skips it.
     if: ${{ !cancelled() }}
-    needs: [lint, security-scan, test, e2e]
+    needs: [lint, security-scan, test, coverage, docker, e2e]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

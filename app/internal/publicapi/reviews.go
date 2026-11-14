@@ -444,7 +444,7 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string, photo
 		Overall: float64(space+service+food+price+cleanliness) / 5,
 		Space:   space, Service: service, Food: food, Price: price, Cleanliness: cleanliness,
 		Title: r.GetString("title"), Feedback: optionalText(r, "feedback"),
-		Creator: toCreator(creator), Photos: photos, Created: r.GetDateTime("created").String(), Updated: r.GetDateTime("updated").String(),
+		Creator: toCreator(creator), Photos: photos, Created: apiTimestamp(r.GetDateTime("created")), Updated: apiTimestamp(r.GetDateTime("updated")),
 	}, nil
 }
 

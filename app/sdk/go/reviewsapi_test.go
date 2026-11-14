@@ -16,7 +16,7 @@ const reviewJSON = `{
 	"id": "r7d4f0h2j9l5s3v", "restaurant": "k3x9m2p7q1w8z4a", "restaurant_name": "Luigi's",
 	"space": 7, "service": 9, "food": 8, "price": 6, "cleanliness": 5, "title": "Best carbonara in town",
 	"creator": {"id": "u2g6k0m4o8q1s5w", "name": "Joe"},
-	"created": "2024-11-04 01:38:00.431Z", "updated": "2024-11-05 09:12:00.000Z"
+	"created": "2024-11-04T01:38:00.431Z", "updated": "2024-11-05T09:12:00.000Z"
 }`
 
 // fakeServer embeds the interface. A test implements only the operations
@@ -108,7 +108,7 @@ func TestDeepObjectAndExplodedFilters(t *testing.T) {
 	rec := serve(t, f, http.MethodGet,
 		"/v1/restaurants/k3x9m2p7q1w8z4a/reviews?food[gte]=4&food[lt]=5"+
 			"&creator[in]=u5n1c8r3t6y0b2e&creator[in]=u2g6k0m4o8q1s5w"+
-			"&created[gte]=2024-11-01%2000:00:00.000Z", "", "")
+			"&created[gte]=2024-11-01T00:00:00.000Z", "", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
@@ -118,7 +118,7 @@ func TestDeepObjectAndExplodedFilters(t *testing.T) {
 	if got.CreatorIn == nil || strings.Join(*got.CreatorIn, ",") != "u5n1c8r3t6y0b2e,u2g6k0m4o8q1s5w" {
 		t.Errorf("creator[in]: got %v", got.CreatorIn)
 	}
-	if got.Created == nil || *got.Created.Gte != "2024-11-01 00:00:00.000Z" {
+	if got.Created == nil || *got.Created.Gte != "2024-11-01T00:00:00.000Z" {
 		t.Errorf("created: got %+v", got.Created)
 	}
 }

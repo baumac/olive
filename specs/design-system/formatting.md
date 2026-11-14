@@ -4,7 +4,7 @@ Rules for how the UI shows values from the API. Format every value with the brow
 
 ## Dates and times
 
-The API sends UTC timestamps in the PocketBase format, `2024-11-04 01:26:55.002Z`. This is not RFC 3339: there is a space, not a `T`. Change the space to a `T` before you give the value to `new Date()`.
+The API sends UTC timestamps in the RFC 3339 format, `2024-11-04T01:26:55.002Z`. `new Date()` reads the value. See decision 00023.
 
 - Within the last 7 days, show relative time: "just now" (under 1 minute), "5 minutes ago", "3 hours ago", "yesterday", "4 days ago". Use `Intl.RelativeTimeFormat` with `numeric: "auto"`.
 - Older than 7 days, show the day, the short month and the year: "4 Nov 2024". Use `Intl.DateTimeFormat` with `day: "numeric", month: "short", year: "numeric"`.

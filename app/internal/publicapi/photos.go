@@ -328,7 +328,7 @@ func toPhoto(r *core.Record, restaurantID string) reviewsapi.Photo {
 			Full:  PhotoFilePath(restaurantID, reviewID, r.Id, reviewsapi.Full),
 			Thumb: PhotoFilePath(restaurantID, reviewID, r.Id, reviewsapi.Thumb),
 		},
-		Created: r.GetDateTime("created").String(),
+		Created: apiTimestamp(r.GetDateTime("created")),
 	}
 }
 

@@ -12,8 +12,7 @@ info:
     The place search also requires an auth token.
     A request with an invalid token gets `401 Unauthorized`, also on read operations.
 
-    Timestamps are in UTC with millisecond precision, for example `2024-11-04 01:26:55.002Z`.
-    This format is not RFC 3339.
+    Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.
 
     Request bodies with unknown or read-only properties get `400 Bad Request`.
     Property values that break a schema rule get `422 Unprocessable Content`.
@@ -1151,7 +1150,7 @@ components:
       explode: true
       schema:
         $ref: '#/components/schemas/TimestampRange'
-      example: {gte: '2024-11-01 00:00:00.000Z'}
+      example: {gte: '2024-11-01T00:00:00.000Z'}
 
     UpdatedFilter:
       name: updated
@@ -1161,7 +1160,7 @@ components:
       explode: true
       schema:
         $ref: '#/components/schemas/TimestampRange'
-      example: {gte: '2024-11-01 00:00:00.000Z'}
+      example: {gte: '2024-11-01T00:00:00.000Z'}
 
     CreatorEq:
       name: creator[eq]
@@ -1332,10 +1331,10 @@ components:
       pattern: '^[a-z0-9]{15}$'
       examples: [k3x9m2p7q1w8z4a]
     Timestamp:
-      description: A UTC timestamp with millisecond precision. This format is not RFC 3339.
+      description: An RFC 3339 timestamp in UTC with millisecond precision.
       type: string
-      pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}Z$'
-      examples: ['2024-11-04 01:26:55.002Z']
+      pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+      examples: ['2024-11-04T01:26:55.002Z']
     Name:
       description: |
         A name with at least one character that is not ASCII whitespace.
@@ -1622,8 +1621,8 @@ components:
             food: 9
             price: 5.5
             cleanliness: 7.5
-          created: '2024-11-04 01:26:55.002Z'
-          updated: '2024-11-04 01:26:55.002Z'
+          created: '2024-11-04T01:26:55.002Z'
+          updated: '2024-11-04T01:26:55.002Z'
     RestaurantRating:
       description: |
         The average of each score over the reviews of a restaurant.
@@ -1717,8 +1716,8 @@ components:
                 name: Ana
               review_count: 0
               rating: null
-              created: '2024-11-04 01:26:55.002Z'
-              updated: '2024-11-04 01:26:55.002Z'
+              created: '2024-11-04T01:26:55.002Z'
+              updated: '2024-11-04T01:26:55.002Z'
           next_cursor: c2Fk9xQe7LmT2vBn
 
     Review:
@@ -1792,9 +1791,9 @@ components:
               urls:
                 full: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full
                 thumb: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb
-              created: '2024-11-06 19:04:30.811Z'
-          created: '2024-11-06 19:02:11.120Z'
-          updated: '2024-11-07 09:12:00.000Z'
+              created: '2024-11-06T19:04:30.811Z'
+          created: '2024-11-06T19:02:11.120Z'
+          updated: '2024-11-07T09:12:00.000Z'
     SpaceScore:
       description: Decoration, comfort, atmosphere, and kitchen setup.
       $ref: '#/components/schemas/Score'
@@ -1891,8 +1890,8 @@ components:
                 id: u2g6k0m4o8q1s5w
                 name: Joe
               photos: []
-              created: '2024-11-04 01:38:00.431Z'
-              updated: '2024-11-05 09:12:00.000Z'
+              created: '2024-11-04T01:38:00.431Z'
+              updated: '2024-11-05T09:12:00.000Z'
             - id: r1b8c5e2g9i6k3m
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
@@ -1907,8 +1906,8 @@ components:
                 id: u5n1c8r3t6y0b2e
                 name: Ana
               photos: []
-              created: '2024-11-06 19:02:11.120Z'
-              updated: '2024-11-06 19:02:11.120Z'
+              created: '2024-11-06T19:02:11.120Z'
+              updated: '2024-11-06T19:02:11.120Z'
           next_cursor: null
 
     Photo:
@@ -1945,7 +1944,7 @@ components:
           urls:
             full: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full
             thumb: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb
-          created: '2024-11-06 19:04:30.811Z'
+          created: '2024-11-06T19:04:30.811Z'
     PhotoUrls:
       description: The paths of the image files on the origin of the API. Clients use them as given.
       type: object
@@ -2084,8 +2083,8 @@ components:
         - id: u5n1c8r3t6y0b2e
           email: ana@example.com
           name: Ana
-          created: '2024-11-01 08:12:40.517Z'
-          updated: '2024-11-01 08:12:40.517Z'
+          created: '2024-11-01T08:12:40.517Z'
+          updated: '2024-11-01T08:12:40.517Z'
     UserCreate:
       description: The properties of a new user.
       type: object
@@ -2137,10 +2136,10 @@ components:
           $ref: '#/components/schemas/User'
       examples:
         - token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InU1bjFjOHIzdDZ5MGIyZSJ9.c2lnbmF0dXJl
-          expires: '2024-11-08 08:12:40.517Z'
+          expires: '2024-11-08T08:12:40.517Z'
           user:
             id: u5n1c8r3t6y0b2e
             email: ana@example.com
             name: Ana
-            created: '2024-11-01 08:12:40.517Z'
-            updated: '2024-11-01 08:12:40.517Z'
+            created: '2024-11-01T08:12:40.517Z'
+            updated: '2024-11-01T08:12:40.517Z'

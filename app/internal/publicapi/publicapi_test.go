@@ -188,7 +188,7 @@ func TestUsers(t *testing.T) {
 	if ana.Token == "" || ana.User.Email != "ana@example.com" || ana.User.Name != "Ana" || len(ana.User.ID) != 15 {
 		t.Fatalf("sign up: %+v", ana)
 	}
-	if _, err := time.Parse("2006-01-02 15:04:05.000Z", ana.Expires); err != nil {
+	if _, err := time.Parse("2006-01-02T15:04:05.000Z", ana.Expires); err != nil {
 		t.Errorf("expires %q: %v", ana.Expires, err)
 	}
 
@@ -999,6 +999,24 @@ func TestListRestaurants(t *testing.T) {
 		if got := names(list("")); got != "Cherry,banana,Mango,apple,Zebra" {
 			t.Errorf("default sort %q", got)
 		}
+	})
+
+	t.Run("timestamp filters use the format of the responses", func(t *testing.T) {
+		first := e.expect(request{method: "GET", path: "/v1/restaurants?limit=1"}, http.StatusOK).object(t)["items"].([]any)[0].(map[string]any)
+		created := first["created"].(string)
+		if _, err := time.Parse(time.RFC3339, created); err != nil {
+			t.Fatalf("created %q is not RFC 3339: %v", created, err)
+		}
+		if got := names(list("created[lte]=" + created + "&created[gte]=" + created)); !strings.Contains(got, first["name"].(string)) {
+			t.Errorf("created range of %s: %q", created, got)
+		}
+		if got := names(list("created[gt]=2999-01-01T00:00:00.000Z")); got != "" {
+			t.Errorf("created[gt] in the future: %q", got)
+		}
+		if got := names(list("sort=name&updated[lt]=2999-01-01T00:00:00.000Z")); got != names(list("sort=name")) {
+			t.Errorf("updated[lt] in the future: %q", got)
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?created[gte]=2024-11-04%2001:26:55.002Z"}, http.StatusBadRequest)
 	})
 
 	t.Run("a binder error names the parameter", func(t *testing.T) {

@@ -306,6 +306,7 @@ The app never stores or serves the bytes that the client sent:
 4. the PocketBase save stores the two files.
 
 - `github.com/disintegration/imaging` is already in `app/go.sum` through PocketBase. `golang.org/x/image/webp` decodes WebP.
+- decision 00025 replaces `imaging` in these steps with `golang.org/x/image/draw` and an EXIF reader of the app.
 - JPEG is the only output type. The standard library has no WebP encoder.
 - a PNG with transparency gets a white background, because JPEG has no alpha channel
 - the encoder of `image/jpeg` writes no metadata. The output has no EXIF, GPS, XMP, IPTC, or comment data.

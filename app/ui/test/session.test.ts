@@ -16,7 +16,7 @@ afterEach(() => {
 
 describe('session', () => {
   it('deletes a token that the API refuses and reads again without it', async () => {
-    saveSession({ token: 'old-token', expires: '2099-01-01 00:00:00.000Z', user })
+    saveSession({ token: 'old-token', expires: '2099-01-01T00:00:00.000Z', user })
     const ended = vi.fn()
     handleSessionEnded(ended)
 
@@ -43,7 +43,7 @@ describe('session', () => {
   })
 
   it('ends the session when the token refresh gets 401', async () => {
-    saveSession({ token: 'old-token', expires: '2099-01-01 00:00:00.000Z', user })
+    saveSession({ token: 'old-token', expires: '2099-01-01T00:00:00.000Z', user })
     const ended = vi.fn()
     handleSessionEnded(ended)
     vi.stubGlobal('fetch', async () =>
@@ -58,18 +58,18 @@ describe('session', () => {
   })
 
   it('gives a draft only to the user who saved it', () => {
-    saveSession({ token: 't', expires: '2099-01-01 00:00:00.000Z', user })
+    saveSession({ token: 't', expires: '2099-01-01T00:00:00.000Z', user })
     saveDraft('review:x:new', { title: 'Mine' })
-    saveSession({ token: 't2', expires: '2099-01-01 00:00:00.000Z', user: { ...user, id: 'joe0000000000000' } })
+    saveSession({ token: 't2', expires: '2099-01-01T00:00:00.000Z', user: { ...user, id: 'joe0000000000000' } })
     expect(takeDraft('review:x:new')).toBeNull()
 
-    saveSession({ token: 't', expires: '2099-01-01 00:00:00.000Z', user })
+    saveSession({ token: 't', expires: '2099-01-01T00:00:00.000Z', user })
     saveDraft('review:x:new', { title: 'Mine' })
     expect(takeDraft('review:x:new')).toEqual({ title: 'Mine' })
   })
 
   it('sign out sends the token to the server and deletes the session', async () => {
-    saveSession({ token: 'old-token', expires: '2099-01-01 00:00:00.000Z', user })
+    saveSession({ token: 'old-token', expires: '2099-01-01T00:00:00.000Z', user })
     const sent: { url: string; method?: string; auth: string | null }[] = []
     vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
       sent.push({ url, method: init.method, auth: new Headers(init.headers).get('Authorization') })
@@ -86,7 +86,7 @@ describe('session', () => {
   })
 
   it('sign out does not send an expired token and warns', async () => {
-    saveSession({ token: 'old-token', expires: '2000-01-01 00:00:00.000Z', user })
+    saveSession({ token: 'old-token', expires: '2000-01-01T00:00:00.000Z', user })
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
     const warning = vi.spyOn(toast, 'warning')
@@ -108,7 +108,7 @@ describe('session', () => {
       }
       window.dispatchEvent(new StorageEvent('storage', { key: 'reviews-session', newValue: value }))
     }
-    const stored = (token: string) => JSON.stringify({ token, expires: '2099-01-01 00:00:00.000Z', user })
+    const stored = (token: string) => JSON.stringify({ token, expires: '2099-01-01T00:00:00.000Z', user })
 
     fromOtherTab(stored('t1'))
     expect(currentUser.value?.name).toBe('Ana')
@@ -124,7 +124,7 @@ describe('session', () => {
   })
 
   it('keeps the session in localStorage', () => {
-    saveSession({ token: 't', expires: '2099-01-01 00:00:00.000Z', user })
+    saveSession({ token: 't', expires: '2099-01-01T00:00:00.000Z', user })
     expect(JSON.parse(localStorage.getItem('reviews-session')!).user.name).toBe('Ana')
   })
 })

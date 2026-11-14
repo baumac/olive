@@ -34,9 +34,11 @@ make test-sdk-go      # Run the tests of the Go SDK
 make test-sdk-ts      # Run the tests of the TypeScript SDK. Needs Node.js.
 make test-app         # Run the Go tests of the app with the race detector. Needs a C compiler.
 make test-ui          # Run the UI tests. Needs Node.js.
+make test-coverage    # Run the Go and UI tests with coverage. Fail below the minimum. Needs Node.js.
 make build-sdk-ts     # Build the TypeScript SDK into app/sdk/typescript/dist. Needs Node.js.
 make build-ui         # Build the UI into app/internal/webui/dist. Needs Node.js.
 make build-app        # Build the UI, then the app server to ./bin/reviews-app
+make build-image      # Build the Docker image reviews-app:local from deploy/Dockerfile. Needs Docker.
 make run-app          # Run the app server on 127.0.0.1:8090 with data in app/pb_data
 make dev-ui           # Run the Vite dev server. It sends /v1 to make run-app.
 make test-e2e         # Build the app, then run the end-to-end tests in tests/. PROJECT=webkit runs one project.
@@ -60,12 +62,17 @@ Run one browser with `make test-e2e PROJECT=chromium`.
 `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. See decision 00010.
 The `lint` job runs `make lint`, and the `test` job runs `make test`.
 The `security-scan` job runs `make security-scan`.
+The `coverage` job runs `make test-coverage`. The makefile and `app/ui/vite.config.ts` have the minimum values.
+The `docker` job runs `make build-image` and checks `deploy/compose.yaml`.
+Renovate opens one pull request with all dependency updates each month. `.github/renovate.json` has its settings. See decision 00024.
 The `e2e` jobs run `make test-e2e` with one Playwright project each.
 A new Playwright project needs an entry in the `e2e` matrix. `make lint` fails without it.
 The `CI result` job passes only when all other jobs pass. Read it first.
 
 ## Production
 
+- `deploy/README.md` has the steps to start, update, back up, and restore the app with Docker Compose.
+- Run only one instance. The rate limits and the place cache are in the memory of the process. See decision 00022.
 - Behind a reverse proxy, set the trusted proxy header in the PocketBase settings, such as `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign up and sign in rate limit counts all of them together. See decision 00004.
 - Set the Application URL in the PocketBase settings to the public URL of the site. The canonical links and link previews of restaurant and review pages start with it. See decision 00013.
   `/sitemap.xml` also needs it. Without a public URL, the sitemap gets 404. See decision 00021.
@@ -87,6 +94,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 ## Architecture
 
 - **`makefile`** - the Makefile for building, developing, and testing the project
+- **`deploy`** - the Dockerfile, the Docker Compose file with Caddy, and the backup script. Start from `deploy/README.md`. See decision 00022.
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
@@ -111,6 +119,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
     - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00007.
     - It checks, changes, and serves the photos of reviews. See decision 00008.
+    - Its timestamps are RFC 3339. The database has the PocketBase format with a space. See decision 00023.
     - It gets the places of the place search from a Photon geocoder. See decision 00017.
   - **`app/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.

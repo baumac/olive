@@ -6,7 +6,6 @@ toolchain go1.27.4
 
 require (
 	github.com/baumac/reviews-app/app/sdk/go v0.0.0-00010101000000-000000000000
-	github.com/disintegration/imaging v1.6.2
 	github.com/getkin/kin-openapi v0.153.0
 	github.com/oapi-codegen/nullable v1.2.0
 	github.com/oapi-codegen/runtime v1.8.0
@@ -21,6 +20,7 @@ require (
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
+	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect

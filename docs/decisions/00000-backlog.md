@@ -10,23 +10,24 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## High Priority
 
-- Add deploy folder and docker compose setup
-  - Deployment details
-    - the app will run as a single instance and deployment
-    - add the `make build-image` target and the `docker` CI job of decision 00010
-    - add the `docker` job to the `needs` of the `CI result` job\
-  - Include a backup plan for `pb_data`
-    - the database and the photo files in `pb_data/storage` need backups
-    - the photos of decision 00008 make `pb_data/storage` much larger than the database
-  - Document support for oauth2 logins
+- Document support for oauth2 logins
 
 ## Low Priority
 - Add IOS app
 - Add load tests
-- Add test coverage make command, and ci check
-- Add renovate on a once per month scheudle that groups all updates into a single PR
 - Allow users to set preferred city and incorporate that into the maps feature
 - Allow users to favorite restaurants and retrieve their list of favorites
+- Add an index for the `overall` sort and filter of reviews
+  - the sort and the filter compute the value for each review of the restaurant or the reviewer
+  - SQLite does not use an index on an expression for the row value range of a cursor. See the migration `1794268808_add_restaurant_index.go`.
+  - a table like `restaurant_overall` with triggers, or a generated column, fixes it. It is not needed while a restaurant has few reviews.
+- Keep the auth token of the UI in an HttpOnly cookie
+  - the UI keeps the token in `localStorage`. A script that runs on the page can read it. The Content Security Policy makes this risk low.
+  - the sign in, token refresh, and sign out operations must then set and clear the cookie
+  - a response to a request with the cookie must not have the token in its body. This is a spec change.
+  - requests with the cookie need a defence against cross-site requests
+- Copy the backups of `deploy/` to a different computer, and test the restore steps
+- Let Renovate update the tool versions of the makefile and the image tags of `deploy/`
 
 ## Won't Do
 - Add rate limits to the write operations

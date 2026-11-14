@@ -12,7 +12,7 @@ import { expectAccessible } from './axe'
 
 function photo(id: string, alt: string | null): Photo {
   const base = `/v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/${id}`
-  return { id, alt, width: 800, height: 600, urls: { full: `${base}/full`, thumb: `${base}/thumb` }, created: '2024-11-06 19:04:30.811Z' }
+  return { id, alt, width: 800, height: 600, urls: { full: `${base}/full`, thumb: `${base}/thumb` }, created: '2024-11-06T19:04:30.811Z' }
 }
 
 const photos = [photo('p4h7j1l5n9q2s6v', 'A plate of carbonara'), photo('p1a2b3c4d5e6f7g', null)]

@@ -388,6 +388,7 @@ Restaurants stay because the reviews of other users can refer to them.
 
 - Timestamps use the PocketBase format: UTC with millisecond precision and a space between the date and the time, for example `2024-11-04 01:26:55.002Z`.
   - this is not RFC 3339, so the OAS schema uses a `string` with a `pattern` instead of `format: date-time`
+  - decision 00023 changes the timestamps to RFC 3339
   - in query parameters the space must be URL-encoded, for example `2024-11-04%2001:26:55.002Z`
   - the `created` and `updated` properties use the default PocketBase autodate fields with the same names
 - IDs use the default PocketBase record ID format: 15 characters that match the pattern `^[a-z0-9]+$`, for example `k3x9m2p7q1w8z4a`.

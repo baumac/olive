@@ -34,6 +34,7 @@ For UI work, run `make run-app` and `make dev-ui` at the same time, and open the
 ```bash
 make lint       # spec lint, go vet, gofmt, type checks, the generated SDK check, and the CI matrix check
 make test       # Go, SDK, and UI unit tests
+make test-coverage   # the Go and UI tests. It fails below the minimum coverage.
 make test-e2e   # the Playwright projects chromium, firefox, webkit, chromium-small, and rate-limit
 ```
 
@@ -54,3 +55,7 @@ CI runs the same commands. See `.github/workflows/ci.yml`.
 | `docs/decisions` | the design decisions. Start with `00000-backlog.md`. |
 
 `AGENTS.md` has all commands and the rules for code comments.
+
+## Deploy
+
+`deploy/README.md` has the Docker Compose setup with the reverse proxy and the backups.

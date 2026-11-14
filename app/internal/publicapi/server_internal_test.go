@@ -135,8 +135,8 @@ func TestResponseAcceptsEachStoredEmail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	body := `{"token":"t","expires":"2026-11-09 18:36:48.504Z","user":{"id":"k3x9m2p7q1w8z4a",` +
-		`"email":"Ana <ana@example.com>","name":"Ana","created":"2026-11-09 18:36:48.504Z","updated":"2026-11-09 18:36:48.504Z"}}`
+	body := `{"token":"t","expires":"2026-11-09T18:36:48.504Z","user":{"id":"k3x9m2p7q1w8z4a",` +
+		`"email":"Ana <ana@example.com>","name":"Ana","created":"2026-11-09T18:36:48.504Z","updated":"2026-11-09T18:36:48.504Z"}}`
 	header := http.Header{"Content-Type": {"application/json"}}
 	if err := checkResponse(t.Context(), in, http.StatusOK, header, []byte(body)); err != nil {
 		t.Errorf("the stored email failed the response check: %s", responseProblem(err))

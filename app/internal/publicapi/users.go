@@ -11,7 +11,6 @@ import (
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
-	"github.com/pocketbase/pocketbase/tools/types"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -131,13 +130,13 @@ func newAuthToken(user *core.Record) (reviewsapi.AuthToken, error) {
 	}
 	return reviewsapi.AuthToken{
 		Token:   token,
-		Expires: exp.UTC().Format(types.DefaultDateLayout),
+		Expires: exp.UTC().Format(timestampLayout),
 		User: reviewsapi.User{
 			Id:      user.Id,
 			Email:   openapi_types.Email(user.Email()),
 			Name:    user.GetString("name"),
-			Created: user.GetDateTime("created").String(),
-			Updated: user.GetDateTime("updated").String(),
+			Created: apiTimestamp(user.GetDateTime("created")),
+			Updated: apiTimestamp(user.GetDateTime("updated")),
 		},
 	}, nil
 }

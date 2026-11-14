@@ -12,6 +12,7 @@ Updated on 2026-11-14 for decision 00019, which made the UI simpler. The items t
 It completed the compact score display, the "Value" label, the photos above the save button, and the map position on a narrow page.
 Updated again on 2026-11-14 for decision 00020, which fixed most items of the UI/UX section.
 Updated again on 2026-11-14 for decision 00021, which fixed the items of the SEO and sharing section.
+Updated again on 2026-11-14 for decisions 00022 to 00025, which fixed most items of the Code and libraries section.
 
 ## Product, highest value first
 
@@ -49,13 +50,15 @@ It added schema.org JSON-LD to the restaurant and review pages, and the `/robots
 
 ## Code and libraries
 
-- `github.com/disintegration/imaging v1.6.2` has had no release since 2019, as far as the reviewer recalls. Check upstream. It decodes untrusted uploads in `photoimage.go`. Replace with `golang.org/x/image/draw` plus a small EXIF orientation reader, or a maintained fork.
-- The auth token is in `localStorage` (`app/ui/src/lib/session.ts`). The CSP is strict, so the risk is low. An HttpOnly cookie for the UI would remove it.
-- Timestamps are the PocketBase format, not RFC 3339. Each client needs `parseTimestamp`. Change it before an iOS client exists.
-- Review `overall` sort and filter scan. Fine now. A generated column with an index fixes it when lists grow.
-- Rate limiters and the place cache are in memory. Correct for one instance, as the backlog says. State it in the deploy decision.
-- No Dockerfile, deploy folder, or backup yet. This is the high priority backlog item and blocks everything public.
-- CI has no coverage number and no dependency update bot. Both are on the backlog as low priority. Renovate matters more now that versions are pinned exactly.
+Decisions 00022 to 00025 completed most items of this section on 2026-11-14.
+They replaced the `imaging` library in the photo upload, changed the timestamps to RFC 3339, added the deploy folder with backups, and added the coverage check and Renovate.
+Decision 00022 states that the rate limiters and the place cache need one instance.
+
+- The auth token is in `localStorage` (`app/ui/src/lib/session.ts`). The CSP is strict, so the risk is low. An HttpOnly cookie for the UI would remove it. It needs a spec change. The backlog has the item.
+- Review `overall` sort and filter scan. Fine now. The backlog has the item.
+- `github.com/disintegration/imaging` is still in `app/go.sum`, because PocketBase needs it. The app does not call it.
+- The backups stay on the host. The operator must copy them to a different computer. The restore steps and the `caddy` service are not tested on a real server.
+- Renovate needs its GitHub app on the repository. It does not update the tool versions of the makefile and the image tags of `deploy/`.
 
 ## What is strong
 

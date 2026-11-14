@@ -21,8 +21,8 @@ const review: Review = {
   title: 'Great food, a bit expensive',
   creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
   photos: [],
-  created: '2024-11-06 19:02:11.120Z',
-  updated: '2024-11-06 19:02:11.120Z',
+  created: '2024-11-06T19:02:11.120Z',
+  updated: '2024-11-06T19:02:11.120Z',
 }
 
 function attach() {

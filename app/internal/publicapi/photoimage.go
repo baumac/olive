@@ -9,7 +9,6 @@ import (
 	"image/jpeg"
 	_ "image/png"
 
-	"github.com/disintegration/imaging"
 	_ "golang.org/x/image/webp"
 )
 
@@ -49,13 +48,18 @@ func processPhoto(data []byte, contentType string) (processedPhoto, string, erro
 		cfg.Width*cfg.Height > maxUploadPixels {
 		return processedPhoto{}, "The image must have at most 25 megapixels and at most 8192 pixels on each side.", nil
 	}
-	img, err := imaging.Decode(bytes.NewReader(data), imaging.AutoOrientation(true))
+	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return processedPhoto{}, "The image cannot be read.", nil
 	}
+	orientation := 1
+	if contentType == "image/jpeg" {
+		orientation = exifOrientation(data)
+	}
 
-	full := imaging.Fit(img, fullSide, fullSide, imaging.Lanczos)
-	thumb := imaging.Fit(full, thumbSide, thumbSide, imaging.Lanczos)
+	// The turn comes after the fit. It then moves fewer pixels.
+	full := orient(fit(img, fullSide), orientation)
+	thumb := fit(full, thumbSide)
 	out := processedPhoto{width: full.Bounds().Dx(), height: full.Bounds().Dy()}
 	if out.full, err = encodeJPEG(full); err != nil {
 		return processedPhoto{}, "", err

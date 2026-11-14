@@ -17,6 +17,9 @@ GOVULNCHECK := $(TOOLS_BIN)/govulncheck
 
 OPENAPI_GENERATOR_IMAGE := openapitools/openapi-generator-cli:v7.27.0
 
+COVERAGE_APP := $(BIN)/coverage-app.out
+COVERAGE_MIN_APP := 65
+
 APP_BIN := $(BIN)/reviews-app
 APP_DATA := app/pb_data
 UI_DIST := app/internal/webui/dist
@@ -24,7 +27,7 @@ UI_DIST := app/internal/webui/dist
 # npm ci runs again only when the lockfile changes.
 NODE_MODULES := node_modules/.package-lock.json
 
-.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui lint-eslint security-scan generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app run-app dev-ui
+.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui lint-eslint security-scan generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-coverage test-coverage-app test-coverage-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app build-image run-app dev-ui
 
 install-tools: $(VACUUM) $(OAPI_CODEGEN) $(GOVULNCHECK)
 
@@ -109,6 +112,20 @@ test-app:
 test-ui: build-sdk-ts
 	npm test --workspace @reviews/ui
 
+test-coverage: test-coverage-app test-coverage-ui
+
+# The target fails when the Go tests cover less than COVERAGE_MIN_APP percent
+# of the statements of the app.
+test-coverage-app:
+	mkdir -p $(BIN)
+	cd app && go test -coverpkg=./... -coverprofile=$(COVERAGE_APP) ./...
+	@cd app && go tool cover -func=$(COVERAGE_APP) | awk -v min=$(COVERAGE_MIN_APP) \
+		'/^total:/ { sub("%", "", $$3); printf "Go coverage: %s%%. The minimum is %s%%.\n", $$3, min; if ($$3 + 0 < min) exit 1 }'
+
+# app/ui/vite.config.ts has the minimum of the UI.
+test-coverage-ui: build-sdk-ts
+	npm run coverage --workspace @reviews/ui
+
 # The end-to-end tests start ./bin/reviews-app. See decision 00006.
 # PROJECT runs one Playwright project, such as make test-e2e PROJECT=webkit.
 test-e2e: build-app
@@ -145,6 +162,11 @@ build-ui: build-sdk-ts
 
 build-app: build-ui
 	go build -o $(APP_BIN) ./app
+
+# The docker job of CI and developers build the image the same way. See
+# decision 00022.
+build-image:
+	docker build -f deploy/Dockerfile -t reviews-app:local .
 
 run-app:
 	go run ./app serve --dir $(APP_DATA)

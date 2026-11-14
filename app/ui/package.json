@@ -9,6 +9,7 @@
     "build": "vue-tsc -b && vite build",
     "typecheck": "vue-tsc -b",
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "@types/leaflet": "1.9.22",
     "@types/node": "26.6.5",
     "@vitejs/plugin-vue": "6.0.10",
+    "@vitest/coverage-v8": "5.0.5",
     "@vue/test-utils": "2.5.1",
     "@vue/tsconfig": "0.9.1",
     "axe-core": "4.14.0",

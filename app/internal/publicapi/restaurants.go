@@ -11,6 +11,7 @@ import (
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 var restaurantSorts = map[string]sortField{
@@ -389,8 +390,8 @@ func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[str
 		Location:    locationOf(r),
 		Creator:     nullable.NewNullNullable[reviewsapi.Creator](),
 		Rating:      nullable.NewNullNullable[reviewsapi.RestaurantRating](),
-		Created:     r.GetDateTime("created").String(),
-		Updated:     r.GetDateTime("updated").String(),
+		Created:     apiTimestamp(r.GetDateTime("created")),
+		Updated:     apiTimestamp(r.GetDateTime("updated")),
 	}
 	if u, ok := users[r.GetString("creator")]; ok {
 		out.Creator = nullable.NewNullableWithValue(toCreator(u))
@@ -465,5 +466,23 @@ func timestampComparisons(r *reviewsapi.TimestampRange) []comparison {
 	if r == nil {
 		return nil
 	}
-	return comparisons(r.Lt, r.Lte, r.Eq, r.Gte, r.Gt)
+	cs := comparisons(r.Lt, r.Lte, r.Eq, r.Gte, r.Gt)
+	for i := range cs {
+		cs[i].value = storedTimestamp(cs[i].value.(string))
+	}
+	return cs
+}
+
+// timestampLayout is the RFC 3339 format of the API. PocketBase stores a
+// space in the place of the T.
+const timestampLayout = "2006-01-02T15:04:05.000Z"
+
+func apiTimestamp(t types.DateTime) string {
+	return t.Time().UTC().Format(timestampLayout)
+}
+
+// storedTimestamp changes a timestamp of the API to the format of the
+// database. The spec pattern makes sure of the format.
+func storedTimestamp(value string) string {
+	return strings.Replace(value, "T", " ", 1)
 }

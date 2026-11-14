@@ -227,7 +227,7 @@ describe('LocationField', () => {
 })
 
 describe('RestaurantFormPage drafts', () => {
-  const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '2024-11-04 01:26:55.002Z', updated: '2024-11-04 01:26:55.002Z' }
+  const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '2024-11-04T01:26:55.002Z', updated: '2024-11-04T01:26:55.002Z' }
   const restaurant: Restaurant = {
     id: 'k3x9m2p7q1w8z4a',
     name: 'Old Place',
@@ -245,7 +245,7 @@ describe('RestaurantFormPage drafts', () => {
   })
 
   async function mountWithDraft(stored: Location | null) {
-    saveSession({ token: 't', expires: '2099-01-01 00:00:00.000Z', user })
+    saveSession({ token: 't', expires: '2099-01-01T00:00:00.000Z', user })
     vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue({ ...restaurant, location: stored })
     vi.spyOn(restaurantsApi, 'listReviews').mockResolvedValue({ items: [], nextCursor: null })
     vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })

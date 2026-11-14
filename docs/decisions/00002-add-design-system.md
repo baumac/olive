@@ -164,6 +164,7 @@ We compared these options:
 ## Dates, numbers, and text
 
 - the API timestamps are not RFC 3339. The UI changes the space to a `T` before it reads them.
+  Decision 00023 changes the timestamps to RFC 3339.
 - dates in the last 7 days show relative time, for example "3 hours ago". Older dates show "4 Nov 2024".
 - scores show the maximum, for example "8 / 10"
 - the UI uses `Intl` to format dates, numbers, and plurals

@@ -45,8 +45,8 @@ const review = {
   title: 'Best carbonara in town',
   creator: { id: 'u2g6k0m4o8q1s5w', name: 'Joe' },
   photos: [],
-  created: '2024-11-04 01:38:00.431Z',
-  updated: '2024-11-05 09:12:00.000Z',
+  created: '2024-11-04T01:38:00.431Z',
+  updated: '2024-11-05T09:12:00.000Z',
 }
 
 const restaurant = {
@@ -57,8 +57,8 @@ const restaurant = {
   creator: null,
   review_count: 0,
   rating: null,
-  created: '2024-11-04 01:26:55.002Z',
-  updated: '2024-11-04 01:26:55.002Z',
+  created: '2024-11-04T01:26:55.002Z',
+  updated: '2024-11-04T01:26:55.002Z',
 }
 
 const location = { latitude: 41.3766, longitude: 2.1893, address: 'Carrer de Sant Carles 4, 08003 Barcelona', placeId: 'osm:N1' }
@@ -70,7 +70,7 @@ describe('query parameters', () => {
       restaurantId: 'k3x9m2p7q1w8z4a',
       food: { gte: 4, lt: 5 },
       creatorIn: ['u5n1c8r3t6y0b2e', 'u2g6k0m4o8q1s5w'],
-      created: { gte: '2024-11-01 00:00:00.000Z' },
+      created: { gte: '2024-11-01T00:00:00.000Z' },
     })
     const q = sent[0].url.searchParams
     expect(sent[0].url.pathname).toBe('/v1/restaurants/k3x9m2p7q1w8z4a/reviews')
@@ -78,7 +78,7 @@ describe('query parameters', () => {
     expect(q.get('food[lt]')).toBe('5')
     expect(q.has('food[eq]')).toBe(false)
     expect(q.getAll('creator[in]')).toEqual(['u5n1c8r3t6y0b2e', 'u2g6k0m4o8q1s5w'])
-    expect(q.get('created[gte]')).toBe('2024-11-01 00:00:00.000Z')
+    expect(q.get('created[gte]')).toBe('2024-11-01T00:00:00.000Z')
   })
 
   it('sends the near filter as a deepObject', async () => {
@@ -128,7 +128,7 @@ describe('reviews', () => {
       restaurantId: 'k3x9m2p7q1w8z4a',
       reviewId: 'r7d4f0h2j9l5s3v',
     })
-    expect(got.created).toBe('2024-11-04 01:38:00.431Z')
+    expect(got.created).toBe('2024-11-04T01:38:00.431Z')
   })
 })
 
@@ -169,7 +169,7 @@ describe('auth', () => {
   it('does not send the stored token on sign in', async () => {
     const { sent, config } = fakeFetch(200, {
       token: 't',
-      expires: '2024-11-08 08:12:40.517Z',
+      expires: '2024-11-08T08:12:40.517Z',
       user: { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: restaurant.created, updated: restaurant.updated },
     })
     await new UsersApi(config).signIn({ credentials: { email: 'ana@example.com', password: 'correct-horse-battery' } })
@@ -190,7 +190,7 @@ describe('review photos', () => {
     width: 1536,
     height: 2048,
     urls: { full: '/v1/x/full', thumb: '/v1/x/thumb' },
-    created: '2024-11-06 19:04:30.811Z',
+    created: '2024-11-06T19:04:30.811Z',
   }
 
   it('sends the image with the content type of the call and the token', async () => {

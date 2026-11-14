@@ -1,0 +1,53 @@
+# One app instance behind Caddy, with a backup service. See decision 00022
+# and deploy/README.md.
+services:
+  app:
+    image: reviews-app:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - pb_data:/pb_data
+    expose:
+      - "8090"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  backup:
+    image: reviews-app:local
+    restart: unless-stopped
+    depends_on:
+      - app
+    entrypoint: ["backup"]
+    command: []
+    environment:
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-86400}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+    healthcheck:
+      disable: true
+    volumes:
+      - pb_data:/pb_data
+      - ${BACKUP_DIR:-./backups}:/backups
+
+volumes:
+  pb_data:
+  caddy_data:
+  caddy_config:

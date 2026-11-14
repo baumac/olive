@@ -4,10 +4,10 @@ const locale = 'en'
 const dateLocale = 'en-GB'
 const day = 24 * 60 * 60 * 1000
 
-// parseTimestamp reads the PocketBase format of the API, such as
-// "2024-11-04 01:26:55.002Z". It is not RFC 3339.
+// parseTimestamp reads the RFC 3339 format of the API, such as
+// "2024-11-04T01:26:55.002Z".
 export function parseTimestamp(value: string): Date {
-  return new Date(value.replace(' ', 'T'))
+  return new Date(value)
 }
 
 const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })

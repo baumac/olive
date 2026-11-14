@@ -17,6 +17,10 @@
 /app/internal/webui/dist/*
 !/app/internal/webui/dist/.gitkeep
 
+# Settings and backups of deploy/compose.yaml
+/deploy/.env
+/deploy/backups
+
 # Node
 node_modules/
 
