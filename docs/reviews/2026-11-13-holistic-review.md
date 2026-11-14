@@ -58,7 +58,7 @@ Decision 00022 states that the rate limiters and the place cache need one instan
 - Review `overall` sort and filter scan. Fine now. The backlog has the item.
 - `github.com/disintegration/imaging` is still in `app/go.sum`, because PocketBase needs it. The app does not call it.
 - The backups stay on the host. The operator must copy them to a different computer. The restore steps and the `caddy` service are not tested on a real server.
-- Renovate needs its GitHub app on the repository. It does not update the tool versions of the makefile and the image tags of `deploy/`.
+- Renovate needs its GitHub app on the repository. It does not update the tool versions of the makefile.
 
 ## What is strong
 

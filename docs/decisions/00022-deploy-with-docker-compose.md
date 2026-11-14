@@ -43,10 +43,11 @@ Docker Compose runs three services:
 | Service | Image | What |
 | --- | --- | --- |
 | `app` | `reviews-app:local` | the app server on port 8090 with the `pb_data` volume |
-| `caddy` | `caddy:2-alpine` | the reverse proxy on the ports 80 and 443. It gets the TLS certificate of `SITE_ADDRESS`. |
+| `caddy` | `caddy` | the reverse proxy on the ports 80 and 443. It gets the TLS certificate of `SITE_ADDRESS`. |
 | `backup` | `reviews-app:local` | runs `backup` in a loop |
 
 `deploy/.env` has `SITE_ADDRESS`, the backup settings, and the `REVIEWS_` variables of the app.
+`compose.yaml` names each `REVIEWS_` variable. A new variable of the app needs a line there.
 
 ## One instance
 
@@ -60,7 +61,8 @@ The app runs as one instance.
 ## Backups
 
 - `backup` copies `data.db` and `auxiliary.db` with the `.backup` command of `sqlite3`. The copy is consistent while the app writes.
-- each copy is a `gzip` file with the time in its name. The newest 14 copies stay.
+- each copy must pass `PRAGMA integrity_check`. It is then a `gzip` file with the time in its name. The newest 14 copies stay.
+- a step that fails stops the backup. The old copies stay, and the health check of the `backup` service fails until the next good backup.
 - `rsync` mirrors `pb_data/storage` to `storage/` of the backup folder. Photo files do not change after the upload, so only new files are copied.
 - the photos have no history. A photo that the app deleted is deleted in the mirror at the next backup.
   A restore of an old database copy can then have photo records without files. The photo cleanup job of decision 00009 does not remove these records.
@@ -72,9 +74,10 @@ The app runs as one instance.
 ## Image
 
 - the build context is the root of the repository. `.dockerignore` keeps `node_modules`, `bin`, `app/pb_data`, the docs, and the tests out of it.
-- stage `ui` uses `node:22-alpine`. It runs `npm ci` for the SDK and UI workspaces and builds both.
-- stage `build` uses `golang:1.27-alpine`. It copies the UI build into `app/internal/webui/dist` and builds the app with `CGO_ENABLED=0`.
-- the last stage uses `alpine:3.22` with `sqlite`, `rsync`, `tzdata`, and `ca-certificates`. The app runs as the user `reviews` with the ID 10001.
+- each base image has an exact version tag. Renovate updates the tags. See decision 00024.
+- stage `ui` uses the Node.js 22 image. It runs `npm ci` for the SDK and UI workspaces and builds both.
+- stage `build` uses the Go image with the toolchain version of `app/go.mod`. It copies the UI build into `app/internal/webui/dist` and builds the app with `CGO_ENABLED=0`.
+- the last stage uses Alpine with `sqlite`, `rsync`, `tzdata`, and `ca-certificates`. The app runs as the user `reviews` with the ID 10001.
 - the image has a health check on `/api/health`
 - the image size is about 67 MB
 

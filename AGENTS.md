@@ -34,7 +34,7 @@ make test-sdk-go      # Run the tests of the Go SDK
 make test-sdk-ts      # Run the tests of the TypeScript SDK. Needs Node.js.
 make test-app         # Run the Go tests of the app with the race detector. Needs a C compiler.
 make test-ui          # Run the UI tests. Needs Node.js.
-make test-coverage    # Run the Go and UI tests with coverage. Fail below the minimum. Needs Node.js.
+make test-coverage    # Run the Go and UI tests with coverage. Fail below the minimum. Needs Node.js and a C compiler.
 make build-sdk-ts     # Build the TypeScript SDK into app/sdk/typescript/dist. Needs Node.js.
 make build-ui         # Build the UI into app/internal/webui/dist. Needs Node.js.
 make build-app        # Build the UI, then the app server to ./bin/reviews-app
@@ -60,9 +60,9 @@ On Linux, the browsers also need system packages. Install them with `make instal
 Run one browser with `make test-e2e PROJECT=chromium`.
 
 `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. See decision 00010.
-The `lint` job runs `make lint`, and the `test` job runs `make test`.
+The `lint` job runs `make lint`. The `test` job runs `make test-sdk test-coverage`. These are the tests of `make test` with a coverage minimum.
 The `security-scan` job runs `make security-scan`.
-The `coverage` job runs `make test-coverage`. The makefile and `app/ui/vite.config.ts` have the minimum values.
+The makefile and `app/ui/vite.config.ts` have the minimum coverage values.
 The `docker` job runs `make build-image` and checks `deploy/compose.yaml`.
 Renovate opens one pull request with all dependency updates each month. `.github/renovate.json` has its settings. See decision 00024.
 The `e2e` jobs run `make test-e2e` with one Playwright project each.

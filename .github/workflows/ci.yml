@@ -48,18 +48,10 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           save-cache: 'true'
-      # make test-app uses the race detector. It needs the gcc of the runner.
-      - run: make test
-
-  coverage:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      # The target fails below the minimum of the makefile or of
-      # app/ui/vite.config.ts.
-      - run: make test-coverage
+      # test-coverage runs the tests of the app and the UI one time. It fails
+      # below the minimum of the makefile or of app/ui/vite.config.ts.
+      # The race detector needs the gcc of the runner.
+      - run: make test-sdk test-coverage
 
   docker:
     runs-on: ubuntu-24.04
@@ -102,7 +94,7 @@ jobs:
     name: CI result
     # A failed job does not skip this job. A cancelled run skips it.
     if: ${{ !cancelled() }}
-    needs: [lint, security-scan, test, coverage, docker, e2e]
+    needs: [lint, security-scan, test, docker, e2e]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

@@ -27,7 +27,7 @@ Each sub-bullet point contains notes about the incomplete decision.
   - a response to a request with the cookie must not have the token in its body. This is a spec change.
   - requests with the cookie need a defence against cross-site requests
 - Copy the backups of `deploy/` to a different computer, and test the restore steps
-- Let Renovate update the tool versions of the makefile and the image tags of `deploy/`
+- Let Renovate update the tool versions of the makefile
 
 ## Won't Do
 - Add rate limits to the write operations

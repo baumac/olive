@@ -12,8 +12,9 @@ import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, sugges
 describe('format', () => {
   const now = new Date('2024-11-10T12:00:00.000Z')
 
-  it('reads the PocketBase timestamp format', () => {
+  it('reads the timestamp format of the API and of an old saved session', () => {
     expect(parseTimestamp('2024-11-04T01:26:55.002Z').toISOString()).toBe('2024-11-04T01:26:55.002Z')
+    expect(parseTimestamp('2024-11-04 01:26:55.002Z').toISOString()).toBe('2024-11-04T01:26:55.002Z')
   })
 
   it('shows relative time for the last 7 days and a date after', () => {

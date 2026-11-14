@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # The build context is the root of the repository. See decision 00022.
 
-FROM node:22-alpine AS ui
+FROM node:22.23.5-alpine3.24 AS ui
 WORKDIR /src
 COPY package.json package-lock.json ./
 COPY app/sdk/typescript/package.json app/sdk/typescript/
@@ -13,7 +13,7 @@ COPY app/sdk/typescript app/sdk/typescript
 COPY app/ui app/ui
 RUN npm run build --workspace @reviews/sdk && npm run build --workspace @reviews/ui
 
-FROM golang:1.27-alpine AS build
+FROM golang:1.27.4-alpine3.24 AS build
 WORKDIR /src
 COPY go.work go.work.sum ./
 COPY app/go.mod app/go.sum app/
@@ -24,7 +24,7 @@ COPY --from=ui /src/app/internal/webui/dist app/internal/webui/dist
 # PocketBase uses a SQLite driver in Go. The build needs no C compiler.
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/reviews-app ./app
 
-FROM alpine:3.22
+FROM alpine:3.24.4
 # The backup service uses sqlite3 and rsync from this image.
 RUN apk add --no-cache ca-certificates rsync sqlite tzdata \
     && adduser -D -u 10001 reviews \

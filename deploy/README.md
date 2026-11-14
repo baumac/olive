@@ -59,6 +59,9 @@ The `backup` service writes to `BACKUP_DIR` on the host. The default is `deploy/
 - `db/data-TIME.db.gz` and `db/auxiliary-TIME.db.gz` are copies of the databases. SQLite makes them while the app runs. The newest `BACKUP_KEEP` copies stay.
 - `storage/` is a mirror of the photo files. A photo that the app deleted is also deleted there at the next backup.
 
+`docker compose -f deploy/compose.yaml ps` shows the `backup` service as `unhealthy` after a backup that failed. Its log has the error.
+A backup fails when the user ID 10001 cannot write to `BACKUP_DIR`.
+
 A backup on the same disk does not help when the disk fails.
 Copy `BACKUP_DIR` to a different computer, for example with `restic` or `rclone` from a cron job of the host.
 

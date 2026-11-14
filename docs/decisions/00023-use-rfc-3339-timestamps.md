@@ -38,6 +38,7 @@ GET /v1/restaurants?created[gte]=2024-11-01T00:00:00.000Z
 ```
 
 This is a breaking change of the API. No client other than the UI exists, and the UI ships in the same binary.
+The `version` of the spec changes from 1.0.0 to 2.0.0. The path stays `/v1`, because a new path would change each route for one format change.
 
 # Implementation Details
 [implementation-details]: #implementation-details
@@ -47,7 +48,8 @@ This is a breaking change of the API. No client other than the UI exists, and th
 - `storedTimestamp` changes a filter value to the format of the database. The request validation of decision 00007 checks the pattern first.
 - the two formats sort in the same order as text. The indexes and the cursors do not change.
 - a cursor has the values of the database, not of the API. Cursors from before the change still work.
-- `parseTimestamp` of the UI is `new Date(value)`
+- `parseTimestamp` of the UI still changes a space to a `T`. A session in `localStorage` from before the change has `expires` in the old format.
+- `apiTimestamp` returns an empty string for a record without the value. The response validation then gives `500`, as before the change.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

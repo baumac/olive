@@ -477,7 +477,12 @@ func timestampComparisons(r *reviewsapi.TimestampRange) []comparison {
 // space in the place of the T.
 const timestampLayout = "2006-01-02T15:04:05.000Z"
 
+// apiTimestamp returns an empty string for a record without the value. The
+// response validation then refuses the response.
 func apiTimestamp(t types.DateTime) string {
+	if t.IsZero() {
+		return ""
+	}
 	return t.Time().UTC().Format(timestampLayout)
 }
 

@@ -115,10 +115,10 @@ test-ui: build-sdk-ts
 test-coverage: test-coverage-app test-coverage-ui
 
 # The target fails when the Go tests cover less than COVERAGE_MIN_APP percent
-# of the statements of the app.
+# of the statements of the app. It uses the race detector like test-app.
 test-coverage-app:
 	mkdir -p $(BIN)
-	cd app && go test -coverpkg=./... -coverprofile=$(COVERAGE_APP) ./...
+	cd app && go test -race -coverpkg=./... -coverprofile=$(COVERAGE_APP) ./...
 	@cd app && go tool cover -func=$(COVERAGE_APP) | awk -v min=$(COVERAGE_MIN_APP) \
 		'/^total:/ { sub("%", "", $$3); printf "Go coverage: %s%%. The minimum is %s%%.\n", $$3, min; if ($$3 + 0 < min) exit 1 }'
 
