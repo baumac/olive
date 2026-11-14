@@ -126,7 +126,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
     - It writes the title and link preview tags of restaurant and review pages into `index.html`. See decision 00013.
-    - It writes the schema.org JSON-LD of these pages, and serves `/robots.txt` and `/sitemap.xml`. See decision 00021.
+    - It writes the schema.org JSON-LD of these pages and of reviewer pages, and serves `/robots.txt` and `/sitemap.xml`. See decision 00021.
     - It serves `/map-config.json` with the tile server of the maps and allows its origin in the Content Security Policy. See decision 00018.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
   - Calls the Public API only through `@reviews/sdk`

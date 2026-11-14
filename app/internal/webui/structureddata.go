@@ -107,3 +107,31 @@ func reviewData(app core.App, restaurant, review *core.Record, baseURL string) j
 	}
 	return d
 }
+
+// reviewerData has only the public fields of the user.
+func reviewerData(app core.App, user *core.Record, baseURL string) (jsonLD, error) {
+	var reviews struct {
+		Count int `db:"count"`
+	}
+	err := app.DB().
+		NewQuery("SELECT COUNT(*) AS [[count]] FROM {{reviews}} WHERE [[creator]] = {:id}").
+		Bind(dbx.Params{"id": user.Id}).
+		One(&reviews)
+	if err != nil {
+		return nil, err
+	}
+	person := jsonLD{
+		"@type": "Person",
+		"name":  user.GetString("name"),
+		"agentInteractionStatistic": jsonLD{
+			"@type":                "InteractionCounter",
+			"interactionType":      "https://schema.org/WriteAction",
+			"userInteractionCount": reviews.Count,
+		},
+	}
+	url := pageURL(baseURL, "/reviewers/"+user.Id)
+	setText(person, "url", url)
+	d := jsonLD{"@type": "ProfilePage", "mainEntity": person}
+	setText(d, "url", url)
+	return d, nil
+}

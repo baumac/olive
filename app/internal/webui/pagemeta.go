@@ -180,7 +180,14 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		if err != nil {
 			return pageMeta{}, true, notFound(err)
 		}
-		return p.reviewerMeta(user, publicBaseURL(appURL)), true, nil
+		baseURL := publicBaseURL(appURL)
+		data, err := reviewerData(app, user, baseURL)
+		if err != nil {
+			return pageMeta{}, true, err
+		}
+		meta := p.reviewerMeta(user, baseURL)
+		meta.StructuredData = data.script()
+		return meta, true, nil
 	}
 	if len(parts) < 2 || !strings.EqualFold(parts[0], "restaurants") || !recordID.MatchString(parts[1]) {
 		return pageMeta{}, false, nil

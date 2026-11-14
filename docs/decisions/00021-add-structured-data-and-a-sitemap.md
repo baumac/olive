@@ -1,5 +1,5 @@
 ---
-description: The app server writes schema.org JSON-LD into restaurant and review pages, and serves robots.txt and sitemap.xml.
+description: The app server writes schema.org JSON-LD into restaurant, review, and reviewer pages, and serves robots.txt and sitemap.xml.
 status: implemented
 ---
 
@@ -15,19 +15,20 @@ Decision 00013 gives each restaurant and review page its title and link preview 
 Expected outcome:
 - a restaurant page tells its name, address, average score, and review count as data
 - a review page tells its title, text, score, author, and restaurant as data
+- a reviewer page tells the name and the review count of the reviewer as data
 - a crawler gets the URL of each restaurant and each review from one file
 
 # Scope
 [scope]: #scope
 
 In scope:
-- JSON-LD in the page-meta block of `/restaurants/{id}` and `/restaurants/{id}/reviews/{id}`
+- JSON-LD in the page-meta block of `/restaurants/{id}`, `/restaurants/{id}/reviews/{id}`, and `/reviewers/{id}`
 - the `/robots.txt` and `/sitemap.xml` routes
 - the tests
 
 Out of scope:
 - the Public API and the UI
-- structured data for the restaurants list and the reviewer pages
+- structured data for the restaurants list. The server does not know the sort and the filters that the UI shows.
 - a sitemap index. One sitemap file has at most 50,000 URLs.
 - the reviewer pages in the sitemap. They have only a name and a list.
 - the reviews of a restaurant inside its JSON-LD. Each review has its own page with its data.
@@ -62,6 +63,23 @@ A review page has a `Review` object.
 - `itemReviewed` is the `Restaurant` with its name, URL, and address.
 - `datePublished` is the creation time.
 
+A reviewer page has a `ProfilePage` object. This part is an addition of 2026-11-14.
+
+```html
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"ProfilePage",
+ "url":"https://reviews.sponga47.com/reviewers/u7c2n5b8d1f4g6h",
+ "mainEntity":{"@type":"Person","name":"Ana",
+  "url":"https://reviews.sponga47.com/reviewers/u7c2n5b8d1f4g6h",
+  "agentInteractionStatistic":{"@type":"InteractionCounter",
+   "interactionType":"https://schema.org/WriteAction","userInteractionCount":12}}}
+</script>
+```
+
+- `mainEntity` is the same `Person` as the `author` of a review, with the same URL.
+- `userInteractionCount` is the number of reviews of the reviewer. A reviewer without reviews has 0.
+- The object has only the public fields of the user.
+
 Without a public Application URL, the objects have no `url`.
 
 ## robots.txt
@@ -93,7 +111,8 @@ Without a public Application URL, `/sitemap.xml` gets `404`. A sitemap needs abs
 - `encoding/json` writes the JSON-LD. It escapes `<`, `>`, and `&`, so a value cannot end the script element.
 - the browser does not run a script of the type `application/ld+json`. The Content Security Policy does not change. The end-to-end tests check this.
 - the restaurant object needs one more query. It reads the review count and the row of `restaurant_overall`. The review object reads the user record of the author.
-- a database error of the rating query gives the default page, like the other errors of decision 00013.
+- the reviewer object needs one more query. It counts the reviews of the user.
+- a database error of the rating query or the count query gives the default page, like the other errors of decision 00013.
 - `/robots.txt` and `/sitemap.xml` have `Cache-Control: public, max-age=3600`. The sitemap query reads all restaurants and reviews, so a proxy cache can keep it.
 - the UI route checks the two paths before the static files. A `robots.txt` in the UI build is not used.
 

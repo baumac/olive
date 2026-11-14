@@ -220,6 +220,11 @@ func TestPageMeta(t *testing.T) {
 			`<meta property="og:type" content="profile" />`,
 			`<meta property="og:url" content="https://reviews.example.com/reviewers/` + user.Id + `" />`,
 			`<meta property="og:image" content="https://site.example.com/og-image.png" />`,
+			`<script type="application/ld+json">{"@context":"https://schema.org","@type":"ProfilePage",` +
+				`"mainEntity":{"@type":"Person","agentInteractionStatistic":{"@type":"InteractionCounter",` +
+				`"interactionType":"https://schema.org/WriteAction","userInteractionCount":2},` +
+				`"name":"Ana","url":"https://reviews.example.com/reviewers/` + user.Id + `"},` +
+				`"url":"https://reviews.example.com/reviewers/` + user.Id + `"}</script>`,
 		}},
 		{"GET", "/Reviewers/" + user.Id + "/", 200, []string{`<title>Ana · Sponga47 Reviews</title>`}},
 		{"GET", "/reviewers/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
@@ -260,6 +265,14 @@ func TestPageMeta(t *testing.T) {
 	if !strings.Contains(body, `<meta property="og:image" content="https://site.example.com/og-image.png" />`) ||
 		!strings.Contains(body, `<title>Great &lt;b&gt;food&lt;/b&gt; · Sponga47 Reviews</title>`) {
 		t.Errorf("default Application URL: no site image or title\n%s", body)
+	}
+
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/reviewers/"+user.Id, nil))
+	body = w.Body.String()
+	if w.Code != 200 || strings.Contains(body, `"url"`) ||
+		!strings.Contains(body, `"@type":"ProfilePage","mainEntity":{"@type":"Person",`) {
+		t.Errorf("default Application URL: reviewer page %d\n%s", w.Code, body)
 	}
 }
 
