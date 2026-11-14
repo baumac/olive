@@ -26,7 +26,7 @@ Each sub-bullet point contains notes about the incomplete decision.
   - the sign in, token refresh, and sign out operations must then set and clear the cookie
   - a response to a request with the cookie must not have the token in its body. This is a spec change.
   - requests with the cookie need a defence against cross-site requests
-- Copy the backups of `deploy/` to a different computer, and test the restore steps
+- Use a backup plan that copies each photo one time when `pb_data` grows near 5 GB. See decision 00022.
 - Let Renovate update the tool versions of the makefile
 
 ## Won't Do

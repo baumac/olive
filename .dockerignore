@@ -11,6 +11,5 @@ app/sdk/typescript/dist
 tests/*
 !tests/package.json
 docs
-deploy/backups
 deploy/.env
 .check-generate

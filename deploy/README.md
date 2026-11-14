@@ -6,7 +6,6 @@ This folder runs the app as one instance with Docker Compose. Decision 00022 has
 | --- | --- |
 | `app` | the app server with its data in the `pb_data` volume |
 | `caddy` | the reverse proxy. It gets the TLS certificate of the site. |
-| `backup` | makes a backup of `pb_data` each day |
 
 ## Start
 
@@ -14,8 +13,6 @@ You need a server with Docker, and a DNS name that points to it. The ports 80 an
 
 ```bash
 cp deploy/.env.example deploy/.env    # then set SITE_ADDRESS
-mkdir -p deploy/backups
-sudo chown 10001 deploy/backups       # the user ID of the containers
 docker compose -f deploy/compose.yaml up -d --build
 ```
 
@@ -30,6 +27,7 @@ Then open `https://SITE_ADDRESS/_/` and set these values. AGENTS.md has the reas
 - the Application URL: `https://SITE_ADDRESS`
 - the trusted proxy header: `X-Real-IP`
 - the superuser IP allow-list
+- the backups. See the Backups section.
 
 ## One instance only
 
@@ -46,35 +44,42 @@ git pull
 docker compose -f deploy/compose.yaml up -d --build
 ```
 
-The app applies the migrations when it starts. Make a backup first:
-
-```bash
-docker compose -f deploy/compose.yaml run --rm backup once
-```
+The app applies the migrations when it starts. Make a backup first with "New backup" in Settings > Backups of the dashboard.
 
 ## Backups
 
-The `backup` service writes to `BACKUP_DIR` on the host. The default is `deploy/backups`.
+PocketBase makes the backups and sends them to an S3 compatible storage. Nothing in this folder makes a backup.
+Without these settings, the app has no backup.
 
-- `db/data-TIME.db.gz` and `db/auxiliary-TIME.db.gz` are copies of the databases. SQLite makes them while the app runs. The newest `BACKUP_KEEP` copies stay.
-- `storage/` is a mirror of the photo files. A photo that the app deleted is also deleted there at the next backup.
+You need a bucket and an access key that can read and write it. Use a bucket that has only the backups.
+In the dashboard, open Settings > Backups and set:
 
-`docker compose -f deploy/compose.yaml ps` shows the `backup` service as `unhealthy` after a backup that failed. Its log has the error.
-A backup fails when the user ID 10001 cannot write to `BACKUP_DIR`.
+- the auto backups, with a cron expression. `0 3 * * *` makes one backup each day at 03:00 UTC.
+- the maximum number of auto backups to keep, for example `7`
+- the S3 storage, with the endpoint, the bucket, the region, the access key, and the secret
 
-A backup on the same disk does not help when the disk fails.
-Copy `BACKUP_DIR` to a different computer, for example with `restic` or `rclone` from a cron job of the host.
+Then make one backup by hand and check that the file is in the bucket.
+
+Each backup is one ZIP file of all of `pb_data`: the databases and the photo files.
+
+- Each backup has all photos again. The bucket needs the size of `pb_data` times the number of backups.
+- The app can be slower while a backup runs.
+- PocketBase advises a different plan for a `pb_data` of 5 GB or more. Decision 00022 has the plan with `sqlite3` and `rsync`.
+- A failed backup shows only in the logs of the dashboard. Look at the list of backups from time to time.
+- The S3 settings are in the database. Keep a copy of the access key in a different place, or a lost server also loses the way to its backups.
 
 ## Restore
 
+On a server that still runs, select a backup in Settings > Backups and select "Restore". The app replaces `pb_data` and starts again.
+
+On a new server, download the ZIP file from the bucket to the folder of the repository. Then put its content into the volume:
+
 ```bash
-docker compose -f deploy/compose.yaml stop app backup
-docker compose -f deploy/compose.yaml run --rm --no-deps --entrypoint sh backup -c '
-  rm -f /pb_data/data.db-wal /pb_data/data.db-shm /pb_data/auxiliary.db-wal /pb_data/auxiliary.db-shm &&
-  gunzip -c /backups/db/data-TIME.db.gz > /pb_data/data.db &&
-  gunzip -c /backups/db/auxiliary-TIME.db.gz > /pb_data/auxiliary.db &&
-  rsync -a /backups/storage/ /pb_data/storage/'
+docker compose -f deploy/compose.yaml up -d --build
+docker compose -f deploy/compose.yaml stop app
+docker compose -f deploy/compose.yaml run --rm --no-deps -v "$PWD/BACKUP.zip:/tmp/backup.zip:ro" --entrypoint sh app -c '
+  rm -rf /pb_data/* && unzip -q /tmp/backup.zip -d /pb_data'
 docker compose -f deploy/compose.yaml up -d
 ```
 
-Replace `TIME` with the time in the file names. Test a restore on a second computer before you need it.
+Test a restore on a second computer before you need it.

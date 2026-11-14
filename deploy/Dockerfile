@@ -25,13 +25,11 @@ COPY --from=ui /src/app/internal/webui/dist app/internal/webui/dist
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/reviews-app ./app
 
 FROM alpine:3.24.4
-# The backup service uses sqlite3 and rsync from this image.
-RUN apk add --no-cache ca-certificates rsync sqlite tzdata \
+RUN apk add --no-cache ca-certificates tzdata \
     && adduser -D -u 10001 reviews \
-    && mkdir /pb_data /backups \
-    && chown reviews:reviews /pb_data /backups
+    && mkdir /pb_data \
+    && chown reviews:reviews /pb_data
 COPY --from=build /out/reviews-app /usr/local/bin/reviews-app
-COPY deploy/backup.sh /usr/local/bin/backup
 USER reviews
 VOLUME /pb_data
 EXPOSE 8090

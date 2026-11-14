@@ -57,7 +57,8 @@ Decision 00022 states that the rate limiters and the place cache need one instan
 - The auth token is in `localStorage` (`app/ui/src/lib/session.ts`). The CSP is strict, so the risk is low. An HttpOnly cookie for the UI would remove it. It needs a spec change. The backlog has the item.
 - Review `overall` sort and filter scan. Fine now. The backlog has the item.
 - `github.com/disintegration/imaging` is still in `app/go.sum`, because PocketBase needs it. The app does not call it.
-- The backups stay on the host. The operator must copy them to a different computer. The restore steps and the `caddy` service are not tested on a real server.
+- PocketBase sends the backups to an S3 compatible storage. The operator must turn this on in the dashboard. Each backup has all photos again, so a large `pb_data` needs a different plan.
+- The `caddy` service and a backup to a real bucket are not tested on a real server.
 - Renovate needs its GitHub app on the repository. It does not update the tool versions of the makefile.
 
 ## What is strong

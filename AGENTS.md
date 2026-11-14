@@ -72,6 +72,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 ## Production
 
 - `deploy/README.md` has the steps to start, update, back up, and restore the app with Docker Compose.
+- Turn on the backups in the PocketBase settings, with an S3 compatible storage. The app has no backup without them. See decision 00022.
 - Run only one instance. The rate limits and the place cache are in the memory of the process. See decision 00022.
 - Behind a reverse proxy, set the trusted proxy header in the PocketBase settings, such as `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign up and sign in rate limit counts all of them together. See decision 00004.
 - Set the Application URL in the PocketBase settings to the public URL of the site. The canonical links and link previews of restaurant and review pages start with it. See decision 00013.
@@ -94,7 +95,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 ## Architecture
 
 - **`makefile`** - the Makefile for building, developing, and testing the project
-- **`deploy`** - the Dockerfile, the Docker Compose file with Caddy, and the backup script. Start from `deploy/README.md`. See decision 00022.
+- **`deploy`** - the Dockerfile and the Docker Compose file with Caddy. Start from `deploy/README.md`. See decision 00022.
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
