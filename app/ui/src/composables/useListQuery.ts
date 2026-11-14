@@ -24,6 +24,9 @@ export function useListQuery(
   relevance?: RelevanceSort,
   // keep has the query keys of the page that a filter change does not remove.
   keep: string[] = [],
+  // oldSortOptions are not in the sort control. A link with one of them
+  // still works. The control then shows it.
+  oldSortOptions: Option[] = [],
 ) {
   const route = useRoute()
   const router = useRouter()
@@ -80,7 +83,11 @@ export function useListQuery(
   })
 
   const searching = computed(() => !!relevance && filters.value[relevance.filter] !== undefined)
-  const sortOptions = computed(() => (searching.value && relevance ? [relevance.option, ...baseSortOptions] : baseSortOptions))
+  const sortOptions = computed(() => {
+    const raw = first(route.query.sort)
+    const old = oldSortOptions.filter((o) => o.value === raw)
+    return [...(searching.value && relevance ? [relevance.option] : []), ...baseSortOptions, ...old]
+  })
   const defaultSort = computed(() => (searching.value && relevance ? relevance.option.value : baseDefaultSort))
 
   const sort = computed<string>({

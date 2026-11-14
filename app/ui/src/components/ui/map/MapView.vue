@@ -21,9 +21,14 @@ const props = withDefaults(
     pick?: boolean
     // wheelZoom is off for a map inside a page that scrolls.
     wheelZoom?: boolean
+    // cluster joins the pins that are near on the screen into one pin with
+    // a count. A click on it zooms to its pins.
+    cluster?: boolean
+    // clusterLabel gives the accessible name of a pin with a count.
+    clusterLabel?: (count: number) => string
     class?: HTMLAttributes['class']
   }>(),
-  { zoom: 13, markers: () => [], selected: undefined, pick: false, wheelZoom: false, class: undefined },
+  { zoom: 13, markers: () => [], selected: undefined, pick: false, wheelZoom: false, cluster: false, clusterLabel: (count: number) => `${count} places`, class: undefined },
 )
 
 const emit = defineEmits<{
@@ -100,39 +105,120 @@ function escapeHtml(text: string): string {
 const pin =
   '<svg viewBox="0 0 28 36" width="28" height="36" aria-hidden="true"><path d="M14 0C6.3 0 0 6.2 0 13.9 0 24 14 36 14 36s14-12 14-22.1C28 6.2 21.7 0 14 0z" fill="currentColor"/><circle cx="14" cy="14" r="5" fill="#fff"/></svg>'
 
-function icon(selected: boolean) {
+function icon(selected: boolean, shift: number) {
   return L.divIcon({
     html: pin,
     className: selected ? 'map-pin map-pin-selected' : 'map-pin',
     iconSize: [28, 36],
-    iconAnchor: [14, 36],
+    iconAnchor: [14 - shift, 36],
   })
 }
 
-// drawn has the markers on the map by their ID. draw keeps the marker of
-// an ID that stays. A marker with the keyboard focus then keeps it.
-const drawn = new Map<string, { marker: L.Marker; selected: boolean; draggable: boolean }>()
+function clusterIcon(count: number) {
+  return L.divIcon({ html: String(count), className: 'map-cluster', iconSize: [36, 36], iconAnchor: [18, 18] })
+}
 
-function draw() {
-  const ids = new Set(props.markers.map((m) => m.id))
-  for (const [id, old] of drawn) {
-    if (!ids.has(id) || old.draggable !== props.pick) {
-      old.marker.remove()
-      drawn.delete(id)
+// clusterRadius is the distance in pixels below which two pins join.
+const clusterRadius = 44
+// spread is the distance in pixels between pins that the last zoom level
+// cannot separate.
+const spread = 22
+
+// Pin is one marker on the map. A cluster has more than one member.
+interface Pin {
+  key: string
+  latitude: number
+  longitude: number
+  label: string
+  shift: number
+  members: MapMarker[]
+}
+
+function single(m: MapMarker, shift = 0): Pin {
+  return { key: m.id, latitude: m.latitude, longitude: m.longitude, label: m.label, shift, members: [m] }
+}
+
+function mean(values: number[]): number {
+  return values.reduce((a, b) => a + b, 0) / values.length
+}
+
+function pins(): Pin[] {
+  if (!map || !props.cluster) {
+    return props.markers.map((m) => single(m))
+  }
+  const zoom = map.getZoom()
+  const last = zoom >= map.getMaxZoom()
+  const groups: { x: number; y: number; alone: boolean; members: MapMarker[] }[] = []
+  for (const m of props.markers) {
+    const { x, y } = map.project([m.latitude, m.longitude], zoom)
+    // The selected pin stays out of a cluster.
+    const alone = !last && m.id === props.selected
+    const near = alone ? undefined : groups.find((g) => !g.alone && Math.hypot(g.x - x, g.y - y) <= clusterRadius)
+    if (near) {
+      near.members.push(m)
+    } else {
+      groups.push({ x, y, alone, members: [m] })
     }
   }
-  for (const m of props.markers) {
-    const selected = m.id === props.selected
-    let entry = drawn.get(m.id)
+  return groups.flatMap(({ members }) => {
+    if (members.length === 1 || last) {
+      return members.map((m, i) => single(m, (i - (members.length - 1) / 2) * spread))
+    }
+    return [
+      {
+        key: `cluster:${members.map((m) => m.id).join(',')}`,
+        latitude: mean(members.map((m) => m.latitude)),
+        longitude: mean(members.map((m) => m.longitude)),
+        label: props.clusterLabel(members.length),
+        shift: 0,
+        members,
+      },
+    ]
+  })
+}
+
+function zoomTo(members: MapMarker[]) {
+  if (!map) {
+    return
+  }
+  // The zoom removes the cluster. The keyboard focus then goes to the map.
+  const focused = map.getContainer().contains(document.activeElement)
+  map.fitBounds(L.latLngBounds(members.map((m) => [m.latitude, m.longitude])), { padding: [48, 48], maxZoom: map.getMaxZoom() })
+  if (focused) {
+    map.getContainer().focus()
+  }
+}
+
+// drawn has the markers on the map by their key. draw keeps the marker of
+// a key that stays. A marker with the keyboard focus then keeps it.
+const drawn = new Map<string, { marker: L.Marker; selected: boolean; draggable: boolean; shift: number }>()
+
+function draw() {
+  const next = pins()
+  const shifts = new Map(next.map((p) => [p.key, p.shift]))
+  for (const [key, old] of drawn) {
+    if (shifts.get(key) !== old.shift || old.draggable !== props.pick) {
+      old.marker.remove()
+      drawn.delete(key)
+    }
+  }
+  for (const p of next) {
+    const cluster = p.members.length > 1
+    const selected = p.key === props.selected
+    let entry = drawn.get(p.key)
     if (!entry) {
-      const marker = L.marker([m.latitude, m.longitude], { icon: icon(selected), draggable: props.pick })
-      marker.on('click', () => emit('select', m.id))
+      const marker = L.marker([p.latitude, p.longitude], {
+        icon: cluster ? clusterIcon(p.members.length) : icon(selected, p.shift),
+        draggable: props.pick && !cluster,
+      })
+      const activate = () => (cluster ? zoomTo(p.members) : emit('select', p.key))
+      marker.on('click', activate)
       // Leaflet opens only a popup with the keyboard. Enter and Space select
       // the marker, like a button.
       marker.on('keypress', (e: L.LeafletKeyboardEvent) => {
         if (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ') {
           e.originalEvent.preventDefault()
-          emit('select', m.id)
+          activate()
         }
       })
       marker.on('dragend', () => {
@@ -140,12 +226,12 @@ function draw() {
         emit('pick', { latitude: lat, longitude: lng })
       })
       marker.addTo(layer)
-      entry = { marker, selected, draggable: props.pick }
-      drawn.set(m.id, entry)
+      entry = { marker, selected, draggable: props.pick, shift: p.shift }
+      drawn.set(p.key, entry)
     } else {
       const at = entry.marker.getLatLng()
-      if (at.lat !== m.latitude || at.lng !== m.longitude) {
-        entry.marker.setLatLng([m.latitude, m.longitude])
+      if (at.lat !== p.latitude || at.lng !== p.longitude) {
+        entry.marker.setLatLng([p.latitude, p.longitude])
       }
       if (entry.selected !== selected) {
         entry.marker.getElement()?.classList.toggle('map-pin-selected', selected)
@@ -154,8 +240,8 @@ function draw() {
     }
     entry.marker.setZIndexOffset(selected ? 1000 : 0)
     const el = entry.marker.getElement()
-    el?.setAttribute('aria-label', m.label)
-    el?.setAttribute('title', m.label)
+    el?.setAttribute('aria-label', p.label)
+    el?.setAttribute('title', p.label)
   }
 }
 
@@ -185,6 +271,7 @@ onMounted(() => {
     const c = map.getCenter().wrap()
     emit('move', { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() }, { latitude: c.lat, longitude: c.lng }, map.getZoom())
   })
+  map.on('zoomend', draw)
   map.on('click', (e) => {
     if (props.pick) {
       const { lat, lng } = e.latlng.wrap()
@@ -230,7 +317,21 @@ onBeforeUnmount(() => {
   color: oklch(0.2 0.01 107);
 }
 
-.map-pin:focus-visible {
+.map-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  background: oklch(0.45 0.12 125);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+.map-pin:focus-visible,
+.map-cluster:focus-visible {
   outline: 3px solid var(--ring);
   outline-offset: 2px;
 }

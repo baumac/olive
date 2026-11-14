@@ -5,7 +5,8 @@ import { restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
 import { restaurantAccess } from '@/lib/restaurants'
-import { scoreFields } from '@/lib/reviews'
+import { directionsLink } from '@/lib/places'
+import { overallOf, scoreFields } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 
 describe('format', () => {
@@ -159,5 +160,22 @@ describe('restaurantAccess', () => {
     expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: false })
     expect(restaurantAccess({ creator, reviewCount: 2 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: true })
     expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, null).canChange).toBe(false)
+  })
+})
+
+describe('overallOf', () => {
+  it('gives the average with one decimal after each score has a value', () => {
+    expect(overallOf({ space: 7, service: 9, food: 8, price: 6, cleanliness: 8 })).toBe(7.6)
+    expect(overallOf({ space: 7, service: 9, food: 8, price: 6, cleanliness: null })).toBeNull()
+  })
+})
+
+describe('directionsLink', () => {
+  const point = { latitude: 41.3766, longitude: 2.1893 }
+
+  it('opens the map app of a phone and OpenStreetMap on other devices', () => {
+    expect(directionsLink(point, 'Mozilla/5.0 (Linux; Android 16; Pixel 9)')).toBe('geo:41.3766,2.1893?q=41.3766,2.1893')
+    expect(directionsLink(point, 'Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X)')).toBe('https://maps.apple.com/?daddr=41.3766,2.1893')
+    expect(directionsLink(point, 'Mozilla/5.0 (X11; Linux x86_64)')).toBe('https://www.openstreetmap.org/directions?to=41.3766%2C2.1893')
   })
 })

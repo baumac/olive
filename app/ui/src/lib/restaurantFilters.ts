@@ -19,6 +19,14 @@ export const restaurantSortOptions: Option[] = [
   { value: 'name', label: 'Name' },
 ]
 
+// oldRestaurantSortOptions are the sorts that only a link can select.
+export const oldRestaurantSortOptions: Option[] = [
+  { value: 'created', label: 'Oldest' },
+  { value: 'overall', label: 'Lowest rated' },
+  { value: '-name', label: 'Name, Z to A' },
+  { value: '-updated', label: 'Recently updated' },
+]
+
 // restaurantFilterParams changes the filters to the query parameters of the
 // SDK.
 export function restaurantFilterParams(f: Record<string, FilterValue>) {

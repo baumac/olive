@@ -86,6 +86,7 @@ Only the account menu and the top of the reviewer page show an avatar. A list of
 - `ReviewList` shows `FilterBar` when the list has 10 reviews or more, or when the URL has a filter or a sort.
   A restaurant gives the count. A list of one reviewer uses the loaded page. Without a filter, this page has all reviews or it has a next page.
 - A URL with a removed sort, such as `?sort=-food`, shows the default sort. `useListQuery` already ignores unknown values.
+  Decision 00020 changes this. A link with a removed sort keeps its order.
 - `FilterBar` has the `end` slot. The label of the sort is `sr-only`, so the name "Sort by" stays.
 - `RestaurantCard` makes the link cover the card with an `after` element. The card has one link, so no other control is below it.
 - `RestaurantPage` uses `useMediaQuery` at 1024px. It makes only one `MapView`. Leaflet then never starts in a hidden element.

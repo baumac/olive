@@ -19,7 +19,8 @@ import type { MapConfig } from '@/lib/mapConfig'
 import { loadMapConfig } from '@/lib/mapConfig'
 import type { Box } from '@/lib/places'
 import { defaultCenter, mapBox } from '@/lib/places'
-import { restaurantFilterDefs, restaurantFilterParams, restaurantSortOptions } from '@/lib/restaurantFilters'
+import { oldRestaurantSortOptions, restaurantFilterDefs, restaurantFilterParams, restaurantSortOptions } from '@/lib/restaurantFilters'
+import { currentUser } from '@/lib/session'
 
 usePageTitle('Restaurants')
 
@@ -36,7 +37,7 @@ void loadMapConfig().then((config) => {
   mapConfigLoaded.value = true
 })
 
-const { filters, sort, active, sortOptions } = useListQuery(restaurantFilterDefs, restaurantSortOptions, '-created', searchRelevance, ['view'])
+const { filters, sort, active, sortOptions } = useListQuery(restaurantFilterDefs, restaurantSortOptions, '-created', searchRelevance, ['view'], oldRestaurantSortOptions)
 
 // The map view is in the URL. A link to the map then opens the map.
 const mapView = computed(() => route.query.view === 'map' && mapConfig.value !== null)
@@ -133,6 +134,10 @@ const markers = computed(() =>
   onMap.value.flatMap((r) => (r.location ? [{ id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name }] : [])),
 )
 
+function clusterLabel(count: number): string {
+  return `${formatCount(count, 'restaurant')}, zoom in to see them`
+}
+
 const status = computed(() => {
   if (mapView.value) {
     if (mapLoading.value && onMap.value.length === 0) {
@@ -158,6 +163,11 @@ const lastView: { center: { latitude: number; longitude: number }; zoom: number 
 <template>
   <main id="main" class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
     <h1 class="sr-only">Restaurants</h1>
+    <p v-if="!currentUser && !active && !mapView" class="text-muted-foreground max-w-2xl text-lg">
+      Find a restaurant by its scores for food, service, space, value, and cleanliness.
+      <RouterLink to="/sign-up" class="text-foreground font-medium underline underline-offset-4">Sign up</RouterLink>
+      to add a restaurant or to write a review.
+    </p>
 
     <FilterBar
       v-model:filters="filters"
@@ -191,13 +201,19 @@ const lastView: { center: { latitude: number; longitude: number }; zoom: number 
         :markers="markers"
         :selected="selectedId"
         wheel-zoom
+        cluster
+        :cluster-label="clusterLabel"
         class="h-[60vh] min-h-80"
         @move="moved"
         @select="selectedId = $event"
       />
       <p v-if="mapFailed" class="text-destructive text-sm" role="alert">The restaurants did not load. Move the map to try again.</p>
+      <p v-if="mapHasMore" class="text-sm font-medium">
+        The map shows only {{ mapLimit }} restaurants of this area. Zoom in to see the others.
+      </p>
       <p class="text-muted-foreground text-sm">
-        Select a pin to see the restaurant. Restaurants without a location are only in the list.
+        Select a pin to see the restaurant. A pin with a number has more than one restaurant. Restaurants without a
+        location are only in the list.
       </p>
       <div class="max-w-md" aria-live="polite">
         <RestaurantCard v-if="selected" :restaurant="selected" />

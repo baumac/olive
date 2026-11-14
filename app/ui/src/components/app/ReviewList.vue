@@ -9,7 +9,7 @@ import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
 import { restaurantsApi, reviewersApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { reviewFilterDefs, reviewFilterParams, reviewSortOptions } from '@/lib/reviewFilters'
+import { reviewFilterDefs, reviewFilterParams, oldReviewSortOptions, reviewSortOptions } from '@/lib/reviewFilters'
 import PagedList from './PagedList.vue'
 import ReviewCard from './ReviewCard.vue'
 
@@ -31,7 +31,7 @@ const limit = 20
 const toolbarMinimum = 10
 const defaultSort = '-created'
 
-const { filters, sort, active, sortOptions } = useListQuery(reviewFilterDefs, reviewSortOptions, defaultSort, searchRelevance)
+const { filters, sort, active, sortOptions } = useListQuery(reviewFilterDefs, reviewSortOptions, defaultSort, searchRelevance, [], oldReviewSortOptions)
 
 const list = usePagedList<Review>(async (cursor) => {
   const params = { limit, cursor, sort: sort.value, ...reviewFilterParams(filters.value) }

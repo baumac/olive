@@ -60,6 +60,17 @@ describe('ReviewFormPage scores', () => {
     await expectAccessible(w.element)
   })
 
+  it('shows the overall score after the five scores have a value', async () => {
+    const w = await mountForm()
+    const overall = w.get('[role=status]')
+    expect(overall.text()).toContain('It shows after you select the five scores.')
+    const values = [7, 9, 8, 6, 8]
+    for (const [i, group] of w.findAll('[role=radiogroup]').entries()) {
+      await group.findAll('[role=radio]')[values[i]! - 1]!.trigger('click')
+    }
+    expect(overall.text()).toBe('Overall7.6')
+  })
+
   it('keeps the help text linked when a score has an error', async () => {
     const w = await mountForm()
     await w.get('form').trigger('submit')

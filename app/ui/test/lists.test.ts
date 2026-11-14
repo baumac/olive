@@ -14,6 +14,8 @@ const defs: FilterDef[] = [
 ]
 const sortOptions: Option[] = [{ value: '-created', label: 'Newest' }]
 
+const oldSortOptions: Option[] = [{ value: 'created', label: 'Oldest' }]
+
 async function queryAt(url: string, filterDefs: FilterDef[] | (() => FilterDef[]) = defs, relevance = false, keep: string[] = []) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
   await router.push(url)
@@ -21,7 +23,7 @@ async function queryAt(url: string, filterDefs: FilterDef[] | (() => FilterDef[]
   mount(
     defineComponent({
       setup() {
-        result = useListQuery(filterDefs, sortOptions, '-created', relevance ? searchRelevance : undefined, keep)
+        result = useListQuery(filterDefs, sortOptions, '-created', relevance ? searchRelevance : undefined, keep, oldSortOptions)
         return () => null
       },
     }),
@@ -35,6 +37,15 @@ describe('useListQuery', () => {
     const q = await queryAt('/r?tags=italian,Bad,pasta&rating=abc&sort=-nope&other=1')
     expect(q.filters.value).toEqual({ tags: ['italian', 'pasta'] })
     expect(q.sort.value).toBe('-created')
+  })
+
+  it('keeps an old sort of a link and shows it as an option', async () => {
+    const q = await queryAt('/r?sort=created')
+    expect(q.sort.value).toBe('created')
+    expect(q.sortOptions.value.map((o) => o.value)).toEqual(['-created', 'created'])
+    q.sort.value = '-created'
+    await flushPromises()
+    expect(q.sortOptions.value.map((o) => o.value)).toEqual(['-created'])
   })
 
   it('keeps allowed values', async () => {

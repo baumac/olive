@@ -52,6 +52,20 @@ export const scoreFields: ScoreField[] = [
   },
 ]
 
+// overallOf gives the overall score of a review, like the API. It returns
+// null until each score has a value.
+export function overallOf(scores: Record<string, number | null | undefined>): number | null {
+  let sum = 0
+  for (const f of scoreFields) {
+    const v = scores[f.name]
+    if (v == null) {
+      return null
+    }
+    sum += v
+  }
+  return Math.round((sum / scoreFields.length) * 10) / 10
+}
+
 export function tagList(tags: Set<string> | undefined | null): string[] {
   return tags ? Array.from(tags) : []
 }

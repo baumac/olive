@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Review } from '@reviews/sdk'
+import { ref } from 'vue'
 import { RatingDisplay } from '@/components/ui/rating-display'
+import { scoreFields } from '@/lib/reviews'
 import DateText from './DateText.vue'
 import ReviewerLink from './ReviewerLink.vue'
 import ReviewPhotos from './ReviewPhotos.vue'
@@ -13,6 +15,8 @@ defineProps<{
   // of one reviewer does not need it.
   showCreator?: boolean
 }>()
+
+const scoresOpen = ref(false)
 </script>
 
 <template>
@@ -33,8 +37,21 @@ defineProps<{
       <ReviewPhotos :review="review" />
       <p class="text-muted-foreground text-sm">
         <template v-if="showCreator"><ReviewerLink :creator="review.creator" /> · </template>
-        <DateText :created="review.created" :updated="review.updated" />
+        <DateText :created="review.created" :updated="review.updated" /> ·
+        <button
+          type="button"
+          class="rounded-sm underline underline-offset-4"
+          :aria-expanded="scoresOpen"
+          @click="scoresOpen = !scoresOpen"
+        >
+          {{ scoresOpen ? 'Hide scores' : 'Show scores' }}<span class="sr-only"> of {{ review.title }}</span>
+        </button>
       </p>
+      <ul v-if="scoresOpen" class="flex flex-wrap gap-x-4 gap-y-1" :aria-label="`Scores of ${review.title}`">
+        <li v-for="f in scoreFields" :key="f.name">
+          <RatingDisplay :value="review[f.name]" :max="f.max" :label="f.label" show-label />
+        </li>
+      </ul>
     </div>
   </article>
 </template>

@@ -41,6 +41,23 @@ describe('ReviewCard', () => {
     await expectAccessible(w.element)
   })
 
+  it('shows the five scores after a click', async () => {
+    const w = mount(ReviewCard, { props: { review }, attachTo: attach() })
+    const button = w.get('button[aria-expanded]')
+    expect(button.text()).toBe('Show scores of Great food, a bit expensive')
+    await button.trigger('click')
+    expect(button.attributes('aria-expanded')).toBe('true')
+    const labels = w.findAll('ul [role=img]').map((e) => e.attributes('aria-label'))
+    expect(labels).toEqual([
+      'Space: 7 out of 10',
+      'Service: 9 out of 10',
+      'Food: 8 out of 10',
+      'Value: 6 out of 10',
+      'Cleanliness: 8 out of 10',
+    ])
+    await expectAccessible(w.element)
+  })
+
   it('does not name the reviewer in a list of one reviewer', () => {
     const w = mount(ReviewCard, { props: { review } })
     expect(w.text()).not.toContain('Ana')

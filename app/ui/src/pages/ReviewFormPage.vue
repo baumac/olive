@@ -18,7 +18,8 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, restaurantsApi } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
-import { type ScoreField, scoreFields } from '@/lib/reviews'
+import { formatScore } from '@/lib/format'
+import { type ScoreField, overallOf, scoreFields } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, maxPhotos } from '@/lib/validation'
 
@@ -56,6 +57,8 @@ const uploading = ref(false)
 const uploadError = ref('')
 const upload = ref<InstanceType<typeof PhotoUpload> | null>(null)
 const photoCount = computed(() => (saved.value?.photos.length ?? 0) + queued.value.length)
+
+const overall = computed(() => overallOf(fields.value.scores))
 
 const draftKey = computed(() => `review:${props.restaurantId}:${props.reviewId ?? 'new'}`)
 const restaurantPath = computed(() => `/restaurants/${props.restaurantId}`)
@@ -323,6 +326,11 @@ async function submit() {
             {{ errors[s.name] }}
           </p>
         </div>
+        <p class="flex items-baseline gap-2 border-t pt-4" role="status">
+          <span class="text-sm font-medium">Overall</span>
+          <span v-if="overall !== null" class="text-2xl font-extrabold tabular-nums">{{ formatScore(overall) }}</span>
+          <span v-else class="text-muted-foreground text-sm">It shows after you select the five scores.</span>
+        </p>
       </div>
 
       <FormItem id="review-title" :error="errors.title">

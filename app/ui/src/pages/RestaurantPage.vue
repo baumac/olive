@@ -19,7 +19,7 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { useMapConfig } from '@/lib/mapConfig'
-import { osmLink } from '@/lib/places'
+import { directionsLink, osmLink } from '@/lib/places'
 import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
@@ -63,6 +63,11 @@ const mapOpen = ref(false)
 const marker = computed(() => {
   const r = restaurant.data.value
   return r?.location ? { id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name } : null
+})
+
+const directions = computed(() => {
+  const l = restaurant.data.value?.location
+  return l ? directionsLink(l) : null
 })
 
 const access = computed(() => {
@@ -134,7 +139,7 @@ async function remove() {
           <p v-if="restaurant.data.value.description" class="text-muted-foreground max-w-2xl text-xl whitespace-pre-line">
             {{ restaurant.data.value.description }}
           </p>
-          <p v-if="restaurant.data.value.location" class="flex flex-wrap items-start gap-x-4 gap-y-1">
+          <p v-if="restaurant.data.value.location" class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <a
               :href="osmLink(restaurant.data.value.location)"
               target="_blank"
@@ -146,6 +151,16 @@ async function remove() {
                 <span class="sr-only">Address: </span>{{ restaurant.data.value.location.address
                 }}<span class="sr-only">, open in OpenStreetMap</span>
               </span>
+            </a>
+            <!-- A geo: link opens an app. It needs no new tab. -->
+            <a
+              v-if="directions"
+              :href="directions"
+              :target="directions.startsWith('https:') ? '_blank' : undefined"
+              rel="noopener noreferrer"
+              class="text-muted-foreground rounded-sm text-sm font-medium underline underline-offset-4"
+            >
+              Directions
             </a>
             <button
               v-if="mapConfig && !wide"

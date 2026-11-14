@@ -33,6 +33,26 @@ test('the restaurant page shows the location on a map', async ({ page, api }) =>
     'href',
     'https://www.openstreetmap.org/?mlat=41.3766&mlon=2.1893#map=18/41.3766/2.1893',
   )
+  // The link depends on the device of the browser.
+  await expect(page.getByRole('link', { name: 'Directions' })).toHaveAttribute(
+    'href',
+    /^(geo:41\.3766,2\.1893\?q=|https:\/\/maps\.apple\.com\/\?daddr=|https:\/\/www\.openstreetmap\.org\/directions\?to=)41\.3766(,|%2C)2\.1893$/,
+  )
+})
+
+test('the map view joins near pins into one pin with a count', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const tag = uniqueTag('cluster')
+  await api.createRestaurant(owner, { name: 'Can Sole', tags: [tag], location: barceloneta })
+  await api.createRestaurant(owner, { name: 'Next Door', tags: [tag], location: { ...barceloneta, latitude: 41.3771 } })
+
+  await page.goto(`/restaurants?tags=${tag}&view=map`)
+  const map = page.getByRole('region', { name: 'Map of the restaurants' })
+  await expect(map.getByRole('button', { name: 'Can Sole' })).toHaveCount(0)
+  await map.getByRole('button', { name: '2 restaurants, zoom in to see them' }).click()
+  await expect(map.getByRole('button', { name: 'Can Sole' })).toBeVisible()
+  await expect(map.getByRole('button', { name: 'Next Door' })).toBeVisible()
+  await expect(map.getByRole('button', { name: '2 restaurants, zoom in to see them' })).toHaveCount(0)
 })
 
 test('the map view shows the restaurants of the filters', async ({ page, api }) => {

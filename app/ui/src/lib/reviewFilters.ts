@@ -22,6 +22,17 @@ export const reviewSortOptions: Option[] = [
   { value: 'overall', label: 'Lowest rated' },
 ]
 
+// oldReviewSortOptions are the sorts that only a link can select.
+export const oldReviewSortOptions: Option[] = [
+  { value: 'created', label: 'Oldest' },
+  { value: '-food', label: 'Best food' },
+  { value: '-service', label: 'Best service' },
+  { value: '-space', label: 'Best space' },
+  { value: '-price', label: 'Best value' },
+  { value: '-cleanliness', label: 'Cleanest' },
+  { value: 'title', label: 'Title, A to Z' },
+]
+
 function atLeast(filters: Record<string, FilterValue>, key: string) {
   const v = Number(filters[key])
   return Number.isInteger(v) && v > 0 ? { gte: v } : undefined

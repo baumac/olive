@@ -16,6 +16,7 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
   for (const [label, score] of [['Space', 7], ['Service', 9], ['Food', 8], ['Value', 6], ['Cleanliness', 5]] as const) {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: `${score} out of 10` }).click()
   }
+  await expect(page.getByRole('status').filter({ hasText: 'Overall' })).toHaveText('Overall7')
   await page.getByLabel('Title').fill('Great food, a bit expensive')
   await page.getByLabel('Feedback').fill('Friendly staff.\nGreat pasta.')
   await expect(page.getByLabel('Tags')).toHaveCount(0)
@@ -24,6 +25,10 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
   await expect(page.getByText('Review saved')).toBeVisible()
   const card = page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').filter({ hasText: 'Great food, a bit expensive' })
   await expect(card.getByRole('img', { name: 'Overall: 7 out of 10' })).toBeVisible()
+  await expect(card.getByRole('img')).toHaveCount(1)
+  await card.getByRole('button', { name: 'Show scores of Great food, a bit expensive' }).click()
+  await expect(card.getByRole('img', { name: 'Value: 6 out of 10' })).toBeVisible()
+  await card.getByRole('button', { name: 'Hide scores of Great food, a bit expensive' }).click()
   await expect(card.getByRole('img')).toHaveCount(1)
   await expect(card).toContainText(user.name)
   await expect(page.getByRole('link', { name: 'Edit your review' })).toBeVisible()
@@ -61,6 +66,10 @@ test('filters and score sorts select and order reviews', async ({ page, api }) =
 
   await page.goto(`/restaurants/${restaurant.id}?sort=overall`)
   await expect(titles).toHaveText(['Best food', 'Poor food', 'Good food'])
+
+  // The sort control does not have this sort. A link with it still works.
+  await page.goto(`/restaurants/${restaurant.id}?sort=-food`)
+  await expect(titles).toHaveText(['Best food', 'Good food', 'Poor food'])
 
   await page.goto(`/restaurants/${restaurant.id}?food=8`)
   await expect(titles).toHaveText(['Good food', 'Best food'])
@@ -114,6 +123,14 @@ test('the header has only the home link', async ({ page }) => {
   await expect(header.getByRole('link', { name: 'Sponga47 Reviews, home' })).toBeVisible()
   await expect(header.getByRole('navigation')).toHaveCount(0)
   await expect(header.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0)
+})
+
+test('the list tells a signed out visitor what the site is', async ({ page }) => {
+  await page.goto('/restaurants')
+  const main = page.getByRole('main')
+  await expect(main.getByText('Find a restaurant by its scores')).toBeVisible()
+  await main.getByRole('link', { name: 'Sign up' }).click()
+  await expect(page).toHaveURL(/\/sign-up$/)
 })
 
 test('my reviews needs an account', async ({ page }) => {

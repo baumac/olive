@@ -10,6 +10,7 @@ Did not run the test suites. Did not test photo upload or the place search in th
 
 Updated on 2026-11-14 for decision 00019, which made the UI simpler. The items that it completed are removed.
 It completed the compact score display, the "Value" label, the photos above the save button, and the map position on a narrow page.
+Updated again on 2026-11-14 for decision 00020, which fixed most items of the UI/UX section.
 
 ## Product, highest value first
 
@@ -26,13 +27,14 @@ It completed the compact score display, the "Value" label, the photos above the 
 
 ## UI/UX
 
-- The review form still has 50 score buttons. It does not show the computed overall while the person selects the scores.
-- A review card shows only the overall score. A reader must open the review to see the five scores.
-- Map view has no marker clustering. Two pins overlap at Barceloneta in the test data. It loads at most 100 restaurants in the box with no cue except `mapHasMore`.
-- The address links only to OpenStreetMap. Add a `geo:` or directions link for phones.
+Decision 00020 completed the other items of this section on 2026-11-14.
+It added the overall score to the review form, the scores to a review card, map clusters, the directions link, the old sort links, and the intro for a signed out visitor.
+
+- The review form still has 50 score buttons. Decision 00020 keeps them, because one click selects a score.
+- The map view loads at most 100 restaurants in the box. A line below the map now tells this, but the person must zoom in to see the others.
 - The restaurants list has no visible heading and the header has no navigation links. A second top-level screen needs both again.
-- The UI has only three sorts for each list. A link with a removed sort, such as `?sort=-food`, shows the default sort.
-- `/` redirects to the list. There is no landing content for a first visitor who is signed out.
+- `/` redirects to the list. A signed out visitor sees only two sentences of intro. There is no landing page.
+- The directions link selects the map app from the user agent. This is not tested on a real phone.
 - All text is English with `en-GB` dates fixed in `app/ui/src/lib/format.ts`. No i18n layer.
 
 ## SEO and sharing

@@ -61,6 +61,20 @@ export function roundCoordinate(v: number): number {
   return Math.round(v * 1e6) / 1e6
 }
 
+// directionsLink has the point as the destination of a route. A phone opens
+// its map app. Other devices open OpenStreetMap.
+export function directionsLink(l: { latitude: number; longitude: number }, userAgent: string = navigator.userAgent): string {
+  const point = `${l.latitude},${l.longitude}`
+  if (/Android/.test(userAgent)) {
+    return `geo:${point}?q=${point}`
+  }
+  // An iPad can send the user agent of a Mac.
+  if (/iPhone|iPad|iPod|Macintosh/.test(userAgent)) {
+    return `https://maps.apple.com/?daddr=${point}`
+  }
+  return `https://www.openstreetmap.org/directions?to=${encodeURIComponent(point)}`
+}
+
 // osmLink opens OpenStreetMap with a marker at the point.
 export function osmLink(l: { latitude: number; longitude: number }): string {
   return `https://www.openstreetmap.org/?mlat=${l.latitude}&mlon=${l.longitude}#map=18/${l.latitude}/${l.longitude}`
