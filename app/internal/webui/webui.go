@@ -173,6 +173,9 @@ func register(app core.App, files fs.FS, opts Options) error {
 			if path == mapConfigPath {
 				return e.Blob(http.StatusOK, "application/json", mapConfig)
 			}
+			if done, err := serveCrawlerFile(e, path); done {
+				return err
+			}
 			if hasMetaBlock {
 				if page, status, ok := renderPage(e, index, path); ok {
 					return e.HTML(status, string(page))

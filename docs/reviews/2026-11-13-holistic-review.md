@@ -11,6 +11,7 @@ Did not run the test suites. Did not test photo upload or the place search in th
 Updated on 2026-11-14 for decision 00019, which made the UI simpler. The items that it completed are removed.
 It completed the compact score display, the "Value" label, the photos above the save button, and the map position on a narrow page.
 Updated again on 2026-11-14 for decision 00020, which fixed most items of the UI/UX section.
+Updated again on 2026-11-14 for decision 00021, which fixed the items of the SEO and sharing section.
 
 ## Product, highest value first
 
@@ -39,8 +40,12 @@ It added the overall score to the review form, the scores to a review card, map 
 
 ## SEO and sharing
 
-- `pagemeta.go` writes title and Open Graph tags but no schema.org JSON-LD (`Restaurant` with `AggregateRating`, `Review`). This is what gives star snippets in search results.
-- No `sitemap.xml` and no `robots.txt` route. The content is only reachable through client-side lists.
+Decision 00021 completed the two items of this section on 2026-11-14.
+It added schema.org JSON-LD to the restaurant and review pages, and the `/robots.txt` and `/sitemap.xml` routes.
+
+- The sitemap is one file with at most 50,000 URLs. A larger site needs a sitemap index.
+- The JSON-LD is not checked with the Rich Results Test of Google. It needs a public URL.
+- The restaurants list and the reviewer pages have no structured data.
 
 ## Code and libraries
 

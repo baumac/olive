@@ -80,6 +80,9 @@ type pageMeta struct {
 	ImageWidth  int
 	ImageHeight int
 	ImageAlt    string
+	// StructuredData is the JSON-LD of the page. It is empty for a page
+	// without it.
+	StructuredData template.JS
 }
 
 var metaTemplate = template.Must(template.New("meta").Parse(`<title>{{.Title}}</title>
@@ -101,7 +104,10 @@ var metaTemplate = template.Must(template.New("meta").Parse(`<title>{{.Title}}</
     <meta property="og:image:alt" content="{{.ImageAlt}}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{{.OGTitle}}" />
-    <meta name="twitter:description" content="{{.Description}}" />`))
+    <meta name="twitter:description" content="{{.Description}}" />
+    {{- if .StructuredData}}
+    <script type="application/ld+json">{{.StructuredData}}</script>
+    {{- end}}`))
 
 // indexPage is index.html cut around the page-meta block. siteName and
 // siteImage come from the default tags of the block.
@@ -189,7 +195,13 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		return pageMeta{}, true, notFound(err)
 	}
 	if !isReview {
-		return p.restaurantMeta(restaurant, baseURL), true, nil
+		data, err := restaurantData(app, restaurant, baseURL)
+		if err != nil {
+			return pageMeta{}, true, err
+		}
+		meta := p.restaurantMeta(restaurant, baseURL)
+		meta.StructuredData = data.script()
+		return meta, true, nil
 	}
 	review, err := app.FindRecordById("reviews", parts[3])
 	if err != nil {
@@ -209,7 +221,9 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 	} else if err != nil {
 		return pageMeta{}, true, err
 	}
-	return p.reviewMeta(restaurant, review, photo, baseURL), true, nil
+	meta := p.reviewMeta(restaurant, review, photo, baseURL)
+	meta.StructuredData = reviewData(app, restaurant, review, baseURL).script()
+	return meta, true, nil
 }
 
 func notFound(err error) error {

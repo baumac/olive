@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	_ "github.com/baumac/reviews-app/app/migrations"
 	"github.com/pocketbase/pocketbase/apis"
@@ -139,11 +140,14 @@ func TestPageMeta(t *testing.T) {
 	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	restaurant := save(t, app, "restaurants", map[string]any{
 		"name": `Luigi's <script>alert(1)</script> & "Co"`, "description": "Pasta\nand pizza.", "creator": user.Id,
+		"address": "Carrer Nou 1, Barcelona", "latitude": 41.39, "longitude": 2.16,
 	})
 	plain := save(t, app, "restaurants", map[string]any{"name": "Plain", "creator": user.Id})
+	noReviews := save(t, app, "restaurants", map[string]any{"name": "No Reviews", "creator": user.Id})
 	scores := map[string]any{"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7}
 	review := save(t, app, "reviews", with(scores, map[string]any{
 		"restaurant": restaurant.Id, "creator": user.Id, "title": "Great <b>food</b>", "feedback": "The best pasta.",
+		"cleanliness": 9,
 	}))
 	other := save(t, app, "reviews", with(scores, map[string]any{"restaurant": plain.Id, "creator": user.Id, "title": "Fine"}))
 	photo := savePhoto(t, app, review.Id)
@@ -167,6 +171,12 @@ func TestPageMeta(t *testing.T) {
 			`<meta property="og:image" content="https://site.example.com/og-image.png" />`,
 			`<meta property="og:image:alt" content="Logo &amp; tagline" />`,
 			`<meta property="og:site_name" content="Sponga47 Reviews" />`,
+			`<script type="application/ld+json">{"@context":"https://schema.org","@type":"Restaurant",` +
+				`"address":"Carrer Nou 1, Barcelona",` +
+				`"aggregateRating":{"@type":"AggregateRating","bestRating":10,"ratingValue":7.4,"reviewCount":1,"worstRating":1},` +
+				`"description":"Pasta and pizza.","geo":{"@type":"GeoCoordinates","latitude":41.39,"longitude":2.16},` +
+				`"name":"Luigi's \u003cscript\u003ealert(1)\u003c/script\u003e \u0026 \"Co\"",` +
+				`"url":"https://reviews.example.com` + restaurantPath + `"}</script>`,
 		}},
 		{"GET", restaurantPath + "/", 200, []string{`href="https://reviews.example.com` + restaurantPath + `"`}},
 		{"HEAD", restaurantPath, 200, nil},
@@ -181,12 +191,22 @@ func TestPageMeta(t *testing.T) {
 			`<meta property="og:image" content="https://reviews.example.com/v1` + reviewPath + `/photos/` + photo.Id + `/full" />`,
 			`<meta property="og:image:width" content="640" />`,
 			`<meta property="og:image:alt" content="A plate of pasta" />`,
+			`<script type="application/ld+json">{"@context":"https://schema.org","@type":"Review",` +
+				`"author":{"@type":"Person","name":"Ana","url":"https://reviews.example.com/reviewers/` + user.Id + `"},`,
+			`"itemReviewed":{"@type":"Restaurant","address":"Carrer Nou 1, Barcelona","name":"Luigi's`,
+			`"name":"Great \u003cb\u003efood\u003c/b\u003e","reviewBody":"The best pasta.",` +
+				`"reviewRating":{"@type":"Rating","bestRating":10,"ratingValue":7.4,"worstRating":1},` +
+				`"url":"https://reviews.example.com` + reviewPath + `"}</script>`,
 		}},
 		{"GET", otherPath, 200, []string{
 			`<meta name="description" content="A review of Plain on Sponga47 Reviews." />`,
 			`<meta property="og:image" content="https://site.example.com/og-image.png" />`,
 		}},
 		{"GET", "/Restaurants/" + plain.Id, 200, []string{`<title>Plain · Sponga47 Reviews</title>`}},
+		{"GET", "/restaurants/" + noReviews.Id, 200, []string{
+			`<script type="application/ld+json">{"@context":"https://schema.org","@type":"Restaurant","name":"No Reviews",` +
+				`"url":"https://reviews.example.com/restaurants/` + noReviews.Id + `"}</script>`,
+		}},
 		{"GET", "/restaurants/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
 		{"GET", restaurantPath + "/reviews/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
 		{"GET", restaurantPath + "/reviews/" + other.Id, 404, []string{`content="Default"`}},
@@ -310,4 +330,63 @@ func with(a, b map[string]any) map[string]any {
 		out[k] = v
 	}
 	return out
+}
+
+func TestCrawlerFiles(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	app.Settings().Meta.AppURL = "https://reviews.example.com/"
+
+	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi & Co", "creator": user.Id})
+	review := save(t, app, "reviews", map[string]any{
+		"restaurant": restaurant.Id, "creator": user.Id, "title": "Fine",
+		"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7,
+	})
+	h := newHandler(t, app, fstest.MapFS{"index.html": {Data: []byte(testIndex)}})
+	get := func(path string) *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		return w
+	}
+
+	robots := get("/robots.txt")
+	wantRobots := "User-agent: *\nDisallow: /_/\nDisallow: /api/\nDisallow: /sign-in\nDisallow: /sign-up\nDisallow: /my-reviews\n" +
+		"\nSitemap: https://reviews.example.com/sitemap.xml\n"
+	if robots.Code != 200 || robots.Body.String() != wantRobots || !strings.HasPrefix(robots.Header().Get("Content-Type"), "text/plain") {
+		t.Errorf("robots.txt: %d %q %q", robots.Code, robots.Header().Get("Content-Type"), robots.Body.String())
+	}
+
+	sitemap := get("/sitemap.xml")
+	body := sitemap.Body.String()
+	if sitemap.Code != 200 || sitemap.Header().Get("Content-Type") != "application/xml; charset=utf-8" ||
+		sitemap.Header().Get("Cache-Control") != crawlerCacheControl {
+		t.Errorf("sitemap.xml: %d %v", sitemap.Code, sitemap.Header())
+	}
+	for _, want := range []string{
+		`<?xml version="1.0" encoding="UTF-8"?>`,
+		`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
+		`<url><loc>https://reviews.example.com/restaurants</loc></url>`,
+		`<url><loc>https://reviews.example.com/restaurants/` + restaurant.Id + `</loc><lastmod>` +
+			restaurant.GetDateTime("updated").Time().UTC().Format(time.RFC3339) + `</lastmod></url>`,
+		`<loc>https://reviews.example.com/restaurants/` + restaurant.Id + `/reviews/` + review.Id + `</loc>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("sitemap.xml: no %s in\n%s", want, body)
+		}
+	}
+	if strings.Count(body, "<url>") != 3 || strings.Contains(body, user.Id) {
+		t.Errorf("sitemap.xml has other URLs:\n%s", body)
+	}
+
+	app.Settings().Meta.AppURL = "http://localhost:8090"
+	if w := get("/sitemap.xml"); w.Code != 404 {
+		t.Errorf("sitemap.xml without a public URL: %d", w.Code)
+	}
+	if w := get("/robots.txt"); w.Code != 200 || strings.Contains(w.Body.String(), "Sitemap") {
+		t.Errorf("robots.txt without a public URL: %d %q", w.Code, w.Body.String())
+	}
 }
