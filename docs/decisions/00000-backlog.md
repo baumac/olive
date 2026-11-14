@@ -13,7 +13,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 3. Photos are only on review cards. The restaurant card and the top of the restaurant page have none. A cover photo and a gallery from the review photos need no new upload.
 4. The "Won't Do" list is one cluster: no email verification, no write rate limits, no reports, no password reset.
    Together they mean a public instance has no defence against spam and no recovery for a lost password. The cheapest slice is a report button that makes a record for the dashboard, plus per-user write limits.
-   Decision 00019 removed the "Confirm password" field of sign up. A typing error in the password now loses the account, so the password reset matters more.
 5. A restaurant has only name, description, tags, location. Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
 6. Reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
 7. Reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).

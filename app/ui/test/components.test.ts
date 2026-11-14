@@ -140,10 +140,11 @@ describe('SignUpForm', () => {
       attachTo: attach(),
     })
     await w.get('#sign-up-password').setValue('short')
+    await w.get('#sign-up-confirm').setValue('shorter')
     await w.get('form').trigger('submit')
     expect(w.text()).toContain('Enter your name.')
     expect(w.text()).toContain(checkPassword('short'))
-    expect(w.find('#sign-up-confirm').exists()).toBe(false)
+    expect(w.text()).toContain('The passwords do not match.')
     expect(w.emitted('submit')).toBeUndefined()
 
     await w.setProps({ errors: { email: 'Enter an email address, for example ana@example.com.' } })

@@ -70,6 +70,7 @@ A score shows as a number without dots and without "/ 10".
 - The photos are above the save button.
 - Sign up has no "Confirm password" field. The show password button lets the person check the password.
   The API has no password reset, so a typing error can lose the account. The help text tells the person to check the password.
+  Decision 00028 changes this. Sign up has the "Confirm password" field again.
 
 ## Avatars
 

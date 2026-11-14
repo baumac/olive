@@ -25,16 +25,18 @@ const props = defineProps<{
 
 const emit = defineEmits<{ submit: [value: { name: string; email: string; password: string }] }>()
 
-type Field = 'name' | 'email' | 'password'
-const order: Field[] = ['name', 'email', 'password']
+type Field = 'name' | 'email' | 'password' | 'confirm'
+const order: Field[] = ['name', 'email', 'password', 'confirm']
 
-const values = ref<Record<Field, string>>({ name: '', email: '', password: '' })
+const values = ref<Record<Field, string>>({ name: '', email: '', password: '', confirm: '' })
 const messages = ref<Record<string, string>>({})
 
 const rules: Record<Field, () => string> = {
   name: () => checkName(values.value.name, 'Enter your name.'),
   email: () => checkEmail(values.value.email),
   password: () => checkPassword(values.value.password),
+  confirm: () =>
+    values.value.confirm === values.value.password ? '' : 'The passwords do not match.',
 }
 
 // The API checks the same rules. Its 422 errors show next to the fields.
@@ -51,6 +53,7 @@ const fieldIds: Record<Field, string> = {
   name: 'sign-up-name',
   email: 'sign-up-email',
   password: 'sign-up-password',
+  confirm: 'sign-up-confirm',
 }
 
 onMounted(() => document.getElementById(fieldIds.name)?.focus())
@@ -118,7 +121,20 @@ function submit() {
               @blur="check('password')"
             />
           </FormControl>
-          <FormDescription>8 to 71 characters. Show the password to check it.</FormDescription>
+          <FormDescription>8 to 71 characters.</FormDescription>
+          <FormMessage />
+        </FormItem>
+        <FormItem :id="fieldIds.confirm" :error="messages.confirm">
+          <FormLabel>Confirm password</FormLabel>
+          <FormControl>
+            <PasswordInput
+              v-model="values.confirm"
+              name="confirm-password"
+              autocomplete="new-password"
+              required
+              @blur="check('confirm')"
+            />
+          </FormControl>
           <FormMessage />
         </FormItem>
         <Button type="submit" class="w-full" :disabled="loading">
