@@ -124,6 +124,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/main.go`** - the PocketBase app
   - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, and `review_photos` collections
     - SQLite triggers keep the `restaurant_overall` and `restaurant_tags` tables equal to the records. See decision 00012.
+    - `restaurant_overall` has the plain average for the responses and a Bayesian average for the `overall` sort. See decision 00029.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.
     - They also make the indexes, the FTS5 search tables, and the rate limit rules
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.

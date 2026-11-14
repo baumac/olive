@@ -7,15 +7,13 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## Product items needing triage
-1. The overall ranking has no confidence weight. `overallOf` in `app/migrations/1794268808_add_restaurant_index.go` is a plain average.
-   One review of 10 beats 200 reviews of 9.4 in the `-overall` sort. Use a Bayesian average for the sort key, and keep the plain average for display.
-2. The default list sort is `-created`. A discovery app wants best rated or nearest first. The API has `near`, but the UI never asks for `navigator.geolocation`.
-3. Photos are only on review cards. The restaurant card and the top of the restaurant page have none. A cover photo and a gallery from the review photos need no new upload.
-4. The "Won't Do" list is one cluster: no email verification, no write rate limits, no reports, no password reset.
+1. The default list sort is `-created`. A discovery app wants best rated or nearest first. The API has `near`, but the UI never asks for `navigator.geolocation`.
+2. Photos are only on review cards. The restaurant card and the top of the restaurant page have none. A cover photo and a gallery from the review photos need no new upload.
+3. The "Won't Do" list is one cluster: no email verification, no write rate limits, no reports, no password reset.
    Together they mean a public instance has no defence against spam and no recovery for a lost password. The cheapest slice is a report button that makes a record for the dashboard, plus per-user write limits.
-5. A restaurant has only name, description, tags, location. Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
-6. Reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
-7. Reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).
+4. A restaurant has only name, description, tags, location. Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
+5. Reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
+6. Reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).
 
 ## High Priority
 

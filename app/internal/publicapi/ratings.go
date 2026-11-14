@@ -43,8 +43,8 @@ type restaurantRating struct {
 }
 
 // ratings runs one query for all restaurants. A restaurant without reviews
-// has no entry. The overall is the stored value. The overall sort and filter
-// then use the value that the response shows.
+// has no entry. The overall is the stored value. The overall filter then
+// uses the value that the response shows.
 func (s *Server) ratings(restaurants ...*core.Record) (map[string]restaurantRating, error) {
 	if len(restaurants) == 0 {
 		return map[string]restaurantRating{}, nil
@@ -84,7 +84,8 @@ func (r restaurantRating) toAPI() reviewsapi.RestaurantRating {
 
 // overallSort puts restaurants without reviews last in both directions. Its
 // first key puts them last. All keys have one direction. They are the
-// columns of one index of the migrations.
+// columns of one index of the migrations. The ranking is the Bayesian average
+// of decision 00029.
 func overallSort(desc bool) []sortKey {
 	missing := column(overallTable, "unrated")
 	if desc {
@@ -92,7 +93,7 @@ func overallSort(desc bool) []sortKey {
 	}
 	return []sortKey{
 		{expr: missing, desc: desc},
-		{expr: column(overallTable, "overall_or_0"), desc: desc},
+		{expr: column(overallTable, "ranking_or_0"), desc: desc},
 		{expr: column(overallTable, "restaurant"), desc: desc, unique: true},
 	}
 }

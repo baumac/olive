@@ -1217,8 +1217,15 @@ func TestListRestaurantsByOverall(t *testing.T) {
 	}
 	lowPath := "/v1/restaurants/" + low + "/reviews/" + lowReview
 	e.expect(request{method: "PATCH", path: lowPath, body: scores(10), token: ana.Token}, http.StatusOK)
-	if got := names("sort=-overall"); got != "Low,High,Mid,None" {
+	// Low has one review of 10. High has two reviews with an average of 8.5.
+	if got := names("sort=-overall"); got != "High,Low,Mid,None" {
 		t.Errorf("after update: %s", got)
+	}
+	if got := names("sort=overall&limit=1"); got != "Mid,Low,High,None" {
+		t.Errorf("ascending after update: %s", got)
+	}
+	if got := names("sort=name&overall[eq]=10"); got != "Low" {
+		t.Errorf("filter after update: %s", got)
 	}
 	e.expect(request{method: "DELETE", path: lowPath, token: ana.Token}, http.StatusNoContent)
 	if got := names("sort=-overall"); got != "High,Mid,Low,None" && got != "High,Mid,None,Low" {

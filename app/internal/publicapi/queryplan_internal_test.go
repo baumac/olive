@@ -81,21 +81,26 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 func TestOldOverallCursorIsRejected(t *testing.T) {
 	s := newTestServer(t)
 	sort := "-overall"
-	old, err := fingerprint("restaurants", reviewsapi.ListRestaurantsParams{Sort: &sort})
-	if err != nil {
-		t.Fatal(err)
-	}
-	cursor, err := encodeCursor(old, []any{0.0, 7.4, "abc"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := s.ListRestaurants(context.Background(), reviewsapi.ListRestaurantsRequestObject{
-		Params: reviewsapi.ListRestaurantsParams{Sort: &sort, Cursor: &cursor},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := res.(reviewsapi.ListRestaurants400ApplicationProblemPlusJSONResponse); !ok {
-		t.Errorf("response %T, want 400", res)
+	for name, version := range map[string][]any{"no version": nil, "version 2": {2}} {
+		t.Run(name, func(t *testing.T) {
+			parts := append([]any{"restaurants", reviewsapi.ListRestaurantsParams{Sort: &sort}}, version...)
+			old, err := fingerprint(parts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cursor, err := encodeCursor(old, []any{0.0, 7.4, "abc"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			res, err := s.ListRestaurants(context.Background(), reviewsapi.ListRestaurantsRequestObject{
+				Params: reviewsapi.ListRestaurantsParams{Sort: &sort, Cursor: &cursor},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := res.(reviewsapi.ListRestaurants400ApplicationProblemPlusJSONResponse); !ok {
+				t.Errorf("response %T, want 400", res)
+			}
+		})
 	}
 }

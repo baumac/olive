@@ -1000,7 +1000,10 @@ components:
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `name` sort ignores case only for the ASCII letters `A` to `Z`.
-        The `overall` sort uses `rating.overall`. It puts restaurants without reviews last in both directions.
+        The `overall` sort uses a Bayesian average of the `overall` values of the reviews, not `rating.overall`.
+        This average starts at 5.5, the middle of the score range. Each review moves it nearer to `rating.overall`.
+        Sort properties after `overall` do not change the order.
+        It puts restaurants without reviews last in both directions.
         The `relevance` sort puts the best matches of `search` first. It needs `search`.
         With `search`, the default sort is `relevance`.
         The API always adds `id` as the last sort key.

@@ -3,6 +3,7 @@ package migrations
 import (
 	"database/sql"
 	"errors"
+	"math"
 	"slices"
 	"testing"
 
@@ -62,6 +63,31 @@ func wantNoOverall(t *testing.T, app core.App, restaurant, when string) {
 	}
 }
 
+// wantRanking compares with a tolerance. The ranking is not rounded.
+func wantRanking(t *testing.T, app core.App, restaurant string, want float64) {
+	t.Helper()
+	var got sql.NullFloat64
+	err := app.DB().Select("ranking").From("restaurant_overall").Where(dbx.HashExp{"restaurant": restaurant}).Row(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Valid || math.Abs(got.Float64-want) > 1e-9 {
+		t.Errorf("ranking of %s is %v, want %v", restaurant, got, want)
+	}
+}
+
+func wantNoRanking(t *testing.T, app core.App, restaurant, when string) {
+	t.Helper()
+	var got sql.NullFloat64
+	err := app.DB().Select("ranking").From("restaurant_overall").Where(dbx.HashExp{"restaurant": restaurant}).Row(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Valid {
+		t.Errorf("%s: ranking is %v, want NULL", when, got)
+	}
+}
+
 func storedTags(t *testing.T, app core.App, restaurant string) []string {
 	t.Helper()
 	var tags []string
@@ -79,10 +105,12 @@ func TestOverallTriggers(t *testing.T) {
 	a := newRecord(t, app, "restaurants", map[string]any{"name": "A"})
 	b := newRecord(t, app, "restaurants", map[string]any{"name": "B"})
 	wantNoOverall(t, app, a.Id, "new restaurant")
+	wantNoRanking(t, app, a.Id, "new restaurant")
 
 	first := newRecord(t, app, "reviews", review(ana, a, scores(8)))
 	newRecord(t, app, "reviews", review(joe, a, map[string]any{"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 6}))
 	wantOverall(t, app, a.Id, 7.4)
+	wantRanking(t, app, a.Id, (5*5.5+8+6.8)/7)
 
 	first.Set("food", 3)
 	if err := app.Save(first); err != nil {
@@ -96,11 +124,14 @@ func TestOverallTriggers(t *testing.T) {
 	}
 	wantOverall(t, app, a.Id, 6.8)
 	wantOverall(t, app, b.Id, 7)
+	wantRanking(t, app, a.Id, (5*5.5+6.8)/6)
+	wantRanking(t, app, b.Id, (5*5.5+7)/6)
 
 	if err := app.Delete(first); err != nil {
 		t.Fatal(err)
 	}
 	wantNoOverall(t, app, b.Id, "last review deleted")
+	wantNoRanking(t, app, b.Id, "last review deleted")
 
 	// The reviews of a user go with a cascade delete.
 	if err := app.Delete(joe); err != nil {
@@ -147,6 +178,7 @@ func TestRawInsertGetsOverallRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantNoOverall(t, app, "rawrestaurant01", "raw insert")
+	wantNoRanking(t, app, "rawrestaurant01", "raw insert")
 	if got := storedTags(t, app, "rawrestaurant01"); !slices.Equal(got, []string{"cheap"}) {
 		t.Errorf("raw insert tags: %v", got)
 	}
@@ -193,4 +225,37 @@ func TestTagTriggers(t *testing.T) {
 	if got := storedTags(t, app, a.Id); len(got) != 0 {
 		t.Errorf("delete: %v", got)
 	}
+}
+
+func TestOverallRankingFillsExistingRows(t *testing.T) {
+	app := newIndexApp(t)
+	redo := downTo(t, app, "1794268810_add_overall_ranking.go")
+
+	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
+	rated := newRecord(t, app, "restaurants", map[string]any{"name": "Rated"})
+	unrated := newRecord(t, app, "restaurants", map[string]any{"name": "Unrated"})
+	first := newRecord(t, app, "reviews", review(ana, rated, scores(8)))
+	newRecord(t, app, "reviews", review(joe, rated, scores(9)))
+	wantOverall(t, app, rated.Id, 8.5)
+	first.Set("food", 3)
+	if err := app.Save(first); err != nil {
+		t.Fatal(err)
+	}
+	wantOverall(t, app, rated.Id, 8)
+	wantNoOverall(t, app, unrated.Id, "down")
+	var sortKey float64
+	if err := app.DB().Select("overall_or_0").From("restaurant_overall").Where(dbx.HashExp{"restaurant": rated.Id}).Row(&sortKey); err != nil || sortKey != 8 {
+		t.Errorf("down sort key is %v (%v), want 8", sortKey, err)
+	}
+
+	redo()
+	wantOverall(t, app, rated.Id, 8)
+	wantRanking(t, app, rated.Id, (5*5.5+7+9)/7)
+	wantNoRanking(t, app, unrated.Id, "up")
+	if err := app.Delete(first); err != nil {
+		t.Fatal(err)
+	}
+	wantOverall(t, app, rated.Id, 9)
+	wantRanking(t, app, rated.Id, (5*5.5+9)/6)
 }

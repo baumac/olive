@@ -49,6 +49,9 @@ All writes change them: the Public API, the PocketBase dashboard, cascade delete
 
 ## Tables
 
+This is the schema of this decision.
+Decision 00029 replaces `overall_or_0` with `ranking` and `ranking_or_0` in the table and in the two sort indexes. It has the current schema.
+
 ```sql
 CREATE TABLE restaurant_overall (
   restaurant TEXT PRIMARY KEY NOT NULL,
@@ -74,6 +77,8 @@ The PocketBase API and the dashboard do not show them.
 A save of a restaurant record then cannot write an old average over a new one.
 
 ## Sort
+
+Decision 00029 changes the second sort key from `overall_or_0` to `ranking_or_0`, a Bayesian average.
 
 The `overall` sort puts restaurants without reviews last in both directions.
 `overall` sorts by `unrated, overall_or_0, restaurant`.

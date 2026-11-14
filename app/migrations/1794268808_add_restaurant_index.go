@@ -59,10 +59,14 @@ func init() {
 // SQLite refuses to drop a column that a trigger uses.
 var overallColumns = []string{"[[restaurant]]", "[[space]]", "[[service]]", "[[food]]", "[[price]]", "[[cleanliness]]"}
 
+const scoreSum = "SUM([[space]] + [[service]] + [[food]] + [[price]] + [[cleanliness]])"
+
+const overallAverage = "ROUND(" + scoreSum + " * 1.0 / (5 * COUNT(*)), 1)"
+
 // overallOf is the rounded overall average of the reviews of a restaurant.
 // It is NULL without reviews.
 func overallOf(restaurant string) string {
-	return "(SELECT ROUND(SUM([[space]] + [[service]] + [[food]] + [[price]] + [[cleanliness]]) * 1.0 / (5 * COUNT(*)), 1) " +
+	return "(SELECT " + overallAverage + " " +
 		"FROM {{reviews}} WHERE [[reviews.restaurant]] = " + restaurant + ")"
 }
 
