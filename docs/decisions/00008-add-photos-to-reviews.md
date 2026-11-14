@@ -422,6 +422,7 @@ Screen changes in `app/ui`:
 - the alt text needs a second request. A failed alt text keeps the added photo and shows "Description not saved". A retry then does not add the photo a second time.
 - a `401` on the create opens the sign in page. The queued files stay in the memory of the page and come back with the text draft. A reload of the page loses them.
 - the restaurant header of the restaurant page, the restaurant cards, and the restaurant forms do not change. They show no photos of the reviews.
+  Decision 00030 adds a cover photo and a gallery from the review photos.
 - `src/lib/validation.ts` gets the type and the size checks
 
 ## Tests

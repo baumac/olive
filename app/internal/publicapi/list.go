@@ -308,10 +308,23 @@ func decodeCursor(raw *string, query string, n int) ([]any, string) {
 	return c.Values, ""
 }
 
-// page gets one page of records with one more row than limit for the next
-// page check. The cursor values come from the query that sorts the page. A
-// write during the request then cannot move the cursor.
+// page gets the records of one page in the order of pageIDs.
 func (s *Server) page(collection string, w *where, keys []sortKey, limit int, query string) ([]*core.Record, nullable.Nullable[string], error) {
+	ids, next, err := s.pageIDs(collection, w, keys, limit, query)
+	if err != nil {
+		return nil, nil, err
+	}
+	records, err := s.recordsInOrder(collection, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	return records, next, nil
+}
+
+// pageIDs reads one more row than limit for the next page check. The cursor
+// values come from the query that sorts the page. A write during the request
+// then cannot move the cursor.
+func (s *Server) pageIDs(collection string, w *where, keys []sortKey, limit int, query string) ([]string, nullable.Nullable[string], error) {
 	rows, err := s.sortValues(collection, w, keys, limit+1)
 	if err != nil {
 		return nil, nil, err
@@ -328,10 +341,6 @@ func (s *Server) page(collection string, w *where, keys []sortKey, limit int, qu
 		}
 		ids[i] = id
 	}
-	records, err := s.recordsInOrder(collection, ids)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	next := nullable.NewNullNullable[string]()
 	if more {
@@ -341,7 +350,7 @@ func (s *Server) page(collection string, w *where, keys []sortKey, limit int, qu
 		}
 		next = nullable.NewNullableWithValue(cursor)
 	}
-	return records, next, nil
+	return ids, next, nil
 }
 
 // sortValues gets the values of the sort keys for at most n rows in the sort
@@ -372,6 +381,16 @@ func (s *Server) sortQuery(collection string, w *where, keys []sortKey, n int) *
 	for i, k := range keys {
 		columns[i] = fmt.Sprintf("%s AS [[k%d]]", k.expr, i)
 	}
+	q := s.selectWhere(collection, w, columns...)
+	for _, term := range orderTerms(keys) {
+		q.AndOrderBy(term)
+	}
+	return q.Limit(int64(n))
+}
+
+// selectWhere selects the columns from the rows that match the joins and
+// the conditions of w.
+func (s *Server) selectWhere(collection string, w *where, columns ...string) *dbx.SelectQuery {
 	q := s.app.DB().Select(columns...).From(collection)
 	for _, j := range w.joins {
 		if j.inner {
@@ -385,14 +404,18 @@ func (s *Server) sortQuery(collection string, w *where, keys []sortKey, n int) *
 	if e := w.expression(); e != nil {
 		q.AndWhere(e)
 	}
-	for _, k := range keys {
-		dir := " ASC"
+	return q
+}
+
+func orderTerms(keys []sortKey) []string {
+	terms := make([]string, len(keys))
+	for i, k := range keys {
+		terms[i] = k.expr + " ASC"
 		if k.desc {
-			dir = " DESC"
+			terms[i] = k.expr + " DESC"
 		}
-		q.AndOrderBy(k.expr + dir)
 	}
-	return q.Limit(int64(n))
+	return terms
 }
 
 // recordsInOrder gets the records in the order of ids. A record that is

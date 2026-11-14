@@ -64,6 +64,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectNoViolations(page)
       await page.keyboard.press('Escape')
 
+      await page.goto(`/restaurants/${photoReview.restaurant}`)
+      await expect(page.getByRole('list', { name: 'Photos of Photo Spot' })).toBeVisible()
+      await expectNoViolations(page)
+
       await page.goto(`/restaurants/${photoReview.restaurant}/reviews/${photoReview.id}/edit`)
       await expect(page.getByRole('heading', { name: 'Photos' })).toBeVisible()
       await expectNoViolations(page)

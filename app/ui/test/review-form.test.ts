@@ -13,6 +13,7 @@ const restaurant: Restaurant = {
   creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
   reviewCount: 0,
   rating: null,
+  cover: null,
   created: '2024-11-06T19:02:11.120Z',
   updated: '2024-11-06T19:02:11.120Z',
 }

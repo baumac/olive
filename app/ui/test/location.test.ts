@@ -235,6 +235,7 @@ describe('RestaurantFormPage drafts', () => {
     creator: { id: user.id, name: 'Ana' },
     reviewCount: 2,
     rating: null,
+    cover: null,
     created: user.created,
     updated: user.updated,
   }

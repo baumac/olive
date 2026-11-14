@@ -17,11 +17,15 @@ const props = defineProps<{
   itemClass?: string
   skeletonClass: string
   skeletonCount: number
+  // focusItem moves the focus to an item of the items slot after a load.
+  focusItem?: (index: number) => void
 }>()
 
-defineSlots<{
-  item(props: { item: T }): unknown
-  empty(): unknown
+// The items slot shows all items in its own list in place of the item slot.
+const slots = defineSlots<{
+  item?(props: { item: T }): unknown
+  items?(props: { items: T[] }): unknown
+  empty?(): unknown
 }>()
 
 const title = props.noun.charAt(0).toUpperCase() + props.noun.slice(1)
@@ -36,7 +40,12 @@ async function load(cursor: string) {
   await props.list.loadMore(cursor)
   await nextTick()
   const first = props.list.items.value[start]
-  if (first) {
+  if (!first) {
+    return
+  }
+  if (props.focusItem) {
+    props.focusItem(start)
+  } else {
     document.getElementById(itemId(first))?.focus()
   }
 }
@@ -62,7 +71,8 @@ async function load(cursor: string) {
   <slot v-else-if="list.items.value.length === 0" name="empty" />
 
   <template v-else>
-    <ul :class="cn('grid gap-4', listClass)">
+    <slot v-if="slots.items" name="items" :items="list.items.value" />
+    <ul v-else :class="cn('grid gap-4', listClass)">
       <li v-for="item in list.items.value" :id="itemId(item)" :key="item.id" tabindex="-1" :class="itemClass ?? 'rounded-xl'">
         <slot name="item" :item="item" />
       </li>

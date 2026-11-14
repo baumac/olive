@@ -93,9 +93,13 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if err != nil {
 		return nil, err
 	}
+	covers, err := s.covers(records...)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]reviewsapi.Restaurant, len(records))
 	for i, r := range records {
-		items[i] = toRestaurant(r, users, ratings)
+		items[i] = toRestaurant(r, users, ratings, covers)
 	}
 	return reviewsapi.ListRestaurants200JSONResponse{Items: items, NextCursor: next}, nil
 }
@@ -139,7 +143,7 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 
 	location := basePath + "/restaurants/" + r.Id
 	return reviewsapi.CreateRestaurant201JSONResponse{
-		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}, nil),
+		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}, nil, nil),
 		Headers: reviewsapi.CreateRestaurant201ResponseHeaders{Location: &location},
 	}, nil
 }
@@ -377,11 +381,15 @@ func (s *Server) restaurantResponse(r *core.Record) (reviewsapi.Restaurant, erro
 	if err != nil {
 		return reviewsapi.Restaurant{}, err
 	}
-	return toRestaurant(r, users, ratings), nil
+	covers, err := s.covers(r)
+	if err != nil {
+		return reviewsapi.Restaurant{}, err
+	}
+	return toRestaurant(r, users, ratings, covers), nil
 }
 
 // toRestaurant gives a restaurant that ratings does not list no reviews.
-func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[string]restaurantRating) reviewsapi.Restaurant {
+func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[string]restaurantRating, covers map[string]reviewsapi.RestaurantPhoto) reviewsapi.Restaurant {
 	out := reviewsapi.Restaurant{
 		Id:          r.Id,
 		Name:        r.GetString("name"),
@@ -390,6 +398,7 @@ func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[str
 		Location:    locationOf(r),
 		Creator:     nullable.NewNullNullable[reviewsapi.Creator](),
 		Rating:      nullable.NewNullNullable[reviewsapi.RestaurantRating](),
+		Cover:       nullable.NewNullNullable[reviewsapi.RestaurantPhoto](),
 		Created:     apiTimestamp(r.GetDateTime("created")),
 		Updated:     apiTimestamp(r.GetDateTime("updated")),
 	}
@@ -399,6 +408,9 @@ func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[str
 	if rating, ok := ratings[r.Id]; ok {
 		out.ReviewCount = rating.Count
 		out.Rating = nullable.NewNullableWithValue(rating.toAPI())
+	}
+	if cover, ok := covers[r.Id]; ok {
+		out.Cover = nullable.NewNullableWithValue(cover)
 	}
 	return out
 }

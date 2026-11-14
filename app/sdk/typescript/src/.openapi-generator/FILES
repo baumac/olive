@@ -22,6 +22,8 @@ models/Restaurant.ts
 models/RestaurantCreate.ts
 models/RestaurantList.ts
 models/RestaurantPatch.ts
+models/RestaurantPhoto.ts
+models/RestaurantPhotoList.ts
 models/RestaurantRating.ts
 models/Review.ts
 models/ReviewCreate.ts

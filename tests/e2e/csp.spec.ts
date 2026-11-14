@@ -72,4 +72,8 @@ test('the photos work under the Content Security Policy', async ({ page, api, us
   await expect(page.getByRole('dialog').getByRole('img', { name: 'A menu' })).toHaveJSProperty('complete', true)
   await page.getByRole('button', { name: 'Next photo' }).click()
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Photo 2 of 2' })).toBeVisible()
+
+  await page.goto(`/restaurants/${restaurant.id}`)
+  await expect(page.getByRole('button', { name: 'Open the cover photo: A menu' }).locator('img')).toHaveJSProperty('complete', true)
+  await expect(page.getByRole('list', { name: 'Photos of Photo Policy' }).getByRole('button')).toHaveCount(2)
 })

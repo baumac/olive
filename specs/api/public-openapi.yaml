@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 2.1.0
+  version: 2.2.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants.
 
@@ -16,6 +16,7 @@ info:
     Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.
     Version 1.0.0 had a space in the place of the `T`. This is the only change of version 2.0.0. The path stays `/v1`.
     Version 2.1.0 adds the `reviews_session` cookie.
+    Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation.
 
     Request bodies with unknown or read-only properties get `400 Bad Request`.
     Property values that break a schema rule get `422 Unprocessable Content`.
@@ -429,6 +430,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/photos:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    get:
+      operationId: listRestaurantPhotos
+      summary: List the photos of all reviews of a restaurant
+      description: |
+        The photos of the review with the highest overall score come first.
+        For an equal score, the photos of the newer review come first.
+        The photos of one review are in the order of `photos` of the review.
+        The first photo is the `cover` of the restaurant.
+      tags: [restaurants]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of photos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantPhotoList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1648,7 +1684,7 @@ components:
     Restaurant:
       description: A restaurant that can be reviewed.
       type: object
-      required: [id, name, location, creator, review_count, rating, created, updated]
+      required: [id, name, location, creator, review_count, rating, cover, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -1677,6 +1713,13 @@ components:
           oneOf:
             - $ref: '#/components/schemas/RestaurantRating'
             - type: 'null'
+        cover:
+          description: |
+            The first photo of `listRestaurantPhotos`. It is `null` for a restaurant without photos.
+            It changes when a review gets photos or new scores.
+          oneOf:
+            - $ref: '#/components/schemas/RestaurantPhoto'
+            - type: 'null'
         created:
           $ref: '#/components/schemas/Timestamp'
         updated:
@@ -1701,6 +1744,19 @@ components:
             food: 9
             price: 5.5
             cleanliness: 7.5
+          cover:
+            id: p4h7j1l5n9q2s6v
+            alt: A plate of carbonara on a wooden table
+            width: 1536
+            height: 2048
+            urls:
+              full: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full
+              thumb: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb
+            created: '2024-11-06T19:04:30.811Z'
+            review: r1b8c5e2g9i6k3m
+            creator:
+              id: u5n1c8r3t6y0b2e
+              name: Ana
           created: '2024-11-04T01:26:55.002Z'
           updated: '2024-11-04T01:26:55.002Z'
     RestaurantRating:
@@ -1796,6 +1852,7 @@ components:
                 name: Ana
               review_count: 0
               rating: null
+              cover: null
               created: '2024-11-04T01:26:55.002Z'
               updated: '2024-11-04T01:26:55.002Z'
           next_cursor: c2Fk9xQe7LmT2vBn
@@ -2025,6 +2082,56 @@ components:
             full: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full
             thumb: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb
           created: '2024-11-06T19:04:30.811Z'
+    RestaurantPhoto:
+      description: A photo of a review of a restaurant. It has the properties of `Photo`, the review, and the creator of the review.
+      allOf:
+        - $ref: '#/components/schemas/Photo'
+        - type: object
+          required: [review, creator]
+          properties:
+            review:
+              $ref: '#/components/schemas/RecordId'
+            creator:
+              $ref: '#/components/schemas/Creator'
+      examples:
+        - id: p4h7j1l5n9q2s6v
+          alt: A plate of carbonara on a wooden table
+          width: 1536
+          height: 2048
+          urls:
+            full: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full
+            thumb: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb
+          created: '2024-11-06T19:04:30.811Z'
+          review: r1b8c5e2g9i6k3m
+          creator:
+            id: u5n1c8r3t6y0b2e
+            name: Ana
+    RestaurantPhotoList:
+      description: A page of the photos of a restaurant.
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestaurantPhoto'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: p4h7j1l5n9q2s6v
+              alt: null
+              width: 2048
+              height: 1536
+              urls:
+                full: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full
+                thumb: /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb
+              created: '2024-11-06T19:04:30.811Z'
+              review: r1b8c5e2g9i6k3m
+              creator:
+                id: u5n1c8r3t6y0b2e
+                name: Ana
+          next_cursor: null
     PhotoUrls:
       description: The paths of the image files on the origin of the API. Clients use them as given.
       type: object

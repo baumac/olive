@@ -50,7 +50,8 @@ test('the viewer moves between photos and closes with Escape', async ({ page, ap
   await api.addPhoto(owner, review, 'menu.png')
 
   await page.goto(`/restaurants/${restaurant.id}`)
-  await page.getByRole('button', { name: 'The first dish' }).click()
+  const reviews = page.getByRole('region', { name: 'Reviews' })
+  await reviews.getByRole('button', { name: 'The first dish' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('heading', { name: 'Photo 1 of 2' })).toBeVisible()
   await expect(dialog.getByRole('img', { name: 'The first dish' })).toBeVisible()
@@ -60,7 +61,53 @@ test('the viewer moves between photos and closes with Escape', async ({ page, ap
   await expect(dialog.getByRole('button', { name: 'Delete photo' })).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Photo 2 of 2' })).toBeFocused()
+  await expect(reviews.getByRole('button', { name: 'Photo 2 of 2' })).toBeFocused()
+})
+
+test('the restaurant card and page show the cover and the gallery', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const restaurant = await api.createRestaurant(owner, { name: 'Gallery Place' })
+  const best = await api.createReview(owner, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
+  const cover = await api.addPhoto(owner, best, 'gps-rotated.jpg', 'The best dish')
+  const other = await api.signUp('Bo')
+  const worse = await api.createReview(other, restaurant.id, { ...scores, title: 'Fine' })
+  await api.addPhoto(other, worse, 'menu.png')
+
+  await page.goto(`/restaurants?search=${encodeURIComponent('Gallery Place')}`)
+  const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: 'Gallery Place' }) })
+  await expect(card.locator('img')).toHaveAttribute('src', cover.urls.thumb)
+  await expect(card.locator('img')).toHaveJSProperty('complete', true)
+
+  await page.goto(`/restaurants/${restaurant.id}`)
+  const coverButton = page.getByRole('button', { name: 'Open the cover photo: The best dish' })
+  await expect(coverButton.locator('img')).toHaveAttribute('src', cover.urls.full)
+  const gallery = page.getByRole('list', { name: 'Photos of Gallery Place' }).getByRole('button')
+  await expect(gallery).toHaveCount(2)
+  await expect(gallery.first()).toHaveAccessibleName('The best dish')
+
+  await coverButton.click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('heading', { name: 'Photo 1 of 2' })).toBeVisible()
+  await expect(dialog).toContainText('From the review by Joe')
+  await page.keyboard.press('ArrowRight')
+  await expect(dialog).toContainText('From the review by Bo')
+  await page.keyboard.press('Escape')
+  await expect(coverButton).toBeFocused()
+
+  await gallery.nth(1).click()
+  await dialog.getByRole('link', { name: 'review by Bo' }).click()
+  await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}/reviews/${worse.id}$`))
+})
+
+test('a restaurant without photos has no cover and no gallery', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const restaurant = await api.createRestaurant(owner, { name: 'Plain Place' })
+  await api.createReview(owner, restaurant.id, { ...scores, title: 'No pictures' })
+
+  await page.goto(`/restaurants/${restaurant.id}`)
+  await expect(page.getByRole('heading', { name: 'Reviews' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Photos' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /cover photo/ })).toHaveCount(0)
 })
 
 test('the creator deletes a photo', async ({ page, api, user }) => {

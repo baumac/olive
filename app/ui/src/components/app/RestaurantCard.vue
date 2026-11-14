@@ -3,6 +3,7 @@ import type { Restaurant } from '@reviews/sdk'
 import { MapPinIcon } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CoverPhoto } from '@/components/ui/cover-photo'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { formatCount } from '@/lib/format'
 import { tagList } from '@/lib/reviews'
@@ -11,7 +12,9 @@ defineProps<{ restaurant: Restaurant }>()
 </script>
 
 <template>
-  <Card class="hover:border-ring relative h-full">
+  <Card class="hover:border-ring relative h-full overflow-hidden pt-0">
+    <!-- The name of the card link is the name. The cover then has no alt text. -->
+    <CoverPhoto :photo="restaurant.cover" size="card" />
     <CardHeader>
       <CardTitle as="h2" class="text-base leading-snug">
         <!-- The after element makes the full card the link. -->

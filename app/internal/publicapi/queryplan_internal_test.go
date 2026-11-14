@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	"github.com/pocketbase/dbx"
 )
 
 func TestRestaurantListsUseIndexes(t *testing.T) {
@@ -51,18 +52,7 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 				}
 				w.keyset(keys, after)
 			}
-			q := s.sortQuery("restaurants", w, keys, defaultLimit+1).Build()
-			var rows []struct {
-				Detail string `db:"detail"`
-			}
-			if err := s.app.DB().NewQuery("EXPLAIN QUERY PLAN " + q.SQL()).Bind(q.Params()).All(&rows); err != nil {
-				t.Fatal(err)
-			}
-			lines := make([]string, len(rows))
-			for i, r := range rows {
-				lines[i] = r.Detail
-			}
-			plan := strings.Join(lines, "\n")
+			plan := queryPlan(t, s, s.sortQuery("restaurants", w, keys, defaultLimit+1).Build())
 			if !strings.Contains(plan, c.want) {
 				t.Errorf("plan has no %q:\n%s", c.want, plan)
 			}
@@ -102,5 +92,40 @@ func TestOldOverallCursorIsRejected(t *testing.T) {
 				t.Errorf("response %T, want 400", res)
 			}
 		})
+	}
+}
+
+// queryPlan gets the lines of EXPLAIN QUERY PLAN for q.
+func queryPlan(t *testing.T, s *Server, q *dbx.Query) string {
+	t.Helper()
+	var rows []struct {
+		Detail string `db:"detail"`
+	}
+	if err := s.app.DB().NewQuery("EXPLAIN QUERY PLAN " + q.SQL()).Bind(q.Params()).All(&rows); err != nil {
+		t.Fatal(err)
+	}
+	lines := make([]string, len(rows))
+	for i, r := range rows {
+		lines[i] = r.Detail
+	}
+	return strings.Join(lines, "\n")
+}
+
+func TestGalleryUsesIndexes(t *testing.T) {
+	s := newTestServer(t)
+	w := galleryWhere(false, "k3x9m2p7q1w8z4a")
+	w.keyset(galleryKeys, []any{7.6, "2024-11-04 01:26:55.002Z", "r1b8c5e2g9i6k3m", "2024-11-04 01:26:55.002Z", "p4h7j1l5n9q2s6v"})
+	for name, p := range map[string]string{
+		"page":  queryPlan(t, s, s.sortQuery("review_photos", w, galleryKeys, defaultLimit+1).Build()),
+		"cover": queryPlan(t, s, s.coverQuery([]string{"k3x9m2p7q1w8z4a", "u5n1c8r3t6y0b2e"})),
+	} {
+		for _, want := range []string{"SEARCH reviews USING INDEX idx_reviews_restaurant", "idx_review_photos_review_created (review=?)"} {
+			if !strings.Contains(p, want) {
+				t.Errorf("%s plan has no %q:\n%s", name, want, p)
+			}
+		}
+		if strings.Contains(p, "SCAN") && !strings.Contains(p, "SCAN (subquery") {
+			t.Errorf("%s plan scans a table:\n%s", name, p)
+		}
 	}
 }

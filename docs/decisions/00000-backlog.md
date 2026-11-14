@@ -8,17 +8,19 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## Product items needing triage
 1. The default list sort is `-created`. A discovery app wants best rated or nearest first. The API has `near`, but the UI never asks for `navigator.geolocation`.
-2. Photos are only on review cards. The restaurant card and the top of the restaurant page have none. A cover photo and a gallery from the review photos need no new upload.
-3. The "Won't Do" list is one cluster: no email verification, no write rate limits, no reports, no password reset.
+2. The "Won't Do" list is one cluster: no email verification, no write rate limits, no reports, no password reset.
    Together they mean a public instance has no defence against spam and no recovery for a lost password. The cheapest slice is a report button that makes a record for the dashboard, plus per-user write limits.
-4. A restaurant has only name, description, tags, location. Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
-5. Reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
-6. Reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).
+3. A restaurant has only name, description, tags, location. Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
+4. Reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
+5. Reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).
 
 ## High Priority
 
 
 ## Low Priority
+- Add the cover photo of a restaurant to its link preview tags and its JSON-LD
+  - `og:image` needs an absolute URL from the Application URL
+  - check that the `Cross-Origin-Resource-Policy` of the photo files does not stop link preview crawlers. See decision 00030.
 - Add IOS app
 - Allow users to set preferred location and incorporate that into the maps feature
 - Allow users to favorite restaurants and retrieve their list of favorites

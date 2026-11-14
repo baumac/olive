@@ -14,6 +14,7 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 const (
@@ -318,17 +319,33 @@ func (s *Server) reviewPhotos(reviews ...*core.Record) (map[string][]reviewsapi.
 }
 
 func toPhoto(r *core.Record, restaurantID string) reviewsapi.Photo {
-	reviewID := r.GetString("review")
+	return photoOf(photoRow{
+		ID: r.Id, Review: r.GetString("review"), Alt: r.GetString("alt"),
+		Width: r.GetInt("width"), Height: r.GetInt("height"), Created: r.GetDateTime("created"),
+	}, restaurantID)
+}
+
+// photoRow has the stored fields of a photo that a response shows.
+type photoRow struct {
+	ID      string         `db:"id"`
+	Review  string         `db:"review"`
+	Alt     string         `db:"alt"`
+	Width   int            `db:"width"`
+	Height  int            `db:"height"`
+	Created types.DateTime `db:"created"`
+}
+
+func photoOf(p photoRow, restaurantID string) reviewsapi.Photo {
 	return reviewsapi.Photo{
-		Id:     r.Id,
-		Alt:    nullableText(r.GetString("alt")),
-		Width:  r.GetInt("width"),
-		Height: r.GetInt("height"),
+		Id:     p.ID,
+		Alt:    nullableText(p.Alt),
+		Width:  p.Width,
+		Height: p.Height,
 		Urls: reviewsapi.PhotoUrls{
-			Full:  PhotoFilePath(restaurantID, reviewID, r.Id, reviewsapi.Full),
-			Thumb: PhotoFilePath(restaurantID, reviewID, r.Id, reviewsapi.Thumb),
+			Full:  PhotoFilePath(restaurantID, p.Review, p.ID, reviewsapi.Full),
+			Thumb: PhotoFilePath(restaurantID, p.Review, p.ID, reviewsapi.Thumb),
 		},
-		Created: apiTimestamp(r.GetDateTime("created")),
+		Created: apiTimestamp(p.Created),
 	}
 }
 

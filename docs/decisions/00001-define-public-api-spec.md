@@ -75,6 +75,7 @@ The properties of a restaurant are as follows:
     - `creator`: the user who created the restaurant, see [Creator](#creator). It is `null` after that user is deleted. See [User Deletion](#user-deletion).
     - `review_count`: the number of reviews of the restaurant
     - `rating`: the average scores of the reviews, see [Rating](#rating). It is `null` for a restaurant without reviews.
+    - `cover`: the first photo of the gallery of the restaurant. It is `null` for a restaurant without photos. Decision 00030 has the gallery.
     - `id`: PocketBase record ID
 
 Example:

@@ -17,6 +17,8 @@ export * from './Restaurant.js';
 export * from './RestaurantCreate.js';
 export * from './RestaurantList.js';
 export * from './RestaurantPatch.js';
+export * from './RestaurantPhoto.js';
+export * from './RestaurantPhotoList.js';
 export * from './RestaurantRating.js';
 export * from './Review.js';
 export * from './ReviewCreate.js';

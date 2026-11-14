@@ -101,6 +101,7 @@ defineExpose({ stopEdit: () => (editing.value = false) })
         :alt="photoLabel(photo, shownIndex, photos.length)"
         class="bg-muted mx-auto max-h-[60vh] w-auto rounded-md object-contain"
       >
+      <slot name="caption" :index="shownIndex" />
       <div v-if="photos.length > 1" class="flex justify-between gap-2">
         <Button variant="outline" @click="move(-1)"><ChevronLeftIcon aria-hidden="true" />Previous photo</Button>
         <Button variant="outline" @click="move(1)">Next photo<ChevronRightIcon aria-hidden="true" /></Button>

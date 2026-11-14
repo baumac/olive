@@ -8,10 +8,12 @@ import { toast } from 'vue-sonner'
 import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import RestaurantGallery from '@/components/app/RestaurantGallery.vue'
 import ReviewList from '@/components/app/ReviewList.vue'
 import ScoreSummary from '@/components/app/ScoreSummary.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { CoverPhoto } from '@/components/ui/cover-photo'
 import { MapView } from '@/components/ui/map'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
@@ -63,6 +65,13 @@ const mapOpen = ref(false)
 const marker = computed(() => {
   const r = restaurant.data.value
   return r?.location ? { id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name } : null
+})
+
+const gallery = ref<InstanceType<typeof RestaurantGallery> | null>(null)
+const coverButton = ref<HTMLButtonElement | null>(null)
+const coverLabel = computed(() => {
+  const alt = restaurant.data.value?.cover?.alt
+  return alt ? `Open the cover photo: ${alt}` : 'Open the cover photo'
 })
 
 const directions = computed(() => {
@@ -119,6 +128,16 @@ async function remove() {
       <Skeleton class="h-6 w-1/2" />
     </div>
     <template v-else-if="restaurant.data.value">
+      <button
+        v-if="restaurant.data.value.cover"
+        ref="coverButton"
+        type="button"
+        class="focus-visible:outline-ring block overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2"
+        :aria-label="coverLabel"
+        @click="gallery?.openCover()"
+      >
+        <CoverPhoto :photo="restaurant.data.value.cover" size="hero" />
+      </button>
       <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
         <div class="flex min-w-0 flex-col gap-4">
           <div class="flex flex-wrap items-start justify-between gap-4">
@@ -213,6 +232,8 @@ async function remove() {
           class="h-72"
         />
       </section>
+
+      <RestaurantGallery ref="gallery" :restaurant="restaurant.data.value" @close-cover="coverButton?.focus()" />
 
       <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">
         <div class="flex flex-wrap items-center justify-between gap-4">
