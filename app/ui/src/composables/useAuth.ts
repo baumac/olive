@@ -1,7 +1,8 @@
 import type { Router } from 'vue-router'
 import { toast } from 'vue-sonner'
+import { ResponseError } from '@reviews/sdk'
 import { apiFailure, endSession, usersApi } from '@/lib/api'
-import { clearSession, saveSession, sessionExpires, sessionToken, signedIn } from '@/lib/session'
+import { clearSession, legacyToken, saveSession, sessionExpires, signedIn } from '@/lib/session'
 import { clearAllDrafts } from '@/lib/drafts'
 import { parseTimestamp } from '@/lib/format'
 
@@ -12,8 +13,11 @@ export async function refreshSession() {
   if (!signedIn.value) {
     return
   }
+  const token = legacyToken()
   try {
-    saveSession(await usersApi.refreshToken())
+    // A bearer token with cookie=true moves the token into the cookie.
+    const init = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+    saveSession(await usersApi.refreshToken({ cookie: true }, init))
   } catch (error) {
     const { status } = await apiFailure(error)
     if (status === 401) {
@@ -40,31 +44,34 @@ export function signInPath(redirect: string, reason?: 'session-ended') {
 
 // revokeTokens makes all tokens of the user invalid on the server. It
 // returns false when the server did not confirm it.
-async function revokeTokens(token: string, expires: string | null): Promise<boolean> {
+async function revokeTokens(expires: string | null, token: string | undefined): Promise<boolean> {
   // An expired token cannot sign out. The other tokens of the user can still be valid.
   if (expires && parseTimestamp(expires).getTime() <= Date.now()) {
     return false
   }
   try {
     // keepalive lets the request finish after the tab closes.
-    await usersApi.signOut({ headers: { Authorization: `Bearer ${token}` }, keepalive: true })
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+    await usersApi.signOut({ headers, keepalive: true })
     return true
   } catch (error) {
-    // A 401 for a token that did not expire means that a sign out already
-    // changed the token key.
-    return (await apiFailure(error)).status === 401
+    // An invalid_token 401 means that a sign out already changed the token
+    // key. A plain 401 means that the request had no cookie.
+    return error instanceof ResponseError && error.response.status === 401 &&
+      (error.response.headers.get('WWW-Authenticate') ?? '').includes('invalid_token')
   }
 }
 
 export function signOut(router: Router) {
-  const token = sessionToken()
+  const hadSession = signedIn.value
   const expires = sessionExpires()
+  const token = legacyToken()
   clearSession()
   clearAllDrafts()
   toast('Signed out')
   void router.push('/')
-  if (token) {
-    void revokeTokens(token, expires).then((revoked) => {
+  if (hadSession) {
+    void revokeTokens(expires, token).then((revoked) => {
       if (!revoked) {
         toast.warning('Signed out only in this browser', {
           description: 'The server did not answer. Other devices can stay signed in.',

@@ -95,6 +95,7 @@ A sign in with the correct password does not count.
 ## Sessions in browser tabs
 
 - the session is in `localStorage`. The browser sends a `storage` event to the other tabs when it changes.
+  Decision 00027 moved the token into a cookie. The session in `localStorage` keeps only `expires` and `user`.
 - `watchOtherTabs` in `app/ui/src/lib/session.ts` loads the session again on this event
 - when the user changes, `main.ts` checks the meta of the current route. It navigates again with `force` only on a page that needs a session after a sign out, or on a guest page after a sign in. The route guards then move the tab. Other pages keep their scroll position.
 - when the user changes to a different user, the tab reloads. Its pages hold data of the first user.

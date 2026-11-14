@@ -3,10 +3,13 @@ import { computed, ref } from 'vue'
 
 const storageKey = 'reviews-session'
 
+// Session has no token. The token is in an HttpOnly cookie. See decision
+// 00027.
 export interface Session {
-  token: string
   expires: string
   user: User
+  // token is only in a session that an older version stored.
+  token?: string
 }
 
 function load(): Session | null {
@@ -23,8 +26,10 @@ const session = ref<Session | null>(load())
 export const currentUser = computed(() => session.value?.user ?? null)
 export const signedIn = computed(() => session.value !== null)
 
-export function sessionToken(): string {
-  return session.value?.token ?? ''
+// legacyToken returns the token of a session from an older version. The
+// first refresh moves it into the cookie.
+export function legacyToken(): string | undefined {
+  return session.value?.token
 }
 
 export function sessionExpires(): string | null {
@@ -32,7 +37,7 @@ export function sessionExpires(): string | null {
 }
 
 export function saveSession(auth: AuthToken) {
-  session.value = { token: auth.token, expires: auth.expires, user: auth.user }
+  session.value = { expires: auth.expires, user: auth.user }
   try {
     localStorage.setItem(storageKey, JSON.stringify(session.value))
   } catch {

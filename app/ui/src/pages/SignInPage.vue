@@ -27,7 +27,7 @@ async function submit(credentials: { email: string; password: string }) {
   error.value = null
   errors.value = {}
   try {
-    saveSession(await usersApi.signIn({ credentials }))
+    saveSession(await usersApi.signIn({ credentials, cookie: true }))
     void router.replace(redirect.value)
   } catch (e) {
     const { status, problem } = await apiFailure(e)

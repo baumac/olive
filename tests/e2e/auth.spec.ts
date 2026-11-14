@@ -13,6 +13,23 @@ test('sign up signs the person in', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'DA, account menu for Dana' })).toBeVisible()
 })
 
+test('the auth token is only in an HttpOnly cookie', async ({ page, api, context }) => {
+  const user = await api.signUp()
+  await page.goto('/sign-in')
+  await page.getByLabel('Email').fill(user.email)
+  await page.getByLabel('Password', { exact: true }).fill(user.password)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page).toHaveURL(/\/restaurants$/)
+
+  const cookie = (await context.cookies()).find((c) => c.name === 'reviews_session')
+  expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Strict', path: '/v1' })
+  expect(await api.refreshStatus(cookie!.value)).toBe(200)
+  const stored = await page.evaluate(() => ({ cookies: document.cookie, session: localStorage.getItem('reviews-session') }))
+  expect(stored.cookies).not.toContain(cookie!.value)
+  expect(stored.session).not.toContain(cookie!.value)
+  expect(JSON.parse(stored.session!)).not.toHaveProperty('token')
+})
+
 test('a wrong password shows an error and keeps the email', async ({ page, api }) => {
   const user = await api.signUp()
   await page.goto('/sign-in')
@@ -42,10 +59,11 @@ test('a refused token ends the session and the draft comes back', async ({ page,
   await selectPlace(page, uniqueTag('draft'))
   await page.getByLabel('Name').fill('Draft Diner')
 
-  // The API refuses the token of the first create request.
+  // The API refuses the cookie of the first create request.
   let refused = false
   await page.route('**/v1/restaurants', async (route) => {
-    if (!refused && route.request().method() === 'POST' && route.request().headers().authorization) {
+    const cookie = (await route.request().allHeaders()).cookie ?? ''
+    if (!refused && route.request().method() === 'POST' && cookie.includes('reviews_session=')) {
       refused = true
       await route.fulfill({
         status: 401,
@@ -77,6 +95,7 @@ test('sign out deletes the session', async ({ page, user }) => {
   await expect(page.getByText('Signed out')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('reviews-session'))).toBeNull()
+  await expect.poll(async () => (await page.context().cookies()).map((c) => c.name)).not.toContain('reviews_session')
 })
 
 test('sign out makes the token invalid on the server', async ({ page, user, api }) => {
@@ -86,7 +105,7 @@ test('sign out makes the token invalid on the server', async ({ page, user, api 
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
 
   expect((await revoked).status()).toBe(204)
-  expect(await api.refreshStatus(user.auth.token)).toBe(401)
+  expect(await api.refreshStatus(user.token)).toBe(401)
 })
 
 test('sign out in one tab signs out the other tabs', async ({ page, user, context }) => {

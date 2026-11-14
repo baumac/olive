@@ -1,6 +1,6 @@
 import type { Middleware, Problem } from '@reviews/sdk'
 import { Configuration, FetchError, PlacesApi, ResponseError, RestaurantsApi, ReviewersApi, UsersApi } from '@reviews/sdk'
-import { clearSession, sessionToken } from './session'
+import { clearSession, signedIn } from './session'
 
 type SessionEndedHandler = () => void
 
@@ -16,24 +16,32 @@ export function endSession() {
   onSessionEnded()
 }
 
-// A 401 on a request with a token means that the token is not valid. The
-// middleware deletes the session and sends the request again without the
-// token. A read then works. A write gets a 401 without a token.
+// The user operations set and delete the session cookie.
+const usersPath = /\/v1\/users(\/|\?|$)/
+
 const sessionMiddleware: Middleware = {
+  // Without a session, requests leave out the cookie. A cookie that a failed
+  // sign out left then has no effect.
+  pre({ url, init }) {
+    if (init.credentials !== undefined) {
+      return Promise.resolve({ url, init })
+    }
+    const credentials: RequestCredentials = signedIn.value || usersPath.test(url) ? 'same-origin' : 'omit'
+    return Promise.resolve({ url, init: { ...init, credentials } })
+  },
+  // A 401 on a request with the cookie ends the session. The response deleted
+  // the cookie, so the second request has no token.
   async post({ fetch, url, init, response }) {
-    const headers = new Headers(init.headers)
-    if (response.status !== 401 || !headers.has('Authorization') || url.includes('/users/tokens')) {
+    if (response.status !== 401 || init.credentials === 'omit' || usersPath.test(url)) {
       return response
     }
     endSession()
-    headers.delete('Authorization')
-    return fetch(url, { ...init, headers })
+    return fetch(url, { ...init, credentials: 'omit' })
   },
 }
 
 const configuration = new Configuration({
   basePath: '/v1',
-  accessToken: () => sessionToken(),
   middleware: [sessionMiddleware],
 })
 

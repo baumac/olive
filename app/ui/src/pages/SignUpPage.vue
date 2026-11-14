@@ -31,7 +31,7 @@ async function submit(userCreate: { name: string; email: string; password: strin
   loading.value = true
   error.value = null
   try {
-    const auth = await usersApi.signUp({ userCreate })
+    const auth = await usersApi.signUp({ userCreate, cookie: true })
     saveSession(auth)
     void router.replace(redirect.value)
     toast.success('Welcome to Sponga47 Reviews', { description: `You are signed in as ${auth.user.name}.` })

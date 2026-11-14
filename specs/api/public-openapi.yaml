@@ -1,12 +1,13 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 2.0.0
+  version: 2.1.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants.
 
     Sign up and sign in do not require authentication.
     They return an auth token.
+    Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter.
     Read operations do not require authentication.
     Create, update, and delete operations of restaurants and reviews require an auth token.
     The place search also requires an auth token.
@@ -14,6 +15,7 @@ info:
 
     Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.
     Version 1.0.0 had a space in the place of the `T`. This is the only change of version 2.0.0. The path stays `/v1`.
+    Version 2.1.0 adds the `reviews_session` cookie.
 
     Request bodies with unknown or read-only properties get `400 Bad Request`.
     Property values that break a schema rule get `422 Unprocessable Content`.
@@ -42,10 +44,12 @@ paths:
       description: |
         Creates a user and signs the user in.
         The response contains an auth token for the new user.
-        The API ignores the `Authorization` header on this operation.
+        The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
       tags: [users]
       security:
         - {}
+      parameters:
+        - $ref: '#/components/parameters/SessionCookie'
       requestBody:
         description: The new user.
         required: true
@@ -58,6 +62,9 @@ paths:
           $ref: '#/components/responses/UnexpectedError'
         '201':
           description: The user was created.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookie'
           content:
             application/json:
               schema:
@@ -81,12 +88,14 @@ paths:
         name: sign-in
       summary: Sign in a user with email and password
       description: |
-        The API ignores the `Authorization` header on this operation.
+        The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
         Too many wrong passwords for one user cause `429 Too Many Requests` for this user.
         A correct password then also gets `429` until the time of `Retry-After`.
       tags: [users]
       security:
         - {}
+      parameters:
+        - $ref: '#/components/parameters/SessionCookie'
       requestBody:
         description: The email and password of the user.
         required: true
@@ -99,6 +108,9 @@ paths:
           $ref: '#/components/responses/UnexpectedError'
         '200':
           description: The user signed in.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookie'
           content:
             application/json:
               schema:
@@ -119,14 +131,19 @@ paths:
       description: |
         Makes all auth tokens of the user of the current token invalid.
         This includes the current token and the tokens of other devices.
+        A request with the `reviews_session` cookie also deletes the cookie.
       tags: [users]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
         '204':
           description: All auth tokens of the user are invalid.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/DeleteSessionCookie'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -138,14 +155,22 @@ paths:
         Returns a new auth token for the user of the current token.
         The current token must be valid and not expired.
         Clients also use this operation to check a stored token.
+        A request with the `reviews_session` cookie gets a new cookie, also without `cookie=true`.
+        A bearer token and `cookie=true` move the token into the cookie.
       tags: [users]
       security:
         - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SessionCookie'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
         '200':
           description: The new auth token and the user.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookie'
           content:
             application/json:
               schema:
@@ -164,6 +189,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       requestBody:
         description: The restaurant to create.
         required: true
@@ -200,6 +226,7 @@ paths:
       security:
         - {}
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -239,6 +266,7 @@ paths:
       security:
         - {}
         - bearerAuth: []
+        - cookieAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -268,6 +296,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       requestBody:
         description: The restaurant properties to change.
         required: true
@@ -309,6 +338,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -335,6 +365,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       requestBody:
         description: The review to create.
         required: true
@@ -373,6 +404,7 @@ paths:
       security:
         - {}
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -416,6 +448,7 @@ paths:
       security:
         - {}
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -462,6 +495,7 @@ paths:
       tags: [places]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - $ref: '#/components/parameters/PlaceSearch'
         - $ref: '#/components/parameters/PlaceLatitude'
@@ -495,6 +529,7 @@ paths:
       security:
         - {}
         - bearerAuth: []
+        - cookieAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -520,6 +555,7 @@ paths:
       security:
         - {}
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -562,6 +598,7 @@ paths:
       security:
         - {}
         - bearerAuth: []
+        - cookieAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -585,6 +622,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       requestBody:
         description: The review properties to change.
         required: true
@@ -620,6 +658,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -652,6 +691,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       requestBody:
         description: |
           The bytes of the image.
@@ -704,6 +744,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       requestBody:
         description: The photo properties to change.
         required: true
@@ -739,6 +780,7 @@ paths:
       tags: [restaurants]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -770,6 +812,7 @@ paths:
       security:
         - {}
         - bearerAuth: []
+        - cookieAuth: []
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -828,8 +871,29 @@ components:
       type: http
       scheme: bearer
       description: An auth token from `signUp`, `signIn`, or `refreshToken`.
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: reviews_session
+      description: |
+        The auth token in the cookie that `signUp`, `signIn`, or `refreshToken` set with `cookie=true`.
+        The API ignores the cookie when the request has an `Authorization` header.
+        The API also ignores it on a cross-origin `POST`, `PATCH`, or `DELETE` request from a browser.
 
   headers:
+    SetSessionCookie:
+      description: |
+        Sets the `reviews_session` cookie with the auth token.
+        The response has it only for a request with `cookie=true` or with the cookie.
+        The cookie has `Path=/v1`, `HttpOnly`, and `SameSite=Strict`. A request that the browser sent over `https` adds `Secure`.
+      schema:
+        type: string
+      example: reviews_session=eyJhbGciOi...; Path=/v1; Max-Age=604800; HttpOnly; Secure; SameSite=Strict
+    DeleteSessionCookie:
+      description: Deletes the `reviews_session` cookie. The response has it only for a request with the cookie.
+      schema:
+        type: string
+      example: reviews_session=; Path=/v1; Max-Age=0; HttpOnly; Secure; SameSite=Strict
     Location:
       description: The URL of the created resource.
       schema:
@@ -860,6 +924,15 @@ components:
         const: nosniff
 
   parameters:
+    SessionCookie:
+      name: cookie
+      in: query
+      description: |
+        `true` puts the auth token in the `reviews_session` cookie. The response body then has no `token`.
+        The API ignores this parameter on a cross-origin `POST` request from a browser.
+      schema:
+        type: boolean
+        default: false
     RestaurantId:
       name: restaurantId
       in: path
@@ -1213,6 +1286,7 @@ components:
     Unauthorized:
       description: |
         The bearer token is missing on a request that requires it, or the bearer token is invalid or expired.
+        A `reviews_session` cookie with an invalid or expired token gets this response also. The response deletes the cookie.
         `refreshToken`, create, update, and delete operations require a bearer token.
       headers:
         WWW-Authenticate:
@@ -1221,6 +1295,8 @@ components:
           schema:
             type: string
           example: Bearer error="invalid_token"
+        Set-Cookie:
+          $ref: '#/components/headers/DeleteSessionCookie'
       content:
         application/problem+json:
           schema:
@@ -2122,13 +2198,14 @@ components:
     AuthToken:
       description: An auth token and the user that it belongs to.
       type: object
-      required: [token, expires, user]
+      required: [expires, user]
       properties:
         token:
           description: |
             The auth token.
             Send it in the `Authorization` header as a bearer token.
             Clients must not parse it.
+            A response that sets the `reviews_session` cookie has no `token`.
           type: string
           examples: [eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InU1bjFjOHIzdDZ5MGIyZSJ9.c2lnbmF0dXJl]
         expires:

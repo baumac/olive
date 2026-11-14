@@ -224,7 +224,11 @@ type stateKey struct{}
 type state struct {
 	user  *core.Record
 	token string
-	props map[string]json.RawMessage
+	// fromCookie is true when the token came from the session cookie.
+	fromCookie bool
+	// sameOrigin is false for an unsafe cross-origin request of a browser.
+	sameOrigin bool
+	props      map[string]json.RawMessage
 	// request lets a file response read the Range and If-None-Match headers.
 	request *http.Request
 	// limited is the rate limit count of the request. It is nil without a
@@ -320,14 +324,18 @@ func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 // serveOperation does the request checks of op and then runs the handler.
 func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *operation, in *openapi3filter.RequestValidationInput) {
 	r := in.Request
-	st := &state{request: r}
+	st := &state{request: r, sameOrigin: sameOrigin(r)}
 	if op.limit != nil && op.limit.key == "ip" && !s.allow(w, op, st, clientKey(clientIP(r))) {
 		return
 	}
 
 	if op.auth != authIgnored {
-		user, token, ok := s.authenticate(r)
+		cookie := cookieToken(st)
+		user, token, ok := s.authenticate(r, cookie)
 		if !ok {
+			if cookie != "" {
+				w.Header().Set("Set-Cookie", s.deleteSessionCookie(r))
+			}
 			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 			writeProblem(w, newProblem(http.StatusUnauthorized, "The bearer token is not valid or is expired."))
 			return
@@ -337,7 +345,7 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 			writeProblem(w, newProblem(http.StatusUnauthorized, "The operation requires a bearer token."))
 			return
 		}
-		st.user, st.token = user, token
+		st.user, st.token, st.fromCookie = user, token, cookie != ""
 	}
 	// The key is the user. The token check therefore runs first.
 	if op.limit != nil && op.limit.key == "user" && !s.allow(w, op, st, st.user.Id) {
@@ -384,12 +392,20 @@ func (s *Server) allow(w http.ResponseWriter, op *operation, st *state, key stri
 	return false
 }
 
-// authenticate returns the user of the bearer token. It returns a nil user
-// and true when the request has no Authorization header.
-func (s *Server) authenticate(r *http.Request) (*core.Record, string, bool) {
+// authenticate returns the user of the bearer token or of the cookie token.
+// It returns a nil user and true when the request has neither.
+func (s *Server) authenticate(r *http.Request, cookieToken string) (*core.Record, string, bool) {
 	header := r.Header.Get("Authorization")
 	if header == "" {
-		return nil, "", true
+		if cookieToken == "" {
+			return nil, "", true
+		}
+		// PocketBase reads only the Authorization header.
+		user, err := s.app.FindAuthRecordByToken(cookieToken, core.TokenTypeAuth)
+		if err != nil || user.Collection().Name != "users" {
+			return nil, "", false
+		}
+		return user, cookieToken, true
 	}
 	scheme, token, found := strings.Cut(header, " ")
 	token = strings.TrimSpace(token)

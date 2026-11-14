@@ -3,12 +3,16 @@ import { test as base, expect } from '@playwright/test'
 import type { TestUser } from './api'
 import { TestApi } from './api'
 
-// signIn stores the session before the next page loads. This is the
-// localStorage key of app/ui/src/lib/session.ts. The init script runs on
-// each load. A flag in sessionStorage makes it store the session one time.
-// A reload after sign out then stays signed out.
+// signIn sets the session cookie and stores the session before the next page
+// loads. This is the localStorage key of app/ui/src/lib/session.ts. The init
+// script runs on each load. A flag in sessionStorage makes it store the
+// session one time. A reload after sign out then stays signed out.
 export async function signIn(page: Page, user: TestUser) {
-  const session = JSON.stringify({ token: user.auth.token, expires: user.auth.expires, user: user.auth.user })
+  const { hostname } = new URL(test.info().project.use.baseURL!)
+  await page.context().addCookies([
+    { name: 'reviews_session', value: user.token, domain: hostname, path: '/v1', httpOnly: true, sameSite: 'Strict' },
+  ])
+  const session = JSON.stringify({ expires: user.auth.expires, user: user.auth.user })
   await page.addInitScript(
     ({ value, flag }) => {
       if (!sessionStorage.getItem(flag)) {

@@ -29,11 +29,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - the sort and the filter compute the value for each review of the restaurant or the reviewer
   - SQLite does not use an index on an expression for the row value range of a cursor. See the migration `1794268808_add_restaurant_index.go`.
   - a table like `restaurant_overall` with triggers, or a generated column, fixes it. It is not needed while a restaurant has few reviews.
-- Keep the auth token of the UI in an HttpOnly cookie
-  - the UI keeps the token in `localStorage`. A script that runs on the page can read it. The Content Security Policy makes this risk low.
-  - the sign in, token refresh, and sign out operations must then set and clear the cookie
-  - a response to a request with the cookie must not have the token in its body. This is a spec change.
-  - requests with the cookie need a defence against cross-site requests
 - Use a backup plan that copies each photo one time when `pb_data` grows near 5 GB. See decision 00022.
 
 ## Future Features
