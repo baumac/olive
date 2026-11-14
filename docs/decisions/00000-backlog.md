@@ -6,16 +6,24 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 # Backlog
 
-## Items for Claude
+## Product items needing triage
+1. The overall ranking has no confidence weight. `overallOf` in `app/migrations/1794268808_add_restaurant_index.go` is a plain average.
+   One review of 10 beats 200 reviews of 9.4 in the `-overall` sort. Use a Bayesian average for the sort key, and keep the plain average for display.
+2. The default list sort is `-created`. A discovery app wants best rated or nearest first. The API has `near`, but the UI never asks for `navigator.geolocation`.
+3. Photos are only on review cards. The restaurant card and the top of the restaurant page have none. A cover photo and a gallery from the review photos need no new upload.
+4. The "Won't Do" list is one cluster: no email verification, no write rate limits, no reports, no password reset.
+   Together they mean a public instance has no defence against spam and no recovery for a lost password. The cheapest slice is a report button that makes a record for the dashboard, plus per-user write limits.
+   Decision 00019 removed the "Confirm password" field of sign up. A typing error in the password now loses the account, so the password reset matters more.
+5. A restaurant has only name, description, tags, location. Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
+6. Reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
+7. Reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).
 
 ## High Priority
 
-- Document support for oauth2 logins
 
 ## Low Priority
 - Add IOS app
-- Add load tests
-- Allow users to set preferred city and incorporate that into the maps feature
+- Allow users to set preferred location and incorporate that into the maps feature
 - Allow users to favorite restaurants and retrieve their list of favorites
 - Add an index for the `overall` sort and filter of reviews
   - the sort and the filter compute the value for each review of the restaurant or the reviewer
@@ -27,7 +35,13 @@ Each sub-bullet point contains notes about the incomplete decision.
   - a response to a request with the cookie must not have the token in its body. This is a spec change.
   - requests with the cookie need a defence against cross-site requests
 - Use a backup plan that copies each photo one time when `pb_data` grows near 5 GB. See decision 00022.
-- Let Renovate update the tool versions of the makefile
+- Add Renovate as a custom github action that runs on a monthly cron schedule
+  - add custom managers so that Renovate can update the tool versions of the makefile
+  - configure  renovate to group all updates in a single PR
+
+## Future Features
+- Support reviewing cheeses, wines, and recipes
+- Add load tests
 
 ## Won't Do
 - Add rate limits to the write operations
@@ -45,3 +59,4 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Add a way for users to report content
   - nobody can report a review, a photo, or a restaurant
   - a superuser must find it and delete it in the dashboard. Decision 00008 accepts this for photos.
+- Support for oauth2 logins
