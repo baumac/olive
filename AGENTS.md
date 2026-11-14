@@ -46,6 +46,8 @@ make install-browsers # Install the Playwright browsers. BROWSER=firefox install
 make install-browser-deps # Install the system packages of the browsers on Linux. Needs sudo.
 make check-ci-matrix  # Fail if the e2e matrix of CI misses a Playwright project
 make test-e2e-ui      # Open the Playwright UI mode for the end-to-end tests
+make renovate-local   # Find the updates with Renovate. It changes no file. The report is in bin/renovate-report.json. Needs Docker and the network.
+make renovate         # Open or update the Renovate pull request on GitHub. Needs Docker, RENOVATE_TOKEN, and RENOVATE_REPOSITORIES.
 ```
 
 The app server applies the migrations when it starts.
@@ -64,7 +66,12 @@ The `lint` job runs `make lint`. The `test` job runs `make test-sdk test-coverag
 The `security-scan` job runs `make security-scan`.
 The makefile and `app/ui/vite.config.ts` have the minimum coverage values.
 The `docker` job runs `make build-image` and checks `deploy/compose.yaml`.
-Renovate opens one pull request with all dependency updates each month. `.github/renovate.json` has its settings. See decision 00024.
+`.github/workflows/renovate.yml` runs `make renovate` on the first day of each month. It opens one pull request with all dependency updates. See decision 00026.
+`.github/renovate.json` has its settings. The workflow uses its `GITHUB_TOKEN`. The repository setting "Allow GitHub Actions to create and approve pull requests" must be on.
+A person must approve the CI run of the Renovate pull request. Renovate does not update the files in `.github/workflows`. Update them by hand.
+Renovate also updates the tool versions of the makefile. A new Go tool needs a `# renovate: depName=MODULE` comment above its version.
+`make renovate-local` checks a change of `.github/renovate.json`. Set `GITHUB_COM_TOKEN` to also get the updates of the GitHub Actions.
+When Renovate changes `TOOLS_GO`, `OAPI_CODEGEN_VERSION`, or `OPENAPI_GENERATOR_IMAGE`, run `make generate` on its branch.
 The `e2e` jobs run `make test-e2e` with one Playwright project each.
 A new Playwright project needs an entry in the `e2e` matrix. `make lint` fails without it.
 The `CI result` job passes only when all other jobs pass. Read it first.

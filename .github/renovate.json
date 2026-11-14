@@ -1,8 +1,51 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "group:all", "schedule:monthly"],
-  "timezone": "UTC",
+  "extends": ["config:recommended", "group:all"],
   "rangeStrategy": "pin",
   "postUpdateOptions": ["gomodTidy"],
-  "prConcurrentLimit": 1
+  "prConcurrentLimit": 1,
+  "prHourlyLimit": 0,
+  "packageRules": [
+    {
+      "description": "The GITHUB_TOKEN of the Renovate workflow cannot change workflow files. GitHub refuses a push with such a change.",
+      "matchFileNames": [".github/workflows/**"],
+      "enabled": false
+    },
+    {
+      "description": "The install command of the makefile has the major version in the module path. Renovate changes only the version. A person does a major update.",
+      "matchFileNames": ["makefile"],
+      "matchDatasources": ["go"],
+      "matchDepNames": ["/\\/v\\d+$/"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "The Go tools of the makefile. A renovate comment above the version gives the Go module.",
+      "managerFilePatterns": ["/^makefile$/"],
+      "matchStrings": [
+        "# renovate: depName=(?<depName>\\S+)\\n[A-Z_]+_VERSION := (?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "go"
+    },
+    {
+      "customType": "regex",
+      "description": "The Go version that builds the tools of the makefile.",
+      "managerFilePatterns": ["/^makefile$/"],
+      "matchStrings": ["TOOLS_GO := go(?<currentValue>\\S+)"],
+      "depNameTemplate": "go",
+      "datasourceTemplate": "golang-version"
+    },
+    {
+      "customType": "regex",
+      "description": "The Docker images of the makefile.",
+      "managerFilePatterns": ["/^makefile$/"],
+      "matchStrings": [
+        "[A-Z_]+_IMAGE := (?<depName>[^\\s:]+):(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
 }

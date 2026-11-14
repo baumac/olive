@@ -35,11 +35,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - a response to a request with the cookie must not have the token in its body. This is a spec change.
   - requests with the cookie need a defence against cross-site requests
 - Use a backup plan that copies each photo one time when `pb_data` grows near 5 GB. See decision 00022.
-Add self hosted Renovate run inside of a github action
-  - docs: https://github.com/renovatebot/github-action
-  - the cron should be on a monthly cron schedule
-  - add custom managers so that Renovate can update the tool versions of the makefile
-  - configure  renovate to group all updates in a single PR
 
 ## Future Features
 - Support reviewing cheeses, wines, and recipes

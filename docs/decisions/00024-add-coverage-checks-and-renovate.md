@@ -27,6 +27,8 @@ Out of scope:
 - the tool versions of the makefile. Renovate does not read them without custom rules.
 - the install of the Renovate app on the repository. The owner of the repository does this one time.
 
+Decision 00026 replaces the Renovate app with a workflow, removes the `schedule:monthly` preset, and adds the tool versions of the makefile.
+
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
 

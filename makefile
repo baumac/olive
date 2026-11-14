@@ -6,16 +6,21 @@ TOOLS_GO := go1.27.3
 TOOLS_BIN := $(BIN)/tools-$(TOOLS_GO)
 SPEC := specs/api/public-openapi.yaml
 
+# renovate: depName=github.com/daveshanley/vacuum
 VACUUM_VERSION := v0.33.2
 VACUUM := $(TOOLS_BIN)/vacuum
 
+# renovate: depName=github.com/oapi-codegen/oapi-codegen/v2
 OAPI_CODEGEN_VERSION := v2.8.2
 OAPI_CODEGEN := $(TOOLS_BIN)/oapi-codegen
 
+# renovate: depName=golang.org/x/vuln
 GOVULNCHECK_VERSION := v1.9.0
 GOVULNCHECK := $(TOOLS_BIN)/govulncheck
 
 OPENAPI_GENERATOR_IMAGE := openapitools/openapi-generator-cli:v7.27.0
+RENOVATE_IMAGE := ghcr.io/renovatebot/renovate:44.239.1
+RENOVATE_REPORT := $(BIN)/renovate-report.json
 
 COVERAGE_APP := $(BIN)/coverage-app.out
 COVERAGE_MIN_APP := 65
@@ -27,7 +32,7 @@ UI_DIST := app/internal/webui/dist
 # npm ci runs again only when the lockfile changes.
 NODE_MODULES := node_modules/.package-lock.json
 
-.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui lint-eslint security-scan generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-coverage test-coverage-app test-coverage-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app build-image run-app dev-ui
+.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui lint-eslint security-scan generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-coverage test-coverage-app test-coverage-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app build-image run-app dev-ui renovate-local renovate
 
 install-tools: $(VACUUM) $(OAPI_CODEGEN) $(GOVULNCHECK)
 
@@ -174,3 +179,22 @@ run-app:
 # Run make run-app at the same time. The Vite dev server sends /v1 to it.
 dev-ui: build-sdk-ts
 	npm run dev --workspace @reviews/ui
+
+# renovate-local changes no file and opens no pull request. A git worktree
+# has its git folder out of the work folder. Docker gets the two folders.
+# Without GITHUB_COM_TOKEN, Renovate skips the lookups of the GitHub Actions.
+renovate-local: GIT_COMMON_DIR = $(shell git rev-parse --path-format=absolute --git-common-dir)
+renovate-local:
+	mkdir -p $(BIN)
+	docker run --rm -u "$$(id -u):$$(id -g)" -v "$(CURDIR):$(CURDIR)" -v "$(GIT_COMMON_DIR):$(GIT_COMMON_DIR)" -w "$(CURDIR)" \
+		-e GITHUB_COM_TOKEN -e LOG_LEVEL $(RENOVATE_IMAGE) renovate \
+		--platform=local --dry-run=lookup --report-type=file --report-path=$(RENOVATE_REPORT)
+	@echo "The report with the updates is in $(RENOVATE_REPORT)."
+
+# renovate opens or updates the pull request on GitHub. The Renovate workflow
+# runs it. RENOVATE_REPOSITORIES has the repository, such as owner/name.
+renovate:
+	@test -n "$$RENOVATE_TOKEN" || { echo "Set RENOVATE_TOKEN. See decision 00026."; exit 1; }
+	@test -n "$$RENOVATE_REPOSITORIES" || { echo "Set RENOVATE_REPOSITORIES, such as owner/name."; exit 1; }
+	docker run --rm -e RENOVATE_TOKEN -e RENOVATE_REPOSITORIES -e RENOVATE_ONBOARDING=false -e LOG_LEVEL \
+		$(RENOVATE_IMAGE) renovate
