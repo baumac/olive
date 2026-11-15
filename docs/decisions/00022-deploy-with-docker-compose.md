@@ -1,5 +1,5 @@
 ---
-description: Deploy the app as one instance with Docker Compose and Caddy for TLS. PocketBase sends the backups of pb_data to an S3 compatible storage.
+description: Deploy the app as one instance with Docker Compose and Caddy for TLS. PocketBase saves the backups of pb_data on the local file system. The backup task of the host copies them off the server.
 status: implemented
 ---
 
@@ -29,7 +29,7 @@ In scope:
 
 Out of scope:
 - a push of the image to a registry, and a deploy from CI
-- the S3 bucket and its access key. The operator makes them and sets them in the dashboard.
+- the backup task of the host. The operator sets it up and adds the folder of the `pb_data` volume to it.
 - more than one instance
 - the document about OAuth2 sign in. It stays in the backlog.
 - monitoring and log collection
@@ -63,7 +63,8 @@ The app runs as one instance.
 PocketBase makes the backups. The operator turns them on in Settings > Backups of the dashboard.
 
 - a cron expression sets the time, and a number sets how many backups stay
-- the backups go to an S3 compatible storage, so they are not on the server
+- the backups go to `pb_data/backups` on the local file system
+- the backup task of the host copies this folder to a different computer. It starts after the auto backups.
 - each backup is one ZIP file of all of `pb_data`. It has the databases and the photo files.
 - a restore on a server that runs is one action in the dashboard. A new server gets the content of the ZIP file in its volume.
 - the compose file has no backup service. Without the dashboard settings, the app has no backup.
@@ -71,11 +72,15 @@ PocketBase makes the backups. The operator turns them on in Settings > Backups o
 The first version of this decision had a `backup` service with `sqlite3 .backup` and `rsync` to a folder of the host.
 It was removed on 2026-11-14. Its backups stayed on the server. The S3 storage of PocketBase needs no code.
 
+On 2026-11-15 the backups moved from S3 to the local file system.
+The host has a backup task that copies the entire host to a different computer.
+This task gets the ZIP files off the server, so the site needs no bucket and no access key.
+
 ## Settings encryption and limits
 
 These parts were added on 2026-11-15.
 
-- the app encrypts the PocketBase settings in the database with `PB_ENCRYPTION_KEY`. The settings have the SMTP password and the S3 secret.
+- the app encrypts the PocketBase settings in the database with `PB_ENCRYPTION_KEY`. The settings have the SMTP password.
 - the backups do not have the key. The operator keeps a copy, and a restore needs it.
 - the `app` container has a memory limit, a `GOMEMLIMIT` below it, and a limit of open files
 - Caddy stops a request body of more than 11 MB
@@ -95,15 +100,17 @@ These parts were added on 2026-11-15.
 
 | Option for the backups | Result |
 | --- | --- |
-| the backup feature of PocketBase with S3 storage | Selected. It needs only settings. The backups are on a different computer. |
+| the backup feature of PocketBase with local storage | Selected. It needs only settings. The backup task of the host copies the files to a different computer. |
+| the backup feature of PocketBase with S3 storage | Not selected on 2026-11-15. The host backup already copies the files off the server. A bucket and an access key are one more thing to keep. |
 | a service with `sqlite3 .backup` and `rsync` | Not selected. It copies each photo only one time, but it needs a script, tools in the image, and a second step to get the files off the server. |
 
 Limits of the selected option:
-- each ZIP file has all photos again. The bucket needs the size of `pb_data` times the number of backups.
+- each ZIP file has all photos again. The disk needs space for `pb_data` and for `pb_data` times the number of backups.
 - the app can be slower while a backup runs
 - PocketBase advises the `sqlite3` and `rsync` plan for a `pb_data` of 5 GB or more. The site then needs a new decision.
 - a failed backup shows only in the logs of the dashboard
-- the S3 settings are in the database. The operator keeps a copy of the access key in a different place.
+- many host backups skip `/var/lib/docker`. The operator adds the folder of the volume to the task.
+- a copy of the database files that the host task makes while the app runs can be broken. A restore uses a ZIP file.
 
 ## Settings encryption
 
@@ -157,7 +164,7 @@ The settings encryption and the limits were tested by hand with `localhost` as `
 - `docker inspect` shows the memory limit and the limit of open files
 - a body of 12 MB gets the `413` of Caddy. A body of 10.6 MB gets the `413` of the app.
 
-Not tested: the `caddy` service with a real DNS name, a backup to a real S3 bucket, and the steps for the mail server and the MFA.
+Not tested: the `caddy` service with a real DNS name, the copy of the backups by a real host backup task, and the steps for the mail server and the MFA.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
