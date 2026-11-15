@@ -11,10 +11,8 @@ Each sub-bullet point contains notes about the incomplete decision.
   - rename and/or move the backlog doc to the /docs directory
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
 - review features such as SEO, and social features that don't align with the 00000-create-reviews-app
-
-## High Priority
-
-## Production Readiness
+- 
+## For Claude
 
 - Document/implement the following in deploy.md:
   - Document SMTP and superuser MFA in deploy/README.md. Both are dashboard settings. The dashboard is the only admin surface, so its sign in matters most.
@@ -23,7 +21,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - Set GOMEMLIMIT and a memory limit for the app service in deploy/compose.yaml
   - Add ulimits.nofile to the app service.
   - Add request_body { max_size 10MB } to deploy/Caddyfile.
-  - Configuring oauth2 logins using Gmail/Google
 
 
 ### Additional items
@@ -46,9 +43,11 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Support reviewing cheeses, wines, and recipes
 
 
-## Ice Box
+## Won't do
 - Add load tests
+  - Load testing is not needed as the number of users are quite low
 - Social features
+  - Supporting oauth2 logins
   - Improve social aspects of reviews
     - reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
   - Add a way for users to report content
