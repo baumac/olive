@@ -14,14 +14,14 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## Production Readiness
 
-Document/implement the following in deploy.md:
-- Document SMTP and superuser MFA in deploy/README.md. Both are dashboard settings. The dashboard is the only admin surface, so its sign in matters most.
-- Enable settings encryption
-  - Turn on the settings encryption. Add --encryptionEnv to the start command of the image and a key variable to deploy/.env.example. The key must stay out of the backups. A lost key makes the settings of a restored backup unreadable, so the operator keeps a copy.
-- Set GOMEMLIMIT and a memory limit for the app service in deploy/compose.yaml
-- Add ulimits.nofile to the app service.
-- Add request_body { max_size 10MB } to deploy/Caddyfile.
-- Configuring oauth2 logins using Gmail/Google
+- Document/implement the following in deploy.md:
+  - Document SMTP and superuser MFA in deploy/README.md. Both are dashboard settings. The dashboard is the only admin surface, so its sign in matters most.
+  - Enable settings encryption
+    - Turn on the settings encryption. Add --encryptionEnv to the start command of the image and a key variable to deploy/.env.example. The key must stay out of the backups. A lost key makes the settings of a restored backup unreadable, so the operator keeps a copy.
+  - Set GOMEMLIMIT and a memory limit for the app service in deploy/compose.yaml
+  - Add ulimits.nofile to the app service.
+  - Add request_body { max_size 10MB } to deploy/Caddyfile.
+  - Configuring oauth2 logins using Gmail/Google
 
 
 ### Additional items
@@ -45,15 +45,16 @@ Document/implement the following in deploy.md:
 
 ## Future
 - Add IOS app
-- Support reviewing cheeses, wines, and recipes
-- Add more information to restaurant
+- Add more information to restaurants
   - Potential additional fields are Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
-- Improve social aspects of reviews
-  - Reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
-- Add a way for users to report content
-  - nobody can report a review, a photo, or a restaurant
-  - a superuser must find it and delete it in the dashboard. Decision 00008 accepts this for photos.
+- Support reviewing cheeses, wines, and recipes
 
 
 ## Ice Box
 - Add load tests
+- Social features
+  - Improve social aspects of reviews
+    - reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
+  - Add a way for users to report content
+    - nobody can report a review, a photo, or a restaurant
+    - a superuser must find it and delete it in the dashboard. Decision 00008 accepts this for photos.
