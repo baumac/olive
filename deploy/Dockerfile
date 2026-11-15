@@ -16,13 +16,14 @@ RUN npm run build --workspace @reviews/sdk && npm run build --workspace @reviews
 FROM golang:1.27.4-alpine3.24 AS build
 WORKDIR /src
 COPY go.work go.work.sum ./
-COPY app/go.mod app/go.sum app/
+COPY app/api/go.mod app/api/go.sum app/api/
 COPY app/sdk/go/go.mod app/sdk/go/go.sum app/sdk/go/
-RUN cd app && go mod download
-COPY app app
-COPY --from=ui /src/app/internal/webui/dist app/internal/webui/dist
+RUN cd app/api && go mod download
+COPY app/api app/api
+COPY app/sdk/go app/sdk/go
+COPY --from=ui /src/app/api/internal/webui/dist app/api/internal/webui/dist
 # PocketBase uses a SQLite driver in Go. The build needs no C compiler.
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/reviews-app ./app
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/reviews-app ./app/api
 
 FROM alpine:3.24.4
 RUN apk add --no-cache ca-certificates tzdata \

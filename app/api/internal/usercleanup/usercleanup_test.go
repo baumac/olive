@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baumac/reviews-app/app/internal/usercleanup"
-	_ "github.com/baumac/reviews-app/app/migrations"
+	"github.com/baumac/reviews-app/app/api/internal/usercleanup"
+	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 )

@@ -18,13 +18,13 @@ You need Go, Node.js 22, and Docker.
 ```bash
 make install-tools   # vacuum and oapi-codegen into ./bin/tools-<TOOLS_GO of the makefile>
 make build-app       # build the UI and the app to ./bin/reviews-app
-make run-app         # serve on http://127.0.0.1:8090 with data in app/pb_data
+make run-app         # serve on http://127.0.0.1:8090 with data in app/api/pb_data
 ```
 
 Make a superuser for the dashboard:
 
 ```bash
-go run ./app superuser create EMAIL PASSWORD --dir app/pb_data
+go run ./app/api superuser create EMAIL PASSWORD --dir app/api/pb_data
 ```
 
 For UI work, run `make run-app` and `make dev-ui` at the same time, and open the Vite URL.

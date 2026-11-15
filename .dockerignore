@@ -4,9 +4,9 @@
 bin
 node_modules
 **/node_modules
-app/pb_data
-app/internal/webui/dist/*
-!app/internal/webui/dist/.gitkeep
+app/api/pb_data
+app/api/internal/webui/dist/*
+!app/api/internal/webui/dist/.gitkeep
 app/sdk/typescript/dist
 tests/*
 !tests/package.json

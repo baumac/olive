@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/baumac/reviews-app/app/internal/publicapi"
-	"github.com/baumac/reviews-app/app/internal/webui"
+	"github.com/baumac/reviews-app/app/api/internal/publicapi"
+	"github.com/baumac/reviews-app/app/api/internal/webui"
 )
 
 func TestOptions(t *testing.T) {

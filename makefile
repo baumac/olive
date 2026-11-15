@@ -26,8 +26,8 @@ COVERAGE_APP := $(BIN)/coverage-app.out
 COVERAGE_MIN_APP := 65
 
 APP_BIN := $(BIN)/reviews-app
-APP_DATA := app/pb_data
-UI_DIST := app/internal/webui/dist
+APP_DATA := app/api/pb_data
+UI_DIST := app/api/internal/webui/dist
 
 # npm ci runs again only when the lockfile changes.
 NODE_MODULES := node_modules/.package-lock.json
@@ -51,8 +51,8 @@ lint-spec: $(VACUUM)
 	$(VACUUM) lint --details --fail-severity warn --ruleset specs/api/vacuum-ruleset.yaml $(SPEC)
 
 lint-go:
-	go vet ./app/... ./app/sdk/go/...
-	@test -z "$$(gofmt -l app)" || { gofmt -l app; echo "Run gofmt -w on these files."; exit 1; }
+	go vet ./app/api/... ./app/sdk/go/...
+	@test -z "$$(gofmt -l app/api app/sdk/go)" || { gofmt -l app/api app/sdk/go; echo "Run gofmt -w on these files."; exit 1; }
 
 lint-ui: build-sdk-ts
 	npm run typecheck --workspace @reviews/ui
@@ -66,7 +66,7 @@ lint-eslint: $(NODE_MODULES)
 # it without a code change. govulncheck reports only the code that the
 # modules call.
 security-scan: $(GOVULNCHECK)
-	$(GOVULNCHECK) -C app ./...
+	$(GOVULNCHECK) -C app/api ./...
 	$(GOVULNCHECK) -C app/sdk/go ./...
 
 generate: generate-sdk-go generate-sdk-ts
@@ -112,7 +112,7 @@ test-sdk-ts: $(NODE_MODULES)
 	npm test --workspace @reviews/sdk
 
 test-app:
-	cd app && go test -race ./...
+	cd app/api && go test -race ./...
 
 test-ui: build-sdk-ts
 	npm test --workspace @reviews/ui
@@ -123,8 +123,8 @@ test-coverage: test-coverage-app test-coverage-ui
 # of the statements of the app. It uses the race detector like test-app.
 test-coverage-app:
 	mkdir -p $(BIN)
-	cd app && go test -race -coverpkg=./... -coverprofile=$(COVERAGE_APP) ./...
-	@cd app && go tool cover -func=$(COVERAGE_APP) | awk -v min=$(COVERAGE_MIN_APP) \
+	cd app/api && go test -race -coverpkg=./... -coverprofile=$(COVERAGE_APP) ./...
+	@cd app/api && go tool cover -func=$(COVERAGE_APP) | awk -v min=$(COVERAGE_MIN_APP) \
 		'/^total:/ { sub("%", "", $$3); printf "Go coverage: %s%%. The minimum is %s%%.\n", $$3, min; if ($$3 + 0 < min) exit 1 }'
 
 # app/ui/vite.config.ts has the minimum of the UI.
@@ -166,7 +166,7 @@ build-ui: build-sdk-ts
 	touch $(UI_DIST)/.gitkeep
 
 build-app: build-ui
-	go build -o $(APP_BIN) ./app
+	go build -o $(APP_BIN) ./app/api
 
 # The docker job of CI and developers build the image the same way. See
 # decision 00022.
@@ -174,7 +174,7 @@ build-image:
 	docker build -f deploy/Dockerfile -t reviews-app:local .
 
 run-app:
-	go run ./app serve --dir $(APP_DATA)
+	go run ./app/api serve --dir $(APP_DATA)
 
 # Run make run-app at the same time. The Vite dev server sends /v1 to it.
 dev-ui: build-sdk-ts

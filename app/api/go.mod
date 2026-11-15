@@ -1,4 +1,4 @@
-module github.com/baumac/reviews-app/app
+module github.com/baumac/reviews-app/app/api
 
 go 1.27
 
@@ -51,4 +51,4 @@ require (
 	modernc.org/sqlite v1.60.1 // indirect
 )
 
-replace github.com/baumac/reviews-app/app/sdk/go => ./sdk/go
+replace github.com/baumac/reviews-app/app/sdk/go => ../sdk/go

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/baumac/reviews-app/app/internal/searchindex"
+	"github.com/baumac/reviews-app/app/api/internal/searchindex"
 	"github.com/pocketbase/dbx"
 )
 

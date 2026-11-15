@@ -6,13 +6,13 @@ Guide for Coding Agents.
 
 This project allows users to review a variety of things. It is composed of the following surfaces:
 - **Public API** for reviewing things with token auth
-  - this is implemented and served by the app in the `app` directory
+  - this is implemented and served by the app in the `app/api` directory
 - **Public UI** to interact with the Public API
-  - this is implemented in the `app/ui` directory and served by the app in the `app` directory
+  - this is implemented in the `app/ui` directory and served by the app in the `app/api` directory
 - **Pocketbase API** for admin operations with token auth
-  - this is served by the app in the `app` directory
+  - this is served by the app in the `app/api` directory
 - **Pocketbase UI** to interact with the Management API
-  - this is served by the app in the `app` directory
+  - this is served by the app in the `app/api` directory
 
 ## Commands
 
@@ -36,10 +36,10 @@ make test-app         # Run the Go tests of the app with the race detector. Need
 make test-ui          # Run the UI tests. Needs Node.js.
 make test-coverage    # Run the Go and UI tests with coverage. Fail below the minimum. Needs Node.js and a C compiler.
 make build-sdk-ts     # Build the TypeScript SDK into app/sdk/typescript/dist. Needs Node.js.
-make build-ui         # Build the UI into app/internal/webui/dist. Needs Node.js.
+make build-ui         # Build the UI into app/api/internal/webui/dist. Needs Node.js.
 make build-app        # Build the UI, then the app server to ./bin/reviews-app
 make build-image      # Build the Docker image reviews-app:local from deploy/Dockerfile. Needs Docker.
-make run-app          # Run the app server on 127.0.0.1:8090 with data in app/pb_data
+make run-app          # Run the app server on 127.0.0.1:8090 with data in app/api/pb_data
 make dev-ui           # Run the Vite dev server. It sends /v1 to make run-app.
 make test-e2e         # Build the app, then run the end-to-end tests in tests/. PROJECT=webkit runs one project.
 make install-browsers # Install the Playwright browsers. BROWSER=firefox installs one.
@@ -52,7 +52,7 @@ make renovate         # Open or update the Renovate pull request on GitHub. Need
 
 The app server applies the migrations when it starts.
 The PocketBase dashboard is at `http://127.0.0.1:8090/_/`.
-To make the first superuser, run `go run ./app superuser create EMAIL PASSWORD --dir app/pb_data`.
+To make the first superuser, run `go run ./app/api superuser create EMAIL PASSWORD --dir app/api/pb_data`.
 
 `make run-app` serves the UI build that `make build-ui` made last.
 For UI work, run `make run-app` and `make dev-ui` at the same time, and open the Vite URL.
@@ -131,30 +131,31 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - **`app/sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00003.
   - **`app/sdk/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
   - **`app/sdk/go`** - the Go module with the server interface and the types that the API uses
-- **`app`** - the directory containing the app that serves the Public UI, Public API, Pocketbase API, and Pocketbase UI
+- **`app`** - the directory with the three parts of the app: `app/api`, `app/ui`, and `app/sdk`
+- **`app/api`** - the Go module of the app that serves the Public UI, Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.
-  - **`app/main.go`** - the PocketBase app
-  - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, and `list_items` collections
+  - **`app/api/main.go`** - the PocketBase app
+  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, and `list_items` collections
     - SQLite triggers keep the `restaurant_overall` and `restaurant_tags` tables equal to the records. See decision 00012.
     - `restaurant_overall` has the plain average for the responses and a Bayesian average for the `overall` sort. See decision 00029.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.
     - The `overall` column of `reviews` is a generated column with indexes. It is not a field of the collection. See decision 00031.
     - Drop it and its indexes before a migration drops a score column of `reviews`. SQLite refuses the drop.
-    - A hook of `app/internal/publicapi` rejects this change from the dashboard with a message.
+    - A hook of `app/api/internal/publicapi` rejects this change from the dashboard with a message.
     - They also make the indexes, the FTS5 search tables, and the rate limit rules
-  - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
+  - **`app/api/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
     - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00007.
     - It checks, changes, and serves the photos of reviews. See decision 00008.
     - Its timestamps are RFC 3339. The database has the PocketBase format with a space. See decision 00023.
     - It gets the places of the place search from a Photon geocoder. See decision 00017.
     - A record hook gives each new user a favorites list. See decision 00033.
     - `mail.go` sends the emails of the sign up, the password reset, and the approval. See decision 00037.
-  - **`app/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
-  - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
-  - **`app/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00034.
-  - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
+  - **`app/api/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
+  - **`app/api/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
+  - **`app/api/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00034.
+  - **`app/api/internal/webui`** - embeds the UI build and serves it. See decision 00005.
     - It writes the title and link preview tags of restaurant, review, reviewer, and list pages into `index.html`. See decision 00013.
     - It writes the schema.org JSON-LD of these pages and of reviewer pages, and serves `/robots.txt` and `/sitemap.xml`. See decision 00021.
     - It serves `/map-config.json` with the tile server of the maps and allows its origin in the Content Security Policy. See decision 00018.
@@ -163,7 +164,6 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Keeps the preferred location of a person in the `localStorage` of the browser. The restaurant list and the maps use it. See decision 00035.
   - Written in TypeScript with Vue, Vue Router, and shadcn-vue on Tailwind CSS. See decision 00002.
   - Follows `specs/design-system`. Components live in `app/ui/src/components/ui`, route-aware components in `app/ui/src/components/app`, and screens in `app/ui/src/pages`.
-  - `app/ui/go.mod` is an empty Go module. The Go tools of `app` then skip `app/ui/node_modules`.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baumac/reviews-app/app/internal/photocleanup"
-	_ "github.com/baumac/reviews-app/app/migrations"
+	"github.com/baumac/reviews-app/app/api/internal/photocleanup"
+	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"

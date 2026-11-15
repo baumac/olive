@@ -9,12 +9,12 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/baumac/reviews-app/app/internal/photocleanup"
-	"github.com/baumac/reviews-app/app/internal/publicapi"
-	"github.com/baumac/reviews-app/app/internal/searchindex"
-	"github.com/baumac/reviews-app/app/internal/usercleanup"
-	"github.com/baumac/reviews-app/app/internal/webui"
-	_ "github.com/baumac/reviews-app/app/migrations"
+	"github.com/baumac/reviews-app/app/api/internal/photocleanup"
+	"github.com/baumac/reviews-app/app/api/internal/publicapi"
+	"github.com/baumac/reviews-app/app/api/internal/searchindex"
+	"github.com/baumac/reviews-app/app/api/internal/usercleanup"
+	"github.com/baumac/reviews-app/app/api/internal/webui"
+	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 )

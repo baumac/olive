@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baumac/reviews-app/app/internal/publicapi"
-	"github.com/baumac/reviews-app/app/internal/searchindex"
-	_ "github.com/baumac/reviews-app/app/migrations"
+	"github.com/baumac/reviews-app/app/api/internal/publicapi"
+	"github.com/baumac/reviews-app/app/api/internal/searchindex"
+	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/dbx"
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"

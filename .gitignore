@@ -7,15 +7,15 @@
 /bin
 
 # PocketBase data of make run-app
-/app/pb_data
+/app/api/pb_data
 
 # Results of make test-e2e
 /tests/test-results
 /tests/playwright-report
 
 # The UI build of make build-ui
-/app/internal/webui/dist/*
-!/app/internal/webui/dist/.gitkeep
+/app/api/internal/webui/dist/*
+!/app/api/internal/webui/dist/.gitkeep
 
 # Settings of deploy/compose.yaml
 /deploy/.env

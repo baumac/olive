@@ -11,7 +11,7 @@ export default defineConfig({
   },
   build: {
     // The PocketBase app embeds this folder. See decision 00005.
-    outDir: '../internal/webui/dist',
+    outDir: '../api/internal/webui/dist',
     emptyOutDir: true,
     // Every asset is a file. The Content Security Policy blocks data: URLs.
     assetsInlineLimit: 0,

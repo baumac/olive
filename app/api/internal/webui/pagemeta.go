@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/baumac/reviews-app/app/internal/publicapi"
+	"github.com/baumac/reviews-app/app/api/internal/publicapi"
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"

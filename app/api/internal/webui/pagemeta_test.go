@@ -9,7 +9,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	_ "github.com/baumac/reviews-app/app/migrations"
+	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -23,7 +23,7 @@ const testIndex = `<!doctype html><html><head><meta property="og:site_name" cont
 </head><body><div id="app"></div></body></html>`
 
 func TestIndexHasMetaBlock(t *testing.T) {
-	data, err := os.ReadFile("../../ui/index.html")
+	data, err := os.ReadFile("../../../ui/index.html")
 	if err != nil {
 		t.Fatal(err)
 	}

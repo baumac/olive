@@ -6,8 +6,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/baumac/reviews-app/app/internal/searchindex"
-	_ "github.com/baumac/reviews-app/app/migrations"
+	"github.com/baumac/reviews-app/app/api/internal/searchindex"
+	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
