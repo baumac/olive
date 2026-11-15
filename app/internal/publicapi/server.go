@@ -92,6 +92,7 @@ var _ reviewsapi.StrictServerInterface = (*Server)(nil)
 
 // Register mounts the Public API on the router of app under /v1.
 func Register(app core.App, opts Options) {
+	guardReviewOverall(app)
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		s, err := New(app, opts)
 		if err != nil {

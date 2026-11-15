@@ -8,16 +8,12 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## High Priority
 1. Currently reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).
-2. Add an index for the `overall` sort and filter of reviews
-  - the sort and the filter compute the value for each review of the restaurant or the reviewer
-  - SQLite does not use an index on an expression for the row value range of a cursor. See the migration `1794268808_add_restaurant_index.go`.
-  - a table like `restaurant_overall` with triggers, or a generated column, fixes it
-3. Improve restaurant location UX
+2. Improve restaurant location UX
   - Allow users to set preferred location and incorporate that into the maps feature
   - The default list sort is `-created`, update it to be `best rated` or `near`. 
   - The API has `near`, but the UI never asks for `navigator.geolocation`.
-4. Allow users to favorite restaurants and retrieve their list of favorites
-5. Set a total number of images that a single user can upload
+3. Allow users to favorite restaurants and retrieve their list of favorites
+4. Set a total number of images that a single user can upload
   - Start by setting this limit to 100
 
 ## Production Readiness

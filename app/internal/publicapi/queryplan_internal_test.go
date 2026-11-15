@@ -129,3 +129,65 @@ func TestGalleryUsesIndexes(t *testing.T) {
 		}
 	}
 }
+
+func TestReviewOverallUsesIndexes(t *testing.T) {
+	s := newTestServer(t)
+	restaurant := func(w *where) { w.idFilters("reviews", "restaurant", new("k3x9m2p7q1w8z4a"), nil) }
+	creator := func(w *where) { w.idFilters("reviews", "creator", new("u5n1c8r3t6y0b2e"), nil) }
+	const cursorRange, filterRange = "(overall,id)", "overall>"
+	for _, c := range []struct {
+		name    string
+		sort    string
+		filter  func(w *where)
+		overall bool
+		cursor  bool
+		want    []string
+	}{
+		{name: "restaurant", sort: "-overall", filter: restaurant, want: []string{"idx_reviews_restaurant_overall"}},
+		{name: "restaurant after cursor", sort: "-overall", filter: restaurant, cursor: true, want: []string{"idx_reviews_restaurant_overall", cursorRange}},
+		{name: "restaurant ascending after cursor", sort: "overall", filter: restaurant, cursor: true, want: []string{"idx_reviews_restaurant_overall", cursorRange}},
+		{name: "restaurant with overall filter", sort: "-overall", filter: restaurant, overall: true, want: []string{"idx_reviews_restaurant_overall", filterRange}},
+		{name: "reviewer", sort: "-overall", filter: creator, want: []string{"idx_reviews_creator_overall"}},
+		{name: "reviewer after cursor", sort: "overall", filter: creator, cursor: true, want: []string{"idx_reviews_creator_overall", cursorRange}},
+		{name: "all", sort: "-overall", want: []string{"idx_reviews_overall"}},
+		{name: "all after cursor", sort: "-overall", cursor: true, want: []string{"idx_reviews_overall", cursorRange}},
+		{name: "all with overall filter", sort: "-overall", overall: true, want: []string{"idx_reviews_overall", filterRange}},
+		{name: "restaurant by created with overall filter", sort: "-created", filter: restaurant, overall: true, want: []string{"idx_reviews_restaurant_created"}},
+		{name: "all by created with overall filter", sort: "-created", overall: true, want: []string{"idx_reviews_created"}},
+		{name: "all by title with overall filter", sort: "title", overall: true, want: []string{"idx_reviews_title"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			keys, sort, detail := parseSort(&c.sort, "reviews", reviewSorts)
+			if detail != "" {
+				t.Fatal(detail)
+			}
+			w := newWhere()
+			if c.filter != nil {
+				c.filter(w)
+			}
+			if c.overall {
+				w.compare(overallFilter(sort), []comparison{{">=", 8.0}})
+			}
+			if c.cursor {
+				w.keyset(keys, []any{7.6, "r1b8c5e2g9i6k3m"})
+			}
+			plan := queryPlan(t, s, s.sortQuery("reviews", w, keys, defaultLimit+1).Build())
+			for _, want := range c.want {
+				if !strings.Contains(plan, want) {
+					t.Errorf("plan has no %q:\n%s", want, plan)
+				}
+			}
+			if strings.Contains(plan, "TEMP B-TREE") {
+				t.Errorf("plan sorts rows:\n%s", plan)
+			}
+		})
+	}
+}
+
+func TestReviewerCountUsesIndex(t *testing.T) {
+	s := newTestServer(t)
+	q := s.app.DB().Select("COUNT(*)").From("reviews").Where(dbx.HashExp{"creator": "u5n1c8r3t6y0b2e"}).Build()
+	if plan := queryPlan(t, s, q); !strings.Contains(plan, "idx_reviews_creator_overall") {
+		t.Errorf("plan has no creator index:\n%s", plan)
+	}
+}

@@ -126,6 +126,9 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - SQLite triggers keep the `restaurant_overall` and `restaurant_tags` tables equal to the records. See decision 00012.
     - `restaurant_overall` has the plain average for the responses and a Bayesian average for the `overall` sort. See decision 00029.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.
+    - The `overall` column of `reviews` is a generated column with indexes. It is not a field of the collection. See decision 00031.
+    - Drop it and its indexes before a migration drops a score column of `reviews`. SQLite refuses the drop.
+    - A hook of `app/internal/publicapi` rejects this change from the dashboard with a message.
     - They also make the indexes, the FTS5 search tables, and the rate limit rules
   - **`app/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
     - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00007.

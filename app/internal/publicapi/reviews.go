@@ -23,9 +23,19 @@ type reviewInput struct {
 	feedback nullable.Nullable[string]
 }
 
-// reviewOverall divides in a double like toReview. The overall filter then
-// compares the values that the responses show.
-const reviewOverall = "(([[reviews.space]] + [[reviews.service]] + [[reviews.food]] + [[reviews.price]] + [[reviews.cleanliness]]) / 5.0)"
+// reviewOverall is a generated column with indexes. It has the value that
+// toReview computes. See decision 00031.
+const reviewOverall = "[[reviews.overall]]"
+
+// overallFilter uses an overall index only with the overall sort. With a
+// different sort, SQLite would read the index and then sort all matches. The
+// unary plus keeps the index of the sort.
+func overallFilter(sort string) string {
+	if sortsBy(sort, "overall") {
+		return reviewOverall
+	}
+	return "+" + reviewOverall
+}
 
 var reviewSorts = map[string]sortField{
 	"overall":     func(desc bool) []sortKey { return []sortKey{{expr: reviewOverall, desc: desc}} },
@@ -140,7 +150,7 @@ func (s *Server) reviewPage(
 	} {
 		w.compare(column("reviews", name), scoreComparisons(r))
 	}
-	w.compare(reviewOverall, averageComparisons(p.Overall))
+	w.compare(overallFilter(sort), averageComparisons(p.Overall))
 	w.idFilters("reviews", "creator", p.CreatorEq, p.CreatorIn)
 	w.compare(column("reviews", "created"), timestampComparisons(p.Created))
 	w.compare(column("reviews", "updated"), timestampComparisons(p.Updated))
@@ -439,6 +449,7 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string, photo
 		photos = []reviewsapi.Photo{}
 	}
 	space, service, food, price, cleanliness := r.GetInt("space"), r.GetInt("service"), r.GetInt("food"), r.GetInt("price"), r.GetInt("cleanliness")
+	// TestOverallColumnEqualsResponse keeps the overall column equal to this.
 	return reviewsapi.Review{
 		Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName,
 		Overall: float64(space+service+food+price+cleanliness) / 5,

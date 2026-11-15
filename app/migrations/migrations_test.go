@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 	"github.com/pocketbase/pocketbase/tools/dbutils"
@@ -362,5 +363,76 @@ func TestRestaurantLocation(t *testing.T) {
 	same.Load(map[string]any{"name": "C", "address": "Carrer Nou 3", "place_id": "osm:N1"})
 	if err := app.Save(same); err == nil {
 		t.Error("two restaurants have one place ID")
+	}
+}
+
+func reviewOverall(t *testing.T, app core.App, id string) float64 {
+	t.Helper()
+	var v float64
+	if err := app.DB().Select("overall").From("reviews").Where(dbx.HashExp{"id": id}).Row(&v); err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
+
+func TestReviewOverallColumn(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268811_add_review_overall.go")
+
+	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
+	review := newRecord(t, app, "reviews", map[string]any{
+		"restaurant": restaurant.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "cleanliness": 7, "title": "Good",
+	})
+
+	hasCreatorIndex := func() bool {
+		reviews, err := app.FindCollectionByNameOrId("reviews")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return reviews.GetIndex("idx_reviews_creator") != ""
+	}
+	if !hasCreatorIndex() {
+		t.Error("down: reviews has no idx_reviews_creator")
+	}
+
+	redo()
+	if hasCreatorIndex() {
+		t.Error("up: reviews still has idx_reviews_creator")
+	}
+	if got := reviewOverall(t, app, review.Id); got != 6.6 {
+		t.Errorf("overall is %v, want 6.6", got)
+	}
+	review, err = app.FindRecordById("reviews", review.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	review.Set("food", 10)
+	if err := app.Save(review); err != nil {
+		t.Fatal(err)
+	}
+	if got := reviewOverall(t, app, review.Id); got != 7 {
+		t.Errorf("overall after an update is %v, want 7", got)
+	}
+
+	// PocketBase changes the table when the fields of the collection change.
+	reviews, err := app.FindCollectionByNameOrId("reviews")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reviews.Fields.Add(&core.TextField{Name: "note"})
+	if err := app.Save(reviews); err != nil {
+		t.Fatal(err)
+	}
+	reviews.Fields.RemoveByName("note")
+	if err := app.Save(reviews); err != nil {
+		t.Fatal(err)
+	}
+	if got := reviewOverall(t, app, review.Id); got != 7 {
+		t.Errorf("overall after a field change is %v, want 7", got)
 	}
 }
