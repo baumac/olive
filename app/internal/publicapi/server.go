@@ -217,6 +217,9 @@ func noRoute(mux *http.ServeMux) http.HandlerFunc {
 	}
 }
 
+// notApproved is the detail of the 403 for a user without approval.
+const notApproved = "The account is not approved. A superuser must approve it."
+
 type clientIPKey struct{}
 
 type pocketBaseAuthKey struct{}
@@ -348,6 +351,13 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 			return
 		}
 		st.user, st.token, st.fromCookie = user, token, cookie != ""
+	}
+	if op.approval && !st.user.GetBool("approved") {
+		p := newProblem(http.StatusForbidden, notApproved)
+		code := reviewsapi.NotApproved
+		p.Code = &code
+		writeProblem(w, p)
+		return
 	}
 	// The key is the user. The token check therefore runs first.
 	if op.limit != nil && op.limit.key == "user" && !s.allow(w, op, st, st.user.Id) {

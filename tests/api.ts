@@ -28,14 +28,29 @@ export interface TestUser {
 
 // TestApi makes test data through the Public API. Each test makes its own
 // users. Tests then can run in parallel.
+// superuserTokenEnv has the superuser token of the app of global-setup.ts.
+export const superuserTokenEnv = 'REVIEWS_E2E_SUPERUSER_TOKEN'
+
 export class TestApi {
-  constructor(private readonly baseURL: string) {}
+  constructor(
+    private readonly baseURL: string,
+    private readonly superuserToken = process.env[superuserTokenEnv],
+  ) {}
 
   private config(token?: string) {
     return new Configuration({ basePath: `${this.baseURL}/v1`, accessToken: token })
   }
 
+  // signUp makes an approved user. Use signUpPending for a user that waits
+  // for approval.
   async signUp(name = 'Ana'): Promise<TestUser> {
+    const user = await this.signUpPending(name)
+    await this.approve(user.auth.user.id)
+    user.auth.user.approved = true
+    return user
+  }
+
+  async signUpPending(name = 'Ana'): Promise<TestUser> {
     const email = `${name.toLowerCase()}-${randomUUID().slice(0, 8)}@example.test`
     const password = 'correct-horse-battery'
     const auth = await new UsersApi(this.config()).signUp({ userCreate: { name, email, password } })
@@ -43,6 +58,37 @@ export class TestApi {
       throw new Error('sign up gave no token')
     }
     return { name, email, password, token: auth.token, auth }
+  }
+
+  // approve changes the user as a superuser does it in the dashboard.
+  async approve(userId: string, approved = true): Promise<void> {
+    if (!this.superuserToken) {
+      throw new Error('The test API has no superuser token')
+    }
+    const res = await fetch(`${this.baseURL}/api/collections/users/records/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: this.superuserToken },
+      body: JSON.stringify({ approved }),
+    })
+    if (!res.ok) {
+      throw new Error(`The user was not approved: ${res.status} ${await res.text()}`)
+    }
+  }
+
+  // approveByEmail approves a user that signed up in the UI.
+  async approveByEmail(email: string): Promise<void> {
+    if (!this.superuserToken) {
+      throw new Error('The test API has no superuser token')
+    }
+    const filter = encodeURIComponent(`email="${email}"`)
+    const res = await fetch(`${this.baseURL}/api/collections/users/records?filter=${filter}`, {
+      headers: { Authorization: this.superuserToken },
+    })
+    const { items } = (await res.json()) as { items: { id: string }[] }
+    if (!res.ok || items.length !== 1) {
+      throw new Error(`The user ${email} was not found: ${res.status}`)
+    }
+    await this.approve(items[0]!.id)
   }
 
   // refreshStatus gives the status of a token refresh. 200 means that the

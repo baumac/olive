@@ -25,6 +25,9 @@ const session = ref<Session | null>(load())
 
 export const currentUser = computed(() => session.value?.user ?? null)
 export const signedIn = computed(() => session.value !== null)
+// A session from before decision 00034 has no approved value. Its user was
+// approved by the migration.
+export const pendingApproval = computed(() => session.value?.user.approved === false)
 
 // legacyToken returns the token of a session from an older version. The
 // first refresh moves it into the cookie.
@@ -63,6 +66,14 @@ export function watchOtherTabs(onUserChange: (before: User | null, after: User |
   }
   window.addEventListener('storage', listener)
   return () => window.removeEventListener('storage', listener)
+}
+
+// markNotApproved changes the stored user after the API refused a write
+// with the code not_approved. A superuser took the approval back.
+export function markNotApproved() {
+  if (session.value?.user.approved) {
+    saveSession({ expires: session.value.expires, user: { ...session.value.user, approved: false } })
+  }
 }
 
 export function clearSession() {

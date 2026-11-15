@@ -497,3 +497,26 @@ func TestListsMigration(t *testing.T) {
 		t.Errorf("%d lists after the user delete, want 0", n)
 	}
 }
+
+func TestUserApprovalMigration(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268814_add_user_approval.go")
+	old := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	redo()
+
+	old, err = app.FindRecordById("users", old.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !old.GetBool("approved") {
+		t.Error("a user from before the migration is not approved")
+	}
+	later := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
+	if later.GetBool("approved") {
+		t.Error("a new user is approved")
+	}
+}

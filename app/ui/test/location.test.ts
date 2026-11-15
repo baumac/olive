@@ -227,7 +227,7 @@ describe('LocationField', () => {
 })
 
 describe('RestaurantFormPage drafts', () => {
-  const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '2024-11-04T01:26:55.002Z', updated: '2024-11-04T01:26:55.002Z' }
+  const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', approved: true, created: '2024-11-04T01:26:55.002Z', updated: '2024-11-04T01:26:55.002Z' }
   const restaurant: Restaurant = {
     id: 'k3x9m2p7q1w8z4a',
     name: 'Old Place',

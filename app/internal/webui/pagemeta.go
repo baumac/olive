@@ -180,6 +180,10 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		if err != nil {
 			return pageMeta{}, true, notFound(err)
 		}
+		// A user without approval has no public profile. See decision 00034.
+		if !user.GetBool("approved") {
+			return pageMeta{}, true, errNoRecord
+		}
 		baseURL := publicBaseURL(appURL)
 		data, err := reviewerData(app, user, baseURL)
 		if err != nil {
@@ -197,6 +201,9 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		creator, err := app.FindRecordById("users", list.GetString("creator"))
 		if err != nil {
 			return pageMeta{}, true, notFound(err)
+		}
+		if !creator.GetBool("approved") {
+			return pageMeta{}, true, errNoRecord
 		}
 		count, err := app.CountRecords("list_items", dbx.HashExp{"list": list.Id})
 		if err != nil {

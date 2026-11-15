@@ -47,6 +47,8 @@ paths:
       description: |
         Creates a user and signs the user in.
         The response contains an auth token for the new user.
+        The new user is not approved. A superuser approves the user in the PocketBase dashboard.
+        Until then, the user can sign in, sign out, and read.
         The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
       tags: [users]
       security:
@@ -130,6 +132,7 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
     delete:
       operationId: signOut
+      x-allow-unapproved: true
       summary: Sign out a user on all devices
       description: |
         Makes all auth tokens of the user of the current token invalid.
@@ -153,6 +156,7 @@ paths:
   /users/tokens/refresh:
     post:
       operationId: refreshToken
+      x-allow-unapproved: true
       summary: Refresh the auth token of a user
       description: |
         Returns a new auth token for the user of the current token.
@@ -216,6 +220,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
         '415':
@@ -392,6 +398,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -551,6 +559,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '503':
@@ -972,6 +982,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
         '415':
@@ -1624,6 +1636,8 @@ components:
       description: |
         The user is not the creator of the resource. For a restaurant without a creator, the user has no review of it.
         A rename or a delete of a favorites list gets this response also.
+        A user who is not approved gets this response for each operation that needs a token.
+        The problem then has the `code` `not_approved`. `signOut` and `refreshToken` are the exceptions.
       content:
         application/problem+json:
           schema:
@@ -2587,6 +2601,12 @@ components:
         instance:
           type: string
           format: uri-reference
+        code:
+          description: |
+            A fixed value for a reason that a client must tell apart from others.
+            `not_approved` is the `403` of a user that no superuser approved.
+          type: string
+          enum: [not_approved]
         property:
           description: |
             The request property that causes a conflict, such as `name` or `location`.
@@ -2643,7 +2663,7 @@ components:
         Only the user of the auth token gets this object.
         Other users see the user as a `Creator`.
       type: object
-      required: [id, email, name, created, updated]
+      required: [id, email, name, approved, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -2651,6 +2671,13 @@ components:
           $ref: '#/components/schemas/Email'
         name:
           $ref: '#/components/schemas/Name'
+        approved:
+          description: |
+            `true` after a superuser approved the user.
+            A user who is not approved can sign in, sign out, and read.
+            All other operations that need a token give `403 Forbidden`.
+            Other people cannot see the reviewer profile and the lists of such a user. They get `404`.
+          type: boolean
         created:
           $ref: '#/components/schemas/Timestamp'
         updated:
@@ -2659,6 +2686,7 @@ components:
         - id: u5n1c8r3t6y0b2e
           email: ana@example.com
           name: Ana
+          approved: true
           created: '2024-11-01T08:12:40.517Z'
           updated: '2024-11-01T08:12:40.517Z'
     UserCreate:
@@ -2718,5 +2746,6 @@ components:
             id: u5n1c8r3t6y0b2e
             email: ana@example.com
             name: Ana
+            approved: true
             created: '2024-11-01T08:12:40.517Z'
             updated: '2024-11-01T08:12:40.517Z'

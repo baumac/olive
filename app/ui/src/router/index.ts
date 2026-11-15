@@ -1,13 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ErrorPage from '@/components/app/ErrorPage.vue'
-import { signInPath } from '@/composables/useAuth'
-import { signedIn } from '@/lib/session'
+import { refreshSession, signInPath } from '@/composables/useAuth'
+import { tellPendingApproval } from '@/lib/approval'
+import { pendingApproval, signedIn } from '@/lib/session'
 import { safeRedirect } from '@/lib/validation'
 
 declare module 'vue-router' {
   interface RouteMeta {
     // requiresAuth sends a signed out person to the sign in page first.
     requiresAuth?: boolean
+    // requiresApproval keeps a user who waits for approval off the page.
+    requiresApproval?: boolean
     // guestOnly sends a signed in person to the redirect path.
     guestOnly?: boolean
   }
@@ -25,20 +28,20 @@ export const router = createRouter({
     {
       path: '/restaurants/new',
       component: () => import('@/pages/RestaurantFormPage.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresApproval: true },
     },
     { path: '/restaurants/:restaurantId', component: () => import('@/pages/RestaurantPage.vue'), props: true },
     {
       path: '/restaurants/:restaurantId/edit',
       component: () => import('@/pages/RestaurantFormPage.vue'),
       props: true,
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresApproval: true },
     },
     {
       path: '/restaurants/:restaurantId/reviews/new',
       component: () => import('@/pages/ReviewFormPage.vue'),
       props: true,
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresApproval: true },
     },
     {
       path: '/restaurants/:restaurantId/reviews/:reviewId',
@@ -49,7 +52,7 @@ export const router = createRouter({
       path: '/restaurants/:restaurantId/reviews/:reviewId/edit',
       component: () => import('@/pages/ReviewFormPage.vue'),
       props: true,
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresApproval: true },
     },
     { path: '/sign-in', component: () => import('@/pages/SignInPage.vue'), meta: { guestOnly: true } },
     { path: '/sign-up', component: () => import('@/pages/SignUpPage.vue'), meta: { guestOnly: true } },
@@ -57,9 +60,23 @@ export const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to, from) => {
   if (to.meta.requiresAuth && !signedIn.value) {
     return signInPath(to.fullPath)
+  }
+  if (to.meta.requiresApproval && pendingApproval.value) {
+    const firstLoad = from.matched.length === 0
+    // The stored user of a first load can be from before the approval.
+    if (firstLoad) {
+      await refreshSession()
+      if (!signedIn.value) {
+        return signInPath(to.fullPath)
+      }
+    }
+    if (tellPendingApproval()) {
+      // A link on a page stays on the page. A first load has no page.
+      return firstLoad ? '/restaurants' : false
+    }
   }
   if (to.meta.guestOnly && signedIn.value) {
     return safeRedirect(to.query.redirect)

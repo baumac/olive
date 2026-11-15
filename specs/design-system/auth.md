@@ -8,6 +8,16 @@ How people sign up, sign in and stay signed in. The API is the Users API: the `u
 - Adding a restaurant and writing, editing or deleting a review needs an account.
 - When a signed out person starts one of these actions, such as "Write a review", go to `/sign-in?redirect=<the action's path>`. Do not show a disabled button.
 
+## Approval
+
+- A new account waits for the approval of an administrator. The `user` of the auth token has `approved`.
+- While `approved` is `false`, `ApprovalBanner` shows below `AppHeader` on each page: an `Alert` with the title "Your account waits for approval", the reason, and an `outline` button "Check again".
+- "Check again" calls `refreshToken` and stores the new `user`. It then shows a `Toast`: "Your account is approved" or "Your account is not approved yet". A failed request shows the destructive `Toast` "The check did not work".
+- The person can read all pages. A link to a form that adds or changes data stays on the page and shows the `Toast` "Your account waits for approval". A direct load of such a form first gets the `user` again. If the account still waits, it opens `/restaurants`.
+- A `403` with the `code` `not_approved` means that an administrator took the approval back. The UI stores `approved` as `false`, so the banner shows.
+- The heart and "Save to list" show the same `Toast` and send no request. The reviewer page of the person has no "Create list" form.
+- Do not show disabled buttons. The banner tells the reason one time.
+
 ## Pages
 
 - `/sign-in`: `SignInPage` with `SignInForm`.
@@ -20,7 +30,7 @@ How people sign up, sign in and stay signed in. The API is the Users API: the `u
 1. The person fills in `SignUpForm` and selects "Create account".
 2. The UI calls `signUp` (`POST /v1/users`) with `name`, `email` and `password`.
 3. The response is an auth token, so the person is signed in. The UI stores `token`, `expires` and `user`.
-4. The UI opens the `redirect` path and shows the "Welcome to Sponga47 Reviews" `Toast`.
+4. The UI opens the `redirect` path and shows the "Welcome to Sponga47 Reviews" `Toast`. For an account that is not approved, the `Toast` also tells that an administrator must approve it.
 
 ## Sign in
 

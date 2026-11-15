@@ -34,7 +34,8 @@ async function submit(userCreate: { name: string; email: string; password: strin
     const auth = await usersApi.signUp({ userCreate, cookie: true })
     saveSession(auth)
     void router.replace(redirect.value)
-    toast.success('Welcome to Sponga47 Reviews', { description: `You are signed in as ${auth.user.name}.` })
+    const next = auth.user.approved ? '' : ' An administrator must approve your account before you can add data.'
+    toast.success('Welcome to Sponga47 Reviews', { description: `You are signed in as ${auth.user.name}.${next}` })
   } catch (e) {
     const { status, problem } = await apiFailure(e)
     if (status === 409) {

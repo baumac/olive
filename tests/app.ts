@@ -11,6 +11,8 @@ const binary = fileURLToPath(new URL('../bin/reviews-app', import.meta.url))
 
 export interface RunningApp {
   baseURL: string
+  // superuserToken approves the users of the tests. See decision 00034.
+  superuserToken: string
   stop: () => Promise<void>
 }
 
@@ -21,9 +23,9 @@ export async function startApp(port: number, env: Record<string, string> = {}, a
     throw new Error(`${binary} does not exist. Run make build-app.`)
   }
   const dir = mkdtempSync(join(tmpdir(), 'reviews-e2e-'))
-  let superuser: Superuser | undefined
+  let superuser: Superuser
   try {
-    superuser = appURL ? makeSuperuser(dir) : undefined
+    superuser = makeSuperuser(dir)
   } catch (err) {
     rmSync(dir, { recursive: true, force: true })
     throw err
@@ -53,15 +55,16 @@ export async function startApp(port: number, env: Record<string, string> = {}, a
       throw new Error(`The app stopped with code ${child.exitCode}: ${stderr}`)
     }
     if (await answers(baseURL)) {
-      if (appURL && superuser) {
-        try {
-          await setAppURL(baseURL, superuser, appURL)
-        } catch (err) {
-          await stop()
-          throw err
+      try {
+        const superuserToken = await superuserSignIn(baseURL, superuser)
+        if (appURL) {
+          await setAppURL(baseURL, superuserToken, appURL)
         }
+        return { baseURL, superuserToken, stop }
+      } catch (err) {
+        await stop()
+        throw err
       }
-      return { baseURL, stop }
     }
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
@@ -93,7 +96,7 @@ function makeSuperuser(dir: string): Superuser {
   return superuser
 }
 
-async function setAppURL(baseURL: string, superuser: Superuser, appURL: string) {
+async function superuserSignIn(baseURL: string, superuser: Superuser): Promise<string> {
   const auth = await fetch(`${baseURL}/api/collections/_superusers/auth-with-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -102,7 +105,10 @@ async function setAppURL(baseURL: string, superuser: Superuser, appURL: string) 
   if (!auth.ok) {
     throw new Error(`The superuser sign in failed with ${auth.status}`)
   }
-  const { token } = (await auth.json()) as { token: string }
+  return ((await auth.json()) as { token: string }).token
+}
+
+async function setAppURL(baseURL: string, token: string, appURL: string) {
   const settings = await fetch(`${baseURL}/api/settings`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: token },

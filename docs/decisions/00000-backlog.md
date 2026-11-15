@@ -34,6 +34,10 @@ Document/implement the following in deploy.md:
   - sign up gives the same response for new and used email addresses. This removes the account enumeration risk in decision 00001.
   - the API sends a confirmation link for a new email address, or a sign in link for a used one
   - password reset needs the same email setup
+- Send email notices for the approval of users after SMTP is on. See decision 00034.
+  - tell the superusers that a new user waits for approval. Today a superuser must search `approved = false` in the dashboard.
+  - tell the user that a superuser approved the account. Today the user finds it at the next load or with "Check again".
+  - the two notices need the SMTP setup of the Production Readiness section
 - Add password reset, password change, name change, and account deletion
   - a person who forgets the password loses the account
   - decision 00001 leaves these out. Password reset needs the email setup of the Ice Box item.

@@ -29,6 +29,20 @@ Then open `https://SITE_ADDRESS/_/` and set these values. AGENTS.md has the reas
 - the superuser IP allow-list
 - the backups. See the Backups section.
 
+## Approve new users
+
+A new user cannot add or change data before a superuser approves the account. See decision 00034.
+
+1. Open `https://SITE_ADDRESS/_/` and select the `users` collection.
+2. Enter `approved = false` in the search field. The list then has the users that wait.
+3. Open a user, turn on `approved`, and save.
+
+Turn `approved` off again to stop the writes of a user. The user can still sign in and read.
+Other people cannot open the reviewer page and the lists of a user without approval. The reviews and restaurants of the user stay public.
+A daily job deletes a user that waits for more than 30 days and has no review, no restaurant, and no restaurant in a list. The person can sign up again.
+The users from before the update to this version are approved.
+A user that a superuser makes in the dashboard is approved only when `approved` is on.
+
 ## One instance only
 
 Do not start a second `app` container on the same data.

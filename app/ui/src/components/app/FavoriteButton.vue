@@ -6,6 +6,7 @@ import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { signInPath } from '@/composables/useAuth'
 import { apiFailure, listsApi } from '@/lib/api'
+import { tellPendingApproval } from '@/lib/approval'
 import { currentUser } from '@/lib/session'
 
 const props = withDefaults(
@@ -37,7 +38,7 @@ async function toggle() {
     void router.push(signInPath(route.fullPath))
     return
   }
-  if (busy.value) {
+  if (busy.value || tellPendingApproval()) {
     return
   }
   busy.value = true

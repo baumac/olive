@@ -23,7 +23,9 @@ type operation struct {
 	route   *routers.Route
 	query   map[string]bool
 	auth    authMode
-	limit   *rateLimit
+	// approval is true when the operation needs an approved user.
+	approval bool
+	limit    *rateLimit
 	// fileBody and fileResponse mark binary bodies. The JSON checks of the
 	// body and the response body check skip them.
 	fileBody     bool
@@ -67,8 +69,13 @@ func loadSpec() (*apiSpec, error) {
 			if limit != nil && limit.key == "user" && authOf(doc, op) != authRequired {
 				return nil, fmt.Errorf("%s: x-rate-limit with the key user needs a bearer token", pattern)
 			}
+			approval := needsApproval(doc, op)
+			if approval && op.Responses.Value("403") == nil {
+				return nil, fmt.Errorf("%s: an operation that needs an approved user needs a 403 response", pattern)
+			}
 			s.operations[pattern] = &operation{
 				pattern:      pattern,
+				approval:     approval,
 				route:        &routers.Route{Spec: doc, Path: path, PathItem: item, Method: method, Operation: op},
 				query:        queryNames(item, op),
 				auth:         authOf(doc, op),
@@ -79,6 +86,13 @@ func loadSpec() (*apiSpec, error) {
 		}
 	}
 	return s, nil
+}
+
+// needsApproval is true for the operations that need a token. The
+// x-allow-unapproved extension is the exception. A new operation then needs
+// approval without a change here. See decision 00034.
+func needsApproval(doc *openapi3.T, op *openapi3.Operation) bool {
+	return authOf(doc, op) == authRequired && op.Extensions["x-allow-unapproved"] != true
 }
 
 func rateLimitOf(op *openapi3.Operation) (*rateLimit, error) {

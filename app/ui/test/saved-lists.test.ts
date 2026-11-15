@@ -11,7 +11,7 @@ import { clearSession, saveSession } from '@/lib/session'
 import ListPage from '@/pages/ListPage.vue'
 import { expectAccessible } from './axe'
 
-const ana = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '2024-11-04T01:26:55.002Z', updated: '2024-11-04T01:26:55.002Z' }
+const ana = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', approved: true, created: '2024-11-04T01:26:55.002Z', updated: '2024-11-04T01:26:55.002Z' }
 
 function signIn() {
   saveSession({ expires: '2099-01-01T00:00:00.000Z', user: ana })

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { signInPath } from '@/composables/useAuth'
 import { listsApi } from '@/lib/api'
+import { tellPendingApproval } from '@/lib/approval'
 import { listFailureText } from '@/lib/lists'
 import { currentUser } from '@/lib/session'
 
@@ -43,6 +44,9 @@ async function load() {
 function setOpen(value: boolean) {
   if (value && !currentUser.value) {
     void router.push(signInPath(route.fullPath))
+    return
+  }
+  if (value && tellPendingApproval()) {
     return
   }
   open.value = value

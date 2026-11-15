@@ -167,22 +167,24 @@ func toSavedList(list, creator *core.Record, count int) reviewsapi.SavedList {
 	}
 }
 
-func (s *Server) savedList(list *core.Record) (reviewsapi.SavedList, error) {
-	creator, err := s.app.FindRecordById("users", list.GetString("creator"))
-	if err != nil {
-		return reviewsapi.SavedList{}, err
+// publicList returns the list and its creator. It returns a nil list when
+// the list does not exist or viewer cannot see its creator.
+func (s *Server) publicList(viewer *core.Record, id string) (list, creator *core.Record, err error) {
+	list, err = findList(s.app, id)
+	if err != nil || list == nil {
+		return nil, nil, err
 	}
-	counts, err := s.itemCounts(list)
-	if err != nil {
-		return reviewsapi.SavedList{}, err
+	creator, err = s.findReviewer(viewer, list.GetString("creator"))
+	if err != nil || creator == nil {
+		return nil, nil, err
 	}
-	return toSavedList(list, creator, counts[list.Id]), nil
+	return list, creator, nil
 }
 
 // ListReviewerLists puts the favorites list first. The other lists follow,
 // the newest first.
-func (s *Server) ListReviewerLists(_ context.Context, req reviewsapi.ListReviewerListsRequestObject) (reviewsapi.ListReviewerListsResponseObject, error) {
-	user, err := s.findUser(req.ReviewerId)
+func (s *Server) ListReviewerLists(ctx context.Context, req reviewsapi.ListReviewerListsRequestObject) (reviewsapi.ListReviewerListsResponseObject, error) {
+	user, err := s.findReviewer(stateFrom(ctx).user, req.ReviewerId)
 	if err != nil {
 		return nil, err
 	}
@@ -270,19 +272,19 @@ func (s *Server) CreateList(ctx context.Context, req reviewsapi.CreateListReques
 	}, nil
 }
 
-func (s *Server) GetList(_ context.Context, req reviewsapi.GetListRequestObject) (reviewsapi.GetListResponseObject, error) {
-	list, err := findList(s.app, req.ListId)
+func (s *Server) GetList(ctx context.Context, req reviewsapi.GetListRequestObject) (reviewsapi.GetListResponseObject, error) {
+	list, creator, err := s.publicList(stateFrom(ctx).user, req.ListId)
 	if err != nil {
 		return nil, err
 	}
 	if list == nil {
 		return reviewsapi.GetList404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(listNotFound)}, nil
 	}
-	out, err := s.savedList(list)
+	counts, err := s.itemCounts(list)
 	if err != nil {
 		return nil, err
 	}
-	return reviewsapi.GetList200JSONResponse(out), nil
+	return reviewsapi.GetList200JSONResponse(toSavedList(list, creator, counts[list.Id])), nil
 }
 
 // listChangeForbidden returns a detail for the 403 response if the user
@@ -387,7 +389,7 @@ func (s *Server) ListListRestaurants(ctx context.Context, req reviewsapi.ListLis
 	if detail != "" {
 		return reviewsapi.ListListRestaurants400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
 	}
-	list, err := findList(s.app, req.ListId)
+	list, _, err := s.publicList(stateFrom(ctx).user, req.ListId)
 	if err != nil {
 		return nil, err
 	}

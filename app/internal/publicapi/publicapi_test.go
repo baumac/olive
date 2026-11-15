@@ -142,7 +142,20 @@ type authToken struct {
 	} `json:"user"`
 }
 
+// signUp makes an approved user. The SQL update keeps the updated time of
+// the user.
 func (e *env) signUp(email, name string) authToken {
+	e.t.Helper()
+	tok := e.signUpPending(email, name)
+	_, err := e.app.DB().NewQuery("UPDATE users SET approved = TRUE WHERE id = {:id}").Bind(map[string]any{"id": tok.User.ID}).Execute()
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return tok
+}
+
+// signUpPending makes a user that no superuser approved.
+func (e *env) signUpPending(email, name string) authToken {
 	e.t.Helper()
 	res := e.expect(request{method: "POST", path: "/v1/users",
 		body: fmt.Sprintf(`{"email":%q,"password":"correct-horse-battery","name":%q}`, email, name)}, http.StatusCreated)

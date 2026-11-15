@@ -88,6 +88,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - The place search sends the search text of users to the public Photon server. This server has no guarantee and blocks heavy use. The app sends the Application URL in its `User-Agent`. See decision 00017.
 - The browsers of users load the map tiles from `tile.openstreetmap.org`. This server gets their IP address and the origin of the site. It has no guarantee and blocks heavy use. Do not set a `Referrer-Policy` of `no-referrer` on the UI. The tile server needs the `Referer` header. See decision 00018.
 - Set the superuser IP allow-list in the PocketBase settings, so only admin networks can open the dashboard at `/_/`.
+- Approve new users in the dashboard. A user without the `approved` value of the `users` collection can only sign in and read. `deploy/README.md` has the steps. See decision 00034.
+  A daily job deletes a user that waits for more than 30 days and has no data.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
 - Environment variables of the app:
   - `REVIEWS_SIGN_IN_LIMIT` sets the sign up and sign in limit per minute. The end-to-end tests raise it. Their parallel sign ups come from one IP address.
@@ -108,6 +110,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
     - the `users` tag has the sign up, sign in, sign out, and token refresh operations
+    - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out and token refresh. See decision 00034.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
     - the `places` tag has the place search for the location of a restaurant
@@ -139,6 +142,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - A record hook gives each new user a favorites list. See decision 00033.
   - **`app/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
+  - **`app/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00034.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
     - It writes the title and link preview tags of restaurant, review, reviewer, and list pages into `index.html`. See decision 00013.
     - It writes the schema.org JSON-LD of these pages and of reviewer pages, and serves `/robots.txt` and `/sitemap.xml`. See decision 00021.
@@ -151,6 +155,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name
+  - `api.signUp` approves the user with the superuser of the test app. `api.signUpPending` does not.
   - **`tests/photos`** - the small test images of the photo tests
   - **`tests/photon.ts`** - the fake geocoder of the place search and the fake map tiles. The tests need no network.
 

@@ -33,7 +33,7 @@ test('too many sign ins show the rate limit alert', async ({ page }) => withApp(
 }))
 
 test('too many photo uploads show an error', async ({ page }) => withApp(8099, { REVIEWS_PHOTO_UPLOAD_LIMIT: '1' }, async (app) => {
-  const api = new TestApi(app.baseURL)
+  const api = new TestApi(app.baseURL, app.superuserToken)
   const user = await api.signUp('Ana')
   const restaurant = await api.createRestaurant(user, { name: 'Busy Place' })
   const review = await api.createReview(user, restaurant.id, { space: 7, service: 7, food: 7, price: 7, cleanliness: 7, title: 'Busy' })

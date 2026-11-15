@@ -31,6 +31,13 @@ func (e *env) lists(userID, query string) listPage {
 	return p
 }
 
+func (e *env) listsAs(userID, token string) listPage {
+	e.t.Helper()
+	var p listPage
+	e.expect(request{method: "GET", path: "/v1/reviewers/" + userID + "/lists", token: token}, http.StatusOK).decode(e.t, &p)
+	return p
+}
+
 func (e *env) listRestaurants(path, token string) (string, *string) {
 	e.t.Helper()
 	var p struct {
@@ -314,6 +321,7 @@ func TestFavoritesListOfOtherUsers(t *testing.T) {
 		joe.SetEmail("joe@example.com")
 		joe.SetPassword("correct-horse-battery")
 		joe.Set("name", "Joe")
+		joe.Set("approved", true)
 		if err := e.app.Save(joe); err != nil {
 			t.Fatal(err)
 		}

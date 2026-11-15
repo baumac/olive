@@ -9,6 +9,7 @@ import { useLoad } from '@/composables/useLoad'
 import { listsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { listFailureText } from '@/lib/lists'
+import { pendingApproval } from '@/lib/session'
 
 // own is true on the page of the signed in user. It shows the create form.
 const props = defineProps<{ reviewerId: string; own: boolean }>()
@@ -61,7 +62,7 @@ async function create() {
         </RouterLink>
       </li>
     </ul>
-    <form v-if="own" class="flex max-w-md flex-wrap gap-2" @submit.prevent="create">
+    <form v-if="own && !pendingApproval" class="flex max-w-md flex-wrap gap-2" @submit.prevent="create">
       <label for="new-list-name" class="sr-only">Name of a new list</label>
       <Input id="new-list-name" v-model="name" class="min-w-40 flex-1" placeholder="New list" maxlength="255" autocomplete="off" />
       <Button type="submit" variant="secondary" :disabled="creating">Create list</Button>

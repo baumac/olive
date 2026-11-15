@@ -37,6 +37,14 @@ export interface User {
      */
     name: string;
     /**
+     * `true` after a superuser approved the user.
+     * A user who is not approved can sign in, sign out, and read.
+     * All other operations that need a token give `403 Forbidden`.
+     * Other people cannot see the reviewer profile and the lists of such a user. They get `404`.
+     * 
+     */
+    approved: boolean;
+    /**
      * An RFC 3339 timestamp in UTC with millisecond precision.
      */
     created: string;
@@ -53,6 +61,7 @@ export function instanceOfUser(value: object): value is User {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('email' in value) || value['email'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
+    if (!('approved' in value) || value['approved'] === undefined) return false;
     if (!('created' in value) || value['created'] === undefined) return false;
     if (!('updated' in value) || value['updated'] === undefined) return false;
     return true;
@@ -71,6 +80,7 @@ export function UserFromJSONTyped(json: any, ignoreDiscriminator: boolean): User
         'id': json['id'],
         'email': json['email'],
         'name': json['name'],
+        'approved': json['approved'],
         'created': json['created'],
         'updated': json['updated'],
     };
@@ -90,6 +100,7 @@ export function UserToJSONTyped(value?: User | null, ignoreDiscriminator: boolea
         'id': value['id'],
         'email': value['email'],
         'name': value['name'],
+        'approved': value['approved'],
         'created': value['created'],
         'updated': value['updated'],
     };

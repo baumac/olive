@@ -158,7 +158,7 @@ export interface UsersApiInterface {
     signUpRequestOpts(requestParameters: SignUpRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Creates a user and signs the user in. The response contains an auth token for the new user. The API ignores the `Authorization` header and the `reviews_session` cookie on this operation. 
+     * Creates a user and signs the user in. The response contains an auth token for the new user. The new user is not approved. A superuser approves the user in the PocketBase dashboard. Until then, the user can sign in, sign out, and read. The API ignores the `Authorization` header and the `reviews_session` cookie on this operation. 
      * @summary Sign up a user
      * @param {UserCreate} userCreate The new user.
      * @param {boolean} [cookie] &#x60;true&#x60; puts the auth token in the &#x60;reviews_session&#x60; cookie. The response body then has no &#x60;token&#x60;. The API ignores this parameter on a cross-origin &#x60;POST&#x60; request from a browser. 
@@ -169,7 +169,7 @@ export interface UsersApiInterface {
     signUpRaw(requestParameters: SignUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthToken>>;
 
     /**
-     * Creates a user and signs the user in. The response contains an auth token for the new user. The API ignores the `Authorization` header and the `reviews_session` cookie on this operation. 
+     * Creates a user and signs the user in. The response contains an auth token for the new user. The new user is not approved. A superuser approves the user in the PocketBase dashboard. Until then, the user can sign in, sign out, and read. The API ignores the `Authorization` header and the `reviews_session` cookie on this operation. 
      * Sign up a user
      */
     signUp(requestParameters: SignUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthToken>;
@@ -365,7 +365,7 @@ export class UsersApi extends runtime.BaseAPI implements UsersApiInterface {
     }
 
     /**
-     * Creates a user and signs the user in. The response contains an auth token for the new user. The API ignores the `Authorization` header and the `reviews_session` cookie on this operation. 
+     * Creates a user and signs the user in. The response contains an auth token for the new user. The new user is not approved. A superuser approves the user in the PocketBase dashboard. Until then, the user can sign in, sign out, and read. The API ignores the `Authorization` header and the `reviews_session` cookie on this operation. 
      * Sign up a user
      */
     async signUpRaw(requestParameters: SignUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthToken>> {
@@ -376,7 +376,7 @@ export class UsersApi extends runtime.BaseAPI implements UsersApiInterface {
     }
 
     /**
-     * Creates a user and signs the user in. The response contains an auth token for the new user. The API ignores the `Authorization` header and the `reviews_session` cookie on this operation. 
+     * Creates a user and signs the user in. The response contains an auth token for the new user. The new user is not approved. A superuser approves the user in the PocketBase dashboard. Until then, the user can sign in, sign out, and read. The API ignores the `Authorization` header and the `reviews_session` cookie on this operation. 
      * Sign up a user
      */
     async signUp(requestParameters: SignUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthToken> {

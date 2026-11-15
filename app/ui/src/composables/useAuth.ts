@@ -9,20 +9,36 @@ import { parseTimestamp } from '@/lib/format'
 const day = 24 * 60 * 60 * 1000
 const hour = 60 * 60 * 1000
 
-export async function refreshSession() {
+// RefreshResult tells how a refresh ended. "ended" means that the server
+// refused the token and the session is deleted.
+export type RefreshResult = 'refreshed' | 'ended' | 'failed' | 'signed-out'
+
+let refreshing: Promise<RefreshResult> | null = null
+
+// refreshSession gets a new token and the current user. Calls at the same
+// time share one request.
+export function refreshSession(): Promise<RefreshResult> {
+  refreshing ??= refresh().finally(() => (refreshing = null))
+  return refreshing
+}
+
+async function refresh(): Promise<RefreshResult> {
   if (!signedIn.value) {
-    return
+    return 'signed-out'
   }
   const token = legacyToken()
   try {
     // A bearer token with cookie=true moves the token into the cookie.
     const init = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
     saveSession(await usersApi.refreshToken({ cookie: true }, init))
+    return 'refreshed'
   } catch (error) {
     const { status } = await apiFailure(error)
     if (status === 401) {
       endSession()
+      return 'ended'
     }
+    return 'failed'
   }
 }
 

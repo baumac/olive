@@ -6,7 +6,7 @@ import { handleSessionEnded, restaurantsApi, usersApi } from '@/lib/api'
 import { saveDraft, takeDraft } from '@/lib/drafts'
 import { clearSession, currentUser, saveSession, signedIn, watchOtherTabs } from '@/lib/session'
 
-const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', created: '', updated: '' }
+const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', approved: true, created: '', updated: '' }
 
 afterEach(() => {
   vi.restoreAllMocks()

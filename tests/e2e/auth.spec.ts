@@ -14,6 +14,51 @@ test('sign up signs the person in', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'DA, account menu for Dana' })).toBeVisible()
 })
 
+test('a new user waits for the approval of a superuser', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const restaurant = await api.createRestaurant(owner, { name: 'Approval Kitchen' })
+  const email = `eve-${Date.now()}@example.test`
+
+  await page.goto('/sign-up')
+  await page.getByLabel('Name').fill('Eve')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
+  await page.getByLabel('Confirm password').fill('correct-horse-battery')
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expect(page).toHaveURL(/\/restaurants$/)
+  const banner = page.getByRole('status').filter({ hasText: 'Your account waits for approval' })
+  await expect(banner).toBeVisible()
+
+  // A link to a form stays on the page. A direct load goes to the list.
+  await page.getByRole('link', { name: 'Add restaurant' }).first().click()
+  await expect(page).toHaveURL(/\/restaurants$/)
+  await page.goto('/restaurants/new')
+  await expect(page).toHaveURL(/\/restaurants$/)
+
+  await page.goto(`/restaurants/${restaurant.id}`)
+  const heart = page.getByRole('button', { name: 'Favorite Approval Kitchen' })
+  await heart.click()
+  await expect(heart).toHaveAttribute('aria-pressed', 'false')
+  await page.getByRole('button', { name: 'Save to list' }).click()
+  await expect(page.getByLabel('Name of a new list')).toHaveCount(0)
+
+  await banner.getByRole('button', { name: 'Check again' }).click()
+  await expect(page.getByText('Your account is not approved yet')).toBeVisible()
+
+  // The stored user is from before the approval. A direct load of a form
+  // gets the user again.
+  await api.approveByEmail(email)
+  await page.goto('/restaurants/new')
+  await expect(page).toHaveURL(/\/restaurants\/new$/)
+  await expect(banner).toHaveCount(0)
+
+  await page.goto(`/restaurants/${restaurant.id}`)
+  await heart.click()
+  await expect(heart).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('link', { name: 'Write a review' }).first().click()
+  await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}/reviews/new$`))
+})
+
 test('the auth token is only in an HttpOnly cookie', async ({ page, api, context }) => {
   const user = await api.signUp()
   await page.goto('/sign-in')

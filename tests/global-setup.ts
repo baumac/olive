@@ -1,4 +1,5 @@
 import { appURL, photonPort, port } from './playwright.config'
+import { superuserTokenEnv } from './api'
 import { startApp } from './app'
 import { startPhoton } from './photon'
 
@@ -18,6 +19,8 @@ export default async function globalSetup() {
       },
       appURL,
     )
+    // The test workers get the environment of this process.
+    process.env[superuserTokenEnv] = app.superuserToken
     return async () => {
       await app.stop()
       await photon.stop()

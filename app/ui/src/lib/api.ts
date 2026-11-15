@@ -1,6 +1,6 @@
 import type { Middleware, Problem } from '@reviews/sdk'
 import { Configuration, FetchError, ListsApi, PlacesApi, ResponseError, RestaurantsApi, ReviewersApi, UsersApi } from '@reviews/sdk'
-import { clearSession, signedIn } from './session'
+import { clearSession, markNotApproved, signedIn } from './session'
 
 type SessionEndedHandler = () => void
 
@@ -32,12 +32,25 @@ const sessionMiddleware: Middleware = {
   // A 401 on a request with the cookie ends the session. The response deleted
   // the cookie, so the second request has no token.
   async post({ fetch, url, init, response }) {
+    if (response.status === 403 && (await problemCode(response)) === 'not_approved') {
+      // The approval banner then tells the reason of the refused write.
+      markNotApproved()
+      return response
+    }
     if (response.status !== 401 || init.credentials === 'omit' || usersPath.test(url)) {
       return response
     }
     endSession()
     return fetch(url, { ...init, credentials: 'omit' })
   },
+}
+
+async function problemCode(response: Response): Promise<string | undefined> {
+  try {
+    return ((await response.clone().json()) as Problem).code
+  } catch {
+    return undefined
+  }
 }
 
 const configuration = new Configuration({

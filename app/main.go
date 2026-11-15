@@ -12,6 +12,7 @@ import (
 	"github.com/baumac/reviews-app/app/internal/photocleanup"
 	"github.com/baumac/reviews-app/app/internal/publicapi"
 	"github.com/baumac/reviews-app/app/internal/searchindex"
+	"github.com/baumac/reviews-app/app/internal/usercleanup"
 	"github.com/baumac/reviews-app/app/internal/webui"
 	_ "github.com/baumac/reviews-app/app/migrations"
 	"github.com/pocketbase/pocketbase"
@@ -28,6 +29,7 @@ func main() {
 	searchindex.Register(app)
 	publicapi.Register(app, opts)
 	photocleanup.Register(app)
+	usercleanup.Register(app)
 	ui, err := uiOptions(os.Getenv)
 	if err != nil {
 		log.Fatal(err)

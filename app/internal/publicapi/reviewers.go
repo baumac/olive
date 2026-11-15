@@ -14,8 +14,8 @@ import (
 const reviewerNotFound = "The user does not exist."
 
 // GetReviewer returns only the public fields of a user.
-func (s *Server) GetReviewer(_ context.Context, req reviewsapi.GetReviewerRequestObject) (reviewsapi.GetReviewerResponseObject, error) {
-	user, err := s.findUser(req.ReviewerId)
+func (s *Server) GetReviewer(ctx context.Context, req reviewsapi.GetReviewerRequestObject) (reviewsapi.GetReviewerResponseObject, error) {
+	user, err := s.findReviewer(stateFrom(ctx).user, req.ReviewerId)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (s *Server) reviewerStatsQuery(userID string) *dbx.Query {
 
 // ListReviewerReviews returns 404 when the user does not exist. It does not
 // return an empty list.
-func (s *Server) ListReviewerReviews(_ context.Context, req reviewsapi.ListReviewerReviewsRequestObject) (reviewsapi.ListReviewerReviewsResponseObject, error) {
+func (s *Server) ListReviewerReviews(ctx context.Context, req reviewsapi.ListReviewerReviewsRequestObject) (reviewsapi.ListReviewerReviewsResponseObject, error) {
 	p := req.Params
 	all := reviewsapi.ListAllReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, CreatorEq: &req.ReviewerId,
@@ -80,10 +80,11 @@ func (s *Server) ListReviewerReviews(_ context.Context, req reviewsapi.ListRevie
 		return []any{"reviewer-reviews", req.ReviewerId, q}
 	}
 	page, err := s.reviewPage(all, fingerprintOf, nil)
-	if err == nil && page.bad == "" && len(page.list.Items) == 0 {
-		// A page with a review proves that the user exists.
+	if err == nil && page.bad == "" {
+		// The lookup runs after the parameter checks. 400 then comes before
+		// 404.
 		var user *core.Record
-		user, err = s.findUser(req.ReviewerId)
+		user, err = s.findReviewer(stateFrom(ctx).user, req.ReviewerId)
 		page.notFound = user == nil
 	}
 	switch {
@@ -97,11 +98,21 @@ func (s *Server) ListReviewerReviews(_ context.Context, req reviewsapi.ListRevie
 	return reviewsapi.ListReviewerReviews200JSONResponse(page.list), nil
 }
 
-// findUser returns a nil record and no error when the user does not exist.
-func (s *Server) findUser(id string) (*core.Record, error) {
+// findReviewer returns a nil record and no error when the user does not
+// exist. A user without approval has a public profile only for the own
+// token. See decision 00034.
+func (s *Server) findReviewer(viewer *core.Record, id string) (*core.Record, error) {
 	user, err := s.app.FindRecordById("users", id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
-	return user, err
+	if err != nil || visibleTo(viewer, user) {
+		return user, err
+	}
+	return nil, nil
+}
+
+// visibleTo is false for a user without approval that viewer is not.
+func visibleTo(viewer, user *core.Record) bool {
+	return user.GetBool("approved") || (viewer != nil && viewer.Id == user.Id)
 }

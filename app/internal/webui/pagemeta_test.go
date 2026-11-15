@@ -137,7 +137,7 @@ func TestPageMeta(t *testing.T) {
 	defer app.Cleanup()
 	app.Settings().Meta.AppURL = "https://reviews.example.com/"
 
-	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana", "approved": true})
 	restaurant := save(t, app, "restaurants", map[string]any{
 		"name": `Luigi's <script>alert(1)</script> & "Co"`, "description": "Pasta\nand pizza.", "creator": user.Id,
 		"address": "Carrer Nou 1, Barcelona", "latitude": 41.39, "longitude": 2.16,
@@ -365,7 +365,7 @@ func TestCrawlerFiles(t *testing.T) {
 	defer app.Cleanup()
 	app.Settings().Meta.AppURL = "https://reviews.example.com/"
 
-	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana", "approved": true})
 	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi & Co", "creator": user.Id})
 	review := save(t, app, "reviews", map[string]any{
 		"restaurant": restaurant.Id, "creator": user.Id, "title": "Fine",

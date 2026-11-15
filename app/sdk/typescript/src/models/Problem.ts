@@ -48,6 +48,12 @@ export interface Problem {
      */
     instance?: string;
     /**
+     * A fixed value for a reason that a client must tell apart from others.
+     * `not_approved` is the `403` of a user that no superuser approved.
+     * 
+     */
+    code?: ProblemCodeEnum;
+    /**
      * The request property that causes a conflict, such as `name` or `location`.
      * Only a conflict of one property has it.
      * 
@@ -62,6 +68,16 @@ export interface Problem {
      */
     errors?: Array<ValidationError>;
 }
+
+
+/**
+ * @export
+ */
+export const ProblemCodeEnum = {
+    NotApproved: 'not_approved',
+} as const;
+export type ProblemCodeEnum = typeof ProblemCodeEnum[keyof typeof ProblemCodeEnum];
+
 
 /**
  * Check if a given object implements the Problem interface.
@@ -88,6 +104,7 @@ export function ProblemFromJSONTyped(json: any, ignoreDiscriminator: boolean): P
         'status': json['status'],
         'detail': json['detail'] == null ? undefined : json['detail'],
         'instance': json['instance'] == null ? undefined : json['instance'],
+        'code': json['code'] == null ? undefined : json['code'],
         'property': json['property'] == null ? undefined : json['property'],
         'restaurant': json['restaurant'] == null ? undefined : json['restaurant'],
         'errors': json['errors'] == null ? undefined : ((json['errors'] as Array<any>).map(ValidationErrorFromJSON)),
@@ -110,6 +127,7 @@ export function ProblemToJSONTyped(value?: Problem | null, ignoreDiscriminator: 
         'status': value['status'],
         'detail': value['detail'],
         'instance': value['instance'],
+        'code': value['code'],
         'property': value['property'],
         'restaurant': value['restaurant'],
         'errors': value['errors'] == null ? undefined : ((value['errors'] as Array<any>).map(ValidationErrorToJSON)),

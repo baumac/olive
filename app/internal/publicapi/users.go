@@ -15,7 +15,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// SignUp creates a user. PocketBase checks that the email is unique.
+// SignUp creates a user. PocketBase checks that the email is unique. The
+// user is not approved. See decision 00034.
 func (s *Server) SignUp(ctx context.Context, req reviewsapi.SignUpRequestObject) (reviewsapi.SignUpResponseObject, error) {
 	b := req.Body
 	users, err := s.app.FindCachedCollectionByNameOrId("users")
@@ -156,11 +157,12 @@ func newAuthToken(user *core.Record) (reviewsapi.AuthToken, time.Time, error) {
 		Token:   &token,
 		Expires: exp.UTC().Format(timestampLayout),
 		User: reviewsapi.User{
-			Id:      user.Id,
-			Email:   openapi_types.Email(user.Email()),
-			Name:    user.GetString("name"),
-			Created: apiTimestamp(user.GetDateTime("created")),
-			Updated: apiTimestamp(user.GetDateTime("updated")),
+			Id:       user.Id,
+			Email:    openapi_types.Email(user.Email()),
+			Name:     user.GetString("name"),
+			Approved: user.GetBool("approved"),
+			Created:  apiTimestamp(user.GetDateTime("created")),
+			Updated:  apiTimestamp(user.GetDateTime("updated")),
 		},
 	}, exp.Time, nil
 }
