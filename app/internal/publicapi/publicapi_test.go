@@ -26,6 +26,7 @@ import (
 var testOptions = publicapi.Options{
 	SignInLimit: 1000, SignInWindow: time.Minute,
 	PhotoUploadLimit: 1000, PhotoUploadWindow: time.Hour,
+	CreateLimit: 1000, EditLimit: 1000, WriteWindow: time.Hour,
 }
 
 type env struct {
@@ -477,6 +478,39 @@ func TestSignInRateLimit(t *testing.T) {
 	}
 	// Sign up has its own count.
 	e.signUp("ana@example.com", "Ana")
+}
+
+func TestWriteRateLimit(t *testing.T) {
+	opts := testOptions
+	opts.CreateLimit, opts.EditLimit = 1, 1
+	e := newEnv(t, opts)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+
+	// A failed request gives its count back.
+	e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"First"}`, token: ana.Token}, http.StatusUnprocessableEntity)
+	restaurant := e.createRestaurant(ana.Token, `{"name":"First"}`)["id"].(string)
+	res := e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"Second","location":` + testLocation + `}`, token: ana.Token}, http.StatusTooManyRequests)
+	if got := res.header.Get("Retry-After"); got == "" || got == "0" {
+		t.Errorf("Retry-After %q", got)
+	}
+	// Each operation and each user has its own count.
+	e.createReview(ana.Token, restaurant, reviewBody)
+	e.createReview(joe.Token, restaurant, reviewBody)
+
+	path := "/v1/restaurants/" + restaurant
+	e.expect(request{method: "PATCH", path: path, body: `{"description":"Tea"}`, token: ana.Token}, http.StatusOK)
+	e.expect(request{method: "PATCH", path: path, body: `{"description":"Cake"}`, token: ana.Token}, http.StatusTooManyRequests)
+	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Picks"}`, token: ana.Token}, http.StatusCreated)
+	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"More"}`, token: ana.Token}, http.StatusTooManyRequests)
+
+	// The approval check runs first. A pending user does not use the count.
+	pending := e.signUpPending("eve@example.com", "Eve")
+	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Wait"}`, token: pending.Token}, http.StatusForbidden)
+	if _, err := e.app.DB().NewQuery("UPDATE users SET approved = TRUE WHERE id = {:id}").Bind(map[string]any{"id": pending.User.ID}).Execute(); err != nil {
+		t.Fatal(err)
+	}
+	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Wait"}`, token: pending.Token}, http.StatusCreated)
 }
 
 func TestSignInFailureLimit(t *testing.T) {

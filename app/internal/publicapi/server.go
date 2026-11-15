@@ -36,6 +36,16 @@ type Options struct {
 	// PhotoUploadWindow.
 	PhotoUploadLimit  int
 	PhotoUploadWindow time.Duration
+	// CreateLimit is the number of restaurants, reviews, or lists that one
+	// user can create in WriteWindow. Each operation has its own count.
+	// Zero uses 30.
+	CreateLimit int
+	// EditLimit is the number of updates, deletes, or list changes of one
+	// operation that one user can send in WriteWindow. Zero uses 300.
+	EditLimit int
+	// WriteWindow is the window of CreateLimit and EditLimit. Zero uses one
+	// hour.
+	WriteWindow time.Duration
 	// PlacesURL is the base URL of the Photon geocoder of the place search.
 	// An empty value turns the place search off.
 	PlacesURL string
@@ -62,12 +72,17 @@ var DefaultOptions = Options{
 	SignInLimit: 10, SignInWindow: time.Minute,
 	SignInFailureLimit: 10, SignInFailureWindow: 15 * time.Minute,
 	PhotoUploadLimit: 30, PhotoUploadWindow: time.Hour,
+	CreateLimit: 30, EditLimit: 300, WriteWindow: time.Hour,
 	PlacesURL:        "https://photon.komoot.io",
 	PlaceSearchLimit: 30, PlaceSearchWindow: time.Minute, PlaceUpstreamLimit: 60,
 }
 
 // rateLimitNames are the values of the name in the x-rate-limit extension.
-var rateLimitNames = []string{"sign-in", "photo-upload", "place-search"}
+var rateLimitNames = []string{"sign-in", "photo-upload", "place-search", "create", "edit"}
+
+// failureRefunds are the limits that give back a request with an error
+// status. A failed write changes no data.
+var failureRefunds = map[string]bool{"create": true, "edit": true}
 
 // Server implements reviewsapi.StrictServerInterface.
 type Server struct {
@@ -143,6 +158,7 @@ func New(app core.App, opts Options) (*Server, error) {
 		cmp.Or(opts.SignInFailureWindow, DefaultOptions.SignInFailureWindow),
 	)
 	signInFailures.maxWindows = 0
+	writeWindow := cmp.Or(opts.WriteWindow, DefaultOptions.WriteWindow)
 	var places *placeSearch
 	if opts.PlacesURL != "" {
 		// The geocoder can use the URL to contact the operator of the app.
@@ -161,6 +177,8 @@ func New(app core.App, opts Options) (*Server, error) {
 			"place-search": newRateLimiter(
 				cmp.Or(opts.PlaceSearchLimit, DefaultOptions.PlaceSearchLimit),
 				cmp.Or(opts.PlaceSearchWindow, DefaultOptions.PlaceSearchWindow)),
+			"create": newRateLimiter(cmp.Or(opts.CreateLimit, DefaultOptions.CreateLimit), writeWindow),
+			"edit":   newRateLimiter(cmp.Or(opts.EditLimit, DefaultOptions.EditLimit), writeWindow),
 		},
 		signInFailures: signInFailures,
 		decodes:        make(chan struct{}, maxParallelDecodes),
@@ -363,6 +381,15 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 	if op.limit != nil && op.limit.key == "user" && !s.allow(w, op, st, st.user.Id) {
 		return
 	}
+	if st.limited != nil && failureRefunds[op.limit.name] {
+		sw := &statusWriter{ResponseWriter: w}
+		w = sw
+		defer func() {
+			if sw.status >= http.StatusBadRequest {
+				st.giveBackLimit()
+			}
+		}()
+	}
 
 	if detail := op.checkQuery(r); detail != "" {
 		writeProblem(w, newProblem(http.StatusBadRequest, detail))
@@ -481,4 +508,28 @@ func (t *trackingWriter) Write(b []byte) (int, error) {
 // Unwrap lets http.ResponseController reach the PocketBase writer.
 func (t *trackingWriter) Unwrap() http.ResponseWriter {
 	return t.ResponseWriter
+}
+
+// statusWriter keeps the first status of the response.
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (s *statusWriter) WriteHeader(status int) {
+	if s.status == 0 {
+		s.status = status
+	}
+	s.ResponseWriter.WriteHeader(status)
+}
+
+func (s *statusWriter) Write(b []byte) (int, error) {
+	if s.status == 0 {
+		s.status = http.StatusOK
+	}
+	return s.ResponseWriter.Write(b)
+}
+
+func (s *statusWriter) Unwrap() http.ResponseWriter {
+	return s.ResponseWriter
 }

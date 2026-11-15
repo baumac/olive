@@ -188,6 +188,9 @@ paths:
   /restaurants:
     post:
       operationId: createRestaurant
+      x-rate-limit:
+        key: user
+        name: create
       summary: Create a restaurant
       description: |
         A restaurant needs a `location`.
@@ -228,6 +231,8 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     get:
       operationId: listRestaurants
       summary: List restaurants
@@ -293,6 +298,9 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       operationId: updateRestaurant
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Update a restaurant
       description: |
         Only the creator of the restaurant can update it.
@@ -336,8 +344,13 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       operationId: deleteRestaurant
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Delete a restaurant
       description: |
         Only the creator of the restaurant can delete it.
@@ -363,12 +376,17 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /restaurants/{restaurantId}/reviews:
     parameters:
       - $ref: '#/components/parameters/RestaurantId'
     post:
       operationId: createReview
+      x-rate-limit:
+        key: user
+        name: create
       summary: Create a review for a restaurant
       description: A user can have at most one review per restaurant.
       tags: [restaurants]
@@ -408,6 +426,8 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     get:
       operationId: listReviews
       summary: List the reviews of a restaurant
@@ -664,6 +684,9 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       operationId: updateReview
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Update a review
       description: |
         Only the creator of the review can update it.
@@ -699,8 +722,13 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       operationId: deleteReview
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Delete a review
       description: Only the creator of the review can delete it.
       tags: [restaurants]
@@ -720,6 +748,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /restaurants/{restaurantId}/reviews/{reviewId}/photos:
     parameters:
@@ -787,6 +817,9 @@ paths:
       - $ref: '#/components/parameters/PhotoId'
     patch:
       operationId: updateReviewPhoto
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Change the alt text of a photo
       description: Only the creator of the review can change its photos.
       tags: [restaurants]
@@ -821,8 +854,13 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       operationId: deleteReviewPhoto
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Delete a photo
       description: Only the creator of the review can delete its photos.
       tags: [restaurants]
@@ -842,6 +880,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant}:
     parameters:
@@ -949,6 +989,9 @@ paths:
   /lists:
     post:
       operationId: createList
+      x-rate-limit:
+        key: user
+        name: create
       summary: Create a list of restaurants
       description: |
         The list is public. The user of the token is its creator.
@@ -990,6 +1033,8 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /lists/{listId}:
     parameters:
@@ -1019,6 +1064,9 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       operationId: updateList
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Rename a list of restaurants
       description: |
         Only the creator of the list can rename it. The favorites list cannot be renamed.
@@ -1058,8 +1106,13 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       operationId: deleteList
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Delete a list of restaurants
       description: |
         Only the creator of the list can delete it. The favorites list cannot be deleted.
@@ -1081,6 +1134,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /lists/{listId}/restaurants:
     parameters:
@@ -1119,6 +1174,9 @@ paths:
       - $ref: '#/components/parameters/RestaurantId'
     put:
       operationId: addListRestaurant
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Add a restaurant to a list
       description: |
         Only the creator of the list can add a restaurant.
@@ -1144,8 +1202,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       operationId: removeListRestaurant
+      x-rate-limit:
+        key: user
+        name: edit
       summary: Remove a restaurant from a list
       description: |
         Only the creator of the list can remove a restaurant.
@@ -1168,6 +1231,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
 components:
   securitySchemes:
@@ -1724,7 +1789,9 @@ components:
             detail: The email or password is not correct.
     TooManyRequests:
       description: |
-        The client sent too many sign up, sign in, photo upload, or place search requests in a short time.
+        The client sent too many requests of one operation in a short time.
+        Sign up and sign in count each IP address. The other operations with a limit count each user.
+        Each operation has its own count.
         Sign in also gets it when one user has too many wrong passwords in a short time.
         A photo upload also gets it when the server holds too many photos in memory.
         This upload does not count for the rate limit of the user.

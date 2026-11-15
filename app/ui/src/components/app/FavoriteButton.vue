@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { signInPath } from '@/composables/useAuth'
-import { apiFailure, listsApi } from '@/lib/api'
+import { apiFailure, listsApi, retryText } from '@/lib/api'
 import { tellPendingApproval } from '@/lib/approval'
 import { currentUser } from '@/lib/session'
 
@@ -57,9 +57,7 @@ async function toggle() {
         ? 'Your favorites list is full.'
         : status === 404
           ? 'The restaurant does not exist now.'
-          : status === 401
-            ? 'Sign in again, then try again.'
-            : 'Try again in a moment.'
+          : retryText(status)
     toast.error(next ? 'Not added to favorites' : 'Not removed from favorites', { description })
   } finally {
     busy.value = false

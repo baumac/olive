@@ -69,6 +69,9 @@ func loadSpec() (*apiSpec, error) {
 			if limit != nil && limit.key == "user" && authOf(doc, op) != authRequired {
 				return nil, fmt.Errorf("%s: x-rate-limit with the key user needs a bearer token", pattern)
 			}
+			if limit != nil && op.Responses.Value("429") == nil {
+				return nil, fmt.Errorf("%s: an operation with x-rate-limit needs a 429 response", pattern)
+			}
 			approval := needsApproval(doc, op)
 			if approval && op.Responses.Value("403") == nil {
 				return nil, fmt.Errorf("%s: an operation that needs an approved user needs a 403 response", pattern)

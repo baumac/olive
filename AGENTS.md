@@ -98,6 +98,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - `REVIEWS_PHOTO_UPLOAD_LIMIT` sets the photo uploads of each user per hour. The default is 30. See decision 00008.
   - `REVIEWS_PLACES_URL` sets the Photon geocoder of the place search. The default is the public server `https://photon.komoot.io`. `off` turns the search off. See decision 00017.
   - `REVIEWS_PLACE_SEARCH_LIMIT` sets the place searches of each user per minute. The default is 30.
+  - `REVIEWS_CREATE_LIMIT` sets the restaurants, reviews, or lists that each user can create per hour. Each operation has its own count. The default is 30. See decision 00036.
+  - `REVIEWS_EDIT_LIMIT` sets the updates, deletes, and list changes of each operation per user and hour. The default is 300. See decision 00036.
   - `REVIEWS_MAP_TILE_URL` sets the tile server of the maps. It is a URL template with `{z}`, `{x}`, and `{y}`. The default is the tile server of OpenStreetMap. `off` turns the maps off. See decision 00018.
   - `REVIEWS_MAP_ATTRIBUTION` sets the credit of a tile server that is not from OpenStreetMap.
   - `REVIEWS_VALIDATE_RESPONSES=false` turns off the spec validation of responses. See decision 00007.
@@ -111,6 +113,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
     - the `users` tag has the sign up, sign in, sign out, and token refresh operations
+    - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. See decision 00036.
     - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out and token refresh. See decision 00034.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user

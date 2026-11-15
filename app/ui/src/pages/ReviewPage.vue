@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, restaurantsApi } from '@/lib/api'
+import { apiFailure, restaurantsApi, retryText } from '@/lib/api'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string; reviewId: string }>()
@@ -42,10 +42,7 @@ async function remove() {
     toast.success('Review deleted', { description: title })
     void router.push(restaurantPath.value)
   } catch (error) {
-    const { status } = await apiFailure(error)
-    toast.error('Review not deleted', {
-      description: status === 401 ? 'Sign in again, then try again.' : 'Try again in a moment.',
-    })
+    toast.error('Review not deleted', { description: retryText((await apiFailure(error)).status) })
   }
 }
 </script>

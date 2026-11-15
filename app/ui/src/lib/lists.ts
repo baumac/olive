@@ -1,4 +1,4 @@
-import { apiFailure, fieldErrors } from './api'
+import { apiFailure, fieldErrors, retryText } from './api'
 
 // listFailureText gives the text for a failed create, rename, or change of
 // a list. fallback is the text for a failure without a known reason.
@@ -10,5 +10,5 @@ export async function listFailureText(error: unknown, fallback: string): Promise
   if (status === 422) {
     return fieldErrors(problem).name ?? 'The name is not valid.'
   }
-  return status === 401 ? 'Sign in again, then try again.' : fallback
+  return retryText(status, fallback)
 }

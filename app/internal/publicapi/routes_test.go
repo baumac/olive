@@ -52,13 +52,29 @@ func TestAuthAndRateLimitComeFromTheSpec(t *testing.T) {
 		"POST " + basePath + "/users/tokens":                 {authIgnored, &rateLimit{"ip", "sign-in"}},
 		"POST " + basePath + "/users/tokens/refresh":         {authRequired, nil},
 		"GET " + basePath + "/restaurants":                   {authOptional, nil},
-		"DELETE " + basePath + "/restaurants/{restaurantId}": {authRequired, nil},
+		"POST " + basePath + "/restaurants":                  {authRequired, &rateLimit{"user", "create"}},
+		"DELETE " + basePath + "/restaurants/{restaurantId}": {authRequired, &rateLimit{"user", "edit"}},
 		"POST " + photos:                                     {authRequired, &rateLimit{"user", "photo-upload"}},
 		"GET " + photos + "/{photoId}/{variant}":             {authOptional, nil},
 	} {
 		op := spec.operations[pattern]
 		if op == nil || op.auth != want.auth || !reflect.DeepEqual(op.limit, want.limit) {
 			t.Errorf("%s: %+v, want %+v", pattern, op, want)
+		}
+	}
+}
+
+// TestWriteOperationsHaveARateLimit finds a new write operation without
+// x-rate-limit. The operations with x-allow-unapproved change no data.
+func TestWriteOperationsHaveARateLimit(t *testing.T) {
+	spec, err := loadSpec()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for pattern, op := range spec.operations {
+		write := !strings.HasPrefix(pattern, "GET ") && !strings.HasPrefix(pattern, "HEAD ")
+		if write && op.approval && op.limit == nil {
+			t.Errorf("%s has no x-rate-limit", pattern)
 		}
 	}
 }

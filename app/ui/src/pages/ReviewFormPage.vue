@@ -15,7 +15,7 @@ import { RatingInput } from '@/components/ui/rating-input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, fieldErrors, restaurantsApi } from '@/lib/api'
+import { apiFailure, fieldErrors, restaurantsApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
 import { formatScore } from '@/lib/format'
@@ -258,7 +258,8 @@ async function submit() {
   } catch (error) {
     const { status, problem } = await apiFailure(error)
     // A 401 opens the sign in page. The draft then waits for the return.
-    if (status !== 401) {
+    // After a 429, the draft waits for the end of the rate limit.
+    if (status !== 401 && status !== 429) {
       clearDraft(draftKey.value)
     } else if (queued.value.length) {
       keepPendingPhotos(draftKey.value, queued.value.map(({ file, alt }) => ({ file, alt })))
@@ -275,6 +276,8 @@ async function submit() {
       alert.value = { title: 'You cannot change this review', description: 'Only the person who wrote it can change it.' }
     } else if (status === 404) {
       alert.value = { title: 'This review no longer exists', description: 'It or its restaurant was deleted.' }
+    } else if (status === 429) {
+      alert.value = { title: 'Review not saved', description: writeLimitText }
     } else if (status !== 401) {
       alert.value = { title: 'Review not saved', description: 'Check your connection and try again in a moment.' }
     }

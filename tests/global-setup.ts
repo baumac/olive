@@ -14,6 +14,8 @@ export default async function globalSetup() {
         REVIEWS_SIGN_IN_LIMIT: '10000',
         REVIEWS_PHOTO_UPLOAD_LIMIT: '10000',
         REVIEWS_PLACE_SEARCH_LIMIT: '10000',
+        REVIEWS_CREATE_LIMIT: '10000',
+        REVIEWS_EDIT_LIMIT: '10000',
         REVIEWS_PLACES_URL: photon.url,
         REVIEWS_MAP_TILE_URL: `${photon.url}/tiles/{z}/{x}/{y}.png`,
       },

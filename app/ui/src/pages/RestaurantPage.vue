@@ -20,7 +20,7 @@ import { MapView } from '@/components/ui/map'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, restaurantsApi } from '@/lib/api'
+import { apiFailure, restaurantsApi, retryText } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { useMapConfig } from '@/lib/mapConfig'
 import { directionsLink, osmLink } from '@/lib/places'
@@ -113,9 +113,7 @@ async function remove() {
         ? 'A restaurant with reviews of other people cannot be deleted.'
         : status === 403
           ? 'You do not have permission to delete it.'
-        : status === 401
-          ? 'Sign in again, then try again.'
-          : 'Try again in a moment.'
+          : retryText(status)
     toast.error('Restaurant not deleted', { description })
   }
 }

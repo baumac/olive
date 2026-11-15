@@ -90,6 +90,19 @@ export async function apiFailure(error: unknown): Promise<ApiFailure> {
   throw error
 }
 
+// writeLimitText is the text of a 429 on a write. The limit of the user can
+// wait up to one hour.
+export const writeLimitText = 'You made many changes in a short time. Try again later.'
+
+// retryText is the text for a failed write. fallback is the text for a
+// failure without a known reason.
+export function retryText(status: number | null, fallback = 'Try again in a moment.'): string {
+  if (status === 429) {
+    return writeLimitText
+  }
+  return status === 401 ? 'Sign in again, then try again.' : fallback
+}
+
 // fieldErrors maps the property of each 422 error to its API message. An
 // array item, such as tags[2], maps to its array property. A nested
 // property, such as location.address, maps to its object property.

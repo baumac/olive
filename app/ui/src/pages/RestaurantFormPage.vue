@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, fieldErrors, restaurantsApi } from '@/lib/api'
+import { apiFailure, fieldErrors, restaurantsApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { nearbyRadius, sameLocation } from '@/lib/places'
 import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
@@ -173,7 +173,8 @@ async function submit() {
   } catch (error) {
     const { status, problem } = await apiFailure(error)
     // A 401 opens the sign in page. The draft then waits for the return.
-    if (status !== 401) {
+    // After a 429, the draft waits for the end of the rate limit.
+    if (status !== 401 && status !== 429) {
       clearDraft(draftKey.value)
     }
     if (status === 422) {
@@ -194,6 +195,8 @@ async function submit() {
       alert.value = { title: 'You cannot change this restaurant', description: 'Only the person who added it can change it. If that person has no account now, write a review first.' }
     } else if (status === 404) {
       alert.value = { title: 'This restaurant no longer exists', description: 'Someone deleted it. Go back to the restaurants.' }
+    } else if (status === 429) {
+      alert.value = { title: 'Restaurant not saved', description: writeLimitText }
     } else if (status !== 401) {
       alert.value = { title: 'Restaurant not saved', description: 'Check your connection and try again in a moment.' }
     }

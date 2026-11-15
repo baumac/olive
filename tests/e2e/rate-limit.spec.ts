@@ -45,3 +45,17 @@ test('too many photo uploads show an error', async ({ page }) => withApp(8099, {
   await page.getByRole('button', { name: 'Upload photo' }).click()
   await expect(page.getByText('You added many photos in a short time. Try again later.')).toBeVisible()
 }))
+
+test('too many new lists show an error', async ({ page }) => withApp(8095, { REVIEWS_CREATE_LIMIT: '1' }, async (app) => {
+  const api = new TestApi(app.baseURL, app.superuserToken)
+  const user = await api.signUp('Ana')
+  const restaurant = await api.createRestaurant(user, { name: 'Busy Place' })
+  await api.createList(user, 'Brunch')
+  await signIn(page, user)
+
+  await page.goto(`${app.baseURL}/restaurants/${restaurant.id}`)
+  await page.getByRole('button', { name: 'Save to list' }).click()
+  await page.getByLabel('Name of a new list').fill('Dinner')
+  await page.getByRole('button', { name: 'Create', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'You made many changes in a short time. Try again later.' })).toBeVisible()
+}))
