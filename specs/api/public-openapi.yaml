@@ -33,6 +33,8 @@ tags:
     description: The public profiles of users and their reviews.
   - name: places
     description: The search for the place of a restaurant.
+  - name: lists
+    description: The lists of restaurants of users. Each user has a favorites list.
 
 paths:
   /users:
@@ -901,6 +903,260 @@ paths:
               schema:
                 type: string
 
+  /reviewers/{reviewerId}/lists:
+    parameters:
+      - $ref: '#/components/parameters/ReviewerId'
+    get:
+      operationId: listReviewerLists
+      summary: List the lists of a user
+      description: |
+        The favorites list is first. The other lists follow, the newest first.
+        A user has at most 50 lists. The response has all of them.
+        With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant.
+      tags: [lists]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ListHasRestaurant'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The lists of the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedListPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lists:
+    post:
+      operationId: createList
+      summary: Create a list of restaurants
+      description: |
+        The list is public. The user of the token is its creator.
+        A name that another list of the user has causes `409 Conflict`. The comparison ignores the case of ASCII letters.
+        A user with 50 lists gets `409 Conflict`.
+        The API removes the spaces at the start and the end of the name.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The list to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedListCreate'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '201':
+          description: The list was created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+
+  /lists/{listId}:
+    parameters:
+      - $ref: '#/components/parameters/ListId'
+    get:
+      operationId: getList
+      summary: Get a list of restaurants
+      tags: [lists]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateList
+      summary: Rename a list of restaurants
+      description: |
+        Only the creator of the list can rename it. The favorites list cannot be renamed.
+        A name that another list of the user has causes `409 Conflict`.
+        The API removes the spaces at the start and the end of the name.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The list properties to change.
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/SavedListPatch'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The updated list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+    delete:
+      operationId: deleteList
+      summary: Delete a list of restaurants
+      description: |
+        Only the creator of the list can delete it. The favorites list cannot be deleted.
+        The restaurants of the list stay.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The list was deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lists/{listId}/restaurants:
+    parameters:
+      - $ref: '#/components/parameters/ListId'
+    get:
+      operationId: listListRestaurants
+      summary: List the restaurants of a list
+      description: The restaurant that was added last is first.
+      tags: [lists]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of restaurants.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lists/{listRef}/restaurants/{restaurantId}:
+    parameters:
+      - $ref: '#/components/parameters/ListRef'
+      - $ref: '#/components/parameters/RestaurantId'
+    put:
+      operationId: addListRestaurant
+      summary: Add a restaurant to a list
+      description: |
+        Only the creator of the list can add a restaurant.
+        A restaurant that the list already has changes nothing.
+        A list with 500 restaurants gets `409 Conflict`.
+        A new restaurant changes `updated` of the list.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The list has the restaurant.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      operationId: removeListRestaurant
+      summary: Remove a restaurant from a list
+      description: |
+        Only the creator of the list can remove a restaurant.
+        A restaurant that the list does not have changes nothing.
+        A removed restaurant changes `updated` of the list.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The list does not have the restaurant.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -988,6 +1244,30 @@ components:
       in: path
       description: The ID of the user.
       required: true
+      schema:
+        $ref: '#/components/schemas/RecordId'
+    ListId:
+      name: listId
+      in: path
+      description: The ID of the list.
+      required: true
+      schema:
+        $ref: '#/components/schemas/RecordId'
+    ListRef:
+      name: listRef
+      in: path
+      description: The ID of the list, or `favorites` for the favorites list of the user of the token.
+      required: true
+      schema:
+        type: string
+        pattern: '^([a-z0-9]{15}|favorites)$'
+        examples: [favorites]
+    ListHasRestaurant:
+      name: restaurant[eq]
+      in: query
+      description: |
+        The ID of a restaurant. Each list of the response then has `has_restaurant`.
+        The parameter does not filter the lists.
       schema:
         $ref: '#/components/schemas/RecordId'
     PhotoId:
@@ -1341,7 +1621,9 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     Forbidden:
-      description: The user is not the creator of the resource. For a restaurant without a creator, the user has no review of it.
+      description: |
+        The user is not the creator of the resource. For a restaurant without a creator, the user has no review of it.
+        A rename or a delete of a favorites list gets this response also.
       content:
         application/problem+json:
           schema:
@@ -1359,7 +1641,8 @@ components:
         a delete of a restaurant that has a review of another user,
         a change of `name` or `location` on a restaurant that has a review of another user,
         a `location.place_id` that another restaurant has,
-        or a sixth photo of a review.
+        a sixth photo of a review, a list name that another list of the user has,
+        or a list or a restaurant above the list limits.
       content:
         application/problem+json:
           schema:
@@ -1620,7 +1903,7 @@ components:
     Reviewer:
       description: The public profile of a user. It has the fields of `Creator` and no private data.
       type: object
-      required: [id, name, review_count, average_overall, restaurant_count]
+      required: [id, name, review_count, average_overall, restaurant_count, list_count]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -1643,12 +1926,17 @@ components:
             `listRestaurants` with `creator[eq]` lists them.
           type: integer
           minimum: 0
+        list_count:
+          description: The number of lists of the user. `listReviewerLists` lists them.
+          type: integer
+          minimum: 0
       examples:
         - id: u5n1c8r3t6y0b2e
           name: Ana
           review_count: 12
           average_overall: 7.4
           restaurant_count: 3
+          list_count: 2
 
     ScoreRange:
       description: Comparisons for a score. All comparisons must match.
@@ -1699,7 +1987,7 @@ components:
     Restaurant:
       description: A restaurant that can be reviewed.
       type: object
-      required: [id, name, location, creator, review_count, rating, cover, created, updated]
+      required: [id, name, location, creator, review_count, rating, cover, favorite, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -1735,6 +2023,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/RestaurantPhoto'
             - type: 'null'
+        favorite:
+          description: |
+            `true` if the favorites list of the user of the token has the restaurant.
+            It is `false` for a request without a token.
+          type: boolean
         created:
           $ref: '#/components/schemas/Timestamp'
         updated:
@@ -1772,6 +2065,7 @@ components:
             creator:
               id: u5n1c8r3t6y0b2e
               name: Ana
+          favorite: false
           created: '2024-11-04T01:26:55.002Z'
           updated: '2024-11-04T01:26:55.002Z'
     RestaurantRating:
@@ -1868,9 +2162,89 @@ components:
               review_count: 0
               rating: null
               cover: null
+              favorite: false
               created: '2024-11-04T01:26:55.002Z'
               updated: '2024-11-04T01:26:55.002Z'
           next_cursor: c2Fk9xQe7LmT2vBn
+
+    SavedList:
+      description: A public list of restaurants of a user. The `favorites` list of a user always exists.
+      type: object
+      required: [id, name, kind, creator, item_count, created, updated]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        name:
+          $ref: '#/components/schemas/Name'
+        kind:
+          description: A user has one `favorites` list. It cannot be renamed or deleted.
+          type: string
+          enum: [favorites, custom]
+        creator:
+          $ref: '#/components/schemas/Creator'
+        item_count:
+          description: The number of restaurants of the list.
+          type: integer
+          minimum: 0
+        has_restaurant:
+          description: |
+            `true` if the list has the restaurant of `restaurant[eq]`.
+            Only `listReviewerLists` with `restaurant[eq]` gives this property.
+          type: boolean
+        created:
+          $ref: '#/components/schemas/Timestamp'
+        updated:
+          $ref: '#/components/schemas/Timestamp'
+      examples:
+        - id: l7d2f9h4j1k8m3p
+          name: Date night
+          kind: custom
+          creator:
+            id: u5n1c8r3t6y0b2e
+            name: Ana
+          item_count: 4
+          created: '2024-11-04T01:26:55.002Z'
+          updated: '2024-11-04T01:26:55.002Z'
+    SavedListCreate:
+      description: The properties of a new list.
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+      examples:
+        - name: Date night
+    SavedListPatch:
+      description: A JSON Merge Patch. An empty patch changes nothing.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+      examples:
+        - name: Date nights
+    SavedListPage:
+      description: All lists of a user.
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/SavedList'
+      examples:
+        - items:
+            - id: f1a6c3e8g5i2k9m
+              name: Favorites
+              kind: favorites
+              creator:
+                id: u5n1c8r3t6y0b2e
+                name: Ana
+              item_count: 12
+              created: '2024-11-04T01:26:55.002Z'
+              updated: '2024-11-04T01:26:55.002Z'
 
     Review:
       description: A review of a restaurant. It scores the space, service, food, price, and cleanliness.

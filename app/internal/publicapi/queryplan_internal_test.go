@@ -7,6 +7,7 @@ import (
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
 )
 
 func TestRestaurantListsUseIndexes(t *testing.T) {
@@ -213,5 +214,35 @@ func TestReviewerRestaurantsUseIndex(t *testing.T) {
 				t.Errorf("plan does not read the creator index in order:\n%s", plan)
 			}
 		})
+	}
+}
+
+func TestListsUseIndexes(t *testing.T) {
+	s := newTestServer(t)
+	restaurants, err := s.app.FindCollectionByNameOrId("restaurants")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := make([]*core.Record, 20)
+	for i := range page {
+		page[i] = core.NewRecord(restaurants)
+	}
+	w := listItemsWhere("l7d2f9h4j1k8m3p")
+	w.keyset(listItemKeys, []any{"2024-11-04 01:26:55.002Z", "k3x9m2p7q1w8z4a"})
+	for name, c := range map[string]struct {
+		plan string
+		want []string
+	}{
+		"favorites of a page":   {queryPlan(t, s, s.favoritesQuery("u5n1c8r3t6y0b2e", page...).Build()), []string{"idx_lists_favorites", "idx_list_items_list_restaurant"}},
+		"restaurants of a list": {queryPlan(t, s, s.sortQuery("list_items", w, listItemKeys, defaultLimit+1).Build()), []string{"idx_list_items_list_created"}},
+	} {
+		for _, want := range c.want {
+			if !strings.Contains(c.plan, want) {
+				t.Errorf("%s: plan has no %q:\n%s", name, want, c.plan)
+			}
+		}
+		if strings.Contains(c.plan, "TEMP B-TREE") || strings.Contains(c.plan, "SCAN") {
+			t.Errorf("%s: plan sorts or scans:\n%s", name, c.plan)
+		}
 	}
 }

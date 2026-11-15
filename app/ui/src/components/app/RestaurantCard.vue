@@ -7,15 +7,26 @@ import { CoverPhoto } from '@/components/ui/cover-photo'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { formatCount } from '@/lib/format'
 import { tagList } from '@/lib/reviews'
+import FavoriteButton from './FavoriteButton.vue'
 
 // heading is the element of the name. A list below an h2 uses h3.
 withDefaults(defineProps<{ restaurant: Restaurant; heading?: 'h2' | 'h3' }>(), { heading: 'h2' })
+
+defineEmits<{ favorite: [favorite: boolean] }>()
 </script>
 
 <template>
   <Card class="hover:border-ring relative h-full overflow-hidden pt-0">
     <!-- The name of the card link is the name. The cover then has no alt text. -->
     <CoverPhoto :photo="restaurant.cover" size="card" />
+    <!-- The heart is above the link layer of the card. -->
+    <FavoriteButton
+      :restaurant-id="restaurant.id"
+      :name="restaurant.name"
+      :favorite="restaurant.favorite"
+      class="absolute top-2 right-2 z-10"
+      @change="$emit('favorite', $event)"
+    />
     <CardHeader>
       <CardTitle :as="heading" class="text-base leading-snug">
         <!-- The after element makes the full card the link. -->

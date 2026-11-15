@@ -1,4 +1,5 @@
 .openapi-generator-ignore
+apis/ListsApi.ts
 apis/PlacesApi.ts
 apis/RestaurantsApi.ts
 apis/ReviewersApi.ts
@@ -30,6 +31,10 @@ models/ReviewCreate.ts
 models/ReviewList.ts
 models/ReviewPatch.ts
 models/Reviewer.ts
+models/SavedList.ts
+models/SavedListCreate.ts
+models/SavedListPage.ts
+models/SavedListPatch.ts
 models/ScoreRange.ts
 models/TimestampRange.ts
 models/User.ts

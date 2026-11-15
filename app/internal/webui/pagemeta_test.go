@@ -151,6 +151,8 @@ func TestPageMeta(t *testing.T) {
 	}))
 	other := save(t, app, "reviews", with(scores, map[string]any{"restaurant": plain.Id, "creator": user.Id, "title": "Fine"}))
 	photo := savePhoto(t, app, review.Id)
+	list := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Date <i>night</i>", "kind": "custom"})
+	save(t, app, "list_items", map[string]any{"list": list.Id, "restaurant": plain.Id})
 
 	h := newHandler(t, app, fstest.MapFS{"index.html": {Data: []byte(testIndex)}})
 	restaurantPath := "/restaurants/" + restaurant.Id
@@ -229,6 +231,16 @@ func TestPageMeta(t *testing.T) {
 		{"GET", "/Reviewers/" + user.Id + "/", 200, []string{`<title>Ana · Sponga47 Reviews</title>`}},
 		{"GET", "/reviewers/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
 		{"GET", "/reviewers/BAD", 200, []string{`content="Default"`}},
+		{"GET", "/lists/" + list.Id, 200, []string{
+			`<title>Date &lt;i&gt;night&lt;/i&gt; by Ana · Sponga47 Reviews</title>`,
+			`<meta name="description" content="A list of 1 restaurant by Ana on Sponga47 Reviews." />`,
+			`<meta property="og:type" content="website" />`,
+			`<meta property="og:url" content="https://reviews.example.com/lists/` + list.Id + `" />`,
+			`<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList",` +
+				`"name":"Date \u003ci\u003enight\u003c/i\u003e","numberOfItems":1,` +
+				`"url":"https://reviews.example.com/lists/` + list.Id + `"}</script>`,
+		}},
+		{"GET", "/lists/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
 	} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest(tc.method, tc.path, nil))
@@ -359,6 +371,9 @@ func TestCrawlerFiles(t *testing.T) {
 		"restaurant": restaurant.Id, "creator": user.Id, "title": "Fine",
 		"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7,
 	})
+	list := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Date night", "kind": "custom"})
+	save(t, app, "list_items", map[string]any{"list": list.Id, "restaurant": restaurant.Id})
+	empty := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Empty", "kind": "custom"})
 	h := newHandler(t, app, fstest.MapFS{"index.html": {Data: []byte(testIndex)}})
 	get := func(path string) *httptest.ResponseRecorder {
 		w := httptest.NewRecorder()
@@ -386,12 +401,13 @@ func TestCrawlerFiles(t *testing.T) {
 		`<url><loc>https://reviews.example.com/restaurants/` + restaurant.Id + `</loc><lastmod>` +
 			restaurant.GetDateTime("updated").Time().UTC().Format(time.RFC3339) + `</lastmod></url>`,
 		`<loc>https://reviews.example.com/restaurants/` + restaurant.Id + `/reviews/` + review.Id + `</loc>`,
+		`<loc>https://reviews.example.com/lists/` + list.Id + `</loc>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("sitemap.xml: no %s in\n%s", want, body)
 		}
 	}
-	if strings.Count(body, "<url>") != 3 || strings.Contains(body, user.Id) {
+	if strings.Count(body, "<url>") != 4 || strings.Contains(body, user.Id) || strings.Contains(body, empty.Id) {
 		t.Errorf("sitemap.xml has other URLs:\n%s", body)
 	}
 

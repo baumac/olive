@@ -111,6 +111,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
     - the `places` tag has the place search for the location of a restaurant
+    - the `lists` tag has the public lists of restaurants of users. Each user has a favorites list. See decision 00033.
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`
@@ -122,7 +123,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.
   - **`app/main.go`** - the PocketBase app
-  - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, and `review_photos` collections
+  - **`app/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, and `list_items` collections
     - SQLite triggers keep the `restaurant_overall` and `restaurant_tags` tables equal to the records. See decision 00012.
     - `restaurant_overall` has the plain average for the responses and a Bayesian average for the `overall` sort. See decision 00029.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.
@@ -135,10 +136,11 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - It checks, changes, and serves the photos of reviews. See decision 00008.
     - Its timestamps are RFC 3339. The database has the PocketBase format with a space. See decision 00023.
     - It gets the places of the place search from a Photon geocoder. See decision 00017.
+    - A record hook gives each new user a favorites list. See decision 00033.
   - **`app/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/internal/webui`** - embeds the UI build and serves it. See decision 00005.
-    - It writes the title and link preview tags of restaurant and review pages into `index.html`. See decision 00013.
+    - It writes the title and link preview tags of restaurant, review, reviewer, and list pages into `index.html`. See decision 00013.
     - It writes the schema.org JSON-LD of these pages and of reviewer pages, and serves `/robots.txt` and `/sitemap.xml`. See decision 00021.
     - It serves `/map-config.json` with the tile server of the maps and allows its origin in the Content Security Policy. See decision 00018.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`

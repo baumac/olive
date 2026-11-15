@@ -166,12 +166,12 @@ func (p indexPage) pageTitle(title string) string {
 	return title + " · " + p.siteName
 }
 
-// errNoRecord tells that the path names a restaurant, a review, or a user
-// that does not exist.
+// errNoRecord tells that the path names a restaurant, a review, a user, or
+// a list that does not exist.
 var errNoRecord = errors.New("no record")
 
-// metaFor returns false for a path that is not a restaurant, review, or
-// reviewer page. appURL is the Application URL of the PocketBase settings.
+// metaFor returns false for a path that is not a restaurant, review,
+// reviewer, or list page. appURL is the Application URL of the PocketBase settings.
 // The literal path parts ignore case like Vue Router.
 func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, error) {
 	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
@@ -187,6 +187,24 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		}
 		meta := p.reviewerMeta(user, baseURL)
 		meta.StructuredData = data.script()
+		return meta, true, nil
+	}
+	if len(parts) == 2 && strings.EqualFold(parts[0], "lists") && recordID.MatchString(parts[1]) {
+		list, err := app.FindRecordById("lists", parts[1])
+		if err != nil {
+			return pageMeta{}, true, notFound(err)
+		}
+		creator, err := app.FindRecordById("users", list.GetString("creator"))
+		if err != nil {
+			return pageMeta{}, true, notFound(err)
+		}
+		count, err := app.CountRecords("list_items", dbx.HashExp{"list": list.Id})
+		if err != nil {
+			return pageMeta{}, true, err
+		}
+		baseURL := publicBaseURL(appURL)
+		meta := p.listMeta(list, creator, int(count), baseURL)
+		meta.StructuredData = listData(list, int(count), baseURL).script()
 		return meta, true, nil
 	}
 	if len(parts) < 2 || !strings.EqualFold(parts[0], "restaurants") || !recordID.MatchString(parts[1]) {
@@ -260,6 +278,22 @@ func (p indexPage) restaurantMeta(restaurant *core.Record, baseURL string) pageM
 	meta.Description = description
 	meta.Type = "website"
 	meta.URL = pageURL(baseURL, "/restaurants/"+restaurant.Id)
+	return meta
+}
+
+// listMeta has only the public fields of the creator.
+func (p indexPage) listMeta(list, creator *core.Record, count int, baseURL string) pageMeta {
+	title := list.GetString("name") + " by " + creator.GetString("name")
+	restaurants := strconv.Itoa(count) + " restaurants"
+	if count == 1 {
+		restaurants = "1 restaurant"
+	}
+	meta := p.siteImage
+	meta.Title = p.pageTitle(title)
+	meta.OGTitle = title
+	meta.Description = "A list of " + restaurants + " by " + creator.GetString("name") + " on " + p.siteName + "."
+	meta.Type = "website"
+	meta.URL = pageURL(baseURL, "/lists/"+list.Id)
 	return meta
 }
 

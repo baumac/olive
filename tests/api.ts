@@ -1,5 +1,5 @@
-import type { AuthToken, Location, Photo, Restaurant, RestaurantCreate, Review, ReviewCreate } from '@reviews/sdk'
-import { Configuration, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
+import type { AuthToken, Location, Photo, Restaurant, RestaurantCreate, Review, ReviewCreate, SavedList } from '@reviews/sdk'
+import { Configuration, ListsApi, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -64,6 +64,14 @@ export class TestApi {
     return new RestaurantsApi(this.config(user.token)).createRestaurant({
       restaurantCreate: { ...rest, tags: tags ? new Set(tags) : undefined, location: location ?? randomLocation() },
     })
+  }
+
+  createList(user: TestUser, name: string): Promise<SavedList> {
+    return new ListsApi(this.config(user.token)).createList({ savedListCreate: { name } })
+  }
+
+  addToList(user: TestUser, listRef: string, restaurantId: string): Promise<void> {
+    return new ListsApi(this.config(user.token)).addListRestaurant({ listRef, restaurantId })
   }
 
   createReview(user: TestUser, restaurantId: string, reviewCreate: ReviewCreate): Promise<Review> {

@@ -91,6 +91,12 @@ export interface Restaurant {
      */
     cover: RestaurantPhoto | null;
     /**
+     * `true` if the favorites list of the user of the token has the restaurant.
+     * It is `false` for a request without a token.
+     * 
+     */
+    favorite: boolean;
+    /**
      * An RFC 3339 timestamp in UTC with millisecond precision.
      */
     created: string;
@@ -111,6 +117,7 @@ export function instanceOfRestaurant(value: object): value is Restaurant {
     if ((!('reviewCount' in (value as Record<string, any>)) && !('review_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['reviewCount'] === undefined && (value as Record<string, any>)['review_count'] === undefined)) return false;
     if (!('rating' in value) || value['rating'] === undefined) return false;
     if (!('cover' in value) || value['cover'] === undefined) return false;
+    if (!('favorite' in value) || value['favorite'] === undefined) return false;
     if (!('created' in value) || value['created'] === undefined) return false;
     if (!('updated' in value) || value['updated'] === undefined) return false;
     return true;
@@ -135,6 +142,7 @@ export function RestaurantFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         'reviewCount': json['review_count'],
         'rating': RestaurantRatingFromJSON(json['rating']),
         'cover': RestaurantPhotoFromJSON(json['cover']),
+        'favorite': json['favorite'],
         'created': json['created'],
         'updated': json['updated'],
     };
@@ -160,6 +168,7 @@ export function RestaurantToJSONTyped(value?: Restaurant | null, ignoreDiscrimin
         'review_count': value['reviewCount'],
         'rating': RestaurantRatingToJSON(value['rating']),
         'cover': RestaurantPhotoToJSON(value['cover']),
+        'favorite': value['favorite'],
         'created': value['created'],
         'updated': value['updated'],
     };

@@ -2,6 +2,7 @@
 import type { Reviewer } from '@reviews/sdk'
 import { computed, watch } from 'vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import ReviewerLists from '@/components/app/ReviewerLists.vue'
 import ReviewerRestaurants from '@/components/app/ReviewerRestaurants.vue'
 import ReviewList from '@/components/app/ReviewList.vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
@@ -65,6 +66,10 @@ const failedStatus = computed(() => {
             <span class="text-muted-foreground text-sm">{{ summary }}</span>
           </p>
         </div>
+      </section>
+      <section class="flex flex-col gap-4" aria-labelledby="lists-heading">
+        <h2 id="lists-heading" class="text-3xl font-semibold tracking-tight">Lists</h2>
+        <ReviewerLists :reviewer-id="reviewerId" :own="isSelf" />
       </section>
       <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">
         <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>

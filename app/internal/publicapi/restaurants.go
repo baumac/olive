@@ -24,7 +24,7 @@ var restaurantSorts = map[string]sortField{
 
 // ListRestaurants uses keyset pagination. The cursor has the sort values of
 // the last item.
-func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestaurantsRequestObject) (reviewsapi.ListRestaurantsResponseObject, error) {
+func (s *Server) ListRestaurants(ctx context.Context, req reviewsapi.ListRestaurantsRequestObject) (reviewsapi.ListRestaurantsResponseObject, error) {
 	p := req.Params
 	bad := func(detail string) (reviewsapi.ListRestaurantsResponseObject, error) {
 		return reviewsapi.ListRestaurants400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
@@ -85,21 +85,9 @@ func (s *Server) ListRestaurants(_ context.Context, req reviewsapi.ListRestauran
 	if err != nil {
 		return nil, err
 	}
-	users, err := s.creators(records...)
+	items, err := s.restaurantsOf(stateFrom(ctx).user, records...)
 	if err != nil {
 		return nil, err
-	}
-	ratings, err := s.ratings(records...)
-	if err != nil {
-		return nil, err
-	}
-	covers, err := s.covers(records...)
-	if err != nil {
-		return nil, err
-	}
-	items := make([]reviewsapi.Restaurant, len(records))
-	for i, r := range records {
-		items[i] = toRestaurant(r, users, ratings, covers)
 	}
 	return reviewsapi.ListRestaurants200JSONResponse{Items: items, NextCursor: next}, nil
 }
@@ -143,12 +131,12 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 
 	location := basePath + "/restaurants/" + r.Id
 	return reviewsapi.CreateRestaurant201JSONResponse{
-		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}, nil, nil),
+		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}, nil, nil, nil),
 		Headers: reviewsapi.CreateRestaurant201ResponseHeaders{Location: &location},
 	}, nil
 }
 
-func (s *Server) GetRestaurant(_ context.Context, req reviewsapi.GetRestaurantRequestObject) (reviewsapi.GetRestaurantResponseObject, error) {
+func (s *Server) GetRestaurant(ctx context.Context, req reviewsapi.GetRestaurantRequestObject) (reviewsapi.GetRestaurantResponseObject, error) {
 	r, err := s.findRestaurant(s.app, req.RestaurantId)
 	if errors.Is(err, sql.ErrNoRows) {
 		return reviewsapi.GetRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}, nil
@@ -156,7 +144,7 @@ func (s *Server) GetRestaurant(_ context.Context, req reviewsapi.GetRestaurantRe
 	if err != nil {
 		return nil, err
 	}
-	out, err := s.restaurantResponse(r)
+	out, err := s.restaurantResponse(stateFrom(ctx).user, r)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +225,7 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 	if response != nil {
 		return response, nil
 	}
-	out, err := s.restaurantResponse(saved)
+	out, err := s.restaurantResponse(user, saved)
 	if err != nil {
 		return nil, err
 	}
@@ -372,24 +360,42 @@ func (s *Server) findRestaurant(app core.App, id string) (*core.Record, error) {
 	return app.FindRecordById("restaurants", id)
 }
 
-func (s *Server) restaurantResponse(r *core.Record) (reviewsapi.Restaurant, error) {
-	users, err := s.creators(r)
+func (s *Server) restaurantResponse(user, r *core.Record) (reviewsapi.Restaurant, error) {
+	out, err := s.restaurantsOf(user, r)
 	if err != nil {
 		return reviewsapi.Restaurant{}, err
 	}
-	ratings, err := s.ratings(r)
+	return out[0], nil
+}
+
+// restaurantsOf gets the creators, ratings, and covers of records. A nil
+// user has no favorite.
+func (s *Server) restaurantsOf(user *core.Record, records ...*core.Record) ([]reviewsapi.Restaurant, error) {
+	users, err := s.creators(records...)
 	if err != nil {
-		return reviewsapi.Restaurant{}, err
+		return nil, err
 	}
-	covers, err := s.covers(r)
+	ratings, err := s.ratings(records...)
 	if err != nil {
-		return reviewsapi.Restaurant{}, err
+		return nil, err
 	}
-	return toRestaurant(r, users, ratings, covers), nil
+	covers, err := s.covers(records...)
+	if err != nil {
+		return nil, err
+	}
+	favorites, err := s.favoriteIDs(user, records...)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]reviewsapi.Restaurant, len(records))
+	for i, r := range records {
+		items[i] = toRestaurant(r, users, ratings, covers, favorites)
+	}
+	return items, nil
 }
 
 // toRestaurant gives a restaurant that ratings does not list no reviews.
-func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[string]restaurantRating, covers map[string]reviewsapi.RestaurantPhoto) reviewsapi.Restaurant {
+func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[string]restaurantRating, covers map[string]reviewsapi.RestaurantPhoto, favorites map[string]bool) reviewsapi.Restaurant {
 	out := reviewsapi.Restaurant{
 		Id:          r.Id,
 		Name:        r.GetString("name"),
@@ -399,6 +405,7 @@ func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[str
 		Creator:     nullable.NewNullNullable[reviewsapi.Creator](),
 		Rating:      nullable.NewNullNullable[reviewsapi.RestaurantRating](),
 		Cover:       nullable.NewNullNullable[reviewsapi.RestaurantPhoto](),
+		Favorite:    favorites[r.Id],
 		Created:     apiTimestamp(r.GetDateTime("created")),
 		Updated:     apiTimestamp(r.GetDateTime("updated")),
 	}

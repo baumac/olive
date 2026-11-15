@@ -93,6 +93,7 @@ var _ reviewsapi.StrictServerInterface = (*Server)(nil)
 // Register mounts the Public API on the router of app under /v1.
 func Register(app core.App, opts Options) {
 	guardReviewOverall(app)
+	registerFavorites(app)
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		s, err := New(app, opts)
 		if err != nil {
@@ -200,7 +201,7 @@ func (s *Server) serverError(w http.ResponseWriter, r *http.Request, err error) 
 func noRoute(mux *http.ServeMux) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var allowed []string
-		for _, m := range []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete} {
+		for _, m := range []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
 			probe := r.Clone(r.Context())
 			probe.Method = m
 			if _, pattern := mux.Handler(probe); pattern != r.Pattern {

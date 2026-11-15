@@ -49,19 +49,23 @@ type sitemapFile struct {
 	URLs    []sitemapURL `xml:"url"`
 }
 
-// sitemap lists the restaurants list, the restaurants, and the reviews.
+// sitemap lists the restaurants list, the restaurants, the reviews, and the
+// lists that have a restaurant.
 // The records with the newest change come first. It stops at
 // maxSitemapURLs.
 func sitemap(app core.App, baseURL string) ([]byte, error) {
 	file := sitemapFile{XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9", URLs: []sitemapURL{{Loc: baseURL + "/restaurants"}}}
 	var rows []struct {
+		Kind       string         `db:"kind"`
 		ID         string         `db:"id"`
 		Restaurant string         `db:"restaurant"`
 		Updated    types.DateTime `db:"updated"`
 	}
 	err := app.DB().
-		NewQuery("SELECT [[id]], '' AS [[restaurant]], [[updated]] FROM {{restaurants}} " +
-			"UNION ALL SELECT [[id]], [[restaurant]], [[updated]] FROM {{reviews}} " +
+		NewQuery("SELECT 'restaurant' AS [[kind]], [[id]], '' AS [[restaurant]], [[updated]] FROM {{restaurants}} " +
+			"UNION ALL SELECT 'review', [[id]], [[restaurant]], [[updated]] FROM {{reviews}} " +
+			"UNION ALL SELECT 'list', [[id]], '', [[updated]] FROM {{lists}} " +
+			"WHERE EXISTS (SELECT 1 FROM {{list_items}} WHERE [[list_items.list]] = [[lists.id]]) " +
 			"ORDER BY [[updated]] DESC, [[id]] LIMIT {:limit}").
 		Bind(map[string]any{"limit": maxSitemapURLs - len(file.URLs)}).
 		All(&rows)
@@ -70,8 +74,11 @@ func sitemap(app core.App, baseURL string) ([]byte, error) {
 	}
 	for _, row := range rows {
 		path := "/restaurants/" + row.ID
-		if row.Restaurant != "" {
+		switch row.Kind {
+		case "review":
 			path = "/restaurants/" + row.Restaurant + "/reviews/" + row.ID
+		case "list":
+			path = "/lists/" + row.ID
 		}
 		u := sitemapURL{Loc: baseURL + path}
 		if !row.Updated.IsZero() {

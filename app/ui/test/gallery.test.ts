@@ -34,6 +34,7 @@ function restaurantWith(c: RestaurantPhoto | null): Restaurant {
     reviewCount: 2,
     rating: null,
     cover: c,
+    favorite: false,
     created: '2024-11-06T19:02:11.120Z',
     updated: '2024-11-06T19:02:11.120Z',
   }

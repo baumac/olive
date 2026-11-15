@@ -11,7 +11,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - Allow users to set preferred location and incorporate that into the maps feature
   - The default list sort is `-created`, update it to be `best rated` or `near`. 
   - The API has `near`, but the UI never asks for `navigator.geolocation`.
-2. Allow users to create lists of restaurants. All users should have a favorite restaurants list that they cannot be deleted.
 
 ## Production Readiness
 

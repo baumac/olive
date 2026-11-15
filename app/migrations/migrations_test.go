@@ -436,3 +436,64 @@ func TestReviewOverallColumn(t *testing.T) {
 		t.Errorf("overall after a field change is %v, want 7", got)
 	}
 }
+
+func TestListsMigration(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268813_add_lists.go")
+	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
+	redo()
+
+	favorites, err := app.FindAllRecords("lists", dbx.HashExp{"creator": ana.Id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(favorites) != 1 || favorites[0].GetString("kind") != "favorites" || favorites[0].GetString("name") != "Favorites" ||
+		len(favorites[0].Id) != 15 || favorites[0].GetDateTime("created").IsZero() {
+		t.Fatalf("lists of an existing user: %v", favorites)
+	}
+
+	second := map[string]any{"creator": ana.Id, "name": "Other", "kind": "favorites"}
+	lists, _ := app.FindCollectionByNameOrId("lists")
+	r := core.NewRecord(lists)
+	r.Load(second)
+	if err := app.Save(r); err == nil {
+		t.Error("a second favorites list was saved")
+	}
+	r = core.NewRecord(lists)
+	r.Load(map[string]any{"creator": ana.Id, "name": "FAVORITES", "kind": "custom"})
+	if err := app.Save(r); err == nil {
+		t.Error("a list with the name of another list was saved")
+	}
+
+	custom := newRecord(t, app, "lists", map[string]any{"creator": ana.Id, "name": "Date night", "kind": "custom"})
+	newRecord(t, app, "list_items", map[string]any{"list": custom.Id, "restaurant": restaurant.Id})
+	newRecord(t, app, "list_items", map[string]any{"list": favorites[0].Id, "restaurant": restaurant.Id})
+	count := func(collection string) int64 {
+		t.Helper()
+		n, err := app.CountRecords(collection)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if err := app.Delete(restaurant); err != nil {
+		t.Fatal(err)
+	}
+	if n := count("list_items"); n != 0 {
+		t.Errorf("%d items after the restaurant delete, want 0", n)
+	}
+	if n := count("lists"); n != 2 {
+		t.Errorf("%d lists after the restaurant delete, want 2", n)
+	}
+	if err := app.Delete(ana); err != nil {
+		t.Fatal(err)
+	}
+	if n := count("lists"); n != 0 {
+		t.Errorf("%d lists after the user delete, want 0", n)
+	}
+}

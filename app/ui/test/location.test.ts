@@ -236,6 +236,7 @@ describe('RestaurantFormPage drafts', () => {
     reviewCount: 2,
     rating: null,
     cover: null,
+    favorite: false,
     created: user.created,
     updated: user.updated,
   }

@@ -45,6 +45,10 @@ export interface Reviewer {
      * 
      */
     restaurantCount: number;
+    /**
+     * The number of lists of the user. `listReviewerLists` lists them.
+     */
+    listCount: number;
 }
 
 /**
@@ -56,6 +60,7 @@ export function instanceOfReviewer(value: object): value is Reviewer {
     if ((!('reviewCount' in (value as Record<string, any>)) && !('review_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['reviewCount'] === undefined && (value as Record<string, any>)['review_count'] === undefined)) return false;
     if ((!('averageOverall' in (value as Record<string, any>)) && !('average_overall' in (value as Record<string, any>))) || ((value as Record<string, any>)['averageOverall'] === undefined && (value as Record<string, any>)['average_overall'] === undefined)) return false;
     if ((!('restaurantCount' in (value as Record<string, any>)) && !('restaurant_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['restaurantCount'] === undefined && (value as Record<string, any>)['restaurant_count'] === undefined)) return false;
+    if ((!('listCount' in (value as Record<string, any>)) && !('list_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['listCount'] === undefined && (value as Record<string, any>)['list_count'] === undefined)) return false;
     return true;
 }
 
@@ -74,6 +79,7 @@ export function ReviewerFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'reviewCount': json['review_count'],
         'averageOverall': json['average_overall'],
         'restaurantCount': json['restaurant_count'],
+        'listCount': json['list_count'],
     };
 }
 
@@ -93,6 +99,7 @@ export function ReviewerToJSONTyped(value?: Reviewer | null, ignoreDiscriminator
         'review_count': value['reviewCount'],
         'average_overall': value['averageOverall'],
         'restaurant_count': value['restaurantCount'],
+        'list_count': value['listCount'],
     };
 }
 

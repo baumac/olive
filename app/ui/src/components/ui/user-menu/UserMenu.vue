@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { User } from '@reviews/sdk'
-import { LogOutIcon, MessageSquareIcon } from 'lucide-vue-next'
+import { ListIcon, LogOutIcon, MessageSquareIcon } from 'lucide-vue-next'
 import { initials } from '@/lib/format'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,8 @@ defineProps<{
   signInPath: string
   signInCurrent?: boolean
   myReviewsPath: string
+  // myListsPath is the page with the lists of the user.
+  myListsPath?: string
 }>()
 
 defineEmits<{ signOut: [] }>()
@@ -50,6 +52,12 @@ const { choice } = useTheme()
         <RouterLink :to="myReviewsPath">
           <MessageSquareIcon aria-hidden="true" />
           My reviews
+        </RouterLink>
+      </DropdownMenuItem>
+      <DropdownMenuItem v-if="myListsPath" as-child>
+        <RouterLink :to="myListsPath">
+          <ListIcon aria-hidden="true" />
+          My lists
         </RouterLink>
       </DropdownMenuItem>
       <DropdownMenuSeparator />

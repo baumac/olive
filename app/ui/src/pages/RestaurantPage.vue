@@ -8,8 +8,10 @@ import { toast } from 'vue-sonner'
 import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import FavoriteButton from '@/components/app/FavoriteButton.vue'
 import RestaurantGallery from '@/components/app/RestaurantGallery.vue'
 import ReviewList from '@/components/app/ReviewList.vue'
+import SaveToListMenu from '@/components/app/SaveToListMenu.vue'
 import ScoreSummary from '@/components/app/ScoreSummary.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -142,17 +144,27 @@ async function remove() {
         <div class="flex min-w-0 flex-col gap-4">
           <div class="flex flex-wrap items-start justify-between gap-4">
             <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ restaurant.data.value.name }}</h1>
-            <div v-if="access?.canChange" class="flex flex-wrap gap-2">
-              <Button variant="outline" as-child>
-                <RouterLink :to="`/restaurants/${restaurantId}/edit`"><PencilIcon aria-hidden="true" />Edit restaurant</RouterLink>
-              </Button>
-              <ConfirmDelete
-                v-if="!access.hasOtherReviews"
-                label="Delete restaurant"
-                title="Delete this restaurant?"
-                :description="deleteDescription"
-                @confirm="remove"
+            <div class="flex flex-wrap gap-2">
+              <FavoriteButton
+                :restaurant-id="restaurantId"
+                :name="restaurant.data.value.name"
+                :favorite="restaurant.data.value.favorite"
+                labeled
+                @change="restaurant.data.value.favorite = $event"
               />
+              <SaveToListMenu :restaurant-id="restaurantId" />
+              <template v-if="access?.canChange">
+                <Button variant="outline" as-child>
+                  <RouterLink :to="`/restaurants/${restaurantId}/edit`"><PencilIcon aria-hidden="true" />Edit restaurant</RouterLink>
+                </Button>
+                <ConfirmDelete
+                  v-if="!access.hasOtherReviews"
+                  label="Delete restaurant"
+                  title="Delete this restaurant?"
+                  :description="deleteDescription"
+                  @confirm="remove"
+                />
+              </template>
             </div>
           </div>
           <p v-if="restaurant.data.value.description" class="text-muted-foreground max-w-2xl text-xl whitespace-pre-line">

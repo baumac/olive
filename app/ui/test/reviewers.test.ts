@@ -1,10 +1,10 @@
-import type { Restaurant, Review } from '@reviews/sdk'
+import type { Restaurant, Review, SavedList } from '@reviews/sdk'
 import { ResponseError } from '@reviews/sdk'
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import ReviewCard from '@/components/app/ReviewCard.vue'
-import { restaurantsApi, reviewersApi } from '@/lib/api'
+import { listsApi, restaurantsApi, reviewersApi } from '@/lib/api'
 import ReviewerPage from '@/pages/ReviewerPage.vue'
 import { expectAccessible } from './axe'
 
@@ -33,6 +33,17 @@ const restaurant: Restaurant = {
   reviewCount: 0,
   rating: null,
   cover: null,
+  favorite: false,
+  created: '2024-11-04T01:26:55.002Z',
+  updated: '2024-11-04T01:26:55.002Z',
+}
+
+const favorites: SavedList = {
+  id: 'f1a6c3e8g5i2k9m',
+  name: 'Favorites',
+  kind: 'favorites',
+  creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
+  itemCount: 2,
   created: '2024-11-04T01:26:55.002Z',
   updated: '2024-11-04T01:26:55.002Z',
 }
@@ -90,6 +101,10 @@ async function mountPage(reviewerId: string) {
 }
 
 describe('ReviewerPage', () => {
+  beforeEach(() => {
+    vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [favorites] })
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
   })
@@ -101,6 +116,7 @@ describe('ReviewerPage', () => {
       reviewCount: 1,
       averageOverall: 7.6,
       restaurantCount: 0,
+      listCount: 1,
     })
     const list = vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [review], nextCursor: null })
     const restaurants = vi.spyOn(restaurantsApi, 'listRestaurants')
@@ -126,6 +142,7 @@ describe('ReviewerPage', () => {
       reviewCount: 0,
       averageOverall: null,
       restaurantCount: 0,
+      listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })
     const w = await mountPage('u2g6k0m4o8q1s5w')
@@ -141,12 +158,13 @@ describe('ReviewerPage', () => {
       reviewCount: 0,
       averageOverall: null,
       restaurantCount: 2,
+      listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })
     const list = vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [restaurant], nextCursor: null })
     const w = await mountPage('u2g6k0m4o8q1s5w')
     expect(w.text()).toContain('No reviews yet · 2 restaurants added')
-    expect(w.findAll('h2').map((h) => h.text())).toEqual(['Reviews', 'Restaurants added'])
+    expect(w.findAll('h2').map((h) => h.text())).toEqual(['Lists', 'Reviews', 'Restaurants added'])
     expect(w.get('h3 a').text()).toBe("Luigi's Trattoria")
     expect(w.get('h3 a').attributes('href')).toBe('/restaurants/k3x9m2p7q1w8z4a')
     expect(list.mock.calls[0]![0]).toMatchObject({ creatorEq: 'u2g6k0m4o8q1s5w', sort: '-created' })
@@ -160,6 +178,7 @@ describe('ReviewerPage', () => {
       reviewCount: 0,
       averageOverall: null,
       restaurantCount: 1,
+      listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })
     vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
@@ -174,6 +193,7 @@ describe('ReviewerPage', () => {
       reviewCount: 0,
       averageOverall: null,
       restaurantCount: 1,
+      listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })
     const list = vi.spyOn(restaurantsApi, 'listRestaurants').mockRejectedValueOnce(rejectWith(400))

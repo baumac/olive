@@ -108,6 +108,12 @@ func reviewData(app core.App, restaurant, review *core.Record, baseURL string) j
 	return d
 }
 
+func listData(list *core.Record, count int, baseURL string) jsonLD {
+	d := jsonLD{"@type": "ItemList", "name": list.GetString("name"), "numberOfItems": count}
+	setText(d, "url", pageURL(baseURL, "/lists/"+list.Id))
+	return d
+}
+
 // reviewerData has only the public fields of the user.
 func reviewerData(app core.App, user *core.Record, baseURL string) (jsonLD, error) {
 	var reviews struct {

@@ -29,7 +29,7 @@ func (s *Server) GetReviewer(_ context.Context, req reviewsapi.GetReviewerReques
 	creator := toCreator(user)
 	return reviewsapi.GetReviewer200JSONResponse{
 		Id: creator.Id, Name: creator.Name,
-		ReviewCount: stats.Reviews, AverageOverall: stats.average(), RestaurantCount: stats.Restaurants,
+		ReviewCount: stats.Reviews, AverageOverall: stats.average(), RestaurantCount: stats.Restaurants, ListCount: stats.Lists,
 	}, nil
 }
 
@@ -37,6 +37,7 @@ type reviewerStats struct {
 	Reviews     int             `db:"reviews"`
 	Overall     sql.NullFloat64 `db:"overall"`
 	Restaurants int             `db:"restaurants"`
+	Lists       int             `db:"lists"`
 }
 
 func (r reviewerStats) average() nullable.Nullable[reviewsapi.AverageScore] {
@@ -58,7 +59,8 @@ func (s *Server) reviewerStatsQuery(userID string) *dbx.Query {
 	return s.app.DB().NewQuery(`
 		SELECT COUNT(*) AS [[reviews]],
 			ROUND(AVG([[overall]]), 1) AS [[overall]],
-			(SELECT COUNT(*) FROM {{restaurants}} WHERE [[creator]] = {:user}) AS [[restaurants]]
+			(SELECT COUNT(*) FROM {{restaurants}} WHERE [[creator]] = {:user}) AS [[restaurants]],
+			(SELECT COUNT(*) FROM {{lists}} WHERE [[creator]] = {:user}) AS [[lists]]
 		FROM {{reviews}} WHERE [[creator]] = {:user}`).Bind(dbx.Params{"user": userID})
 }
 

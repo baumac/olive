@@ -38,7 +38,14 @@ const signIn = computed(() => {
         <img :src="markDark" alt="" class="hidden h-9 dark:block dark:md:hidden" />
       </RouterLink>
       <div class="flex-1" />
-      <UserMenu :user="currentUser" :sign-in-path="signIn" my-reviews-path="/my-reviews" :sign-in-current="route.path === '/sign-in'" @sign-out="signOut(router)" />
+      <UserMenu
+        :user="currentUser"
+        :sign-in-path="signIn"
+        my-reviews-path="/my-reviews"
+        :my-lists-path="currentUser ? `/reviewers/${currentUser.id}` : undefined"
+        :sign-in-current="route.path === '/sign-in'"
+        @sign-out="signOut(router)"
+      />
     </div>
   </header>
 </template>
