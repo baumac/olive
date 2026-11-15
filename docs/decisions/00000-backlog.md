@@ -15,7 +15,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## Production Readiness
 
-1. restrict signup to require admin approval
 Document/implement the following in deploy.md:
 - Document SMTP and superuser MFA in deploy/README.md. Both are dashboard settings. The dashboard is the only admin surface, so its sign in matters most.
 - Enable settings encryption
