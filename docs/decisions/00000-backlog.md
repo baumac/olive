@@ -7,6 +7,11 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## High Priority
+- Add rate limits to the write operations
+  - only sign up, sign in, and photo upload have `x-rate-limit` in `specs/api/public-openapi.yaml`
+  - sign up has no email verification. One script can make 10 accounts per minute per IP address.
+  - each account can then create restaurants and reviews without a limit
+  - this is a spec change. It needs new SDKs.
 
 ## Production Readiness
 
@@ -37,7 +42,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Add password reset, password change, name change, and account deletion
   - a person who forgets the password loses the account
   - decision 00001 leaves these out. Password reset needs the email setup of the Ice Box item.
-- Use a backup plan that copies each photo one time when `pb_data` grows near 5 GB. See decision 00022.
 
 ## Future
 - Add IOS app
