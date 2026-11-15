@@ -7,8 +7,17 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile
     restart: unless-stopped
-    # An empty value gives the default of the app. AGENTS.md lists the variables.
+    mem_limit: ${APP_MEMORY_LIMIT:-768m}
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    # An empty REVIEWS_ value gives the default of the app. AGENTS.md lists the
+    # variables.
     environment:
+      PB_ENCRYPTION_KEY: ${PB_ENCRYPTION_KEY:?Set PB_ENCRYPTION_KEY in deploy/.env}
+      # The Go runtime frees memory before the container gets to its limit.
+      GOMEMLIMIT: ${APP_GOMEMLIMIT:-600MiB}
       REVIEWS_SIGN_IN_LIMIT: ${REVIEWS_SIGN_IN_LIMIT:-}
       REVIEWS_SIGN_IN_FAILURE_LIMIT: ${REVIEWS_SIGN_IN_FAILURE_LIMIT:-}
       REVIEWS_PHOTO_UPLOAD_LIMIT: ${REVIEWS_PHOTO_UPLOAD_LIMIT:-}

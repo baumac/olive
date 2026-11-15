@@ -36,4 +36,4 @@ EXPOSE 8090
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
     CMD wget -q -O /dev/null http://127.0.0.1:8090/api/health || exit 1
 ENTRYPOINT ["reviews-app"]
-CMD ["serve", "--http=0.0.0.0:8090", "--dir=/pb_data"]
+CMD ["serve", "--http=0.0.0.0:8090", "--dir=/pb_data", "--encryptionEnv=PB_ENCRYPTION_KEY"]

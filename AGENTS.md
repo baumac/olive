@@ -89,6 +89,9 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - The browsers of users load the map tiles from `tile.openstreetmap.org`. This server gets their IP address and the origin of the site. It has no guarantee and blocks heavy use. Do not set a `Referrer-Policy` of `no-referrer` on the UI. The tile server needs the `Referer` header. See decision 00018.
 - The "Use my current location" button needs HTTPS. Do not turn off `geolocation` in a `Permissions-Policy` header of the reverse proxy. See decision 00035.
 - Set the superuser IP allow-list in the PocketBase settings, so only admin networks can open the dashboard at `/_/`.
+- Set the mail server in the PocketBase settings, then turn on OTP and MFA for the `_superusers` collection. `deploy/README.md` has the steps.
+- `PB_ENCRYPTION_KEY` of `deploy/.env` encrypts the PocketBase settings in the database. The backups do not have it. A restore needs the same key. See decision 00022.
+- `deploy/compose.yaml` limits the memory and the open files of the app. `deploy/Caddyfile` limits the request body to 11 MB. `deploy/README.md` has the values.
 - Approve new users in the dashboard. A user without the `approved` value of the `users` collection can only sign in and read. `deploy/README.md` has the steps. See decision 00034.
   A daily job deletes a user that waits for more than 30 days and has no data.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.

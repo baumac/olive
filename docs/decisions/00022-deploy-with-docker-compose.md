@@ -46,7 +46,7 @@ Docker Compose runs two services:
 | `app` | `reviews-app:local` | the app server on port 8090 with the `pb_data` volume |
 | `caddy` | `caddy` | the reverse proxy on the ports 80 and 443. It gets the TLS certificate of `SITE_ADDRESS`. |
 
-`deploy/.env` has `SITE_ADDRESS` and the `REVIEWS_` variables of the app.
+`deploy/.env` has `SITE_ADDRESS`, `PB_ENCRYPTION_KEY`, and the `REVIEWS_` variables of the app.
 `compose.yaml` names each `REVIEWS_` variable. A new variable of the app needs a line there.
 
 ## One instance
@@ -70,6 +70,16 @@ PocketBase makes the backups. The operator turns them on in Settings > Backups o
 
 The first version of this decision had a `backup` service with `sqlite3 .backup` and `rsync` to a folder of the host.
 It was removed on 2026-11-14. Its backups stayed on the server. The S3 storage of PocketBase needs no code.
+
+## Settings encryption and limits
+
+These parts were added on 2026-11-15.
+
+- the app encrypts the PocketBase settings in the database with `PB_ENCRYPTION_KEY`. The settings have the SMTP password and the S3 secret.
+- the backups do not have the key. The operator keeps a copy, and a restore needs it.
+- the `app` container has a memory limit, a `GOMEMLIMIT` below it, and a limit of open files
+- Caddy stops a request body of more than 11 MB
+- `deploy/README.md` has the steps for the mail server and the MFA of the superusers
 
 # Implementation Details
 [implementation-details]: #implementation-details
@@ -95,6 +105,28 @@ Limits of the selected option:
 - a failed backup shows only in the logs of the dashboard
 - the S3 settings are in the database. The operator keeps a copy of the access key in a different place.
 
+## Settings encryption
+
+- the start command of the image has `--encryptionEnv=PB_ENCRYPTION_KEY`. `compose.yaml` stops without the variable.
+- the app does not start with a key that does not have 32 characters. The example value of `.env.example` is such a key.
+- a `reviews-app` command with `docker compose exec` does not use the start command. It needs the flag, or it cannot read the settings.
+
+| Option | Result |
+| --- | --- |
+| the flag in the start command | Selected. The app code does not change. |
+| `DefaultEncryptionEnv` in `app/main.go` | Not selected. A local run with the variable in its environment then encrypts `app/pb_data`. |
+
+## Limits
+
+| Limit | Value | Reason |
+| --- | --- | --- |
+| `mem_limit` of `app` | 768 MB | The server has 1 GB. Caddy and the system get the other memory. |
+| `GOMEMLIMIT` | 600 MiB | The Go runtime frees memory before Docker stops the container. Decision 00008 gives a peak of about 264 MB for the photos. |
+| `ulimits.nofile` | 65536 | Each connection and each SQLite file uses a file descriptor. |
+| `request_body` of Caddy | 11 MB | The limit of the app is 10 MiB, which is more than 10 MB. A body between the two limits gets the `413` of the app with Problem Details. |
+
+`APP_MEMORY_LIMIT` and `APP_GOMEMLIMIT` of `deploy/.env` change the two memory values.
+
 ## Reverse proxy
 
 | Option | Result |
@@ -118,7 +150,14 @@ The change was tested by hand:
 - `POST /api/backups` of PocketBase makes a ZIP file in the container
 - the restore steps of `deploy/README.md` for a new server put this file into the volume, and the app starts with it
 
-Not tested: the `caddy` service with a real DNS name, and a backup to a real S3 bucket.
+The settings encryption and the limits were tested by hand with `localhost` as `SITE_ADDRESS`:
+- the app does not start with a key of 9 characters
+- with a key of 32 characters, the `settings` row of `_params` is not readable JSON, and the app starts again after a restart
+- `superuser create` fails without `--encryptionEnv` and passes with it
+- `docker inspect` shows the memory limit and the limit of open files
+- a body of 12 MB gets the `413` of Caddy. A body of 10.6 MB gets the `413` of the app.
+
+Not tested: the `caddy` service with a real DNS name, a backup to a real S3 bucket, and the steps for the mail server and the MFA.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

@@ -12,15 +12,19 @@ This folder runs the app as one instance with Docker Compose. Decision 00022 has
 You need a server with Docker, and a DNS name that points to it. The ports 80 and 443 must be open.
 
 ```bash
-cp deploy/.env.example deploy/.env    # then set SITE_ADDRESS
+cp deploy/.env.example deploy/.env    # then set SITE_ADDRESS and PB_ENCRYPTION_KEY
 docker compose -f deploy/compose.yaml up -d --build
 ```
+
+`PB_ENCRYPTION_KEY` must have 32 characters. `openssl rand -hex 16` makes one. See the Settings encryption section.
 
 Make the first superuser:
 
 ```bash
-docker compose -f deploy/compose.yaml exec app reviews-app superuser create EMAIL PASSWORD --dir /pb_data
+docker compose -f deploy/compose.yaml exec app reviews-app superuser create EMAIL PASSWORD --dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY
 ```
+
+Each `reviews-app` command in the container needs `--dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY`.
 
 Then open `https://SITE_ADDRESS/_/` and set these values. AGENTS.md has the reasons in its Production section.
 
@@ -28,6 +32,48 @@ Then open `https://SITE_ADDRESS/_/` and set these values. AGENTS.md has the reas
 - the trusted proxy header: `X-Real-IP`
 - the superuser IP allow-list
 - the backups. See the Backups section.
+- the mail server and the MFA of the superusers. See the Mail and superuser MFA section.
+
+## Settings encryption
+
+The PocketBase settings have secrets, such as the SMTP password and the S3 secret of the backups.
+The app encrypts the settings in the database with `PB_ENCRYPTION_KEY` of `deploy/.env`.
+
+- The app does not start without a key of 32 characters.
+- The backups do not have the key. A restore needs the same key, or the app cannot read the settings.
+- Keep a copy of the key in a different place than the server and the bucket.
+
+## Mail and superuser MFA
+
+The dashboard is the only admin surface. Its sign in needs a second factor.
+The second factor is a code that PocketBase sends by email, so set the mail server first.
+
+1. Open Settings > Mail settings. Set the sender address, turn on "Use SMTP mail server", and set the host, the port, the user name, and the password.
+2. Select "Send test email" and check that the email arrives.
+3. Open the `_superusers` collection. It is one of the system collections.
+4. Open its settings, and select Options.
+5. Turn on "One-time password (OTP)" and "Multi-factor authentication (MFA)", and save.
+6. Sign out and sign in again. The dashboard asks for the password and then for the code of the email.
+
+Each superuser needs an email address that gets mail.
+When the mail server does not work, make a code on the server:
+
+```bash
+docker compose -f deploy/compose.yaml exec app reviews-app superuser otp EMAIL --dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY
+```
+
+## Limits of the containers
+
+| Limit | Default | Where |
+| --- | --- | --- |
+| memory of the `app` container | 768 MB | `APP_MEMORY_LIMIT` in `deploy/.env` |
+| memory target of the Go runtime | 600 MiB | `APP_GOMEMLIMIT` in `deploy/.env` |
+| open files of the `app` container | 65536 | `deploy/compose.yaml` |
+| request body in Caddy | 11 MB | `deploy/Caddyfile` |
+
+The memory defaults are for a server with 1 GB. On a larger server, raise both values.
+Keep `APP_GOMEMLIMIT` at about 80 percent of `APP_MEMORY_LIMIT`. Docker stops a container that gets to its memory limit.
+The app accepts a photo of up to 10 MiB. The limit of Caddy must stay above it.
 
 ## Approve new users
 
@@ -86,7 +132,8 @@ Each backup is one ZIP file of all of `pb_data`: the databases and the photo fil
 
 On a server that still runs, select a backup in Settings > Backups and select "Restore". The app replaces `pb_data` and starts again.
 
-On a new server, download the ZIP file from the bucket to the folder of the repository. Then put its content into the volume:
+On a new server, set `PB_ENCRYPTION_KEY` in `deploy/.env` to the key of the old server.
+Download the ZIP file from the bucket to the folder of the repository. Then put its content into the volume:
 
 ```bash
 docker compose -f deploy/compose.yaml up -d --build

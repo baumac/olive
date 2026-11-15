@@ -14,15 +14,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 - 
 ## For Claude
 
-- Document/implement the following in deploy.md:
-  - Document SMTP and superuser MFA in deploy/README.md. Both are dashboard settings. The dashboard is the only admin surface, so its sign in matters most.
-  - Enable settings encryption
-    - Turn on the settings encryption. Add --encryptionEnv to the start command of the image and a key variable to deploy/.env.example. The key must stay out of the backups. A lost key makes the settings of a restored backup unreadable, so the operator keeps a copy.
-  - Set GOMEMLIMIT and a memory limit for the app service in deploy/compose.yaml
-  - Add ulimits.nofile to the app service.
-  - Add request_body { max_size 10MB } to deploy/Caddyfile.
-
-
 ### Additional items
 - Adding email verification to sign up
   - sign up gives the same response for new and used email addresses. This removes the account enumeration risk in decision 00001.
