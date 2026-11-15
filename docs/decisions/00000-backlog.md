@@ -7,13 +7,12 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## High Priority
-1. Currently reviewer page has only a count. Add the average score of the reviewer and the restaurants they added (00014 left this out).
-2. Improve restaurant location UX
+1. Improve restaurant location UX
   - Allow users to set preferred location and incorporate that into the maps feature
   - The default list sort is `-created`, update it to be `best rated` or `near`. 
   - The API has `near`, but the UI never asks for `navigator.geolocation`.
-3. Allow users to favorite restaurants and retrieve their list of favorites
-4. Set a total number of images that a single user can upload
+2. Allow users to favorite restaurants and retrieve their list of favorites
+3. Set a total number of images that a single user can upload
   - Start by setting this limit to 100
 
 ## Production Readiness

@@ -8,7 +8,8 @@ import { RatingDisplay } from '@/components/ui/rating-display'
 import { formatCount } from '@/lib/format'
 import { tagList } from '@/lib/reviews'
 
-defineProps<{ restaurant: Restaurant }>()
+// heading is the element of the name. A list below an h2 uses h3.
+withDefaults(defineProps<{ restaurant: Restaurant; heading?: 'h2' | 'h3' }>(), { heading: 'h2' })
 </script>
 
 <template>
@@ -16,7 +17,7 @@ defineProps<{ restaurant: Restaurant }>()
     <!-- The name of the card link is the name. The cover then has no alt text. -->
     <CoverPhoto :photo="restaurant.cover" size="card" />
     <CardHeader>
-      <CardTitle as="h2" class="text-base leading-snug">
+      <CardTitle :as="heading" class="text-base leading-snug">
         <!-- The after element makes the full card the link. -->
         <RouterLink :to="`/restaurants/${restaurant.id}`" class="rounded-sm after:absolute after:inset-0 after:rounded-xl">
           {{ restaurant.name }}

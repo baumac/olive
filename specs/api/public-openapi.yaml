@@ -1620,7 +1620,7 @@ components:
     Reviewer:
       description: The public profile of a user. It has the fields of `Creator` and no private data.
       type: object
-      required: [id, name, review_count]
+      required: [id, name, review_count, average_overall, restaurant_count]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -1630,10 +1630,25 @@ components:
           description: The number of reviews of the user.
           type: integer
           minimum: 0
+        average_overall:
+          description: |
+            The average of the `overall` values of the reviews of the user.
+            The API rounds it to one decimal. It is `null` for a user without reviews.
+          oneOf:
+            - $ref: '#/components/schemas/AverageScore'
+            - type: 'null'
+        restaurant_count:
+          description: |
+            The number of restaurants that the user created.
+            `listRestaurants` with `creator[eq]` lists them.
+          type: integer
+          minimum: 0
       examples:
         - id: u5n1c8r3t6y0b2e
           name: Ana
           review_count: 12
+          average_overall: 7.4
+          restaurant_count: 3
 
     ScoreRange:
       description: Comparisons for a score. All comparisons must match.

@@ -1,6 +1,7 @@
 package publicapi_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -96,7 +97,8 @@ func TestReviewers(t *testing.T) {
 
 	t.Run("the profile has only public fields", func(t *testing.T) {
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID}, http.StatusOK).object(t)
-		want := map[string]any{"id": ana.User.ID, "name": "Ana", "review_count": 2.0}
+		// The overall values of Ana are 4.8 and 7.6.
+		want := map[string]any{"id": ana.User.ID, "name": "Ana", "review_count": 2.0, "average_overall": 6.2, "restaurant_count": 1.0}
 		if len(got) != len(want) {
 			t.Errorf("profile %v, want only %v", got, want)
 		}
@@ -106,8 +108,30 @@ func TestReviewers(t *testing.T) {
 			}
 		}
 		empty := e.expect(request{method: "GET", path: "/v1/reviewers/" + sam.User.ID, token: joe.Token}, http.StatusOK).object(t)
-		if empty["review_count"] != 0.0 {
+		average, ok := empty["average_overall"]
+		if empty["review_count"] != 0.0 || !ok || average != nil || empty["restaurant_count"] != 0.0 {
 			t.Errorf("profile without reviews: %v", empty)
+		}
+	})
+
+	t.Run("the average is rounded to one decimal", func(t *testing.T) {
+		tom := e.signUp("tom@example.com", "Tom")
+		for name, cleanliness := range map[string]int{"Tom A": 8, "Tom B": 7, "Tom C": 7} {
+			id := e.createRestaurant(tom.Token, fmt.Sprintf(`{"name":%q}`, name))["id"].(string)
+			e.createReview(tom.Token, id, fmt.Sprintf(`{"space":7,"service":7,"food":7,"price":7,"cleanliness":%d,"title":"T"}`, cleanliness))
+		}
+		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + tom.User.ID}, http.StatusOK).object(t)
+		if got["average_overall"] != 7.1 || got["restaurant_count"] != 3.0 {
+			t.Errorf("profile %v, want an average of 7.1 for 7.2, 7, and 7, and 3 restaurants", got)
+		}
+		var page struct {
+			Items []struct {
+				Name string `json:"name"`
+			} `json:"items"`
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?sort=name&creator[eq]=" + tom.User.ID}, http.StatusOK).decode(t, &page)
+		if len(page.Items) != 3 || page.Items[0].Name != "Tom A" {
+			t.Errorf("restaurants of the user: %v", page.Items)
 		}
 	})
 

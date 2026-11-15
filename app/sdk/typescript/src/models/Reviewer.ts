@@ -33,6 +33,18 @@ export interface Reviewer {
      * The number of reviews of the user.
      */
     reviewCount: number;
+    /**
+     * The average of the `overall` values of the reviews of the user.
+     * The API rounds it to one decimal. It is `null` for a user without reviews.
+     * 
+     */
+    averageOverall: number | null;
+    /**
+     * The number of restaurants that the user created.
+     * `listRestaurants` with `creator[eq]` lists them.
+     * 
+     */
+    restaurantCount: number;
 }
 
 /**
@@ -42,6 +54,8 @@ export function instanceOfReviewer(value: object): value is Reviewer {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     if ((!('reviewCount' in (value as Record<string, any>)) && !('review_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['reviewCount'] === undefined && (value as Record<string, any>)['review_count'] === undefined)) return false;
+    if ((!('averageOverall' in (value as Record<string, any>)) && !('average_overall' in (value as Record<string, any>))) || ((value as Record<string, any>)['averageOverall'] === undefined && (value as Record<string, any>)['average_overall'] === undefined)) return false;
+    if ((!('restaurantCount' in (value as Record<string, any>)) && !('restaurant_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['restaurantCount'] === undefined && (value as Record<string, any>)['restaurant_count'] === undefined)) return false;
     return true;
 }
 
@@ -58,6 +72,8 @@ export function ReviewerFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'id': json['id'],
         'name': json['name'],
         'reviewCount': json['review_count'],
+        'averageOverall': json['average_overall'],
+        'restaurantCount': json['restaurant_count'],
     };
 }
 
@@ -75,6 +91,8 @@ export function ReviewerToJSONTyped(value?: Reviewer | null, ignoreDiscriminator
         'id': value['id'],
         'name': value['name'],
         'review_count': value['reviewCount'],
+        'average_overall': value['averageOverall'],
+        'restaurant_count': value['restaurantCount'],
     };
 }
 

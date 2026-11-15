@@ -17,6 +17,8 @@ const props = defineProps<{
   itemClass?: string
   skeletonClass: string
   skeletonCount: number
+  // unfiltered is for a list without a search or filters.
+  unfiltered?: boolean
   // focusItem moves the focus to an item of the items slot after a load.
   focusItem?: (index: number) => void
 }>()
@@ -55,7 +57,7 @@ async function load(cursor: string) {
   <Alert v-if="list.failed.value" variant="destructive">
     <CircleAlertIcon aria-hidden="true" />
     <AlertTitle>{{ title }} did not load</AlertTitle>
-    <AlertDescription v-if="list.failed.value.detail">
+    <AlertDescription v-if="list.failed.value.detail && !unfiltered">
       {{ list.failed.value.detail }} Change the search or the filters.
     </AlertDescription>
     <AlertDescription v-else class="flex flex-wrap items-center gap-3">

@@ -184,10 +184,34 @@ func TestReviewOverallUsesIndexes(t *testing.T) {
 	}
 }
 
-func TestReviewerCountUsesIndex(t *testing.T) {
+func TestReviewerStatsUseIndexes(t *testing.T) {
 	s := newTestServer(t)
-	q := s.app.DB().Select("COUNT(*)").From("reviews").Where(dbx.HashExp{"creator": "u5n1c8r3t6y0b2e"}).Build()
-	if plan := queryPlan(t, s, q); !strings.Contains(plan, "idx_reviews_creator_overall") {
-		t.Errorf("plan has no creator index:\n%s", plan)
+	plan := queryPlan(t, s, s.reviewerStatsQuery("u5n1c8r3t6y0b2e"))
+	for _, want := range []string{"idx_reviews_creator_overall", "COVERING INDEX idx_restaurants_creator_created"} {
+		if !strings.Contains(plan, want) {
+			t.Errorf("plan has no %q:\n%s", want, plan)
+		}
+	}
+}
+
+func TestReviewerRestaurantsUseIndex(t *testing.T) {
+	s := newTestServer(t)
+	sort := "-created"
+	keys, _, detail := parseSort(&sort, "restaurants", restaurantSorts)
+	if detail != "" {
+		t.Fatal(detail)
+	}
+	for name, cursor := range map[string]bool{"first page": false, "after cursor": true} {
+		t.Run(name, func(t *testing.T) {
+			w := newWhere()
+			w.idFilters("restaurants", "creator", new("u5n1c8r3t6y0b2e"), nil)
+			if cursor {
+				w.keyset(keys, []any{"2024-11-04 01:26:55.002Z", "k3x9m2p7q1w8z4a"})
+			}
+			plan := queryPlan(t, s, s.sortQuery("restaurants", w, keys, 7).Build())
+			if !strings.Contains(plan, "idx_restaurants_creator_created") || strings.Contains(plan, "TEMP B-TREE") {
+				t.Errorf("plan does not read the creator index in order:\n%s", plan)
+			}
+		})
 	}
 }

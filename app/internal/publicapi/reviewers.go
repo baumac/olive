@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -21,12 +22,44 @@ func (s *Server) GetReviewer(_ context.Context, req reviewsapi.GetReviewerReques
 	if user == nil {
 		return reviewsapi.GetReviewer404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(reviewerNotFound)}, nil
 	}
-	n, err := s.app.CountRecords("reviews", dbx.HashExp{"creator": user.Id})
+	stats, err := s.findReviewerStats(user.Id)
 	if err != nil {
 		return nil, err
 	}
 	creator := toCreator(user)
-	return reviewsapi.GetReviewer200JSONResponse{Id: creator.Id, Name: creator.Name, ReviewCount: int(n)}, nil
+	return reviewsapi.GetReviewer200JSONResponse{
+		Id: creator.Id, Name: creator.Name,
+		ReviewCount: stats.Reviews, AverageOverall: stats.average(), RestaurantCount: stats.Restaurants,
+	}, nil
+}
+
+type reviewerStats struct {
+	Reviews     int             `db:"reviews"`
+	Overall     sql.NullFloat64 `db:"overall"`
+	Restaurants int             `db:"restaurants"`
+}
+
+func (r reviewerStats) average() nullable.Nullable[reviewsapi.AverageScore] {
+	if !r.Overall.Valid {
+		return nullable.NewNullNullable[reviewsapi.AverageScore]()
+	}
+	return nullable.NewNullableWithValue(r.Overall.Float64)
+}
+
+func (s *Server) findReviewerStats(userID string) (reviewerStats, error) {
+	var stats reviewerStats
+	err := s.reviewerStatsQuery(userID).One(&stats)
+	return stats, err
+}
+
+// reviewerStatsQuery is one statement. The count and the average come from
+// the same reviews.
+func (s *Server) reviewerStatsQuery(userID string) *dbx.Query {
+	return s.app.DB().NewQuery(`
+		SELECT COUNT(*) AS [[reviews]],
+			ROUND(AVG([[overall]]), 1) AS [[overall]],
+			(SELECT COUNT(*) FROM {{restaurants}} WHERE [[creator]] = {:user}) AS [[restaurants]]
+		FROM {{reviews}} WHERE [[creator]] = {:user}`).Bind(dbx.Params{"user": userID})
 }
 
 // ListReviewerReviews returns 404 when the user does not exist. It does not
