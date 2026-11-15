@@ -11,7 +11,7 @@ Each sub-bullet point contains notes about the incomplete decision.
   - rename and/or move the backlog doc to the /docs directory
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
 - review features such as SEO, and social features that don't align with the 00000-create-reviews-app
-- 
+
 ## For Claude
 
 ### Additional items
@@ -25,7 +25,7 @@ Each sub-bullet point contains notes about the incomplete decision.
   - the two notices need the SMTP setup of the Production Readiness section
 - Add password reset, password change, name change, and account deletion
   - a person who forgets the password loses the account
-  - decision 00001 leaves these out. Password reset needs the email setup of the Ice Box item.
+  - decision 00001 leaves these out. Password reset needs the email setup.
 
 ## Future
 - Add IOS app
