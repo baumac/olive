@@ -7,11 +7,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## High Priority
-- Add rate limits to the write operations
-  - only sign up, sign in, and photo upload have `x-rate-limit` in `specs/api/public-openapi.yaml`
-  - sign up has no email verification. One script can make 10 accounts per minute per IP address.
-  - each account can then create restaurants and reviews without a limit
-  - this is a spec change. It needs new SDKs.
 
 ## Production Readiness
 
