@@ -324,11 +324,20 @@ func TestUsers(t *testing.T) {
 		}
 	})
 
-	t.Run("the PocketBase auth endpoint is off", func(t *testing.T) {
-		res := e.do(request{method: "POST", path: "/api/collections/users/auth-with-password",
-			body: `{"identity":"ana@example.com","password":"correct-horse-battery"}`})
-		if res.status == http.StatusOK {
-			t.Errorf("PocketBase sign in worked: %s", res.body)
+	t.Run("the PocketBase auth routes of users are closed", func(t *testing.T) {
+		// The status must be the same for a correct and a wrong password.
+		for _, password := range []string{"correct-horse-battery", "wrong-password"} {
+			res := e.do(request{method: "POST", path: "/api/collections/users/auth-with-password",
+				body: `{"identity":"ana@example.com","password":"` + password + `"}`})
+			if res.status != http.StatusNotFound {
+				t.Errorf("auth-with-password with %s: status %d", password, res.status)
+			}
+		}
+		for _, action := range []string{"auth-refresh", "auth-with-otp", "auth-with-oauth2"} {
+			res := e.do(request{method: "POST", path: "/api/collections/users/" + action, body: `{}`, token: ana.Token})
+			if res.status != http.StatusNotFound {
+				t.Errorf("%s: status %d", action, res.status)
+			}
 		}
 	})
 }

@@ -7,10 +7,12 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// closedUserActions are the PocketBase account routes of users. The Public
-// API has its own operations for the confirmation and the password reset.
-// These routes would skip the rate limit and the rules of the Public API.
+// closedUserActions are the PocketBase auth and account routes of users.
+// The Public API has its own operations for them. These routes would skip
+// the rate limit and the rules of the Public API. auth-with-password gives
+// no token, but its status shows if the password is correct.
 var closedUserActions = []string{
+	"auth-with-password", "auth-with-oauth2", "auth-with-otp", "auth-refresh",
 	"request-password-reset", "confirm-password-reset",
 	"request-verification", "confirm-verification",
 	"request-email-change", "confirm-email-change",
