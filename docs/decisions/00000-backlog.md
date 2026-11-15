@@ -11,13 +11,13 @@ Each sub-bullet point contains notes about the incomplete decision.
   - rename and/or move the backlog doc to the /docs directory
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
 - review features such as SEO, and social features that don't align with the 00000-create-reviews-app
+- deploy to prod
 
 ## For Claude
+- Add IOS app
 
 ## Future
-- Add IOS app
 - Support reviewing cheeses, wines, and recipes
-
 
 ## Won't do
 - Add load tests
