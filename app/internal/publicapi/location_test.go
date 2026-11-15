@@ -190,10 +190,73 @@ func TestListRestaurantsNear(t *testing.T) {
 	e.expect(request{method: "GET", path: "/v1/restaurants?limit=1&" + near(41.3766, 2.1893, 75) + cursor}, http.StatusBadRequest)
 
 	for _, query := range []string{
-		"near[latitude]=1&near[longitude]=1", "near[latitude]=1&near[radius]=5", "near[latitude]=91&near[longitude]=1&near[radius]=5",
+		"near[latitude]=1", "near[latitude]=1&near[radius]=5", "near[latitude]=91&near[longitude]=1&near[radius]=5",
 		"near[latitude]=1&near[longitude]=1&near[radius]=0", "near[latitude]=1&near[longitude]=1&near[radius]=50001",
 		"near[latitude]=1&near[longitude]=1&near[radius]=5&near[extra]=1", "near=1",
 	} {
+		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
+	}
+}
+
+func TestListRestaurantsByDistance(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	for name, l := range map[string][2]float64{
+		"Center": {41.3766, 2.1893}, "North 56 m": {41.3771, 2.1893}, "East 62 m": {41.3766, 2.19005},
+		"North 110 m": {41.3776, 2.1893}, "Madrid": {40.4168, -3.7038},
+		"Date line east": {0, 179.9999}, "Date line west": {0, -179.9998},
+	} {
+		e.createRestaurant(ana.Token, fmt.Sprintf(`{"name":%q,"location":%s}`, name, locationJSON(l[0], l[1], "Qwx 1", "")))
+	}
+	// Two restaurants at one point have the same distance. The id is then
+	// the order.
+	e.createRestaurant(ana.Token, `{"name":"Center","location":`+locationJSON(41.3766, 2.1893, "Qwx 2", "")+`}`)
+
+	none := e.createRestaurant(ana.Token, `{"name":"No location"}`)["id"].(string)
+	if _, err := e.app.DB().NewQuery("UPDATE restaurants SET address = '', latitude = 41.3766, longitude = 2.1893 WHERE id = {:id}").
+		Bind(map[string]any{"id": none}).Execute(); err != nil {
+		t.Fatal(err)
+	}
+
+	const point = "near[latitude]=41.3766&near[longitude]=2.1893"
+	const barceloneta = point + "&near[radius]=150"
+	names := func(query string, limit int) string {
+		t.Helper()
+		var out []string
+		cursor := ""
+		for {
+			var page struct {
+				Items      []map[string]any `json:"items"`
+				NextCursor *string          `json:"next_cursor"`
+			}
+			e.expect(request{method: "GET", path: fmt.Sprintf("/v1/restaurants?limit=%d&%s%s", limit, query, cursor)}, http.StatusOK).decode(t, &page)
+			for _, it := range page.Items {
+				out = append(out, it["name"].(string))
+			}
+			if page.NextCursor == nil {
+				return strings.Join(out, ",")
+			}
+			cursor = "&cursor=" + url.QueryEscape(*page.NextCursor)
+		}
+	}
+	for query, want := range map[string]string{
+		"sort=distance&" + barceloneta:                                        "Center,Center,North 56 m,East 62 m,North 110 m",
+		"sort=-distance&" + barceloneta:                                       "North 110 m,East 62 m,North 56 m,Center,Center",
+		"sort=name,distance&" + barceloneta:                                   "Center,Center,East 62 m,North 110 m,North 56 m",
+		"sort=distance&search=north&" + barceloneta:                           "North 56 m,North 110 m",
+		"sort=distance&near[latitude]=0&near[longitude]=180&near[radius]=100": "Date line east,Date line west",
+		// Without a radius, near is only the point of the sort.
+		"sort=distance&" + point:  "Center,Center,North 56 m,East 62 m,North 110 m,Madrid,Date line east,Date line west,No location",
+		"sort=-distance&" + point: "Date line west,Date line east,Madrid,North 110 m,East 62 m,North 56 m,Center,Center,No location",
+	} {
+		for _, limit := range []int{1, 2, 100} {
+			if got := names(query, limit); got != want {
+				t.Errorf("%s with limit %d: %q, want %q", query, limit, got, want)
+			}
+		}
+	}
+
+	for _, query := range []string{"sort=distance", "sort=-distance", "sort=name,distance", "sort=distance,distance&" + barceloneta} {
 		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"maps"
+	"math"
 	"slices"
 	"strings"
 
@@ -39,7 +41,19 @@ func (s *Server) ListRestaurants(ctx context.Context, req reviewsapi.ListRestaur
 	if detail != "" {
 		return bad(detail)
 	}
-	keys, sort, detail := parseSort(sortSpec, "restaurants", restaurantSorts)
+	sorts := restaurantSorts
+	if p.Near != nil {
+		// The spec validation can be off. The sort key has the numbers in
+		// its SQL text.
+		if math.IsNaN(p.Near.Latitude+p.Near.Longitude) || math.IsInf(p.Near.Latitude+p.Near.Longitude, 0) {
+			return bad("The near values must be numbers.")
+		}
+		sorts = maps.Clone(restaurantSorts)
+		sorts["distance"] = distanceSort(p.Near)
+	} else if sortSpec != nil && sortsBy(*sortSpec, "distance") {
+		return bad("The distance sort needs the near parameter.")
+	}
+	keys, sort, detail := parseSort(sortSpec, "restaurants", sorts)
 	if detail != "" {
 		return bad(detail)
 	}

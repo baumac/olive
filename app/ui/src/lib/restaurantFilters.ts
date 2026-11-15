@@ -14,10 +14,13 @@ export const restaurantFilterDefs: FilterDef[] = [
 ]
 
 export const restaurantSortOptions: Option[] = [
-  { value: '-created', label: 'Newest' },
   { value: '-overall', label: 'Highest rated' },
+  { value: '-created', label: 'Newest' },
   { value: 'name', label: 'Name' },
 ]
+
+// nearestSort needs the near parameter of the API.
+export const nearestSort: Option = { value: 'distance', label: 'Nearest' }
 
 // oldRestaurantSortOptions are the sorts that only a link can select.
 export const oldRestaurantSortOptions: Option[] = [

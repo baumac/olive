@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime.js';
 /**
- * A point and a radius in meters.
+ * A point and an optional radius in meters.
  * @export
  * @interface Near
  */
@@ -30,7 +30,7 @@ export interface Near {
     /**
      * The radius in meters.
      */
-    radius: number;
+    radius?: number;
 }
 
 /**
@@ -39,7 +39,6 @@ export interface Near {
 export function instanceOfNear(value: object): value is Near {
     if (!('latitude' in value) || value['latitude'] === undefined) return false;
     if (!('longitude' in value) || value['longitude'] === undefined) return false;
-    if (!('radius' in value) || value['radius'] === undefined) return false;
     return true;
 }
 
@@ -55,7 +54,7 @@ export function NearFromJSONTyped(json: any, ignoreDiscriminator: boolean): Near
         
         'latitude': json['latitude'],
         'longitude': json['longitude'],
-        'radius': json['radius'],
+        'radius': json['radius'] == null ? undefined : json['radius'],
     };
 }
 

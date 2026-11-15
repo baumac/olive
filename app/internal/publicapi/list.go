@@ -9,6 +9,7 @@ import (
 	"maps"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
@@ -186,20 +187,44 @@ func (w *where) tagFilters(has *string, hasAny, hasAll *[]string) {
 // metersPerDegree is the length of one degree of latitude.
 const metersPerDegree = 111320.0
 
-// near keeps the restaurants at most the radius from the point. It uses a
-// flat surface. The longitude difference is the short way around the earth.
+// squaredDistance is the SQL of the squared distance in meters from a point
+// to a restaurant, on a flat surface. The longitude difference is the short
+// way around the earth. The arguments are SQL values.
+func squaredDistance(latitude, longitude, metersPerLatitude, metersPerLongitude string) string {
+	lat, lon := column("restaurants", "latitude"), column("restaurants", "longitude")
+	dy := fmt.Sprintf("((%s - %s) * %s)", lat, latitude, metersPerLatitude)
+	dx := fmt.Sprintf("((180 - abs(abs(%s - %s) - 180)) * %s)", lon, longitude, metersPerLongitude)
+	return fmt.Sprintf("(%s * %s + %s * %s)", dy, dy, dx, dx)
+}
+
+func metersPerLongitude(latitude float64) float64 {
+	return metersPerDegree * math.Cos(latitude*math.Pi/180)
+}
+
+// near keeps the restaurants at most the radius from the point. Without a
+// radius, it keeps all restaurants.
 func (w *where) near(n *reviewsapi.NearFilter) {
-	if n == nil {
+	if n == nil || n.Radius == nil {
 		return
 	}
-	lat, lon := column("restaurants", "latitude"), column("restaurants", "longitude")
-	reach := float64(n.Radius) / metersPerDegree
+	lat := column("restaurants", "latitude")
+	radius := float64(*n.Radius)
+	reach := radius / metersPerDegree
 	w.add(column("restaurants", "address") + " != ''")
 	w.add(fmt.Sprintf("%s BETWEEN %s AND %s", lat, w.param(n.Latitude-reach), w.param(n.Latitude+reach)))
-	dy := fmt.Sprintf("((%s - %s) * %s)", lat, w.param(n.Latitude), w.param(metersPerDegree))
-	dx := fmt.Sprintf("((180 - abs(abs(%s - %s) - 180)) * %s)", lon, w.param(n.Longitude),
-		w.param(metersPerDegree*math.Cos(n.Latitude*math.Pi/180)))
-	w.add(fmt.Sprintf("(%s * %s + %s * %s) <= %s", dy, dy, dx, dx, w.param(float64(n.Radius)*float64(n.Radius))))
+	distance := squaredDistance(w.param(n.Latitude), w.param(n.Longitude), w.param(metersPerDegree), w.param(metersPerLongitude(n.Latitude)))
+	w.add(fmt.Sprintf("%s <= %s", distance, w.param(radius*radius)))
+}
+
+// distanceSort sorts by the squared distance from the point of n.
+// Restaurants without a location are last in both directions. The SQL text
+// has the numbers, not parameters.
+func distanceSort(n *reviewsapi.NearFilter) sortField {
+	sql := func(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
+	expr := squaredDistance(sql(n.Latitude), sql(n.Longitude), sql(metersPerDegree), sql(metersPerLongitude(n.Latitude)))
+	return func(desc bool) []sortKey {
+		return []sortKey{{expr: "(" + column("restaurants", "address") + " = '')"}, {expr: expr, desc: desc}}
+	}
 }
 
 // within keeps the restaurants in the box. A box with west after east goes

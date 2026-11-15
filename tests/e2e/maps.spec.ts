@@ -106,6 +106,54 @@ test('the map view shows the restaurants of the filters', async ({ page, api }) 
   await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Bar Central'])
 })
 
+test('a location of the device puts the nearest restaurants first', async ({ page, api, context }) => {
+  const owner = await api.signUp('Joe')
+  const tag = uniqueTag('near')
+  const far = await api.createRestaurant(owner, { name: 'Far Place', tags: [tag], location: { latitude: 40.4168, longitude: -3.7038, address: 'Calle Mayor 1, Madrid' } })
+  await api.createRestaurant(owner, { name: 'Mid Place', tags: [tag], location: eixample })
+  await api.createRestaurant(owner, { name: 'Near Place', tags: [tag], location: barceloneta })
+  await api.createReview(owner, far.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Top' })
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: barceloneta.latitude, longitude: barceloneta.longitude })
+  const names = page.getByRole('heading', { level: 2, name: / Place$/ })
+  const sort = page.getByRole('combobox', { name: 'Sort by' })
+
+  // Only Far Place has a review. The other two have no fixed order.
+  await page.goto(`/restaurants?tags=${tag}`)
+  await expect(names).toHaveCount(3)
+  await expect(names.first()).toHaveText('Far Place')
+  await page.getByRole('button', { name: 'Set location' }).click()
+  await page.getByRole('button', { name: 'Use my current location' }).click()
+
+  // Madrid is not in the default distance of 10 km.
+  const menu = page.getByRole('button', { name: 'Location: Current location' })
+  await expect(menu).toBeVisible()
+  await expect(sort).toHaveText('Nearest')
+  await expect(names).toHaveText(['Near Place', 'Mid Place'])
+  await expect(page.getByText('Less than 100 m')).toBeVisible()
+  await expect(page).not.toHaveURL(/latitude|sort=/)
+
+  await menu.click()
+  await page.getByRole('combobox', { name: 'Distance' }).click()
+  await page.getByRole('option', { name: 'Any distance' }).click()
+  await page.keyboard.press('Escape')
+  await expect(sort).toHaveText('Nearest')
+  await expect(names).toHaveText(['Near Place', 'Mid Place', 'Far Place'])
+
+  // The browser keeps the location. The map shows it.
+  await page.reload()
+  await expect(menu).toBeVisible()
+  await page.getByRole('button', { name: 'Map', exact: true }).click()
+  const map = page.getByRole('region', { name: 'Map of the restaurants' })
+  await expect(map.getByRole('button', { name: 'Near Place' })).toBeVisible()
+  await expect(page.getByText('The blue dot is your location.')).toBeVisible()
+
+  await menu.click()
+  await page.getByRole('button', { name: 'Clear location' }).click()
+  await expect(page.getByRole('button', { name: 'Set location' })).toBeVisible()
+  await expect(page.getByText('The blue dot is your location.')).toHaveCount(0)
+})
+
 test('a click on the map sets the point of a location by hand', async ({ page, user: _user }) => {
   await page.goto('/restaurants/new')
   await page.getByRole('button', { name: 'Enter the location by hand' }).click()

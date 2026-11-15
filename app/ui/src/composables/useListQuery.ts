@@ -19,8 +19,8 @@ export const searchRelevance: RelevanceSort = { filter: 'search', option: { valu
 // when the signed in user changes.
 export function useListQuery(
   defs: MaybeRefOrGetter<FilterDef[]>,
-  baseSortOptions: Option[],
-  baseDefaultSort: string,
+  baseSortOptions: MaybeRefOrGetter<Option[]>,
+  baseDefaultSort: MaybeRefOrGetter<string>,
   relevance?: RelevanceSort,
   // keep has the query keys of the page that a filter change does not remove.
   keep: string[] = [],
@@ -86,9 +86,9 @@ export function useListQuery(
   const sortOptions = computed(() => {
     const raw = first(route.query.sort)
     const old = oldSortOptions.filter((o) => o.value === raw)
-    return [...(searching.value && relevance ? [relevance.option] : []), ...baseSortOptions, ...old]
+    return [...(searching.value && relevance ? [relevance.option] : []), ...toValue(baseSortOptions), ...old]
   })
-  const defaultSort = computed(() => (searching.value && relevance ? relevance.option.value : baseDefaultSort))
+  const defaultSort = computed(() => (searching.value && relevance ? relevance.option.value : toValue(baseDefaultSort)))
 
   const sort = computed<string>({
     get() {

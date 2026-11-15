@@ -1,16 +1,27 @@
 <script setup lang="ts">
 import type { Restaurant } from '@reviews/sdk'
 import { MapPinIcon } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CoverPhoto } from '@/components/ui/cover-photo'
 import { RatingDisplay } from '@/components/ui/rating-display'
+import type { MapPoint } from '@/components/ui/map'
 import { formatCount } from '@/lib/format'
+import { distanceMeters, formatDistance } from '@/lib/preferredLocation'
 import { tagList } from '@/lib/reviews'
 import FavoriteButton from './FavoriteButton.vue'
 
 // heading is the element of the name. A list below an h2 uses h3.
-withDefaults(defineProps<{ restaurant: Restaurant; heading?: 'h2' | 'h3' }>(), { heading: 'h2' })
+// from is the point for the distance to the restaurant.
+const props = withDefaults(defineProps<{ restaurant: Restaurant; heading?: 'h2' | 'h3'; from?: MapPoint | null }>(), {
+  heading: 'h2',
+  from: null,
+})
+
+const distance = computed(() =>
+  props.from && props.restaurant.location ? formatDistance(distanceMeters(props.from, props.restaurant.location)) : null,
+)
 
 defineEmits<{ favorite: [favorite: boolean] }>()
 </script>
@@ -47,7 +58,10 @@ defineEmits<{ favorite: [favorite: boolean] }>()
       </p>
       <p v-if="restaurant.location" class="text-muted-foreground flex items-start gap-1.5 text-sm">
         <MapPinIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <span class="line-clamp-1"><span class="sr-only">Address: </span>{{ restaurant.location.address }}</span>
+        <span class="line-clamp-1">
+          <template v-if="distance"><span class="sr-only">Distance: </span>{{ distance }}<span aria-hidden="true"> · </span></template>
+          <span class="sr-only">Address: </span>{{ restaurant.location.address }}
+        </span>
       </p>
       <div v-if="tagList(restaurant.tags).length" class="flex flex-wrap gap-1.5">
         <Badge v-for="tag in tagList(restaurant.tags)" :key="tag" variant="secondary">{{ tag }}</Badge>

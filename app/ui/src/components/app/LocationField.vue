@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import type { Location, Place } from '@reviews/sdk'
 import { MapPinIcon } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import PlaceResults from '@/components/app/PlaceResults.vue'
+import PlaceSearchCredit from '@/components/app/PlaceSearchCredit.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MapView } from '@/components/ui/map'
 import type { MapPoint } from '@/components/ui/map'
-import { apiFailure, placesApi } from '@/lib/api'
-import { formatCount } from '@/lib/format'
 import { useMapConfig } from '@/lib/mapConfig'
-import { defaultCenter, minPlaceSearch, parseCoordinate, roundCoordinate } from '@/lib/places'
+import { usePlaceSearch } from '@/composables/usePlaceSearch'
+import { parseCoordinate, roundCoordinate } from '@/lib/places'
+import { homePoint } from '@/lib/preferredLocation'
 
 defineProps<{
   id: string
@@ -25,56 +27,14 @@ const emit = defineEmits<{ named: [name: string] }>()
 
 const mapConfig = useMapConfig()
 const byHand = ref(false)
-const text = ref('')
-const places = ref<Place[]>([])
-const state = ref<'idle' | 'loading' | 'done' | 'limited' | 'failed'>('idle')
-// retryAfter is the wait in seconds after a 429.
-const retryAfter = ref(0)
+const { text, places, state, retryAfter } = usePlaceSearch(homePoint)
 const hand = ref({ address: '', latitude: '', longitude: '' })
 
-let timer: ReturnType<typeof setTimeout> | undefined
-let request = 0
-
-// The delay keeps the number of requests to the geocoder low.
-watch(text, (value) => {
-  clearTimeout(timer)
-  request++
-  const search = value.trim()
-  if (search.length < minPlaceSearch) {
-    places.value = []
-    state.value = 'idle'
-    return
+watch(state, (next) => {
+  if (next === 'failed') {
+    enterByHand()
   }
-  state.value = 'loading'
-  const current = request
-  timer = setTimeout(async () => {
-    try {
-      const list = await placesApi.searchPlaces({ search, ...defaultCenter })
-      if (current === request) {
-        places.value = list.items
-        state.value = 'done'
-      }
-    } catch (error) {
-      const failure = await apiFailure(error)
-      if (current !== request) {
-        return
-      }
-      places.value = []
-      // A 401 opens the sign in page.
-      if (failure.status === 401) {
-        state.value = 'idle'
-      } else if (failure.status === 429) {
-        retryAfter.value = failure.retryAfter ?? 60
-        state.value = 'limited'
-      } else {
-        state.value = 'failed'
-        enterByHand()
-      }
-    }
-  }, 400)
 })
-
-onBeforeUnmount(() => clearTimeout(timer))
 
 function select(place: Place) {
   location.value = place.location
@@ -89,7 +49,7 @@ function enterByHand() {
   hand.value = l
     ? { address: l.address, latitude: String(l.latitude), longitude: String(l.longitude) }
     : { address: '', latitude: '', longitude: '' }
-  mapCenter.value = l ?? defaultCenter
+  mapCenter.value = l ?? homePoint()
   mapZoom.value = l ? 17 : 13
   byHand.value = true
 }
@@ -104,7 +64,7 @@ const handPoint = computed<MapPoint | null>(() => {
 
 // mapCenter moves only for a typed point after a blur. A click on the map
 // then does not move the map under the pointer.
-const mapCenter = ref<MapPoint>(defaultCenter)
+const mapCenter = ref<MapPoint>(homePoint())
 const mapZoom = ref(13)
 
 function centerOnPoint() {
@@ -236,38 +196,16 @@ watch(
         :aria-invalid="invalid ? 'true' : undefined"
         :aria-describedby="describedBy"
       />
-      <p v-if="state === 'limited'" class="text-sm" role="status">
-        Too many searches. Try again in {{ formatCount(retryAfter, 'second') }}.
-      </p>
-      <p class="sr-only" role="status">
-        <template v-if="state === 'loading'">Searching</template>
-        <template v-else-if="state === 'done'">{{ places.length ? `${formatCount(places.length, 'place')} found` : 'No places found' }}</template>
-      </p>
-      <ul v-if="places.length" class="divide-border divide-y rounded-md border" aria-label="Places">
-        <li v-for="(place, i) in places" :key="i">
-          <button
-            type="button"
-            class="hover:bg-accent focus-visible:ring-ring/50 w-full rounded-md px-3 py-2 text-left text-sm outline-none focus-visible:ring-[3px]"
-            @click="select(place)"
-          >
-            <span v-if="place.name" class="block font-medium">{{ place.name }}</span>
-            <span class="text-muted-foreground block">{{ place.location.address }}</span>
-          </button>
-        </li>
-      </ul>
-      <p v-else-if="state === 'done'" class="text-muted-foreground text-sm">
-        No places found. Change the search, or enter the location by hand.
-      </p>
+      <PlaceResults
+        :places="places"
+        :state="state"
+        :retry-after="retryAfter"
+        empty="No places found. Change the search, or enter the location by hand."
+        @select="select"
+      />
       <div class="flex flex-wrap items-center justify-between gap-2">
         <Button type="button" variant="outline" size="sm" @click="enterByHand">Enter the location by hand</Button>
-        <a
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-muted-foreground text-xs underline underline-offset-4"
-        >
-          Place search © OpenStreetMap contributors
-        </a>
+        <PlaceSearchCredit />
       </div>
     </template>
   </div>

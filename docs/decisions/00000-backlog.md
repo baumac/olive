@@ -7,10 +7,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## High Priority
-1. Improve restaurant location UX
-  - Allow users to set preferred location and incorporate that into the maps feature
-  - The default list sort is `-created`, update it to be `best rated` or `near`. 
-  - The API has `near`, but the UI never asks for `navigator.geolocation`.
 
 ## Production Readiness
 

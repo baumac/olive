@@ -208,7 +208,9 @@ test('restaurants filter and sort by the overall rating', async ({ page, api }) 
   await api.createReview(owner, fine.id, { space: 6, service: 6, food: 6, price: 6, cleanliness: 6, title: 'Fine' })
   const names = page.getByRole('heading', { level: 2, name: / Place$/ })
 
-  await page.goto(`/restaurants?tags=${tag}&sort=-overall`)
+  // The highest rated restaurants are first without a sort in the link.
+  await page.goto(`/restaurants?tags=${tag}`)
+  await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Highest rated')
   await expect(names).toHaveText(['Top Place', 'Fine Place', 'Unrated Place'])
 
   await page.goto(`/restaurants?tags=${tag}&overall=8`)
@@ -240,5 +242,5 @@ test('the search box finds restaurants by name, description, and tags', async ({
   await page.getByRole('button', { name: `Remove filter search ${word} cafe` }).click()
   await expect(box).toHaveValue('')
   await expect(page).not.toHaveURL(/search=/)
-  await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Newest')
+  await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Highest rated')
 })

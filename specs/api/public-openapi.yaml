@@ -1334,10 +1334,13 @@ components:
         It puts restaurants without reviews last in both directions.
         The `relevance` sort puts the best matches of `search` first. It needs `search`.
         With `search`, the default sort is `relevance`.
+        The `distance` sort puts the restaurants nearest to the point of `near` first. It needs `near`.
+        It uses the same approximation of the distance as `near`.
+        It puts restaurants without a location last in both directions.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(name|overall|relevance|created|updated)(,-?(name|overall|relevance|created|updated))*$'
+        pattern: '^-?(name|overall|relevance|distance|created|updated)(,-?(name|overall|relevance|distance|created|updated))*$'
         default: '-created'
       example: 'name,-created'
     ReviewSort:
@@ -1488,8 +1491,9 @@ components:
       description: |
         Selects the restaurants with a `location` at most `radius` meters from a point.
         Each key is a property, for example `near[latitude]=41.3874&near[longitude]=2.1686&near[radius]=75`.
-        All three properties are required.
-        A restaurant without a location matches no `near` filter.
+        `latitude` and `longitude` are required.
+        Without `radius`, `near` selects all restaurants. It then only gives the point of the `distance` sort.
+        A restaurant without a location matches no `near` filter with a `radius`.
         The distance is an approximation on a flat surface. Its error is small for the radii that the API allows.
       style: deepObject
       explode: true
@@ -1842,10 +1846,10 @@ components:
           address: Carrer de Sant Carles 4, 08003 Barcelona, España
           place_id: osm:N1234567890
     Near:
-      description: A point and a radius in meters.
+      description: A point and an optional radius in meters.
       type: object
       additionalProperties: false
-      required: [latitude, longitude, radius]
+      required: [latitude, longitude]
       properties:
         latitude:
           $ref: '#/components/schemas/Latitude'

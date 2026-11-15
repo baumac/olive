@@ -26,9 +26,11 @@ const props = withDefaults(
     cluster?: boolean
     // clusterLabel gives the accessible name of a pin with a count.
     clusterLabel?: (count: number) => string
+    // origin is a dot at the location of the person. It is not a button.
+    origin?: MapPoint | null
     class?: HTMLAttributes['class']
   }>(),
-  { zoom: 13, markers: () => [], selected: undefined, pick: false, wheelZoom: false, cluster: false, clusterLabel: (count: number) => `${count} places`, class: undefined },
+  { zoom: 13, markers: () => [], selected: undefined, origin: null, pick: false, wheelZoom: false, cluster: false, clusterLabel: (count: number) => `${count} places`, class: undefined },
 )
 
 const emit = defineEmits<{
@@ -245,6 +247,23 @@ function draw() {
   }
 }
 
+let originDot: L.CircleMarker | undefined
+
+function drawOrigin() {
+  originDot?.remove()
+  originDot = undefined
+  if (map && props.origin) {
+    originDot = L.circleMarker([props.origin.latitude, props.origin.longitude], {
+      radius: 7,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#2563eb',
+      fillOpacity: 1,
+      interactive: false,
+    }).addTo(map)
+  }
+}
+
 onMounted(() => {
   if (!el.value) {
     return
@@ -280,9 +299,11 @@ onMounted(() => {
   })
   map.setView([props.center.latitude, props.center.longitude], props.zoom)
   draw()
+  drawOrigin()
 })
 
 watch(() => [props.markers, props.selected, props.pick], draw, { deep: true })
+watch(() => props.origin && `${props.origin.latitude},${props.origin.longitude}`, drawOrigin)
 // The key is a string. A new center object with the same point then does
 // not move the map. A move of the map would start a new load of the page.
 watch(
