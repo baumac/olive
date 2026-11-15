@@ -141,6 +141,7 @@ func TestPageMeta(t *testing.T) {
 	restaurant := save(t, app, "restaurants", map[string]any{
 		"name": `Luigi's <script>alert(1)</script> & "Co"`, "description": "Pasta\nand pizza.", "creator": user.Id,
 		"address": "Carrer Nou 1, Barcelona", "latitude": 41.39, "longitude": 2.16,
+		"website": "https://luigis.example/?a=1&b=2", "phone": "+34 932 21 50 12", "opening_hours": "Mo-Su 12:00-23:00", "price_level": 2,
 	})
 	plain := save(t, app, "restaurants", map[string]any{"name": "Plain", "creator": user.Id})
 	noReviews := save(t, app, "restaurants", map[string]any{"name": "No Reviews", "creator": user.Id})
@@ -178,6 +179,7 @@ func TestPageMeta(t *testing.T) {
 				`"aggregateRating":{"@type":"AggregateRating","bestRating":10,"ratingValue":7.4,"reviewCount":1,"worstRating":1},` +
 				`"description":"Pasta and pizza.","geo":{"@type":"GeoCoordinates","latitude":41.39,"longitude":2.16},` +
 				`"name":"Luigi's \u003cscript\u003ealert(1)\u003c/script\u003e \u0026 \"Co\"",` +
+				`"sameAs":"https://luigis.example/?a=1\u0026b=2","telephone":"+34 932 21 50 12",` +
 				`"url":"https://reviews.example.com` + restaurantPath + `"}</script>`,
 		}},
 		{"GET", restaurantPath + "/", 200, []string{`href="https://reviews.example.com` + restaurantPath + `"`}},

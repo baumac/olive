@@ -23,6 +23,8 @@ import {
 
 /**
  * A place that the place search found.
+ * It has `website`, `phone`, and `opening_hours` only when the geocoder gives them.
+ * 
  * @export
  * @interface Place
  */
@@ -35,6 +37,23 @@ export interface Place {
      * 
      */
     location: Location;
+    /**
+     * The website of a restaurant. It is an `http` or `https` URL with a host.
+     * Spaces, control characters, direction marks and overrides, and invisible characters cause `422`.
+     * 
+     */
+    website?: string;
+    /**
+     * A phone number with 3 to 20 digits. Spaces, parentheses, points, slashes, and hyphens can separate the digits. A `+` can come first.
+     * 
+     */
+    phone?: string;
+    /**
+     * The opening hours of a restaurant as text. The API does not read the text.
+     * Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters cause `422`.
+     * 
+     */
+    openingHours?: string;
 }
 
 /**
@@ -57,6 +76,9 @@ export function PlaceFromJSONTyped(json: any, ignoreDiscriminator: boolean): Pla
         
         'name': json['name'] == null ? undefined : json['name'],
         'location': LocationFromJSON(json['location']),
+        'website': json['website'] == null ? undefined : json['website'],
+        'phone': json['phone'] == null ? undefined : json['phone'],
+        'openingHours': json['opening_hours'] == null ? undefined : json['opening_hours'],
     };
 }
 
@@ -73,6 +95,9 @@ export function PlaceToJSONTyped(value?: Place | null, ignoreDiscriminator: bool
         
         'name': value['name'],
         'location': LocationToJSON(value['location']),
+        'website': value['website'],
+        'phone': value['phone'],
+        'opening_hours': value['openingHours'],
     };
 }
 

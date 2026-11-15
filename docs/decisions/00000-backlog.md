@@ -16,8 +16,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## Future
 - Add IOS app
-- Add more information to restaurants
-  - Potential additional fields are Website, phone, opening hours, and price level are the facts people look for. Photon returns some OSM tags.
 - Support reviewing cheeses, wines, and recipes
 
 

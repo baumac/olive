@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Location, Restaurant } from '@reviews/sdk'
+import type { Location, Place, Restaurant } from '@reviews/sdk'
 import { CircleAlertIcon, MapPinIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FormControl, FormDescription, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,10 +18,11 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, restaurantsApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { nearbyRadius, sameLocation } from '@/lib/places'
+import { normalizeWebsite, priceLevels } from '@/lib/restaurantDetails'
 import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
-import { checkLongText, checkName } from '@/lib/validation'
+import { checkLongText, checkName, checkOpeningHours, checkPhone, checkWebsite } from '@/lib/validation'
 
 const props = defineProps<{ restaurantId?: string }>()
 const router = useRouter()
@@ -33,9 +35,14 @@ interface Fields {
   description: string
   tags: string[]
   location: Location | null
+  website: string
+  phone: string
+  openingHours: string
+  priceLevel: number | null
 }
 
-const fields = ref<Fields>({ name: '', description: '', tags: [], location: null })
+const emptyFields: Fields = { name: '', description: '', tags: [], location: null, website: '', phone: '', openingHours: '', priceLevel: null }
+const fields = ref<Fields>({ ...emptyFields })
 const errors = ref<Record<string, string>>({})
 const alert = ref<{ title: string; description: string; restaurant?: string } | null>(null)
 // stored is the location of the restaurant before the edit.
@@ -71,7 +78,16 @@ onMounted(async () => {
       }
       nameLocked.value = access.hasOtherReviews
       stored.value = r.location
-      fields.value = { name: r.name, description: r.description ?? '', tags: tagList(r.tags), location: r.location }
+      fields.value = {
+        name: r.name,
+        description: r.description ?? '',
+        tags: tagList(r.tags),
+        location: r.location,
+        website: r.website ?? '',
+        phone: r.phone ?? '',
+        openingHours: r.openingHours ?? '',
+        priceLevel: r.priceLevel ?? null,
+      }
     } catch (error) {
       failed.value = { status: (await apiFailure(error)).status }
       return
@@ -81,7 +97,9 @@ onMounted(async () => {
   }
   const draft = takeDraft<Fields>(draftKey.value)
   if (draft) {
+    // A draft from before decision 00038 has no details.
     fields.value = {
+      ...emptyFields,
       ...draft,
       name: nameLocked.value ? fields.value.name : draft.name,
       location: locationLocked.value ? fields.value.location : draft.location,
@@ -115,13 +133,37 @@ watch(
   },
 )
 
-function useName(name: string) {
-  if (!editing.value && fields.value.name.trim() === '') {
-    fields.value.name = name
+// usePlace fills only the empty fields. The name of a stored restaurant
+// stays.
+function usePlace(place: Place) {
+  const f = fields.value
+  if (place.name && !editing.value && f.name.trim() === '') {
+    f.name = place.name
+  }
+  if (place.website && f.website.trim() === '') {
+    f.website = place.website
+  }
+  if (place.phone && f.phone.trim() === '') {
+    f.phone = place.phone
+  }
+  if (place.openingHours && f.openingHours.trim() === '') {
+    f.openingHours = place.openingHours
   }
 }
 
+// The Select of Reka UI does not allow an empty value.
+const noPriceLevel = 'none'
+const priceLevelValue = computed({
+  get: () => (fields.value.priceLevel === null ? noPriceLevel : String(fields.value.priceLevel)),
+  set: (v: string) => {
+    fields.value.priceLevel = v === noPriceLevel ? null : Number(v)
+  },
+})
+
 function validate(): boolean {
+  fields.value.website = normalizeWebsite(fields.value.website)
+  fields.value.phone = fields.value.phone.trim()
+  fields.value.openingHours = fields.value.openingHours.trim()
   errors.value = {
     name: checkName(fields.value.name, 'Enter a name with at least one character that is not a space.'),
     description: checkLongText(fields.value.description),
@@ -132,8 +174,11 @@ function validate(): boolean {
       : editing.value && !stored.value
         ? ''
         : 'Search for the place and select it, or enter the location by hand.',
+    website: checkWebsite(fields.value.website),
+    phone: checkPhone(fields.value.phone),
+    opening_hours: checkOpeningHours(fields.value.openingHours),
   }
-  const first = ['name', 'location', 'description', 'tags'].find((k) => errors.value[k])
+  const first = ['name', 'location', 'description', 'tags', 'website', 'phone', 'opening_hours'].find((k) => errors.value[k])
   if (first) {
     document.getElementById(`restaurant-${first}`)?.focus()
   }
@@ -147,7 +192,8 @@ async function submit() {
   }
   saving.value = true
   saveDraft(draftKey.value, fields.value)
-  const { name, description, tags, location } = fields.value
+  const { name, description, tags, location, priceLevel } = fields.value
+  const { website, phone, openingHours } = fields.value
   try {
     const saved = props.restaurantId
       ? await restaurantsApi.updateRestaurant({
@@ -157,6 +203,10 @@ async function submit() {
             description: description || null,
             tags: tags.length ? new Set(tags) : null,
             location: !location || locationLocked.value || sameLocation(location, stored.value) ? undefined : location,
+            website: website || null,
+            phone: phone || null,
+            openingHours: openingHours || null,
+            priceLevel,
           },
         })
       : await restaurantsApi.createRestaurant({
@@ -165,6 +215,10 @@ async function submit() {
             description: description || undefined,
             tags: tags.length ? new Set(tags) : undefined,
             location: location!,
+            website: website || undefined,
+            phone: phone || undefined,
+            openingHours: openingHours || undefined,
+            priceLevel: priceLevel ?? undefined,
           },
         })
     clearDraft(draftKey.value)
@@ -249,7 +303,7 @@ async function submit() {
           :locked="locationLocked"
           :invalid="!!errors.location"
           :described-by="`restaurant-location-description${errors.location ? ' restaurant-location-message' : ''}`"
-          @named="useName"
+          @selected="usePlace"
         />
         <FormDescription>
           {{
@@ -293,6 +347,56 @@ async function submit() {
         <FormDescription>Optional. Press Enter or comma after each tag, for example wood-fired.</FormDescription>
         <FormMessage />
       </FormItem>
+      <fieldset class="grid gap-6">
+        <legend class="mb-1 text-xl font-semibold tracking-tight">Details</legend>
+        <p class="text-muted-foreground -mt-4 text-sm">Optional. A selected place can fill some of them.</p>
+        <FormItem id="restaurant-website" :error="errors.website">
+          <FormLabel>Website</FormLabel>
+          <FormControl>
+            <Input
+              v-model="fields.website"
+              name="website"
+              type="url"
+              inputmode="url"
+              autocomplete="url"
+              maxlength="2048"
+              placeholder="https://cansole.example"
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+        <FormItem id="restaurant-phone" :error="errors.phone">
+          <FormLabel>Phone</FormLabel>
+          <FormControl>
+            <Input v-model="fields.phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="+34 932 21 50 12" />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+        <FormItem id="restaurant-opening_hours" :error="errors.opening_hours" description>
+          <FormLabel>Opening hours</FormLabel>
+          <FormControl>
+            <Textarea v-model="fields.openingHours" name="opening-hours" maxlength="500" rows="3" />
+          </FormControl>
+          <FormDescription>For example, Tu-Sa 13:00-16:00 on one line and Su 13:00-16:00 on the next.</FormDescription>
+          <FormMessage />
+        </FormItem>
+        <FormItem id="restaurant-price_level" :error="errors.price_level" description>
+          <FormLabel>Price level</FormLabel>
+          <Select v-model="priceLevelValue">
+            <FormControl>
+              <SelectTrigger class="w-full sm:w-60">
+                <SelectValue />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              <SelectItem :value="noPriceLevel">Not set</SelectItem>
+              <SelectItem v-for="l in priceLevels" :key="l.value" :value="String(l.value)">{{ l.label }}</SelectItem>
+            </SelectContent>
+          </Select>
+          <FormDescription>How much a meal costs, compared to other restaurants in the city.</FormDescription>
+          <FormMessage />
+        </FormItem>
+      </fieldset>
       <div class="flex flex-wrap gap-2">
         <Button type="submit" :disabled="saving">
           {{ saving ? 'Saving…' : editing ? 'Save restaurant' : 'Add restaurant' }}

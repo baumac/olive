@@ -128,6 +128,12 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 		r.Set("tags", *b.Tags)
 	}
 	setLocation(r, b.Location)
+	setOptionalText(r, "website", b.Website)
+	setOptionalText(r, "phone", b.Phone)
+	setOptionalText(r, "opening_hours", b.OpeningHours)
+	if b.PriceLevel != nil {
+		r.Set("price_level", float64(*b.PriceLevel))
+	}
 	r.Set("creator", user.Id)
 	var duplicate string
 	err = s.app.RunInTransaction(func(tx core.App) error {
@@ -197,6 +203,10 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 		}
 		ch.patchText("description", b.Description)
 		ch.patchTags(b.Tags)
+		ch.patchText("website", b.Website)
+		ch.patchText("phone", b.Phone)
+		ch.patchText("opening_hours", b.OpeningHours)
+		ch.patchPriceLevel(b.PriceLevel)
 		moves := b.Location != nil && !sameLocation(r, *b.Location)
 		if moves {
 			setLocation(r, *b.Location)
@@ -411,17 +421,21 @@ func (s *Server) restaurantsOf(user *core.Record, records ...*core.Record) ([]re
 // toRestaurant gives a restaurant that ratings does not list no reviews.
 func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[string]restaurantRating, covers map[string]reviewsapi.RestaurantPhoto, favorites map[string]bool) reviewsapi.Restaurant {
 	out := reviewsapi.Restaurant{
-		Id:          r.Id,
-		Name:        r.GetString("name"),
-		Description: optionalText(r, "description"),
-		Tags:        tagsOf(r),
-		Location:    locationOf(r),
-		Creator:     nullable.NewNullNullable[reviewsapi.Creator](),
-		Rating:      nullable.NewNullNullable[reviewsapi.RestaurantRating](),
-		Cover:       nullable.NewNullNullable[reviewsapi.RestaurantPhoto](),
-		Favorite:    favorites[r.Id],
-		Created:     apiTimestamp(r.GetDateTime("created")),
-		Updated:     apiTimestamp(r.GetDateTime("updated")),
+		Id:           r.Id,
+		Name:         r.GetString("name"),
+		Description:  optionalText(r, "description"),
+		Tags:         tagsOf(r),
+		Location:     locationOf(r),
+		Website:      optionalText(r, "website"),
+		Phone:        optionalText(r, "phone"),
+		OpeningHours: optionalText(r, "opening_hours"),
+		PriceLevel:   priceLevelOf(r),
+		Creator:      nullable.NewNullNullable[reviewsapi.Creator](),
+		Rating:       nullable.NewNullNullable[reviewsapi.RestaurantRating](),
+		Cover:        nullable.NewNullNullable[reviewsapi.RestaurantPhoto](),
+		Favorite:     favorites[r.Id],
+		Created:      apiTimestamp(r.GetDateTime("created")),
+		Updated:      apiTimestamp(r.GetDateTime("updated")),
 	}
 	if u, ok := users[r.GetString("creator")]; ok {
 		out.Creator = nullable.NewNullableWithValue(toCreator(u))
@@ -444,6 +458,21 @@ func toCreator(user *core.Record) reviewsapi.Creator {
 // string for a text that is not set.
 func optionalText(r *core.Record, field string) *string {
 	if v := r.GetString(field); v != "" {
+		return &v
+	}
+	return nil
+}
+
+func setOptionalText(r *core.Record, field string, v *string) {
+	if v != nil {
+		r.Set(field, *v)
+	}
+}
+
+// priceLevelOf returns nil for the stored 0 of a restaurant without a price
+// level.
+func priceLevelOf(r *core.Record) *reviewsapi.PriceLevel {
+	if v := r.GetInt("price_level"); v != 0 {
 		return &v
 	}
 	return nil
@@ -475,6 +504,14 @@ func (c *changes) patchText(field string, v nullable.Nullable[string]) {
 	if v.IsSpecified() {
 		text, _ := v.Get()
 		c.set(field, text)
+	}
+}
+
+// patchPriceLevel stores 0 for null.
+func (c *changes) patchPriceLevel(v nullable.Nullable[reviewsapi.PriceLevel]) {
+	if v.IsSpecified() {
+		level, _ := v.Get()
+		c.set("price_level", float64(level))
 	}
 }
 

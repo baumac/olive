@@ -43,6 +43,10 @@ func restaurantData(app core.App, restaurant *core.Record, baseURL string) (json
 	d := jsonLD{"@type": "Restaurant", "name": restaurant.GetString("name")}
 	setText(d, "description", strings.Join(strings.Fields(restaurant.GetString("description")), " "))
 	setText(d, "url", pageURL(baseURL, "/restaurants/"+restaurant.Id))
+	// sameAs is the official site of the restaurant. url is the page of the
+	// app. See decision 00038.
+	setText(d, "sameAs", restaurant.GetString("website"))
+	setText(d, "telephone", restaurant.GetString("phone"))
 	if address := restaurant.GetString("address"); address != "" {
 		d["address"] = address
 		d["geo"] = jsonLD{

@@ -9,7 +9,8 @@ const tile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQV
 // gives a map tile for each path under /tiles. See decision 00018.
 //
 // A search with the word "nothing" finds no place. Each other search finds a
-// restaurant with the name of the search and then an address.
+// restaurant with the name of the search and then an address. The restaurant
+// of a search with the word "details" has the extra tags of decision 00038.
 export async function startPhoton(port: number): Promise<{ url: string; stop: () => Promise<void> }> {
   const server: Server = createServer((req, res) => {
     if (req.url?.startsWith('/tiles/')) {
@@ -37,10 +38,13 @@ function placesOf(q: string) {
   const latitude = -60 - hash.readUInt16BE(0) / 6554
   const longitude = hash.readUInt16BE(2) / 183 - 179
   const address = { street: 'Test Street', postcode: '08003', city: 'Testville', country: 'Testland' }
+  const extra = /\bdetails\b/i.test(q)
+    ? { extra: { 'contact:website': 'https://details.example', phone: '+34 932 21 50 12;+34 600 00 00 00', opening_hours: 'Tu-Sa 13:00-16:00; Su 13:00-16:00' } }
+    : {}
   return [
     {
       geometry: { coordinates: [longitude, latitude] },
-      properties: { ...address, name: q, housenumber: '4', osm_key: 'amenity', osm_value: 'restaurant', osm_type: 'N', osm_id: hash.readUInt32BE(4) + 1 },
+      properties: { ...address, name: q, housenumber: '4', osm_key: 'amenity', osm_value: 'restaurant', osm_type: 'N', osm_id: hash.readUInt32BE(4) + 1, ...extra },
     },
     {
       geometry: { coordinates: [longitude + 0.0001, latitude] },

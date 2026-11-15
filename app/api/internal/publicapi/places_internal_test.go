@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -86,5 +87,46 @@ func TestPlaceSearchCache(t *testing.T) {
 	p.store("latest", nil)
 	if len(p.cache) != 1 {
 		t.Errorf("%d answers after all expired, want 1", len(p.cache))
+	}
+}
+
+func TestPlaceDetails(t *testing.T) {
+	text := func(v *string) string {
+		if v == nil {
+			return "<nil>"
+		}
+		return *v
+	}
+	for in, want := range map[string]string{
+		"https://cansole.example":                          "https://cansole.example",
+		" http://cansole.example/a ":                       "http://cansole.example/a",
+		"cansole.example":                                  "<nil>",
+		"https://":                                         "<nil>",
+		"https://cansole.example/​":                        "<nil>",
+		"https://" + strings.Repeat("a", maxWebsiteLength): "<nil>",
+	} {
+		if got := text(placeWebsite(in)); got != want {
+			t.Errorf("placeWebsite(%q) = %q, want %q", in, got, want)
+		}
+	}
+	for in, want := range map[string]string{
+		"+34 932 21 50 12;+34 600": "+34 932 21 50 12",
+		"(030) 123-45/67":          "(030) 123-45/67",
+		"12":                       "<nil>",
+		"tel. 123456":              "<nil>",
+	} {
+		if got := text(placePhone(in)); got != want {
+			t.Errorf("placePhone(%q) = %q, want %q", in, got, want)
+		}
+	}
+	for in, want := range map[string]string{
+		"Mo-Fr 12:00-15:00; Sa 12:00-23:00":   "Mo-Fr 12:00-15:00\nSa 12:00-23:00",
+		"24/7":                                "24/7",
+		" ; ":                                 "<nil>",
+		strings.Repeat("Mo 12:00-13:00;", 40): "<nil>",
+	} {
+		if got := text(placeOpeningHours(in)); got != want {
+			t.Errorf("placeOpeningHours(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

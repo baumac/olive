@@ -106,3 +106,34 @@ export function checkPhotoFile(file: File): string {
 export function checkAlt(v: string): string {
   return v === '' ? '' : checkName(v, 'Enter a description with at least one character that is not a space.')
 }
+
+// eslint-disable-next-line no-control-regex -- A URL has no spaces or control characters.
+const websitePattern = /^https?:\/\/[^\u0000- \u007f-\u009f/?#][^\u0000- \u007f-\u009f]*$/
+const phonePattern = /^\+?\(?[0-9](?:[ ()./-]*[0-9]){2,19}$/
+
+// checkWebsite checks a website after normalizeWebsite. An empty website is
+// allowed.
+export function checkWebsite(v: string): string {
+  if (v === '') {
+    return ''
+  }
+  return length(v) > 2048 || !websitePattern.test(v) || hidden.test(v)
+    ? 'Enter a web address, for example https://cansole.example.'
+    : ''
+}
+
+export function checkPhone(v: string): string {
+  if (v.trim() === '') {
+    return ''
+  }
+  return v.trim().length > 40 || !phonePattern.test(v.trim())
+    ? 'Enter a phone number with 3 to 20 digits, for example +34 932 21 50 12.'
+    : ''
+}
+
+export function checkOpeningHours(v: string): string {
+  if (length(v) > 500) {
+    return 'Use at most 500 characters.'
+  }
+  return hidden.test(v.replace(/[\t\n\r]/g, '')) ? hiddenText : ''
+}

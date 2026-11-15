@@ -23,7 +23,7 @@ defineProps<{
 }>()
 
 const location = defineModel<Location | null>({ default: null })
-const emit = defineEmits<{ named: [name: string] }>()
+const emit = defineEmits<{ selected: [place: Place] }>()
 
 const mapConfig = useMapConfig()
 const byHand = ref(false)
@@ -38,9 +38,7 @@ watch(state, (next) => {
 
 function select(place: Place) {
   location.value = place.location
-  if (place.name) {
-    emit('named', place.name)
-  }
+  emit('selected', place)
   text.value = ''
 }
 

@@ -2209,7 +2209,9 @@ components:
         north:
           $ref: '#/components/schemas/Latitude'
     Place:
-      description: A place that the place search found.
+      description: |
+        A place that the place search found.
+        It has `website`, `phone`, and `opening_hours` only when the geocoder gives them.
       type: object
       required: [location]
       properties:
@@ -2218,6 +2220,12 @@ components:
           type: string
         location:
           $ref: '#/components/schemas/Location'
+        website:
+          $ref: '#/components/schemas/Website'
+        phone:
+          $ref: '#/components/schemas/Phone'
+        opening_hours:
+          $ref: '#/components/schemas/OpeningHours'
       examples:
         - name: Can Solé
           location:
@@ -2225,6 +2233,8 @@ components:
             longitude: 2.1893
             address: Carrer de Sant Carles 4, 08003 Barcelona, España
             place_id: osm:N1234567890
+          website: https://cansole.example
+          phone: +34 932 21 50 12
     PlaceList:
       description: The places of one search. It has no pages.
       type: object
@@ -2243,6 +2253,41 @@ components:
                 longitude: 2.1893
                 address: Carrer de Sant Carles 4, 08003 Barcelona, España
                 place_id: osm:N1234567890
+    Website:
+      description: |
+        The website of a restaurant. It is an `http` or `https` URL with a host.
+        Spaces, control characters, direction marks and overrides, and invisible characters cause `422`.
+      type: string
+      maxLength: 2048
+      pattern: '^https?://[^\x00-\x20\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB/?#][^\x00-\x20\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
+      x-pattern-message: must be an http or https URL with a host and without spaces or hidden characters
+      examples: ['https://cansole.example']
+    Phone:
+      description: |
+        A phone number with 3 to 20 digits. Spaces, parentheses, points, slashes, and hyphens can separate the digits. A `+` can come first.
+      type: string
+      maxLength: 40
+      pattern: '^\+?\(?[0-9](?:[ ()./-]*[0-9]){2,19}$'
+      x-pattern-message: must have 3 to 20 digits with only spaces, parentheses, points, slashes, and hyphens between them
+      examples: ['+34 932 21 50 12']
+    OpeningHours:
+      description: |
+        The opening hours of a restaurant as text. The API does not read the text.
+        Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters cause `422`.
+      type: string
+      maxLength: 500
+      pattern: '^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
+      x-pattern-message: must not have control, direction, or invisible characters other than line breaks and tabs
+      examples: ["Tu-Sa 13:00-16:00, 20:00-23:00\nSu 13:00-16:00"]
+    PriceLevel:
+      description: |
+        How much a meal costs, relative to the restaurants of the same city. The API has no currency.
+        1 is inexpensive, 2 is moderate, 3 is expensive, and 4 is very expensive.
+        It is not the `price` score of a review.
+      type: integer
+      minimum: 1
+      maximum: 4
+      examples: [2]
     Creator:
       description: The public fields of a user.
       type: object
@@ -2354,6 +2399,14 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Location'
             - type: 'null'
+        website:
+          $ref: '#/components/schemas/Website'
+        phone:
+          $ref: '#/components/schemas/Phone'
+        opening_hours:
+          $ref: '#/components/schemas/OpeningHours'
+        price_level:
+          $ref: '#/components/schemas/PriceLevel'
         creator:
           description: The user who created the restaurant. It is `null` after that user is deleted.
           oneOf:
@@ -2393,6 +2446,8 @@ components:
             latitude: 41.3766
             longitude: 2.1893
             address: Carrer de Sant Carles 4, 08003 Barcelona, España
+          website: https://luigis.example
+          price_level: 2
           creator:
             id: u5n1c8r3t6y0b2e
             name: Ana
@@ -2461,6 +2516,14 @@ components:
           $ref: '#/components/schemas/Tags'
         location:
           $ref: '#/components/schemas/Location'
+        website:
+          $ref: '#/components/schemas/Website'
+        phone:
+          $ref: '#/components/schemas/Phone'
+        opening_hours:
+          $ref: '#/components/schemas/OpeningHours'
+        price_level:
+          $ref: '#/components/schemas/PriceLevel'
       examples:
         - name: Luigi's Trattoria
           description: A family-run Italian restaurant
@@ -2488,6 +2551,22 @@ components:
             - type: 'null'
         location:
           $ref: '#/components/schemas/Location'
+        website:
+          oneOf:
+            - $ref: '#/components/schemas/Website'
+            - type: 'null'
+        phone:
+          oneOf:
+            - $ref: '#/components/schemas/Phone'
+            - type: 'null'
+        opening_hours:
+          oneOf:
+            - $ref: '#/components/schemas/OpeningHours'
+            - type: 'null'
+        price_level:
+          oneOf:
+            - $ref: '#/components/schemas/PriceLevel'
+            - type: 'null'
       examples:
         - description: A family-run Italian restaurant since 1987
           tags: null

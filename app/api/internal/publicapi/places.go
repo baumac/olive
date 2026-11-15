@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -204,6 +205,9 @@ type photonFeature struct {
 		OSMValue    string `json:"osm_value"`
 		OSMType     string `json:"osm_type"`
 		OSMID       int64  `json:"osm_id"`
+		// Extra has the OpenStreetMap tags of a server that imports them
+		// with -extra-tags. The public server has none. See decision 00038.
+		Extra map[string]any `json:"extra"`
 	} `json:"properties"`
 }
 
@@ -243,7 +247,69 @@ func (f photonFeature) place() (reviewsapi.Place, bool) {
 		id := fmt.Sprintf("osm:%s%d", p.OSMType, p.OSMID)
 		place.Location.PlaceId = &id
 	}
+	place.Website = placeWebsite(firstTag(p.Extra, "website", "contact:website"))
+	place.Phone = placePhone(firstTag(p.Extra, "phone", "contact:phone"))
+	place.OpeningHours = placeOpeningHours(firstTag(p.Extra, "opening_hours"))
 	return place, true
+}
+
+const (
+	maxWebsiteLength      = 2048
+	maxPhoneLength        = 40
+	maxOpeningHoursLength = 500
+)
+
+// The patterns are the patterns of the Website and Phone schemas without
+// the hidden characters. hiddenRune checks these.
+var (
+	websitePattern = regexp.MustCompile(`^https?://[^\x00-\x20\x7F-\x9F/?#][^\x00-\x20\x7F-\x9F]*$`)
+	phonePattern   = regexp.MustCompile(`^\+?\(?[0-9](?:[ ()./-]*[0-9]){2,19}$`)
+)
+
+func firstTag(tags map[string]any, keys ...string) string {
+	for _, k := range keys {
+		if v, ok := tags[k].(string); ok && strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// The place functions return nil for a value that the schema refuses.
+// The response validation then cannot fail.
+
+func placeWebsite(v string) *string {
+	v = strings.TrimSpace(v)
+	if len([]rune(v)) > maxWebsiteLength || !websitePattern.MatchString(v) || strings.ContainsFunc(v, hiddenRune) {
+		return nil
+	}
+	return &v
+}
+
+// placePhone returns the first number of a list with semicolons.
+func placePhone(v string) *string {
+	v, _, _ = strings.Cut(v, ";")
+	v = strings.TrimSpace(v)
+	if len(v) > maxPhoneLength || !phonePattern.MatchString(v) {
+		return nil
+	}
+	return &v
+}
+
+// placeOpeningHours puts each rule of the OpenStreetMap syntax on its own
+// line.
+func placeOpeningHours(v string) *string {
+	var lines []string
+	for rule := range strings.SplitSeq(v, ";") {
+		if rule = cleanPlaceText(rule); rule != "" {
+			lines = append(lines, rule)
+		}
+	}
+	text := strings.Join(lines, "\n")
+	if text == "" || len([]rune(text)) > maxOpeningHoursLength {
+		return nil
+	}
+	return &text
 }
 
 func firstText(values ...string) string {

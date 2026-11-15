@@ -9,6 +9,7 @@ import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import FavoriteButton from '@/components/app/FavoriteButton.vue'
+import RestaurantDetails from '@/components/app/RestaurantDetails.vue'
 import RestaurantGallery from '@/components/app/RestaurantGallery.vue'
 import ReviewList from '@/components/app/ReviewList.vue'
 import SaveToListMenu from '@/components/app/SaveToListMenu.vue'
@@ -219,6 +220,7 @@ async function remove() {
             :markers="[marker]"
             class="h-56"
           />
+          <RestaurantDetails :restaurant="restaurant.data.value" />
           <ul v-if="tagList(restaurant.data.value.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
             <li v-for="tag in tagList(restaurant.data.value.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
           </ul>

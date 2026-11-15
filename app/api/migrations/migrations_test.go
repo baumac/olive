@@ -543,3 +543,53 @@ func TestConfirmExistingUsersMigration(t *testing.T) {
 		t.Error("a new user is confirmed")
 	}
 }
+
+func TestRestaurantDetailsMigration(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268816_add_restaurant_details.go")
+	restaurants, err := app.FindCollectionByNameOrId("restaurants")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restaurants.Fields.GetByName("website") != nil {
+		t.Fatal("down keeps the website field")
+	}
+	old := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "address": "Carrer Nou 1"})
+	redo()
+
+	old, err = app.FindRecordById("restaurants", old.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if old.GetString("website") != "" || old.GetString("phone") != "" || old.GetString("opening_hours") != "" || old.GetInt("price_level") != 0 {
+		t.Errorf("the old restaurant has details: %v", old.FieldsData())
+	}
+	old.Set("price_level", 5)
+	if err := app.Save(old); err == nil {
+		t.Error("a price level of 5 is saved")
+	}
+	old.Set("price_level", 4)
+	if err := app.Save(old); err != nil {
+		t.Errorf("a price level of 4: %v", err)
+	}
+
+	for field, values := range map[string][2]string{
+		"website":       {"https://cansole.example/menu", "see menu"},
+		"phone":         {"+34 932 21 50 12", "call us"},
+		"opening_hours": {"Mo-Fr 12:00-15:00\nSa 12:00-23:00", "Mo\u200b"},
+	} {
+		old.Set(field, values[0])
+		if err := app.Save(old); err != nil {
+			t.Errorf("%s %q: %v", field, values[0], err)
+		}
+		old.Set(field, values[1])
+		if err := app.Save(old); err == nil {
+			t.Errorf("%s %q is saved", field, values[1])
+		}
+		old.Set(field, "")
+	}
+}

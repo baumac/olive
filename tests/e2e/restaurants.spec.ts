@@ -54,6 +54,38 @@ test('a signed in user adds, edits, and deletes a restaurant', async ({ page, us
   await expect(page.getByText('Restaurant deleted')).toBeVisible()
 })
 
+test('the place search fills the details, and the creator changes and removes them', async ({ page, user: _user }) => {
+  await page.goto('/restaurants/new')
+  await page.getByLabel('Phone').fill('+34 600 11 22 33')
+  await selectPlace(page, uniqueTag('details'))
+  // The typed phone number stays. The empty fields get the tags of the place.
+  await expect(page.getByLabel('Website')).toHaveValue('https://details.example')
+  await expect(page.getByLabel('Phone')).toHaveValue('+34 600 11 22 33')
+  await expect(page.getByLabel('Opening hours')).toHaveValue('Tu-Sa 13:00-16:00\nSu 13:00-16:00')
+  await page.getByLabel('Price level').click()
+  await page.getByRole('option', { name: 'Moderate' }).click()
+  await page.getByRole('button', { name: 'Add restaurant' }).click()
+
+  const details = page.getByRole('definition')
+  await expect(page.getByText('Restaurant added')).toBeVisible()
+  await expect(page.getByRole('link', { name: /^details\.example ?, opens in a new tab$/ })).toHaveAttribute('href', 'https://details.example')
+  await expect(page.getByRole('link', { name: '+34 600 11 22 33' })).toHaveAttribute('href', 'tel:+34600112233')
+  await expect(details.filter({ hasText: 'Tu-Sa 13:00-16:00' })).toBeVisible()
+  await expect(details.filter({ hasText: 'Moderate' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Edit restaurant' }).click()
+  await page.getByLabel('Website').fill('www.details.example/menu')
+  await page.getByLabel('Phone').fill('')
+  await page.getByLabel('Opening hours').fill('')
+  await page.getByLabel('Price level').click()
+  await page.getByRole('option', { name: 'Not set' }).click()
+  await page.getByRole('button', { name: 'Save restaurant' }).click()
+
+  await expect(page.getByText('Restaurant saved')).toBeVisible()
+  await expect(page.getByRole('link', { name: /^details\.example ?, opens in a new tab$/ })).toHaveAttribute('href', 'https://www.details.example/menu')
+  await expect(details).toHaveCount(1)
+})
+
 test('only the creator sees edit and delete', async ({ page, api }) => {
   const owner = await api.signUp('Joe')
   const restaurant = await api.createRestaurant(owner, { name: 'Can Sole' })

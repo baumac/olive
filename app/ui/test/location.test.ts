@@ -150,7 +150,7 @@ describe('LocationField', () => {
 
     await buttons[0]!.trigger('click')
     expect(w.emitted('update:modelValue')).toEqual([[canSole.location]])
-    expect(w.emitted('named')).toEqual([['Can Solé']])
+    expect(w.emitted('selected')).toEqual([[canSole]])
     await w.setProps({ modelValue: canSole.location })
     expect(w.text()).toContain('Selected location: Carrer de Sant Carles 4, 08003 Barcelona')
     expect(w.findAll('ul button')).toHaveLength(0)

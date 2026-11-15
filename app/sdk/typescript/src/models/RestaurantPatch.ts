@@ -49,6 +49,30 @@ export interface RestaurantPatch {
      * 
      */
     location?: Location;
+    /**
+     * The website of a restaurant. It is an `http` or `https` URL with a host.
+     * Spaces, control characters, direction marks and overrides, and invisible characters cause `422`.
+     * 
+     */
+    website?: string | null;
+    /**
+     * A phone number with 3 to 20 digits. Spaces, parentheses, points, slashes, and hyphens can separate the digits. A `+` can come first.
+     * 
+     */
+    phone?: string | null;
+    /**
+     * The opening hours of a restaurant as text. The API does not read the text.
+     * Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters cause `422`.
+     * 
+     */
+    openingHours?: string | null;
+    /**
+     * How much a meal costs, relative to the restaurants of the same city. The API has no currency.
+     * 1 is inexpensive, 2 is moderate, 3 is expensive, and 4 is very expensive.
+     * It is not the `price` score of a review.
+     * 
+     */
+    priceLevel?: number | null;
 }
 
 /**
@@ -72,6 +96,10 @@ export function RestaurantPatchFromJSONTyped(json: any, ignoreDiscriminator: boo
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'tags': json['tags'] === undefined ? undefined : json['tags'] === null ? null : new Set(json['tags']),
         'location': json['location'] == null ? undefined : LocationFromJSON(json['location']),
+        'website': json['website'] === undefined ? undefined : json['website'] === null ? null : json['website'],
+        'phone': json['phone'] === undefined ? undefined : json['phone'] === null ? null : json['phone'],
+        'openingHours': json['opening_hours'] === undefined ? undefined : json['opening_hours'] === null ? null : json['opening_hours'],
+        'priceLevel': json['price_level'] === undefined ? undefined : json['price_level'] === null ? null : json['price_level'],
     };
 }
 
@@ -90,6 +118,10 @@ export function RestaurantPatchToJSONTyped(value?: RestaurantPatch | null, ignor
         'description': value['description'],
         'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
         'location': LocationToJSON(value['location']),
+        'website': value['website'],
+        'phone': value['phone'],
+        'opening_hours': value['openingHours'],
+        'price_level': value['priceLevel'],
     };
 }
 

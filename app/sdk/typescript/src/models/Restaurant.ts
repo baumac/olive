@@ -73,6 +73,30 @@ export interface Restaurant {
      */
     location: Location | null;
     /**
+     * The website of a restaurant. It is an `http` or `https` URL with a host.
+     * Spaces, control characters, direction marks and overrides, and invisible characters cause `422`.
+     * 
+     */
+    website?: string;
+    /**
+     * A phone number with 3 to 20 digits. Spaces, parentheses, points, slashes, and hyphens can separate the digits. A `+` can come first.
+     * 
+     */
+    phone?: string;
+    /**
+     * The opening hours of a restaurant as text. The API does not read the text.
+     * Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters cause `422`.
+     * 
+     */
+    openingHours?: string;
+    /**
+     * How much a meal costs, relative to the restaurants of the same city. The API has no currency.
+     * 1 is inexpensive, 2 is moderate, 3 is expensive, and 4 is very expensive.
+     * It is not the `price` score of a review.
+     * 
+     */
+    priceLevel?: number;
+    /**
      * The user who created the restaurant. It is `null` after that user is deleted.
      */
     creator: Creator | null;
@@ -138,6 +162,10 @@ export function RestaurantFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         'description': json['description'] == null ? undefined : json['description'],
         'tags': json['tags'] == null ? undefined : new Set(json['tags']),
         'location': LocationFromJSON(json['location']),
+        'website': json['website'] == null ? undefined : json['website'],
+        'phone': json['phone'] == null ? undefined : json['phone'],
+        'openingHours': json['opening_hours'] == null ? undefined : json['opening_hours'],
+        'priceLevel': json['price_level'] == null ? undefined : json['price_level'],
         'creator': CreatorFromJSON(json['creator']),
         'reviewCount': json['review_count'],
         'rating': RestaurantRatingFromJSON(json['rating']),
@@ -164,6 +192,10 @@ export function RestaurantToJSONTyped(value?: Restaurant | null, ignoreDiscrimin
         'description': value['description'],
         'tags': value['tags'] == null ? value['tags'] : Array.from(value['tags'] as Set<any>),
         'location': LocationToJSON(value['location']),
+        'website': value['website'],
+        'phone': value['phone'],
+        'opening_hours': value['openingHours'],
+        'price_level': value['priceLevel'],
         'creator': CreatorToJSON(value['creator']),
         'review_count': value['reviewCount'],
         'rating': RestaurantRatingToJSON(value['rating']),
