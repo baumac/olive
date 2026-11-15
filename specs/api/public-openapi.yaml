@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 2.2.0
+  version: 3.0.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants.
 
     Sign up and sign in do not require authentication.
-    They return an auth token.
+    Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token.
     Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter.
     Read operations do not require authentication.
     Create, update, and delete operations of restaurants and reviews require an auth token.
@@ -17,6 +17,8 @@ info:
     Version 1.0.0 had a space in the place of the `T`. This is the only change of version 2.0.0. The path stays `/v1`.
     Version 2.1.0 adds the `reviews_session` cookie.
     Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation.
+    Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.
+    It also adds the password reset and the operations of `/users/me`. The path stays `/v1`.
 
     Request bodies with unknown or read-only properties get `400 Bad Request`.
     Property values that break a schema rule get `422 Unprocessable Content`.
@@ -26,7 +28,9 @@ servers:
 
 tags:
   - name: users
-    description: Sign up, sign in, sign out, and refresh the auth token of a user.
+    description: |
+      Sign up, sign in, sign out, and refresh the auth token of a user.
+      A user can also reset the password and change or delete the account.
   - name: restaurants
     description: Restaurants and their reviews.
   - name: reviewers
@@ -45,16 +49,19 @@ paths:
         name: sign-in
       summary: Sign up a user
       description: |
-        Creates a user and signs the user in.
-        The response contains an auth token for the new user.
+        Creates a user and sends an email with a confirmation link to the email address.
+        `confirmEmail` then signs the user in. The user cannot sign in before that.
+        The response is the same for a new email address and for an email address that a user has.
+        An email address of a confirmed user gets an email that tells about the account. The user does not change.
+        An email address of a user without confirmation gets a new link. The user then has the new `name` and `password`.
+        At the email limit of the address, this user does not change.
+        The API sends only a small number of emails to one address in one hour. The response does not show it.
         The new user is not approved. A superuser approves the user in the PocketBase dashboard.
-        Until then, the user can sign in, sign out, and read.
+        Until then, the user can sign in, sign out, read, and change or delete the account.
         The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
       tags: [users]
       security:
         - {}
-      parameters:
-        - $ref: '#/components/parameters/SessionCookie'
       requestBody:
         description: The new user.
         required: true
@@ -65,8 +72,45 @@ paths:
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
-        '201':
-          description: The user was created.
+        '202':
+          description: The API sends an email to the email address.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /users/confirmations:
+    post:
+      operationId: confirmEmail
+      x-rate-limit:
+        key: ip
+        name: sign-in
+      summary: Confirm the email address of a user
+      description: |
+        Confirms the email address with the token of the confirmation link and signs the user in.
+        A token works one time and for one day.
+        The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
+      tags: [users]
+      security:
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/SessionCookie'
+      requestBody:
+        description: The token of the confirmation link.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailConfirmation'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The email address is confirmed and the user is signed in.
           headers:
             Set-Cookie:
               $ref: '#/components/headers/SetSessionCookie'
@@ -76,8 +120,211 @@ paths:
                 $ref: '#/components/schemas/AuthToken'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /users/password-resets:
+    post:
+      operationId: requestPasswordReset
+      x-rate-limit:
+        key: ip
+        name: sign-in
+      summary: Send a password reset link
+      description: |
+        Sends an email with a password reset link to the email address of a user.
+        The response is the same for all email addresses.
+        The API sends only a small number of emails to one address in one hour. The response does not show it.
+        The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
+      tags: [users]
+      security:
+        - {}
+      requestBody:
+        description: The email address of the user.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '202':
+          description: The API sends an email if a user has the email address.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /users/password:
+    put:
+      operationId: resetPassword
+      x-rate-limit:
+        key: ip
+        name: sign-in
+      summary: Set a new password with a reset token
+      description: |
+        Sets the password of the user of the token of a password reset link.
+        A token works one time and for 30 minutes.
+        All auth tokens of the user become invalid. The user then signs in with the new password.
+        The reset also confirms the email address of the user.
+        The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
+      tags: [users]
+      security:
+        - {}
+      requestBody:
+        description: The token of the reset link and the new password.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordReset'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The user has the new password.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /users/me:
+    patch:
+      operationId: updateUser
+      x-allow-unapproved: true
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Change the name of the user
+      description: Changes the user of the auth token.
+      tags: [users]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The user properties to change.
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/UserPatch'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /users/me/password:
+    put:
+      operationId: changePassword
+      x-allow-unapproved: true
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Change the password of the user
+      description: |
+        Changes the password of the user of the auth token.
+        All auth tokens of the user become invalid, also on other devices. The response has a new auth token.
+        A wrong `current_password` causes `422`. It counts for the wrong password limit of sign in.
+      tags: [users]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SessionCookie'
+      requestBody:
+        description: The current password and the new password.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChange'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The user has the new password. The body has a new auth token.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /users/me/deletion:
+    post:
+      operationId: deleteUser
+      x-allow-unapproved: true
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Delete the user
+      description: |
+        Deletes the user of the auth token. The delete cannot be undone.
+        The reviews, the photos, and the lists of the user are deleted also.
+        The restaurants of the user stay. They then have no creator.
+        A wrong `password` causes `422`. It counts for the wrong password limit of sign in.
+        A request with the `reviews_session` cookie also deletes the cookie.
+      tags: [users]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The password of the user.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserDelete'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The user was deleted.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/DeleteSessionCookie'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
@@ -96,6 +343,8 @@ paths:
         The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
         Too many wrong passwords for one user cause `429 Too Many Requests` for this user.
         A correct password then also gets `429` until the time of `Retry-After`.
+        A user who did not confirm the email address gets `403` for the correct password.
+        The API then sends a new confirmation link.
       tags: [users]
       security:
         - {}
@@ -124,6 +373,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/InvalidCredentials'
+        '403':
+          $ref: '#/components/responses/EmailNotConfirmed'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
@@ -1239,13 +1490,13 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      description: An auth token from `signUp`, `signIn`, or `refreshToken`.
+      description: An auth token from `confirmEmail`, `signIn`, `refreshToken`, or `changePassword`.
     cookieAuth:
       type: apiKey
       in: cookie
       name: reviews_session
       description: |
-        The auth token in the cookie that `signUp`, `signIn`, or `refreshToken` set with `cookie=true`.
+        The auth token in the cookie that `confirmEmail`, `signIn`, `refreshToken`, or `changePassword` set with `cookie=true`.
         The API ignores the cookie when the request has an `Authorization` header.
         The API also ignores it on a cross-origin `POST`, `PATCH`, or `DELETE` request from a browser.
 
@@ -1687,7 +1938,7 @@ components:
       description: |
         The bearer token is missing on a request that requires it, or the bearer token is invalid or expired.
         A `reviews_session` cookie with an invalid or expired token gets this response also. The response deletes the cookie.
-        `refreshToken`, create, update, and delete operations require a bearer token.
+        `refreshToken`, the operations of `/users/me`, and create, update, and delete operations require a bearer token.
       headers:
         WWW-Authenticate:
           description: The auth scheme. An invalid token adds `error="invalid_token"`.
@@ -1706,7 +1957,8 @@ components:
         The user is not the creator of the resource. For a restaurant without a creator, the user has no review of it.
         A rename or a delete of a favorites list gets this response also.
         A user who is not approved gets this response for each operation that needs a token.
-        The problem then has the `code` `not_approved`. `signOut` and `refreshToken` are the exceptions.
+        The problem then has the `code` `not_approved`.
+        `signOut`, `refreshToken`, and the operations of `/users/me` are the exceptions.
       content:
         application/problem+json:
           schema:
@@ -1720,7 +1972,7 @@ components:
     Conflict:
       description: |
         The request conflicts with the current state.
-        Examples are a sign up with an email that another user has, a duplicate review for a restaurant,
+        Examples are a duplicate review for a restaurant,
         a delete of a restaurant that has a review of another user,
         a change of `name` or `location` on a restaurant that has a review of another user,
         a `location.place_id` that another restaurant has,
@@ -1787,12 +2039,27 @@ components:
             title: Unauthorized
             status: 401
             detail: The email or password is not correct.
+    EmailNotConfirmed:
+      description: |
+        The password is correct, but the user did not confirm the email address.
+        The problem has the `code` `email_not_confirmed`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            detail: The email address is not confirmed. A new confirmation link is on its way.
+            code: email_not_confirmed
     TooManyRequests:
       description: |
         The client sent too many requests of one operation in a short time.
-        Sign up and sign in count each IP address. The other operations with a limit count each user.
+        Sign up, sign in, `confirmEmail`, and the password reset count each IP address.
+        The other operations with a limit count each user.
         Each operation has its own count.
-        Sign in also gets it when one user has too many wrong passwords in a short time.
+        Sign in, `changePassword`, and `deleteUser` also get it when one user has too many wrong passwords in a short time.
         A photo upload also gets it when the server holds too many photos in memory.
         This upload does not count for the rate limit of the user.
       headers:
@@ -2676,8 +2943,10 @@ components:
           description: |
             A fixed value for a reason that a client must tell apart from others.
             `not_approved` is the `403` of a user that no superuser approved.
+            `email_not_confirmed` is the `403` of a sign in before the user confirmed the email address.
+            `wrong_password_limit` is the `429` of a user with too many wrong passwords.
           type: string
-          enum: [not_approved]
+          enum: [not_approved, email_not_confirmed, wrong_password_limit]
         property:
           description: |
             The request property that causes a conflict, such as `name` or `location`.
@@ -2745,7 +3014,7 @@ components:
         approved:
           description: |
             `true` after a superuser approved the user.
-            A user who is not approved can sign in, sign out, and read.
+            A user who is not approved can sign in, sign out, read, and change or delete the account.
             All other operations that need a token give `403 Forbidden`.
             Other people cannot see the reviewer profile and the lists of such a user. They get `404`.
           type: boolean
@@ -2776,6 +3045,80 @@ components:
         - email: ana@example.com
           password: correct-horse-battery
           name: Ana
+    EmailConfirmation:
+      description: The token of a confirmation link.
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          $ref: '#/components/schemas/EmailToken'
+    EmailToken:
+      description: |
+        The token of a link in an email. The link has it after `#token=`.
+        A token that is not valid or is expired causes `422`.
+      type: string
+      minLength: 1
+      maxLength: 2000
+      examples: [eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InU1bjFjOHIzdDZ5MGIyZSJ9.c2lnbmF0dXJl]
+    PasswordResetRequest:
+      description: The email address that gets a password reset link.
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          $ref: '#/components/schemas/Email'
+      examples:
+        - email: ana@example.com
+    PasswordReset:
+      description: The token of a password reset link and the new password.
+      type: object
+      additionalProperties: false
+      required: [token, password]
+      properties:
+        token:
+          $ref: '#/components/schemas/EmailToken'
+        password:
+          $ref: '#/components/schemas/Password'
+    UserPatch:
+      description: A JSON Merge Patch. An empty patch changes nothing.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+      examples:
+        - name: Ana Maria
+    PasswordChange:
+      description: The current password and the new password of the user.
+      type: object
+      additionalProperties: false
+      required: [current_password, password]
+      properties:
+        current_password:
+          description: The password that the user has now.
+          type: string
+          format: password
+          maxLength: 255
+        password:
+          $ref: '#/components/schemas/Password'
+      examples:
+        - current_password: correct-horse-battery
+          password: better-horse-battery
+    UserDelete:
+      description: The password of the user. It confirms the delete.
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          description: The password of the user.
+          type: string
+          format: password
+          maxLength: 255
+      examples:
+        - password: correct-horse-battery
     Credentials:
       description: The email and password to sign in.
       type: object

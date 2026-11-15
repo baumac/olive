@@ -65,7 +65,7 @@ func TestAuthAndRateLimitComeFromTheSpec(t *testing.T) {
 }
 
 // TestWriteOperationsHaveARateLimit finds a new write operation without
-// x-rate-limit. The operations with x-allow-unapproved change no data.
+// x-rate-limit. Sign out and the token refresh change no data.
 func TestWriteOperationsHaveARateLimit(t *testing.T) {
 	spec, err := loadSpec()
 	if err != nil {
@@ -73,7 +73,8 @@ func TestWriteOperationsHaveARateLimit(t *testing.T) {
 	}
 	for pattern, op := range spec.operations {
 		write := !strings.HasPrefix(pattern, "GET ") && !strings.HasPrefix(pattern, "HEAD ")
-		if write && op.approval && op.limit == nil {
+		noData := strings.HasPrefix(pattern, "DELETE "+basePath+"/users/tokens") || strings.HasSuffix(pattern, "/users/tokens/refresh")
+		if write && !noData && op.limit == nil {
 			t.Errorf("%s has no x-rate-limit", pattern)
 		}
 	}

@@ -12,12 +12,14 @@ func TestUserApproval(t *testing.T) {
 	review := e.createReview(ana.Token, restaurant, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Good"}`)["id"].(string)
 	list := e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Date night"}`, token: ana.Token}, http.StatusCreated).object(t)["id"].(string)
 
-	res := e.expect(request{method: "POST", path: "/v1/users",
-		body: `{"email":"joe@example.com","password":"correct-horse-battery","name":"Joe"}`}, http.StatusCreated)
+	e.expect(request{method: "POST", path: "/v1/users",
+		body: `{"email":"joe@example.com","password":"correct-horse-battery","name":"Joe"}`}, http.StatusAccepted)
+	res := e.expect(request{method: "POST", path: "/v1/users/confirmations",
+		body: `{"token":"` + e.emailToken("joe@example.com") + `"}`}, http.StatusOK)
 	var joe authToken
 	res.decode(t, &joe)
 	if res.object(t)["user"].(map[string]any)["approved"] != false {
-		t.Errorf("sign up: user %v, want approved false", res.object(t)["user"])
+		t.Errorf("confirmation: user %v, want approved false", res.object(t)["user"])
 	}
 
 	reviewPath := "/v1/restaurants/" + restaurant + "/reviews/" + review

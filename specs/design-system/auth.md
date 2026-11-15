@@ -22,6 +22,11 @@ How people sign up, sign in and stay signed in. The API is the Users API: the `u
 
 - `/sign-in`: `SignInPage` with `SignInForm`.
 - `/sign-up`: `SignUpPage` with `SignUpForm`.
+- `/confirm-email`: `ConfirmEmailPage`. The link of the confirmation email opens it.
+- `/forgot-password`: `ForgotPasswordPage` with one "Email" field.
+- `/reset-password`: `ResetPasswordPage`. The link of the password reset email opens it.
+- `/account`: `AccountPage`. `UserMenu` has the "Account" item. The page needs an account.
+- The links of the emails have the token after `#token=`. The page reads the token and then removes it from the address.
 - Both pages take a `redirect` query and return to it after success. Accept only paths that start with `/` and not `//`. The default is `/restaurants`.
 - The two forms link to each other and keep the `redirect` query.
 
@@ -29,14 +34,38 @@ How people sign up, sign in and stay signed in. The API is the Users API: the `u
 
 1. The person fills in `SignUpForm` and selects "Create account".
 2. The UI calls `signUp` (`POST /v1/users`) with `name`, `email` and `password`.
-3. The response is an auth token, so the person is signed in. The UI stores `token`, `expires` and `user`.
-4. The UI opens the `redirect` path and shows the "Welcome to Sponga47 Reviews" `Toast`. For an account that is not approved, the `Toast` also tells that an administrator must approve it.
+3. The response is `202` for a new and for a used email address. The page shows the card "Check your email" with the email address. The person is not signed in.
+4. The card has the `outline` button "Send the email again". It sends the same sign up again.
+5. The person opens the link of the email and selects "Confirm email address". `ConfirmEmailPage` then calls `confirmEmail` (`POST /v1/users/confirmations`) and stores `expires` and `user`. The page sends no request before the click, so a mail scanner does not use the link.
+6. The UI opens the `redirect` path of the sign up and shows the "Welcome to Sponga47 Reviews" `Toast`. For an account that is not approved, the `Toast` also tells that an administrator must approve it.
+7. A link that is not valid, is too old, or was used shows the destructive `Alert` "This link does not work" and a link to the sign in page.
 
 ## Sign in
 
 1. The person fills in `SignInForm` and selects "Sign in".
 2. The UI calls `signIn` (`POST /v1/users/tokens`) with `email` and `password`.
 3. The UI stores `token`, `expires` and `user`, then opens the `redirect` path.
+4. A `403` with the `code` `email_not_confirmed` shows the destructive `Alert` "Confirm your email address first". The API sent a new link.
+5. The form has the link "Forgot your password?" below the "Password" field.
+
+## Password reset
+
+1. The person enters the email address on `/forgot-password` and selects "Send the link".
+2. The UI calls `requestPasswordReset` (`POST /v1/users/password-resets`). The response is `202` for all email addresses.
+3. The page shows the card "Check your email". Its text starts with "If ... has an account".
+4. The link of the email opens `/reset-password`. The person enters "New password" and "Confirm new password".
+5. The UI calls `resetPassword` (`PUT /v1/users/password`), deletes the stored session, opens `/sign-in`, and shows the `Toast` "Your password is changed".
+6. A token that the API refuses shows the destructive `Alert` "This link does not work" and the link "Ask for a new link".
+
+## Account page
+
+`AccountPage` has three cards.
+
+- "Name": one field and the button "Save name". The button is disabled while the name is the stored name. It calls `updateUser` and stores the new `user`.
+- "Password": "Current password", "New password", "Confirm new password", and the button "Change password". It calls `changePassword` with `cookie=true` and stores the new session. The other devices are signed out.
+- "Delete account": a `destructive` button opens an alert dialog with a "Password" field. "Delete account" calls `deleteUser`, deletes the stored session, opens the home page, and shows the `Toast` "Your account is deleted".
+- A wrong password is a `422`. Show "The password is not correct." next to the field.
+- A message of the two new password fields goes away while the person types. A message that goes away on blur moves the button, and the click misses it.
 
 ## Stay signed in
 
@@ -58,12 +87,11 @@ Errors use RFC 9457 Problem Details, like the rest of the Public API. A `422` ha
 
 - Check the fields in the UI with the same rules as the API, so most errors never reach the API.
 - Show a `422` item next to the field that its `property` names. Use the UI text for that field and rule. Use the API `message` only when the UI has no text.
-- `409` on sign up means another account has the email.
 - `401` on sign in means a wrong email or password.
-- `429` on sign up or sign in means too many tries. Show the form's destructive `Alert` "Too many tries" / "Wait a minute and try again."
+- `429` on sign up, sign in, the confirmation, or the password reset means too many tries. Show the form's destructive `Alert` "Too many tries" / "Wait a minute and try again."
 - Sign up and sign in ignore the stored token. Do not delete it before these calls.
 - For `5xx` and network errors, show the form's destructive `Alert` and keep what the person typed.
 
 ## Not in the Users API
 
-These have no API yet, so the UI does not show them: password reset, email verification, changing the name, email or password, deleting an account, and sign in with other providers.
+These have no API, so the UI does not show them: a change of the email address and sign in with other providers.

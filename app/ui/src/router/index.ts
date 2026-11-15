@@ -56,6 +56,10 @@ export const router = createRouter({
     },
     { path: '/sign-in', component: () => import('@/pages/SignInPage.vue'), meta: { guestOnly: true } },
     { path: '/sign-up', component: () => import('@/pages/SignUpPage.vue'), meta: { guestOnly: true } },
+    { path: '/confirm-email', component: () => import('@/pages/ConfirmEmailPage.vue') },
+    { path: '/forgot-password', component: () => import('@/pages/ForgotPasswordPage.vue'), meta: { guestOnly: true } },
+    { path: '/reset-password', component: () => import('@/pages/ResetPasswordPage.vue') },
+    { path: '/account', component: () => import('@/pages/AccountPage.vue'), meta: { requiresAuth: true } },
     { path: '/:pathMatch(.*)*', component: ErrorPage, props: { status: 404 } },
   ],
 })

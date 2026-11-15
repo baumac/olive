@@ -11,8 +11,12 @@ models/AverageRange.ts
 models/Box.ts
 models/Creator.ts
 models/Credentials.ts
+models/EmailConfirmation.ts
 models/Location.ts
 models/Near.ts
+models/PasswordChange.ts
+models/PasswordReset.ts
+models/PasswordResetRequest.ts
 models/Photo.ts
 models/PhotoPatch.ts
 models/PhotoUrls.ts
@@ -39,6 +43,8 @@ models/ScoreRange.ts
 models/TimestampRange.ts
 models/User.ts
 models/UserCreate.ts
+models/UserDelete.ts
+models/UserPatch.ts
 models/ValidationError.ts
 models/index.ts
 runtime.ts

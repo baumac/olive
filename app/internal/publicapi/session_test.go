@@ -82,9 +82,11 @@ func TestSessionCookie(t *testing.T) {
 		cookieToken(t, res)
 	})
 
-	t.Run("sign up sets the cookie", func(t *testing.T) {
-		res := e.expect(request{method: "POST", path: "/v1/users?cookie=true",
-			body: `{"email":"eve@example.com","password":"correct-horse-battery","name":"Eve"}`}, http.StatusCreated)
+	t.Run("the confirmation sets the cookie", func(t *testing.T) {
+		e.expect(request{method: "POST", path: "/v1/users",
+			body: `{"email":"eve@example.com","password":"correct-horse-battery","name":"Eve"}`}, http.StatusAccepted)
+		res := e.expect(request{method: "POST", path: "/v1/users/confirmations?cookie=true",
+			body: `{"token":"` + e.emailToken("eve@example.com") + `"}`}, http.StatusOK)
 		cookieToken(t, res)
 	})
 

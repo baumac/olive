@@ -88,6 +88,13 @@ Other people cannot open the reviewer page and the lists of a user without appro
 A daily job deletes a user that waits for more than 30 days and has no review, no restaurant, and no restaurant in a list. The person can sign up again.
 The users from before the update to this version are approved.
 A user that a superuser makes in the dashboard is approved only when `approved` is on.
+Such a user can sign in only when `verified` is also on. Without it, the person sets a password with "Forgot your password?".
+
+The app sends emails for the sign up, the password reset, and the approval. See decision 00037.
+
+- Each superuser gets an email when a new user confirms the email address. The user gets an email after the approval.
+- Set the mail server first. See the Mail and superuser MFA section. Without it, the app writes each email with its link to the log of the dashboard, and no person gets it.
+- Set the Application name and the Application URL in the dashboard. The emails use both.
 
 ## One instance only
 

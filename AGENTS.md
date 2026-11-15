@@ -92,6 +92,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - Set the mail server in the PocketBase settings, then turn on OTP and MFA for the `_superusers` collection. `deploy/README.md` has the steps.
 - `PB_ENCRYPTION_KEY` of `deploy/.env` encrypts the PocketBase settings in the database. The backups do not have it. A restore needs the same key. See decision 00022.
 - `deploy/compose.yaml` limits the memory and the open files of the app. `deploy/Caddyfile` limits the request body to 11 MB. `deploy/README.md` has the values.
+- Set the mail server in the PocketBase settings before the first sign up. A new user confirms the email address with a link from an email. Without SMTP, the app writes each email to the log. See decision 00037.
 - Approve new users in the dashboard. A user without the `approved` value of the `users` collection can only sign in and read. `deploy/README.md` has the steps. See decision 00034.
   A daily job deletes a user that waits for more than 30 days and has no data.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
@@ -102,6 +103,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - `REVIEWS_PLACES_URL` sets the Photon geocoder of the place search. The default is the public server `https://photon.komoot.io`. `off` turns the search off. See decision 00017.
   - `REVIEWS_PLACE_SEARCH_LIMIT` sets the place searches of each user per minute. The default is 30.
   - `REVIEWS_CREATE_LIMIT` sets the restaurants, reviews, or lists that each user can create per hour. Each operation has its own count. The default is 30. See decision 00036.
+  - `REVIEWS_EMAIL_LIMIT` sets the emails of each kind that one address can get per hour. The default is 5. See decision 00037.
   - `REVIEWS_EDIT_LIMIT` sets the updates, deletes, and list changes of each operation per user and hour. The default is 300. See decision 00036.
   - `REVIEWS_MAP_TILE_URL` sets the tile server of the maps. It is a URL template with `{z}`, `{x}`, and `{y}`. The default is the tile server of OpenStreetMap. `off` turns the maps off. See decision 00018.
   - `REVIEWS_MAP_ATTRIBUTION` sets the credit of a tile server that is not from OpenStreetMap.
@@ -115,9 +117,10 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
-    - the `users` tag has the sign up, sign in, sign out, and token refresh operations
+    - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
+    - the operations of `/users/me` change the name and the password and delete the user. See decision 00037.
     - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. See decision 00036.
-    - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out and token refresh. See decision 00034.
+    - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out, token refresh, and the operations of `/users/me`. See decision 00034.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
     - the `places` tag has the place search for the location of a restaurant
@@ -147,6 +150,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - Its timestamps are RFC 3339. The database has the PocketBase format with a space. See decision 00023.
     - It gets the places of the place search from a Photon geocoder. See decision 00017.
     - A record hook gives each new user a favorites list. See decision 00033.
+    - `mail.go` sends the emails of the sign up, the password reset, and the approval. See decision 00037.
   - **`app/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00034.
@@ -163,7 +167,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name
-  - `api.signUp` approves the user with the superuser of the test app. `api.signUpPending` does not.
+  - `api.signUp` confirms and approves the user with the superuser of the test app. `api.signUpPending` only confirms.
+  - `api.emailLink` reads the link of an email from the log of the test app. The test app has no mail server.
   - **`tests/photos`** - the small test images of the photo tests
   - **`tests/photon.ts`** - the fake geocoder of the place search and the fake map tiles. The tests need no network.
 

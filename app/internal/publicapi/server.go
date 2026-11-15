@@ -59,6 +59,11 @@ type Options struct {
 	// PhotoMemoryLimit is the number of bytes that all photo uploads can
 	// hold in memory. Zero uses 64 MB.
 	PhotoMemoryLimit int64
+	// EmailLimit is the number of emails that one address can get in one
+	// hour. Zero uses 5.
+	EmailLimit int
+	// SyncEmail sends each email before the response. Tests use it.
+	SyncEmail bool
 	// SkipRequestValidation turns off the spec validation of the parameters
 	// and the body values. Invalid values then reach the handlers.
 	SkipRequestValidation bool
@@ -98,6 +103,7 @@ type Server struct {
 	photoMemory *photoMemory
 	// places is nil when the place search is off.
 	places *placeSearch
+	post   *postman
 	// dummyHash lets sign in check a password hash for an unknown email.
 	// Sign in then takes the same time for all email addresses.
 	dummyHash []byte
@@ -109,8 +115,10 @@ var _ reviewsapi.StrictServerInterface = (*Server)(nil)
 func Register(app core.App, opts Options) {
 	guardReviewOverall(app)
 	registerFavorites(app)
+	post := newPostman(app, opts)
+	notifyApproval(app, post)
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		s, err := New(app, opts)
+		s, err := newServer(app, opts, post)
 		if err != nil {
 			return err
 		}
@@ -130,6 +138,10 @@ func Register(app core.App, opts Options) {
 
 // New makes a Server for app.
 func New(app core.App, opts Options) (*Server, error) {
+	return newServer(app, opts, newPostman(app, opts))
+}
+
+func newServer(app core.App, opts Options, post *postman) (*Server, error) {
 	cost := bcrypt.DefaultCost
 	if users, err := app.FindCollectionByNameOrId("users"); err == nil {
 		if f, ok := users.Fields.GetByName(core.FieldNamePassword).(*core.PasswordField); ok && f.Cost > 0 {
@@ -184,6 +196,7 @@ func New(app core.App, opts Options) (*Server, error) {
 		decodes:        make(chan struct{}, maxParallelDecodes),
 		photoMemory:    &photoMemory{limit: cmp.Or(opts.PhotoMemoryLimit, defaultPhotoMemoryLimit)},
 		places:         places,
+		post:           post,
 		dummyHash:      hash,
 	}, nil
 }
@@ -372,7 +385,7 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 	}
 	if op.approval && !st.user.GetBool("approved") {
 		p := newProblem(http.StatusForbidden, notApproved)
-		code := reviewsapi.NotApproved
+		code := reviewsapi.ProblemCodeNotApproved
 		p.Code = &code
 		writeProblem(w, p)
 		return

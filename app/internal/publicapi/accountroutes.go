@@ -7,9 +7,9 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// closedUserActions are the PocketBase account routes of users. Decision
-// 00001 has no password reset, verification, or email change. These routes
-// would also skip the rate limit and the rules of the Public API.
+// closedUserActions are the PocketBase account routes of users. The Public
+// API has its own operations for the confirmation and the password reset.
+// These routes would skip the rate limit and the rules of the Public API.
 var closedUserActions = []string{
 	"request-password-reset", "confirm-password-reset",
 	"request-verification", "confirm-verification",

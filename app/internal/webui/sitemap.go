@@ -29,7 +29,7 @@ const crawlerCacheControl = "public, max-age=3600"
 func robotsTxt(baseURL string) string {
 	var b strings.Builder
 	b.WriteString("User-agent: *\n")
-	for _, path := range []string{"/_/", "/api/", "/sign-in", "/sign-up", "/my-reviews"} {
+	for _, path := range []string{"/_/", "/api/", "/sign-in", "/sign-up", "/my-reviews", "/account", "/confirm-email", "/forgot-password", "/reset-password"} {
 		b.WriteString("Disallow: " + path + "\n")
 	}
 	if baseURL != "" {

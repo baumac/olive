@@ -16,6 +16,26 @@ for (const colorScheme of ['light', 'dark'] as const) {
   test.describe(`in the ${colorScheme} theme`, () => {
     test.use({ colorScheme })
 
+    test('the account screens have no axe violations', async ({ page, api }) => {
+      await page.goto('/forgot-password')
+      await expect(page.getByRole('heading', { name: 'Forgot your password?' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.goto('/reset-password#token=not-a-token')
+      await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await signIn(page, await api.signUp('Ana'))
+      await page.goto('/account')
+      await expect(page.getByRole('heading', { name: 'Account', level: 1 })).toBeVisible()
+      await expectNoViolations(page)
+      await page.getByRole('button', { name: 'Delete account' }).click()
+      await expect(page.getByRole('alertdialog')).toBeVisible()
+      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'))
+      await expectNoViolations(page)
+      await page.keyboard.press('Escape')
+    })
+
     test('the main screens have no axe violations', async ({ page, api }) => {
       const owner = await api.signUp('Joe')
       const restaurant = await api.createRestaurant(owner, {
@@ -113,6 +133,8 @@ test('the sign in form has a keyboard order', async ({ page }) => {
   await expect(page.getByLabel('Password', { exact: true })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'Show password' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Forgot your password?' })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeFocused()
 })

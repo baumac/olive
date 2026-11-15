@@ -101,7 +101,7 @@ describe('TagInput', () => {
 describe('SignInForm', () => {
   it('checks the fields before it sends them', async () => {
     const w = mount(SignInForm, {
-      props: { loading: false, error: null, notice: null, signUpPath: '/sign-up' },
+      props: { loading: false, error: null, notice: null, signUpPath: '/sign-up', forgotPasswordPath: '/forgot-password' },
       attachTo: attach(),
     })
     await w.get('form').trigger('submit')
@@ -118,13 +118,13 @@ describe('SignInForm', () => {
 
   it('shows the session ended notice', () => {
     const w = mount(SignInForm, {
-      props: { loading: false, error: null, notice: 'session-ended', signUpPath: '/sign-up' },
+      props: { loading: false, error: null, notice: 'session-ended', signUpPath: '/sign-up', forgotPasswordPath: '/forgot-password' },
     })
     expect(w.text()).toContain('Your session has ended')
   })
 
   it('toggles the password visibility', async () => {
-    const w = mount(SignInForm, { props: { loading: false, error: null, notice: null, signUpPath: '/sign-up' } })
+    const w = mount(SignInForm, { props: { loading: false, error: null, notice: null, signUpPath: '/sign-up', forgotPasswordPath: '/forgot-password' } })
     const toggle = w.get('button[aria-label="Show password"]')
     expect(w.get('#sign-in-password').attributes('type')).toBe('password')
     await toggle.trigger('click')

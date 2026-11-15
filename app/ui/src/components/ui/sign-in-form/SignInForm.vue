@@ -20,6 +20,7 @@ const props = defineProps<{
   fieldErrors?: Record<string, string>
   notice: 'session-ended' | null
   signUpPath: string
+  forgotPasswordPath: string
   initialEmail?: string
 }>()
 
@@ -100,6 +101,11 @@ defineExpose({ clearPassword })
             />
           </FormControl>
           <FormMessage />
+          <p class="text-sm">
+            <RouterLink :to="forgotPasswordPath" class="text-primary font-medium underline-offset-4 hover:underline">
+              Forgot your password?
+            </RouterLink>
+          </p>
         </FormItem>
         <Button type="submit" class="w-full" :disabled="loading">
           {{ loading ? 'Signing in…' : 'Sign in' }}

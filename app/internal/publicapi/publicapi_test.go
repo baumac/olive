@@ -45,6 +45,12 @@ func newEnv(t *testing.T, opts publicapi.Options) *env {
 	}
 	t.Cleanup(app.Cleanup)
 
+	// Without SMTP, the app writes each email to the log.
+	app.Settings().SMTP.Enabled = true
+	opts.SyncEmail = true
+	if opts.EmailLimit == 0 {
+		opts.EmailLimit = 1000
+	}
 	searchindex.Register(app)
 	publicapi.Register(app, opts)
 	router, err := apis.NewRouter(app)
@@ -155,14 +161,41 @@ func (e *env) signUp(email, name string) authToken {
 	return tok
 }
 
-// signUpPending makes a user that no superuser approved.
+// signUpPending makes a user with a confirmed email address that no
+// superuser approved.
 func (e *env) signUpPending(email, name string) authToken {
 	e.t.Helper()
-	res := e.expect(request{method: "POST", path: "/v1/users",
-		body: fmt.Sprintf(`{"email":%q,"password":"correct-horse-battery","name":%q}`, email, name)}, http.StatusCreated)
+	e.expect(request{method: "POST", path: "/v1/users",
+		body: fmt.Sprintf(`{"email":%q,"password":"correct-horse-battery","name":%q}`, email, name)}, http.StatusAccepted)
+	res := e.expect(request{method: "POST", path: "/v1/users/confirmations",
+		body: fmt.Sprintf(`{"token":%q}`, e.emailToken(email))}, http.StatusOK)
 	var tok authToken
 	res.decode(e.t, &tok)
 	return tok
+}
+
+// lastEmail returns the text of the last email to address. It returns an
+// empty string without such an email.
+func (e *env) lastEmail(address string) string {
+	e.t.Helper()
+	messages := e.app.TestMailer.Messages()
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].To[0].Address == address {
+			return messages[i].Subject + "\n\n" + messages[i].Text
+		}
+	}
+	return ""
+}
+
+// emailToken returns the token of the link in the last email to address.
+func (e *env) emailToken(address string) string {
+	e.t.Helper()
+	_, after, found := strings.Cut(e.lastEmail(address), "#token=")
+	if !found {
+		e.t.Fatalf("no email with a token to %s", address)
+	}
+	token, _, _ := strings.Cut(after, "\n")
+	return token
 }
 
 // testLocation has no word that a search test uses.
@@ -205,13 +238,6 @@ func TestUsers(t *testing.T) {
 	if _, err := time.Parse("2006-01-02T15:04:05.000Z", ana.Expires); err != nil {
 		t.Errorf("expires %q: %v", ana.Expires, err)
 	}
-
-	t.Run("sign up with a used email", func(t *testing.T) {
-		e.expect(request{method: "POST", path: "/v1/users",
-			body: `{"email":"ana@example.com","password":"another-password","name":"Ana 2"}`}, http.StatusConflict)
-		e.expect(request{method: "POST", path: "/v1/users",
-			body: `{"email":"ANA@Example.com","password":"another-password","name":"Ana 2"}`}, http.StatusConflict)
-	})
 
 	t.Run("sign in ignores ASCII case in the email", func(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/users/tokens",

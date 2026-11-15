@@ -31,7 +31,12 @@ async function submit(credentials: { email: string; password: string }) {
     void router.replace(redirect.value)
   } catch (e) {
     const { status, problem } = await apiFailure(e)
-    if (status === 401) {
+    if (status === 403 && problem?.code === 'email_not_confirmed') {
+      error.value = {
+        title: 'Confirm your email address first',
+        description: 'We sent a new confirmation link to your email address. Open it to finish your account.',
+      }
+    } else if (status === 401) {
       error.value = { title: 'The email or password is not correct', description: 'Check both and try again.' }
       await form.value?.clearPassword()
     } else if (status === 422) {
@@ -56,6 +61,7 @@ async function submit(credentials: { email: string; password: string }) {
       :field-errors="errors"
       :notice="notice"
       :sign-up-path="router.resolve(signUpPath).fullPath"
+      forgot-password-path="/forgot-password"
       @submit="submit"
     />
   </main>

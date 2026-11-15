@@ -69,6 +69,7 @@ func options(getenv func(string) string) (publicapi.Options, error) {
 		"REVIEWS_PLACE_SEARCH_LIMIT":    &opts.PlaceSearchLimit,
 		"REVIEWS_CREATE_LIMIT":          &opts.CreateLimit,
 		"REVIEWS_EDIT_LIMIT":            &opts.EditLimit,
+		"REVIEWS_EMAIL_LIMIT":           &opts.EmailLimit,
 	} {
 		v := getenv(name)
 		if v == "" {

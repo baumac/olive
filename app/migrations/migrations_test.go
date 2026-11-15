@@ -520,3 +520,26 @@ func TestUserApprovalMigration(t *testing.T) {
 		t.Error("a new user is approved")
 	}
 }
+
+func TestConfirmExistingUsersMigration(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268815_confirm_existing_users.go")
+	old := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	redo()
+
+	old, err = app.FindRecordById("users", old.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !old.Verified() {
+		t.Error("a user from before the migration is not confirmed")
+	}
+	later := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
+	if later.Verified() {
+		t.Error("a new user is confirmed")
+	}
+}

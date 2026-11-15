@@ -50,45 +50,82 @@ export class TestApi {
     return user
   }
 
+  // signUpPending confirms the email address as a superuser. It does not
+  // read the confirmation email.
   async signUpPending(name = 'Ana'): Promise<TestUser> {
     const email = `${name.toLowerCase()}-${randomUUID().slice(0, 8)}@example.test`
     const password = 'correct-horse-battery'
-    const auth = await new UsersApi(this.config()).signUp({ userCreate: { name, email, password } })
+    const users = new UsersApi(this.config())
+    await users.signUp({ userCreate: { name, email, password } })
+    await this.patchUser(await this.userId(email), { verified: true })
+    const auth = await users.signIn({ credentials: { email, password } })
     if (!auth.token) {
-      throw new Error('sign up gave no token')
+      throw new Error('sign in gave no token')
     }
     return { name, email, password, token: auth.token, auth }
   }
 
-  // approve changes the user as a superuser does it in the dashboard.
-  async approve(userId: string, approved = true): Promise<void> {
+  private superuserHeaders(): Record<string, string> {
     if (!this.superuserToken) {
       throw new Error('The test API has no superuser token')
     }
+    return { 'Content-Type': 'application/json', Authorization: this.superuserToken }
+  }
+
+  private async patchUser(userId: string, body: Record<string, boolean>): Promise<void> {
     const res = await fetch(`${this.baseURL}/api/collections/users/records/${userId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: this.superuserToken },
-      body: JSON.stringify({ approved }),
+      headers: this.superuserHeaders(),
+      body: JSON.stringify(body),
     })
     if (!res.ok) {
-      throw new Error(`The user was not approved: ${res.status} ${await res.text()}`)
+      throw new Error(`The user did not change: ${res.status} ${await res.text()}`)
     }
   }
 
-  // approveByEmail approves a user that signed up in the UI.
-  async approveByEmail(email: string): Promise<void> {
-    if (!this.superuserToken) {
-      throw new Error('The test API has no superuser token')
-    }
+  private async userId(email: string): Promise<string> {
     const filter = encodeURIComponent(`email="${email}"`)
     const res = await fetch(`${this.baseURL}/api/collections/users/records?filter=${filter}`, {
-      headers: { Authorization: this.superuserToken },
+      headers: this.superuserHeaders(),
     })
     const { items } = (await res.json()) as { items: { id: string }[] }
     if (!res.ok || items.length !== 1) {
       throw new Error(`The user ${email} was not found: ${res.status}`)
     }
-    await this.approve(items[0]!.id)
+    return items[0]!.id
+  }
+
+  // approve changes the user as a superuser does it in the dashboard.
+  approve(userId: string, approved = true): Promise<void> {
+    return this.patchUser(userId, { approved })
+  }
+
+  // approveByEmail approves a user that signed up in the UI.
+  async approveByEmail(email: string): Promise<void> {
+    await this.approve(await this.userId(email))
+  }
+
+  // emailLink returns the path of the link with linkPath in the last email
+  // to address. The test app writes each email to its log. PocketBase saves
+  // the log after some seconds.
+  async emailLink(address: string, linkPath: string): Promise<string> {
+    const filter = encodeURIComponent(`data.to="${address}" && data.text~"${linkPath}#token="`)
+    for (let i = 0; i < 40; i++) {
+      const res = await fetch(`${this.baseURL}/api/logs?filter=${filter}&sort=-created&perPage=1`, {
+        headers: this.superuserHeaders(),
+      })
+      if (!res.ok) {
+        throw new Error(`The log was not read: ${res.status} ${await res.text()}`)
+      }
+      const { items } = (await res.json()) as { items: { data: { text: string } }[] }
+      const link = items[0]?.data.text.split('\n').find((line) => line.includes(`${linkPath}#token=`))
+      if (link) {
+        const url = new URL(link)
+        return url.pathname + url.hash
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
+    throw new Error(`No email with a ${linkPath} link to ${address}`)
   }
 
   // refreshStatus gives the status of a token refresh. 200 means that the

@@ -382,7 +382,7 @@ func TestCrawlerFiles(t *testing.T) {
 	}
 
 	robots := get("/robots.txt")
-	wantRobots := "User-agent: *\nDisallow: /_/\nDisallow: /api/\nDisallow: /sign-in\nDisallow: /sign-up\nDisallow: /my-reviews\n" +
+	wantRobots := "User-agent: *\nDisallow: /_/\nDisallow: /api/\nDisallow: /sign-in\nDisallow: /sign-up\nDisallow: /my-reviews\nDisallow: /account\nDisallow: /confirm-email\nDisallow: /forgot-password\nDisallow: /reset-password\n" +
 		"\nSitemap: https://reviews.example.com/sitemap.xml\n"
 	if robots.Code != 200 || robots.Body.String() != wantRobots || !strings.HasPrefix(robots.Header().Get("Content-Type"), "text/plain") {
 		t.Errorf("robots.txt: %d %q %q", robots.Code, robots.Header().Get("Content-Type"), robots.Body.String())

@@ -1,17 +1,126 @@
+import type { Page } from '@playwright/test'
+import type { TestApi } from '../api'
 import { uniqueTag } from '../api'
-import { expect, selectPlace, test } from '../fixtures'
+import { expect, selectPlace, signIn, test } from '../fixtures'
 
-test('sign up signs the person in', async ({ page }) => {
+// signUp fills the sign up form and opens the link of the confirmation
+// email.
+async function signUp(page: Page, api: TestApi, name: string, email: string) {
   await page.goto('/sign-up')
-  await page.getByLabel('Name').fill('Dana')
-  await page.getByLabel('Email').fill(`dana-${Date.now()}@example.test`)
+  await page.getByLabel('Name').fill(name)
+  await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
   await page.getByLabel('Confirm password').fill('correct-horse-battery')
   await page.getByRole('button', { name: 'Create account' }).click()
-
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+  await expect(page.getByText(`We sent an email to ${email}.`)).toBeVisible()
+  await page.goto(await api.emailLink(email, '/confirm-email'))
+  await page.getByRole('button', { name: 'Confirm email address' }).click()
   await expect(page).toHaveURL(/\/restaurants$/)
+}
+
+test('sign up sends a link that signs the person in', async ({ page, api }) => {
+  const email = `dana-${Date.now()}@example.test`
+  await signUp(page, api, 'Dana', email)
   await expect(page.getByText('Welcome to Sponga47 Reviews')).toBeVisible()
   await expect(page.getByRole('button', { name: 'DA, account menu for Dana' })).toBeVisible()
+})
+
+test('a person cannot sign in before the confirmation', async ({ page }) => {
+  const email = `finn-${Date.now()}@example.test`
+  await page.goto('/sign-up')
+  await page.getByLabel('Name').fill('Finn')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
+  await page.getByLabel('Confirm password').fill('correct-horse-battery')
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await page.getByRole('link', { name: 'Go to sign in' }).click()
+
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('alert')).toContainText('Confirm your email address first')
+
+  await page.goto('/confirm-email#token=not-a-token')
+  await page.getByRole('button', { name: 'Confirm email address' }).click()
+  await expect(page.getByRole('alert')).toContainText('This link does not work')
+  await expect(page).toHaveURL(/\/confirm-email$/)
+})
+
+test('a person sets a new password with the link of an email', async ({ page, api }) => {
+  const user = await api.signUp('Gus')
+  await page.goto('/sign-in')
+  await page.getByRole('link', { name: 'Forgot your password?' }).click()
+  await page.getByLabel('Email').fill(user.email)
+  await page.getByRole('button', { name: 'Send the link' }).click()
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+
+  await page.goto(await api.emailLink(user.email, '/reset-password'))
+  await page.getByLabel('New password', { exact: true }).fill('better-horse-battery')
+  await page.getByLabel('Confirm new password').fill('other-horse-battery')
+  await page.getByRole('button', { name: 'Set the new password' }).click()
+  await expect(page.getByText('The passwords do not match.')).toBeVisible()
+  await page.getByLabel('Confirm new password').fill('better-horse-battery')
+  await page.getByRole('button', { name: 'Set the new password' }).click()
+
+  await expect(page).toHaveURL(/\/sign-in$/)
+  await expect(page.getByText('Your password is changed')).toBeVisible()
+  expect(await api.refreshStatus(user.token)).toBe(401)
+  await page.getByLabel('Email').fill(user.email)
+  await page.getByLabel('Password', { exact: true }).fill('better-horse-battery')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('button', { name: 'GU, account menu for Gus' })).toBeVisible()
+})
+
+test('a user changes the name and the password on the account page', async ({ page, api }) => {
+  const user = await api.signUp('Hana')
+  await signIn(page, user)
+  await page.goto('/restaurants')
+  await page.getByRole('button', { name: 'HA, account menu for Hana' }).click()
+  await page.getByRole('menuitem', { name: 'Account' }).click()
+  await expect(page.getByRole('heading', { name: 'Account', level: 1 })).toBeVisible()
+
+  await page.getByLabel('Name').fill('Ivy')
+  await page.getByRole('button', { name: 'Save name' }).click()
+  await expect(page.getByText('Your name is changed')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'IV, account menu for Ivy' })).toBeVisible()
+
+  await page.getByLabel('Current password').fill('wrong-password')
+  await page.getByLabel('New password', { exact: true }).fill('better-horse-battery')
+  await page.getByLabel('Confirm new password').fill('better-horse-battery')
+  await page.getByRole('button', { name: 'Change password' }).click()
+  await expect(page.getByText('The password is not correct.')).toBeVisible()
+  await page.getByLabel('Current password').fill(user.password)
+  await page.getByRole('button', { name: 'Change password' }).click()
+  await expect(page.getByText('Your password is changed')).toBeVisible()
+  expect(await api.refreshStatus(user.token)).toBe(401)
+
+  // The page has the new token in its cookie.
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'IV, account menu for Ivy' })).toBeVisible()
+})
+
+test('a user deletes the account', async ({ page, api }) => {
+  const user = await api.signUp('Jon')
+  const restaurant = await api.createRestaurant(user, { name: 'Leftover Kitchen' })
+  await api.createReview(user, restaurant.id, { space: 7, service: 7, food: 7, price: 7, cleanliness: 7, title: 'Gone soon' })
+  await signIn(page, user)
+  await page.goto('/account')
+
+  await page.getByRole('button', { name: 'Delete account' }).click()
+  const dialog = page.getByRole('alertdialog')
+  await dialog.getByLabel('Password', { exact: true }).fill('wrong-password')
+  await dialog.getByRole('button', { name: 'Delete account' }).click()
+  await expect(dialog.getByText('The password is not correct.')).toBeVisible()
+  await dialog.getByLabel('Password', { exact: true }).fill(user.password)
+  await dialog.getByRole('button', { name: 'Delete account' }).click()
+
+  await expect(page.getByText('Your account is deleted')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
+  expect(await api.refreshStatus(user.token)).toBe(401)
+  await page.goto(`/restaurants/${restaurant.id}`)
+  await expect(page.getByRole('heading', { name: 'Leftover Kitchen' })).toBeVisible()
+  await expect(page.getByText('Gone soon')).toHaveCount(0)
 })
 
 test('a new user waits for the approval of a superuser', async ({ page, api }) => {
@@ -19,13 +128,7 @@ test('a new user waits for the approval of a superuser', async ({ page, api }) =
   const restaurant = await api.createRestaurant(owner, { name: 'Approval Kitchen' })
   const email = `eve-${Date.now()}@example.test`
 
-  await page.goto('/sign-up')
-  await page.getByLabel('Name').fill('Eve')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
-  await page.getByLabel('Confirm password').fill('correct-horse-battery')
-  await page.getByRole('button', { name: 'Create account' }).click()
-  await expect(page).toHaveURL(/\/restaurants$/)
+  await signUp(page, api, 'Eve', email)
   const banner = page.getByRole('status').filter({ hasText: 'Your account waits for approval' })
   await expect(banner).toBeVisible()
 

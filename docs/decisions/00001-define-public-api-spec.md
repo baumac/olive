@@ -22,7 +22,7 @@ In scope:
 
 Out of scope:
 - All APIs provided by PocketBase. Clients use only the Public API.
-- Password reset, email verification, and changes to a user after sign up. Decision 00015 added the sign out on the server.
+- Password reset, email verification, and changes to a user after sign up. Decision 00015 added the sign out on the server. Decision 00037 added the other operations.
 - Generating client libraries and documentation for the Public API
 - Implementation of the API spec
 - Reviews of things that are not restaurants, such as books or movies

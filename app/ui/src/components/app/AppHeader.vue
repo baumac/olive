@@ -12,10 +12,15 @@ import { currentUser } from '@/lib/session'
 const route = useRoute()
 const router = useRouter()
 
-const onAuthPage = computed(() => route.path === '/sign-in' || route.path === '/sign-up')
+// A sign in from these pages does not come back to them.
+const authPaths = ['/sign-in', '/sign-up', '/confirm-email', '/forgot-password', '/reset-password']
+const onAuthPage = computed(() => authPaths.includes(route.path))
 const signIn = computed(() => {
-  if (onAuthPage.value) {
+  if (route.path === '/sign-in' || route.path === '/sign-up') {
     return route.fullPath
+  }
+  if (onAuthPage.value) {
+    return '/sign-in'
   }
   return router.resolve(signInPath(route.fullPath)).fullPath
 })
@@ -43,6 +48,7 @@ const signIn = computed(() => {
         :sign-in-path="signIn"
         my-reviews-path="/my-reviews"
         :my-lists-path="currentUser ? `/reviewers/${currentUser.id}` : undefined"
+        account-path="/account"
         :sign-in-current="route.path === '/sign-in'"
         @sign-out="signOut(router)"
       />

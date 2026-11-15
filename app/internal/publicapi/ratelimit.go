@@ -77,6 +77,15 @@ func (l *rateLimiter) giveBack(key string, start time.Time) {
 	}
 }
 
+// forget removes the window of key.
+func (l *rateLimiter) forget(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if e, ok := l.keys[key]; ok {
+		l.remove(e)
+	}
+}
+
 func (l *rateLimiter) remove(e *list.Element) {
 	delete(l.keys, l.order.Remove(e).(*rateWindow).key)
 }

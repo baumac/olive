@@ -48,6 +48,13 @@ export function saveSession(auth: AuthToken) {
   }
 }
 
+// saveUser replaces the stored user after a change of the account.
+export function saveUser(user: User) {
+  if (session.value) {
+    saveSession({ expires: session.value.expires, user })
+  }
+}
+
 // watchOtherTabs keeps the session equal to the session of the other tabs.
 // It runs onUserChange when another tab changes the signed in user. The
 // browser sends the storage event only to the other tabs.
