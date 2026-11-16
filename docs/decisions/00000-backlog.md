@@ -6,6 +6,18 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 # Backlog
 
+## For Claude
+3. Design gaps
+- Only the creator can edit a restaurant. If the creator is inactive, the website, phone, hours and tags are frozen. In a trusted group, let any approved user edit the non-identity fields.
+- No GET /users/me. The UI calls refreshToken on every load just to learn who is signed in, minting a new token each time.
+- No email change. UserPatch has only name; a new address needs the dashboard.
+- Sign-out is all devices only. Signing out on the tablet signs out the phone, and the HttpOnly cookie has no other way to be cleared.
+listListRestaurants has no search, sort or filters, so favorites cannot be shown on a map or sorted by distance. A list[eq] filter on listRestaurants would give all of that for free.
+- No price_level filter, though the field exists.
+- Tags are ASCII-only ([a-z0-9]), so café or non-Latin tags are impossible.
+
+4. Surface the UI never uses
+- listAllReviews, tags[has], tags[has_all], creator[in], restaurant[in], the created/updated range filters, and every operator except gte. tags[has] is redundant with the other two. Each is validation and test weight; I would cut them unless the planned iOS app needs them.
 ## For Me
 - write 00000-create-reviews-app decision doc that covers the decision to create the app, its intended users, and what it does/does not need to do
   - rename and/or move the backlog doc to the /docs directory
