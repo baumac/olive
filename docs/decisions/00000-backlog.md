@@ -23,8 +23,13 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Add load tests: not needed as the number of users are quite low
 - Support oauth2 logins: not needed since email/password based authentication is sufficient
 - Social features: not needed since this is intended to be used by a low number of users that communicate with each other via other means
-  - Improve social aspects of reviews
-    - reviews have no visit date, no helpful vote, and no owner or reader reply. Helpful votes also give the review list a better default sort than newest.
-  - Add a way for users to report content
-    - nobody can report a review, a photo, or a restaurant
+  - Reviews have no visit date and no owner or reader reply
+  - Comments or replies on review
+  - Helpful votes or likes on reviews
+  - Following users, or an activity feed
+  - Messages or notifications between users
+  - Profile pictures or bios (the avatar field was removed)
+  - Private or collaborative lists
+  - A share button in the UI (sharing works by copying the page link)
+  - A way for users to report content
     - a superuser must find it and delete it in the dashboard. Decision 00008 accepts this for photos.
