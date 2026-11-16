@@ -13,13 +13,11 @@ Each sub-bullet point contains notes about the incomplete decision.
 - review features such as SEO, and social features that don't align with the 00000-create-reviews-app
 - deploy to prod
 
-## For Claude
-- Add IOS app
-
 ## Future
 - Support reviewing cheeses, wines, and recipes
 
 ## Won't do
+- Add IOS app: won't do for now as this requires a mac laptop and side-loading the app from that device, or a 99$ per year subscription to host the app in the app store
 - Add load tests: not needed as the number of users are quite low
 - Support oauth2 logins: not needed since email/password based authentication is sufficient
 - Social features: not needed since this is intended to be used by a low number of users that communicate with each other via other means
