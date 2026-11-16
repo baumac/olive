@@ -103,6 +103,18 @@ export function retryText(status: number | null, fallback = 'Try again in a mome
   return status === 401 ? 'Sign in again, then try again.' : fallback
 }
 
+export const notApprovedText = 'An administrator must approve your account before you can add or change data.'
+export const notCreatorText = 'You do not have permission to change or delete it.'
+
+// failureText is retryText with the reason of a 403. A page that knows more
+// about a code checks the code first.
+export function failureText({ status, problem }: ApiFailure, fallback?: string): string {
+  if (problem?.code === 'not_approved') {
+    return notApprovedText
+  }
+  return problem?.code === 'not_creator' ? notCreatorText : retryText(status, fallback)
+}
+
 // fieldErrors maps the property of each 422 error to its API message. An
 // array item, such as tags[2], maps to its array property. A nested
 // property, such as location.address, maps to its object property.

@@ -191,7 +191,7 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 		if detail, err := restaurantChangeForbidden(tx, r, user.Id); err != nil {
 			return err
 		} else if detail != "" {
-			response = reviewsapi.UpdateRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden(detail)}
+			response = reviewsapi.UpdateRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator(detail)}
 			return nil
 		}
 
@@ -223,7 +223,7 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 					property = "location"
 				}
 				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: propertyConflict(
-					property, "The "+property+" cannot change because the restaurant has reviews of other users.")}
+					reviewsapi.ProblemCodeOtherReviews, property, "The "+property+" cannot change because the restaurant has reviews of other users.")}
 				return nil
 			}
 		}
@@ -274,7 +274,7 @@ func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRest
 		if detail, err := restaurantChangeForbidden(tx, r, user.Id); err != nil {
 			return err
 		} else if detail != "" {
-			response = reviewsapi.DeleteRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden(detail)}
+			response = reviewsapi.DeleteRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator(detail)}
 			return nil
 		}
 		n, err := countReviewsOfOtherUsers(tx, r.Id, user.Id)
@@ -282,7 +282,7 @@ func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRest
 			return err
 		}
 		if n > 0 {
-			response = reviewsapi.DeleteRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The restaurant has reviews of other users. It cannot be deleted.")}
+			response = reviewsapi.DeleteRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(reviewsapi.ProblemCodeOtherReviews, "The restaurant has reviews of other users. It cannot be deleted.")}
 			return nil
 		}
 		own, err := tx.FindAllRecords("reviews", dbx.HashExp{"restaurant": r.Id})

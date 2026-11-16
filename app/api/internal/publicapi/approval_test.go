@@ -14,8 +14,7 @@ func TestUserApproval(t *testing.T) {
 
 	e.expect(request{method: "POST", path: "/v1/users",
 		body: `{"email":"joe@example.com","password":"correct-horse-battery","name":"Joe"}`}, http.StatusAccepted)
-	res := e.expect(request{method: "POST", path: "/v1/users/confirmations",
-		body: `{"token":"` + e.emailToken("joe@example.com") + `"}`}, http.StatusOK)
+	res := e.confirm(e.emailToken("joe@example.com"), "correct-horse-battery", http.StatusOK)
 	var joe authToken
 	res.decode(t, &joe)
 	if res.object(t)["user"].(map[string]any)["approved"] != false {

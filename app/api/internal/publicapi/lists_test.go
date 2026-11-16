@@ -106,8 +106,8 @@ func TestFavorites(t *testing.T) {
 	}
 
 	t.Run("the favorites list is fixed", func(t *testing.T) {
-		e.expect(request{method: "DELETE", path: favorites, token: ana.Token}, http.StatusForbidden)
-		e.expect(request{method: "PATCH", path: favorites, body: `{"name":"Best"}`, token: ana.Token}, http.StatusForbidden)
+		e.expectCode(request{method: "DELETE", path: favorites, token: ana.Token}, http.StatusForbidden, "favorites_list")
+		e.expectCode(request{method: "PATCH", path: favorites, body: `{"name":"Best"}`, token: ana.Token}, http.StatusForbidden, "favorites_list")
 		e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"favorites"}`, token: ana.Token}, http.StatusConflict)
 		if got := e.lists(ana.User.ID, "").Items; len(got) != 1 || got[0].Name != "Favorites" {
 			t.Errorf("lists: %+v", got)
@@ -116,7 +116,7 @@ func TestFavorites(t *testing.T) {
 
 	t.Run("only the creator changes a list", func(t *testing.T) {
 		id := lists.Items[0].ID
-		e.expect(request{method: "PUT", path: "/v1/lists/" + id + "/restaurants/" + sole, token: joe.Token}, http.StatusForbidden)
+		e.expectCode(request{method: "PUT", path: "/v1/lists/" + id + "/restaurants/" + sole, token: joe.Token}, http.StatusForbidden, "not_creator")
 		e.expect(request{method: "DELETE", path: "/v1/lists/" + id + "/restaurants/" + luigiID, token: joe.Token}, http.StatusForbidden)
 		e.expect(request{method: "PUT", path: "/v1/lists/" + id + "/restaurants/" + sole, token: ana.Token}, http.StatusNoContent)
 		if got, _ := e.listRestaurants(favorites+"/restaurants", joe.Token); got != "Can Sole,Luigi's" {
@@ -162,7 +162,7 @@ func TestLists(t *testing.T) {
 	if _, ok := list["has_restaurant"]; ok {
 		t.Errorf("create: has_restaurant in %v", list)
 	}
-	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"DATE NIGHT"}`, token: ana.Token}, http.StatusConflict)
+	e.expectCode(request{method: "POST", path: "/v1/lists", body: `{"name":"DATE NIGHT"}`, token: ana.Token}, http.StatusConflict, "list_name_taken")
 	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Date night"}`, token: joe.Token}, http.StatusCreated)
 	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":" "}`, token: ana.Token}, http.StatusUnprocessableEntity)
 	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"X","kind":"favorites"}`, token: ana.Token}, http.StatusBadRequest)
@@ -214,7 +214,7 @@ func TestLists(t *testing.T) {
 	})
 
 	t.Run("rename", func(t *testing.T) {
-		e.expect(request{method: "PATCH", path: path, body: `{"name":"Dinner"}`, token: joe.Token}, http.StatusForbidden)
+		e.expectCode(request{method: "PATCH", path: path, body: `{"name":"Dinner"}`, token: joe.Token}, http.StatusForbidden, "not_creator")
 		e.expect(request{method: "PATCH", path: path, body: `{"name":"lunch"}`, token: ana.Token}, http.StatusConflict)
 		e.expect(request{method: "PATCH", path: path, body: `{"name":"favorites"}`, token: ana.Token}, http.StatusConflict)
 		e.expect(request{method: "PATCH", path: "/v1/lists/aaaaaaaaaaaaaaa", body: `{"name":"Dinner"}`, token: ana.Token}, http.StatusNotFound)
@@ -243,7 +243,7 @@ func TestListLimits(t *testing.T) {
 	for i := range 49 {
 		e.expect(request{method: "POST", path: "/v1/lists", body: fmt.Sprintf(`{"name":"L%d"}`, i), token: ana.Token}, http.StatusCreated)
 	}
-	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"One more"}`, token: ana.Token}, http.StatusConflict)
+	e.expectCode(request{method: "POST", path: "/v1/lists", body: `{"name":"One more"}`, token: ana.Token}, http.StatusConflict, "list_limit")
 	if got := len(e.lists(ana.User.ID, "").Items); got != 50 {
 		t.Errorf("%d lists, want 50", got)
 	}
@@ -262,7 +262,7 @@ func TestListItemLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.expect(request{method: "PUT", path: "/v1/lists/favorites/restaurants/" + restaurant, token: ana.Token}, http.StatusConflict)
+	e.expectCode(request{method: "PUT", path: "/v1/lists/favorites/restaurants/" + restaurant, token: ana.Token}, http.StatusConflict, "list_restaurant_limit")
 }
 
 func TestListNamesAndUpdated(t *testing.T) {

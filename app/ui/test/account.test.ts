@@ -1,5 +1,4 @@
 import type { Component } from 'vue'
-import { ResponseError } from '@reviews/sdk'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -11,14 +10,10 @@ import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue'
 import ResetPasswordPage from '@/pages/ResetPasswordPage.vue'
 import SignUpPage from '@/pages/SignUpPage.vue'
 import { expectAccessible } from './axe'
+import { rejectWith } from './problem'
 
 const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', approved: true, created: '2024-11-04T01:26:55.002Z', updated: '2024-11-04T01:26:55.002Z' }
 const expires = '2099-01-01T00:00:00.000Z'
-
-function problem(status: number, errors?: { property: string; message: string }[]) {
-  const body = JSON.stringify({ type: 'about:blank', title: 'Error', status, errors })
-  return new ResponseError(new Response(body, { status, headers: { 'Content-Type': 'application/problem+json' } }))
-}
 
 async function mountPage(page: Component, path: string) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
@@ -60,7 +55,7 @@ describe('SignUpPage', () => {
   })
 
   it('shows the 422 errors of the API next to the fields', async () => {
-    vi.spyOn(usersApi, 'signUp').mockRejectedValue(problem(422, [{ property: 'email', message: 'must be an email address' }]))
+    vi.spyOn(usersApi, 'signUp').mockRejectedValue(rejectWith(422, { errors: [{ property: 'email', message: 'must be an email address' }] }))
     const { w } = await mountPage(SignUpPage, '/sign-up')
     await w.get('#sign-up-name').setValue('Ana')
     await w.get('#sign-up-email').setValue('ana@example.com')
@@ -78,24 +73,49 @@ describe('ConfirmEmailPage', () => {
     const confirm = vi.spyOn(usersApi, 'confirmEmail').mockResolvedValue({ expires, user })
     localStorage.setItem('reviews-sign-up-redirect', '/restaurants/new')
     const { w, router } = await mountPage(ConfirmEmailPage, '/confirm-email#token=abc.def')
-    expect(confirm).not.toHaveBeenCalled()
-    await w.get('button').trigger('click')
+    await w.get('form').trigger('submit')
     await flushPromises()
-    expect(confirm).toHaveBeenCalledWith({ emailConfirmation: { token: 'abc.def' }, cookie: true })
+    expect(confirm).not.toHaveBeenCalled()
+    expect(w.text()).toContain('Enter your password.')
+    await w.get('#confirm-email-password').setValue('correct-horse-battery')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    const emailConfirmation = { token: 'abc.def', password: 'correct-horse-battery' }
+    expect(confirm).toHaveBeenCalledWith({ emailConfirmation, cookie: true })
     expect(currentUser.value?.id).toBe(user.id)
     expect(router.currentRoute.value.fullPath).toBe('/restaurants/new')
     expect(localStorage.getItem('reviews-sign-up-redirect')).toBeNull()
   })
 
   it('tells about a link that does not work', async () => {
-    vi.spyOn(usersApi, 'confirmEmail').mockRejectedValue(problem(422, [{ property: 'token', message: 'is not valid or is expired' }]))
+    vi.spyOn(usersApi, 'confirmEmail').mockRejectedValue(rejectWith(422, { errors: [{ property: 'token', message: 'is not valid or is expired' }] }))
     const { w, router } = await mountPage(ConfirmEmailPage, '/confirm-email#token=old')
-    await w.get('button').trigger('click')
+    await w.get('#confirm-email-password').setValue('correct-horse-battery')
+    await w.get('form').trigger('submit')
     await flushPromises()
     expect(w.text()).toContain('This link does not work')
     expect(router.currentRoute.value.hash).toBe('')
     expect(signedIn.value).toBe(false)
     await expectAccessible(w.element)
+  })
+
+  it('keeps the form after a wrong password', async () => {
+    const confirm = vi.spyOn(usersApi, 'confirmEmail')
+    confirm.mockRejectedValueOnce(rejectWith(422, { errors: [{ property: 'password', message: 'is not correct' }] }))
+    const { w } = await mountPage(ConfirmEmailPage, '/confirm-email#token=abc.def')
+    await w.get('#confirm-email-password').setValue('wrong-password')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(w.text()).toContain('The password is not correct.')
+    expect(w.text()).not.toContain('This link does not work')
+    expect(signedIn.value).toBe(false)
+    await expectAccessible(w.element)
+
+    confirm.mockRejectedValueOnce(rejectWith(429, { code: 'wrong_password_limit' }))
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(w.text()).toContain('Too many wrong passwords. Try again later.')
+    expect(w.find('form').exists()).toBe(true)
   })
 
   it('sends no request without a token', async () => {
@@ -123,7 +143,7 @@ describe('ForgotPasswordPage', () => {
   })
 
   it('tells about the rate limit', async () => {
-    vi.spyOn(usersApi, 'requestPasswordReset').mockRejectedValue(problem(429))
+    vi.spyOn(usersApi, 'requestPasswordReset').mockRejectedValue(rejectWith(429))
     const { w } = await mountPage(ForgotPasswordPage, '/forgot-password')
     await w.get('#forgot-password-email').setValue('ana@example.com')
     await w.get('form').trigger('submit')
@@ -156,7 +176,7 @@ describe('ResetPasswordPage', () => {
   })
 
   it('offers a new link when the token is too old', async () => {
-    vi.spyOn(usersApi, 'resetPassword').mockRejectedValue(problem(422, [{ property: 'token', message: 'is not valid or is expired' }]))
+    vi.spyOn(usersApi, 'resetPassword').mockRejectedValue(rejectWith(422, { errors: [{ property: 'token', message: 'is not valid or is expired' }] }))
     const { w } = await mountPage(ResetPasswordPage, '/reset-password#token=old')
     await w.get('#reset-password-password').setValue('better-horse-battery')
     await w.get('#reset-password-confirm').setValue('better-horse-battery')
@@ -183,7 +203,7 @@ describe('AccountPage', () => {
 
   it('shows a wrong current password next to its field', async () => {
     saveSession({ expires, user })
-    const change = vi.spyOn(usersApi, 'changePassword').mockRejectedValueOnce(problem(422, [{ property: 'current_password', message: 'is not correct' }]))
+    const change = vi.spyOn(usersApi, 'changePassword').mockRejectedValueOnce(rejectWith(422, { errors: [{ property: 'current_password', message: 'is not correct' }] }))
     const { w } = await mountPage(AccountPage, '/account')
     const form = w.findAll('form')[1]!
     await form.trigger('submit')

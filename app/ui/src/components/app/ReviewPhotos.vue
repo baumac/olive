@@ -4,7 +4,7 @@ import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { PhotoGrid } from '@/components/ui/photo-grid'
 import { PhotoViewer } from '@/components/ui/photo-viewer'
-import { apiFailure, fieldErrors, restaurantsApi, retryText } from '@/lib/api'
+import { apiFailure, failureText, fieldErrors, restaurantsApi } from '@/lib/api'
 
 const props = defineProps<{
   review: Review
@@ -31,9 +31,11 @@ async function saveAlt(photo: Photo, alt: string) {
     viewer.value?.stopEdit()
     toast.success('Description saved')
   } catch (e) {
-    const { status, problem } = await apiFailure(e)
+    const failure = await apiFailure(e)
     error.value =
-      status === 422 ? (fieldErrors(problem).alt ?? 'Check the description.') : retryText(status, 'Description not saved. Try again in a moment.')
+      failure.status === 422
+        ? (fieldErrors(failure.problem).alt ?? 'Check the description.')
+        : failureText(failure, 'Description not saved. Try again in a moment.')
   } finally {
     saving.value = false
   }
@@ -48,7 +50,7 @@ async function remove(photo: Photo) {
     emit('change', rest)
     toast.success('Photo deleted')
   } catch (e) {
-    toast.error('Photo not deleted', { description: retryText((await apiFailure(e)).status) })
+    toast.error('Photo not deleted', { description: failureText(await apiFailure(e)) })
   } finally {
     saving.value = false
   }

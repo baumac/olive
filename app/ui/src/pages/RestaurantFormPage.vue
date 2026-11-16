@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, fieldErrors, restaurantsApi, writeLimitText } from '@/lib/api'
+import { apiFailure, fieldErrors, notApprovedText, restaurantsApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { nearbyRadius, sameLocation } from '@/lib/places'
 import { normalizeWebsite, priceLevels } from '@/lib/restaurantDetails'
@@ -226,6 +226,7 @@ async function submit() {
     void router.push(`/restaurants/${saved.id}`)
   } catch (error) {
     const { status, problem } = await apiFailure(error)
+    const code = problem?.code
     // A 401 opens the sign in page. The draft then waits for the return.
     // After a 429, the draft waits for the end of the rate limit.
     if (status !== 401 && status !== 429) {
@@ -233,18 +234,20 @@ async function submit() {
     }
     if (status === 422) {
       errors.value = fieldErrors(problem)
-    } else if (status === 409 && problem?.restaurant) {
+    } else if (code === 'place_taken' && problem?.restaurant) {
       errors.value = { location: 'Another restaurant has this place.' }
       alert.value = {
         title: 'This restaurant is already here',
         description: 'Add your review to it, or select a different place.',
         restaurant: problem.restaurant,
       }
-    } else if (status === 409 && (problem?.property === 'name' || problem?.property === 'location')) {
+    } else if (code === 'other_reviews' && (problem?.property === 'name' || problem?.property === 'location')) {
       const field = problem.property
       errors.value = { [field]: `The ${field} cannot change because other people have reviewed this restaurant.` }
     } else if (status === 409) {
       alert.value = { title: 'Restaurant not saved', description: 'Reload the page and try again.' }
+    } else if (code === 'not_approved') {
+      alert.value = { title: 'Your account waits for approval', description: notApprovedText }
     } else if (status === 403) {
       alert.value = { title: 'You cannot change this restaurant', description: 'Only the person who added it can change it. If that person has no account now, write a review first.' }
     } else if (status === 404) {

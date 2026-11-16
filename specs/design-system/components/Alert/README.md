@@ -8,6 +8,8 @@ From shadcn-vue (`@/components/ui/alert`). Props: `variant` (`default`, `destruc
 - Use `success` for a confirmation that must stay on the page, such as after an account change. For a quick "Review saved", use `Toast`.
 - Use `default` for neutral notes, with the info icon.
 - The title says what happened. The description says what to do next. Use the problem `title` and `detail` only when they are written for people.
+- A `403` and a `409` have a `code`. Select the text by the `code`, not by the status or the `detail`. `apiFailure` of `lib/api.ts` gives the problem with its `code`.
+- `failureText` of `lib/api.ts` has the texts of `not_approved` and `not_creator`. Use it for a failure without a text of its own.
 - Add `role="alert"` to errors that appear after an action, and `role="status"` to confirmations.
 - Every variant has an icon and words. Color is never the only signal.
 - An empty list uses `EmptyState`, not an alert.

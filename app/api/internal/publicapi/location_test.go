@@ -63,7 +63,7 @@ func TestRestaurantLocation(t *testing.T) {
 	t.Run("a second restaurant with the place gets 409", func(t *testing.T) {
 		res := e.expect(request{method: "POST", path: "/v1/restaurants",
 			body: `{"name":"Can Solé","location":` + locationJSON(41.3767, 2.1894, "Sant Carles 4", "osm:N1") + `}`, token: joe.Token}, http.StatusConflict)
-		if got := res.object(t); got["restaurant"] != id || got["property"] != "location" {
+		if got := res.object(t); got["restaurant"] != id || got["property"] != "location" || got["code"] != "place_taken" {
 			t.Errorf("problem %v, want restaurant %s and property location", got, id)
 		}
 		other := e.createRestaurant(joe.Token, `{"name":"Next door","location":`+locationJSON(41.3767, 2.1894, "Sant Carles 6", "osm:N2")+`}`)

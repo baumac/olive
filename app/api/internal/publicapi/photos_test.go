@@ -267,7 +267,10 @@ func TestAddReviewPhotoErrors(t *testing.T) {
 		for range 5 {
 			p.addPhoto()
 		}
-		p.upload(p.ana.Token, jpg, "image/jpeg", http.StatusConflict)
+		res := p.upload(p.ana.Token, jpg, "image/jpeg", http.StatusConflict)
+		if code := res.object(t)["code"]; code != "photo_limit" {
+			t.Errorf("code %v, want photo_limit", code)
+		}
 	})
 }
 
@@ -304,7 +307,7 @@ func TestUpdateReviewPhoto(t *testing.T) {
 	photo := p.addPhoto()
 	path := p.reviews + "/photos/" + photo["id"].(string)
 
-	got := p.expect(request{method: "PATCH", path: path, token: p.ana.Token, body: `{"alt":"A plate of pasta"}`}, http.StatusOK).object(t)
+	got := p.expect(request{method: "PATCH", path: path, token: p.ana.Token, body: `{"alt":"  A plate of pasta "}`}, http.StatusOK).object(t)
 	if got["alt"] != "A plate of pasta" {
 		t.Errorf("alt %v", got["alt"])
 	}
@@ -324,7 +327,7 @@ func TestUpdateReviewPhoto(t *testing.T) {
 		t.Errorf("422 properties %v", props)
 	}
 	p.expect(request{method: "PATCH", path: path, token: p.ana.Token, body: `{"width":10}`}, http.StatusBadRequest)
-	p.expect(request{method: "PATCH", path: path, token: p.joe.Token, body: `{"alt":"Mine"}`}, http.StatusForbidden)
+	p.expectCode(request{method: "PATCH", path: path, token: p.joe.Token, body: `{"alt":"Mine"}`}, http.StatusForbidden, "not_creator")
 	p.expect(request{method: "PATCH", path: p.reviews + "/photos/aaaaaaaaaaaaaaa", token: p.ana.Token, body: `{}`}, http.StatusNotFound)
 }
 

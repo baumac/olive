@@ -98,7 +98,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - A migration turns on the PocketBase rate limits. Their default rules limit the PocketBase auth routes, which include the superuser sign in.
 - Environment variables of the app:
   - `REVIEWS_SIGN_IN_LIMIT` sets the sign up and sign in limit per minute. The end-to-end tests raise it. Their parallel sign ups come from one IP address.
-  - `REVIEWS_SIGN_IN_FAILURE_LIMIT` sets the wrong passwords of each user per 15 minutes. The default is 10. See decision 00015.
+  - `REVIEWS_SIGN_IN_FAILURE_LIMIT` sets the wrong passwords of each email address per 15 minutes. The default is 10. See decisions 00015 and 00039.
   - `REVIEWS_PHOTO_UPLOAD_LIMIT` sets the photo uploads of each user per hour. The default is 30. See decision 00008.
   - `REVIEWS_PLACES_URL` sets the Photon geocoder of the place search. The default is the public server `https://photon.komoot.io`. `off` turns the search off. See decision 00017.
   - `REVIEWS_PLACE_SEARCH_LIMIT` sets the place searches of each user per minute. The default is 30.
@@ -119,7 +119,10 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `restaurants` tag has the restaurant and review operations
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
     - the operations of `/users/me` change the name and the password and delete the user. See decision 00037.
-    - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. See decision 00036.
+    - `confirmEmail` needs the token of the link and the password. The wrong password limit counts each email address, with or without a user. Its limiter has a cap of 100,000 addresses. See decision 00039.
+    - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. Sign out and the token refresh are the exceptions. See decision 00036.
+    - each `403` and `409` problem has a `code`. A new reason needs a value in the `code` enum of `Problem`. See decision 00040.
+    - a schema with `x-trim: true` loses the ASCII spaces around its value. Names, titles, addresses, and alt texts have it. See decision 00040.
     - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out, token refresh, and the operations of `/users/me`. See decision 00034.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user

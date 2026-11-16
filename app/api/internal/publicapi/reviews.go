@@ -222,7 +222,7 @@ func (s *Server) restaurantNames(known map[string]string, reviews ...*core.Recor
 // The unique index on restaurant and creator also blocks a second review.
 func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRequestObject) (reviewsapi.CreateReviewResponseObject, error) {
 	st := stateFrom(ctx)
-	duplicate := reviewsapi.CreateReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The user already has a review for this restaurant.")}
+	duplicate := reviewsapi.CreateReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(reviewsapi.ProblemCodeReviewExists, "The user already has a review for this restaurant.")}
 
 	var response reviewsapi.CreateReviewResponseObject
 	var saved, restaurant *core.Record
@@ -320,7 +320,7 @@ func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRe
 			return nil
 		}
 		if r.GetString("creator") != st.user.Id {
-			response = reviewsapi.UpdateReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden("Only the creator of the review can change it.")}
+			response = reviewsapi.UpdateReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can change it.")}
 			return nil
 		}
 
@@ -363,7 +363,7 @@ func (s *Server) DeleteReview(ctx context.Context, req reviewsapi.DeleteReviewRe
 			return nil
 		}
 		if r.GetString("creator") != user.Id {
-			response = reviewsapi.DeleteReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden("Only the creator of the review can delete it.")}
+			response = reviewsapi.DeleteReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can delete it.")}
 			return nil
 		}
 		return tx.Delete(r)

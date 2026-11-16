@@ -1,5 +1,4 @@
 import type { Restaurant, Review, SavedList } from '@reviews/sdk'
-import { ResponseError } from '@reviews/sdk'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -7,6 +6,7 @@ import ReviewCard from '@/components/app/ReviewCard.vue'
 import { listsApi, restaurantsApi, reviewersApi } from '@/lib/api'
 import ReviewerPage from '@/pages/ReviewerPage.vue'
 import { expectAccessible } from './axe'
+import { rejectWith } from './problem'
 
 const review: Review = {
   id: 'r1b8c5e2g9i6k3m',
@@ -86,11 +86,6 @@ describe('ReviewCard', () => {
     expect(w.text()).not.toContain('Ana')
   })
 })
-
-function rejectWith(status: number) {
-  const problem = { type: 'about:blank', title: 'Error', status, detail: 'The user does not exist.' }
-  return new ResponseError(new Response(JSON.stringify(problem), { status, headers: { 'Content-Type': 'application/problem+json' } }))
-}
 
 async function mountPage(reviewerId: string) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })

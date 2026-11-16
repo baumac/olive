@@ -187,6 +187,7 @@ func TestReviewers(t *testing.T) {
 		e.expect(request{method: "GET", path: unknown + "/reviews"}, http.StatusNotFound)
 		e.expect(request{method: "GET", path: unknown + "/reviews?sort=bad"}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/reviewers/BAD"}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/reviewers/BAD"}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID + "/reviews?creator[eq]=" + joe.User.ID}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID, token: "not-a-token"}, http.StatusUnauthorized)
 	})

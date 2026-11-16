@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
@@ -73,11 +74,22 @@ func (s *Server) SignUp(_ context.Context, req reviewsapi.SignUpRequestObject) (
 	return reviewsapi.SignUp202Response{}, nil
 }
 
-// ConfirmEmail signs the user of a confirmation token in.
+// ConfirmEmail checks the password and signs the user of a confirmation
+// token in. A sign up of another person can set that password. See decision
+// 00039.
 func (s *Server) ConfirmEmail(ctx context.Context, req reviewsapi.ConfirmEmailRequestObject) (reviewsapi.ConfirmEmailResponseObject, error) {
 	user := s.userOfEmailToken(req.Body.Token, core.TokenTypeVerification)
 	if user == nil {
 		return reviewsapi.ConfirmEmail422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: invalidEmailToken()}, nil
+	}
+	// Only a request with a valid token adds to this key. A person without
+	// the link then cannot block the confirmation.
+	wait, wrong := s.checkPassword("confirm:"+user.Id, user, req.Body.Password, "password")
+	if wait > 0 {
+		return reviewsapi.ConfirmEmail429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: tooManyPasswords(wait)}, nil
+	}
+	if wrong != nil {
+		return reviewsapi.ConfirmEmail422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: *wrong}, nil
 	}
 	// A new token key makes the token of the link invalid.
 	user.RefreshTokenKey()
@@ -161,7 +173,7 @@ func (s *Server) ResetPassword(_ context.Context, req reviewsapi.ResetPasswordRe
 		return reviewsapi.ResetPassword422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: unprocessable(fromPocketBase(invalid))}, nil
 	}
 	// The wrong passwords from before the reset do not block the new one.
-	s.signInFailures.forget(user.Id)
+	s.signInFailures.forget(passwordLimitKey(user.Email()))
 	return reviewsapi.ResetPassword204Response{}, nil
 }
 
@@ -185,7 +197,7 @@ func (s *Server) UpdateUser(ctx context.Context, req reviewsapi.UpdateUserReques
 func (s *Server) ChangePassword(ctx context.Context, req reviewsapi.ChangePasswordRequestObject) (reviewsapi.ChangePasswordResponseObject, error) {
 	st := stateFrom(ctx)
 	user := st.user
-	wait, wrong := s.checkPassword(user, req.Body.CurrentPassword, "current_password")
+	wait, wrong := s.checkPassword(passwordLimitKey(user.Email()), user, req.Body.CurrentPassword, "current_password")
 	if wait > 0 {
 		return reviewsapi.ChangePassword429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: tooManyPasswords(wait)}, nil
 	}
@@ -211,7 +223,7 @@ func (s *Server) ChangePassword(ctx context.Context, req reviewsapi.ChangePasswo
 // collections delete the reviews, the photos, and the lists of the user.
 func (s *Server) DeleteUser(ctx context.Context, req reviewsapi.DeleteUserRequestObject) (reviewsapi.DeleteUserResponseObject, error) {
 	st := stateFrom(ctx)
-	wait, wrong := s.checkPassword(st.user, req.Body.Password, "password")
+	wait, wrong := s.checkPassword(passwordLimitKey(st.user.Email()), st.user, req.Body.Password, "password")
 	if wait > 0 {
 		return reviewsapi.DeleteUser429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: tooManyPasswords(wait)}, nil
 	}
@@ -229,11 +241,17 @@ func (s *Server) DeleteUser(ctx context.Context, req reviewsapi.DeleteUserReques
 	return res, nil
 }
 
-// checkPassword counts a wrong password for the limit of sign in. A stolen
-// token then cannot try many passwords. It returns the wait time of a user
-// at the limit, or the 422 of a wrong password for property.
-func (s *Server) checkPassword(user *core.Record, password, property string) (time.Duration, *reviewsapi.UnprocessableContentApplicationProblemPlusJSONResponse) {
-	wait, window := s.signInFailures.allow(user.Id)
+// passwordLimitKey is the key of the wrong passwords of an email address.
+// The lookup of a user by email ignores the case of ASCII letters.
+func passwordLimitKey(email string) string {
+	return strings.ToLower(email)
+}
+
+// checkPassword counts a wrong password for key. A stolen token then cannot
+// try many passwords. It returns the wait time of a key at the limit, or the
+// 422 of a wrong password for property.
+func (s *Server) checkPassword(key string, user *core.Record, password, property string) (time.Duration, *reviewsapi.UnprocessableContentApplicationProblemPlusJSONResponse) {
+	wait, window := s.signInFailures.allow(key)
 	if wait > 0 {
 		return wait, nil
 	}
@@ -243,20 +261,26 @@ func (s *Server) checkPassword(user *core.Record, password, property string) (ti
 		res := unprocessable(errs)
 		return 0, &res
 	}
-	s.signInFailures.giveBack(user.Id, window)
+	s.signInFailures.giveBack(key, window)
 	return 0, nil
 }
 
 func tooManyPasswords(wait time.Duration) reviewsapi.TooManyRequestsApplicationProblemPlusJSONResponse {
-	res := tooManyRequests(wait, "Too many wrong passwords for this user. Try again later.")
+	res := tooManyRequests(wait, "Too many wrong passwords. Try again later.")
 	code := reviewsapi.ProblemCodeWrongPasswordLimit
 	res.Body.Code = &code
 	return res
 }
 
-// SignIn checks a password hash also for an unknown email. A user at the
-// wrong password limit gets 429 before the password check.
+// SignIn gives the same responses for an unknown email and for a wrong
+// password. It checks a password hash and counts the wrong password for both.
+// An email at the wrong password limit gets 429 before the user lookup.
 func (s *Server) SignIn(ctx context.Context, req reviewsapi.SignInRequestObject) (reviewsapi.SignInResponseObject, error) {
+	key := passwordLimitKey(string(req.Body.Email))
+	wait, window := s.signInFailures.allow(key)
+	if wait > 0 {
+		return reviewsapi.SignIn429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: tooManyPasswords(wait)}, nil
+	}
 	user, err := s.app.FindAuthRecordByEmail("users", string(req.Body.Email))
 	if errors.Is(err, sql.ErrNoRows) {
 		_ = bcrypt.CompareHashAndPassword(s.dummyHash, []byte(req.Body.Password))
@@ -265,14 +289,10 @@ func (s *Server) SignIn(ctx context.Context, req reviewsapi.SignInRequestObject)
 	if err != nil {
 		return nil, err
 	}
-	wait, window := s.signInFailures.allow(user.Id)
-	if wait > 0 {
-		return reviewsapi.SignIn429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: tooManyPasswords(wait)}, nil
-	}
 	if !user.ValidatePassword(req.Body.Password) {
 		return invalidCredentials(), nil
 	}
-	s.signInFailures.giveBack(user.Id, window)
+	s.signInFailures.giveBack(key, window)
 	if !user.Verified() {
 		if err := s.post.sendConfirmation(user); err != nil {
 			return nil, err

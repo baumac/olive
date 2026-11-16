@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, listsApi, retryText } from '@/lib/api'
+import { listsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { listFailureText } from '@/lib/lists'
 import { currentUser } from '@/lib/session'
@@ -96,7 +96,7 @@ async function remove() {
     toast.success('List deleted', { description: data?.name })
     void router.push(data ? `/reviewers/${data.creator.id}` : '/restaurants')
   } catch (e) {
-    toast.error('List not deleted', { description: retryText((await apiFailure(e)).status) })
+    toast.error('List not deleted', { description: await listFailureText(e, 'Try again in a moment.') })
   }
 }
 
@@ -112,7 +112,7 @@ async function removeRestaurant(restaurant: Restaurant) {
     await listsApi.removeListRestaurant({ listRef: props.listId, restaurantId: restaurant.id })
     drop(restaurant.id)
   } catch (e) {
-    toast.error('Restaurant not removed', { description: retryText((await apiFailure(e)).status) })
+    toast.error('Restaurant not removed', { description: await listFailureText(e, 'Try again in a moment.') })
   }
 }
 

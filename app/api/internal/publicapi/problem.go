@@ -28,28 +28,37 @@ func badRequest(detail string) reviewsapi.BadRequestApplicationProblemPlusJSONRe
 	return reviewsapi.BadRequestApplicationProblemPlusJSONResponse(newProblem(http.StatusBadRequest, detail))
 }
 
-func forbidden(detail string) reviewsapi.ForbiddenApplicationProblemPlusJSONResponse {
-	return reviewsapi.ForbiddenApplicationProblemPlusJSONResponse(newProblem(http.StatusForbidden, detail))
+func forbidden(code reviewsapi.ProblemCode, detail string) reviewsapi.ForbiddenApplicationProblemPlusJSONResponse {
+	p := newProblem(http.StatusForbidden, detail)
+	p.Code = &code
+	return reviewsapi.ForbiddenApplicationProblemPlusJSONResponse(p)
+}
+
+// notCreator is the 403 of a user who does not own the resource.
+func notCreator(detail string) reviewsapi.ForbiddenApplicationProblemPlusJSONResponse {
+	return forbidden(reviewsapi.ProblemCodeNotCreator, detail)
 }
 
 func notFound(detail string) reviewsapi.NotFoundApplicationProblemPlusJSONResponse {
 	return reviewsapi.NotFoundApplicationProblemPlusJSONResponse(newProblem(http.StatusNotFound, detail))
 }
 
-func conflict(detail string) reviewsapi.ConflictApplicationProblemPlusJSONResponse {
-	return reviewsapi.ConflictApplicationProblemPlusJSONResponse(newProblem(http.StatusConflict, detail))
+func conflict(code reviewsapi.ProblemCode, detail string) reviewsapi.ConflictApplicationProblemPlusJSONResponse {
+	p := newProblem(http.StatusConflict, detail)
+	p.Code = &code
+	return reviewsapi.ConflictApplicationProblemPlusJSONResponse(p)
 }
 
 // propertyConflict names the request property that causes the conflict.
-func propertyConflict(property, detail string) reviewsapi.ConflictApplicationProblemPlusJSONResponse {
-	p := newProblem(http.StatusConflict, detail)
+func propertyConflict(code reviewsapi.ProblemCode, property, detail string) reviewsapi.ConflictApplicationProblemPlusJSONResponse {
+	p := conflict(code, detail)
 	p.Property = &property
-	return reviewsapi.ConflictApplicationProblemPlusJSONResponse(p)
+	return p
 }
 
 // placeConflict names the restaurant that has the place ID of the request.
 func placeConflict(restaurantID string) reviewsapi.ConflictApplicationProblemPlusJSONResponse {
-	p := propertyConflict("location", "Another restaurant has this place.")
+	p := propertyConflict(reviewsapi.ProblemCodePlaceTaken, "location", "Another restaurant has this place.")
 	p.Restaurant = &restaurantID
 	return p
 }

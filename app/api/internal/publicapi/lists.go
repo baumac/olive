@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"slices"
-	"strings"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/pocketbase/dbx"
@@ -89,7 +88,7 @@ func listNameTaken(app core.App, creator, name, exceptID string) (bool, error) {
 }
 
 func nameTaken() reviewsapi.ConflictApplicationProblemPlusJSONResponse {
-	return propertyConflict("name", "Another list of the user has this name.")
+	return propertyConflict(reviewsapi.ProblemCodeListNameTaken, "name", "Another list of the user has this name.")
 }
 
 // itemCounts gives no entry for a list without restaurants.
@@ -234,7 +233,7 @@ func boolInt(b bool) int {
 // transaction. It saves the name without the spaces at its start and end.
 func (s *Server) CreateList(ctx context.Context, req reviewsapi.CreateListRequestObject) (reviewsapi.CreateListResponseObject, error) {
 	user := stateFrom(ctx).user
-	name := strings.TrimSpace(req.Body.Name)
+	name := req.Body.Name
 	var problem *reviewsapi.ConflictApplicationProblemPlusJSONResponse
 	var list *core.Record
 	err := s.app.RunInTransaction(func(tx core.App) error {
@@ -243,7 +242,7 @@ func (s *Server) CreateList(ctx context.Context, req reviewsapi.CreateListReques
 			return err
 		}
 		if n >= maxLists {
-			p := conflict("The user has the maximum number of lists.")
+			p := conflict(reviewsapi.ProblemCodeListLimit, "The user has the maximum number of lists.")
 			problem = &p
 			return nil
 		}
@@ -287,16 +286,18 @@ func (s *Server) GetList(ctx context.Context, req reviewsapi.GetListRequestObjec
 	return reviewsapi.GetList200JSONResponse(toSavedList(list, creator, counts[list.Id])), nil
 }
 
-// listChangeForbidden returns a detail for the 403 response if the user
-// cannot rename or delete the list.
-func listChangeForbidden(list *core.Record, userID string) string {
+// listChangeForbidden returns the 403 problem if the user cannot rename or
+// delete the list.
+func listChangeForbidden(list *core.Record, userID string) *reviewsapi.ForbiddenApplicationProblemPlusJSONResponse {
 	if list.GetString("creator") != userID {
-		return "Only the creator of the list can change or delete it."
+		p := notCreator("Only the creator of the list can change or delete it.")
+		return &p
 	}
 	if list.GetString("kind") == kindFavorites {
-		return "The favorites list cannot be renamed or deleted."
+		p := forbidden(reviewsapi.ProblemCodeFavoritesList, "The favorites list cannot be renamed or deleted.")
+		return &p
 	}
-	return ""
+	return nil
 }
 
 func (s *Server) UpdateList(ctx context.Context, req reviewsapi.UpdateListRequestObject) (reviewsapi.UpdateListResponseObject, error) {
@@ -312,15 +313,15 @@ func (s *Server) UpdateList(ctx context.Context, req reviewsapi.UpdateListReques
 			response = reviewsapi.UpdateList404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(listNotFound)}
 			return nil
 		}
-		if detail := listChangeForbidden(list, user.Id); detail != "" {
-			response = reviewsapi.UpdateList403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden(detail)}
+		if p := listChangeForbidden(list, user.Id); p != nil {
+			response = reviewsapi.UpdateList403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: *p}
 			return nil
 		}
 		saved = list
 		if req.Body.Name == nil {
 			return nil
 		}
-		name := strings.TrimSpace(*req.Body.Name)
+		name := *req.Body.Name
 		if name == list.GetString("name") {
 			return nil
 		}
@@ -361,8 +362,8 @@ func (s *Server) DeleteList(ctx context.Context, req reviewsapi.DeleteListReques
 			response = reviewsapi.DeleteList404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(listNotFound)}
 			return nil
 		}
-		if detail := listChangeForbidden(list, user.Id); detail != "" {
-			response = reviewsapi.DeleteList403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden(detail)}
+		if p := listChangeForbidden(list, user.Id); p != nil {
+			response = reviewsapi.DeleteList403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: *p}
 			return nil
 		}
 		return tx.Delete(list)
@@ -444,7 +445,7 @@ func ownList(app core.App, ref string, user *core.Record) (listAccess, error) {
 		return listAccess{notFound: &p}, nil
 	}
 	if list.GetString("creator") != user.Id {
-		p := forbidden("Only the creator of the list can change its restaurants.")
+		p := notCreator("Only the creator of the list can change its restaurants.")
 		return listAccess{forbidden: &p}, nil
 	}
 	return listAccess{list: list}, nil
@@ -492,7 +493,7 @@ func (s *Server) AddListRestaurant(ctx context.Context, req reviewsapi.AddListRe
 			return err
 		}
 		if n >= maxListItems {
-			response = reviewsapi.AddListRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("The list has the maximum number of restaurants.")}
+			response = reviewsapi.AddListRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(reviewsapi.ProblemCodeListRestaurantLimit, "The list has the maximum number of restaurants.")}
 			return nil
 		}
 		items, err := tx.FindCachedCollectionByNameOrId("list_items")

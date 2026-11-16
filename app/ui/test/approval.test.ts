@@ -1,4 +1,4 @@
-import { FetchError, ResponseError } from '@reviews/sdk'
+import { FetchError } from '@reviews/sdk'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -10,6 +10,7 @@ import { listsApi, usersApi } from '@/lib/api'
 import { clearSession, currentUser, markNotApproved, pendingApproval, saveSession } from '@/lib/session'
 import { router } from '@/router'
 import { expectAccessible } from './axe'
+import { rejectWith } from './problem'
 
 const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', approved: false, created: '2024-11-04T01:26:55.002Z', updated: '2024-11-04T01:26:55.002Z' }
 const expires = '2099-01-01T00:00:00.000Z'
@@ -60,10 +61,6 @@ describe('ApprovalBanner', () => {
 })
 
 describe('ApprovalBanner after a refresh that did not work', () => {
-  function rejectWith(status: number) {
-    return new ResponseError(new Response('{}', { status, headers: { 'Content-Type': 'application/problem+json' } }))
-  }
-
   it('tells that the check did not work', async () => {
     saveSession({ expires, user })
     const w = mount(ApprovalBanner, { attachTo: attach() })

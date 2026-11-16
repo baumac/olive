@@ -15,6 +15,10 @@ async function signUp(page: Page, api: TestApi, name: string, email: string) {
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
   await expect(page.getByText(`We sent an email to ${email}.`)).toBeVisible()
   await page.goto(await api.emailLink(email, '/confirm-email'))
+  await page.getByLabel('Password', { exact: true }).fill('wrong-password')
+  await page.getByRole('button', { name: 'Confirm email address' }).click()
+  await expect(page.getByText('The password is not correct.')).toBeVisible()
+  await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
   await page.getByRole('button', { name: 'Confirm email address' }).click()
   await expect(page).toHaveURL(/\/restaurants$/)
 }
@@ -42,6 +46,7 @@ test('a person cannot sign in before the confirmation', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('Confirm your email address first')
 
   await page.goto('/confirm-email#token=not-a-token')
+  await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
   await page.getByRole('button', { name: 'Confirm email address' }).click()
   await expect(page.getByRole('alert')).toContainText('This link does not work')
   await expect(page).toHaveURL(/\/confirm-email$/)

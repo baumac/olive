@@ -28,8 +28,8 @@ type Options struct {
 	// address can send in SignInWindow. Each operation has its own count.
 	SignInLimit  int
 	SignInWindow time.Duration
-	// SignInFailureLimit is the number of wrong passwords that one user can
-	// get in SignInFailureWindow. Zero uses 10 in 15 minutes.
+	// SignInFailureLimit is the number of wrong passwords that one email
+	// address can get in SignInFailureWindow. Zero uses 10 in 15 minutes.
 	SignInFailureLimit  int
 	SignInFailureWindow time.Duration
 	// PhotoUploadLimit is the number of photos that one user can add in
@@ -82,6 +82,10 @@ var DefaultOptions = Options{
 	PlaceSearchLimit: 30, PlaceSearchWindow: time.Minute, PlaceUpstreamLimit: 60,
 }
 
+// maxFailureWindows is the cap of the wrong password limiter. Clients
+// without an account make its keys. The cap keeps its memory below 40 MB.
+const maxFailureWindows = 100_000
+
 // rateLimitNames are the values of the name in the x-rate-limit extension.
 var rateLimitNames = []string{"sign-in", "photo-upload", "place-search", "create", "edit"}
 
@@ -95,8 +99,8 @@ type Server struct {
 	spec     *apiSpec
 	opts     Options
 	limiters map[string]*rateLimiter
-	// signInFailures counts the wrong passwords of each user ID. It has no
-	// window cap, so other keys cannot remove the window of a user.
+	// signInFailures counts the wrong passwords of each email address, with
+	// or without a user. Its cap is maxFailureWindows.
 	signInFailures *rateLimiter
 	// decodes holds one token for each photo upload that decodes its image.
 	decodes     chan struct{}
@@ -169,7 +173,7 @@ func newServer(app core.App, opts Options, post *postman) (*Server, error) {
 		cmp.Or(opts.SignInFailureLimit, DefaultOptions.SignInFailureLimit),
 		cmp.Or(opts.SignInFailureWindow, DefaultOptions.SignInFailureWindow),
 	)
-	signInFailures.maxWindows = 0
+	signInFailures.maxWindows = maxFailureWindows
 	writeWindow := cmp.Or(opts.WriteWindow, DefaultOptions.WriteWindow)
 	var places *placeSearch
 	if opts.PlacesURL != "" {

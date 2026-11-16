@@ -102,7 +102,52 @@ func readBody(ctx context.Context, in *openapi3filter.RequestValidationInput, va
 		p := reviewsapi.Problem(unprocessable(sortedErrors(errs)))
 		return nil, &p
 	}
+	if trimProperties(schema, props) {
+		trimmed, _ := json.Marshal(props)
+		r.Body = io.NopCloser(bytes.NewReader(trimmed))
+	}
 	return props, nil
+}
+
+// trimProperties removes the ASCII spaces around each string of a schema
+// with x-trim. The pattern of such a schema needs one other character. A
+// valid value then does not become empty.
+func trimProperties(schema *openapi3.Schema, props map[string]json.RawMessage) bool {
+	changed := false
+	for name, value := range props {
+		property := schema.Properties[name]
+		if property == nil {
+			continue
+		}
+		if trimmed := trimValue(property.Value, value); !bytes.Equal(trimmed, value) {
+			props[name] = trimmed
+			changed = true
+		}
+	}
+	return changed
+}
+
+func trimValue(schema *openapi3.Schema, raw json.RawMessage) json.RawMessage {
+	for _, option := range schema.OneOf {
+		raw = trimValue(option.Value, raw)
+	}
+	if schema.Extensions["x-trim"] == true {
+		var text string
+		if json.Unmarshal(raw, &text) != nil || strings.Trim(text, " ") == text {
+			return raw
+		}
+		trimmed, _ := json.Marshal(strings.Trim(text, " "))
+		return trimmed
+	}
+	if len(schema.Properties) == 0 {
+		return raw
+	}
+	props, err := decodeObject(raw)
+	if err != nil || !trimProperties(schema, props) {
+		return raw
+	}
+	trimmed, _ := json.Marshal(props)
+	return trimmed
 }
 
 // decodeObject rejects repeated properties. The later decoders read the

@@ -1,6 +1,8 @@
+import type { Problem } from '@reviews/sdk'
 import { describe, expect, it } from 'vitest'
 import spec from '../../../specs/api/public-openapi.yaml?raw'
-import { fieldErrors } from '@/lib/api'
+import { apiFailure, failureText, fieldErrors, notApprovedText, notCreatorText } from '@/lib/api'
+import { listFailureText } from '@/lib/lists'
 import { restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
@@ -8,6 +10,7 @@ import { restaurantAccess } from '@/lib/restaurants'
 import { directionsLink } from '@/lib/places'
 import { overallOf, scoreFields } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
+import { rejectWith } from './problem'
 
 describe('format', () => {
   const now = new Date('2024-11-10T12:00:00.000Z')
@@ -178,5 +181,31 @@ describe('directionsLink', () => {
     expect(directionsLink(point, 'Mozilla/5.0 (Linux; Android 16; Pixel 9)')).toBe('geo:41.3766,2.1893?q=41.3766,2.1893')
     expect(directionsLink(point, 'Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X)')).toBe('https://maps.apple.com/?daddr=41.3766,2.1893')
     expect(directionsLink(point, 'Mozilla/5.0 (X11; Linux x86_64)')).toBe('https://www.openstreetmap.org/directions?to=41.3766%2C2.1893')
+  })
+})
+
+describe('problem codes', () => {
+  it('tells the reason of a 403', async () => {
+    expect(failureText(await apiFailure(rejectWith(403, { code: 'not_approved' })))).toBe(notApprovedText)
+    expect(failureText(await apiFailure(rejectWith(403, { code: 'not_creator' })))).toBe(notCreatorText)
+    expect(failureText(await apiFailure(rejectWith(403)), 'Not saved.')).toBe('Not saved.')
+    expect(failureText(await apiFailure(rejectWith(401)))).toBe('Sign in again, then try again.')
+  })
+
+  it('has a text for each code of the list operations', async () => {
+    const fallback = 'Not saved.'
+    const texts: Partial<Record<NonNullable<Problem['code']>, string>> = {
+      list_name_taken: 'You have a list with this name.',
+      list_limit: 'You have the maximum number of lists. Delete a list first.',
+      list_restaurant_limit: 'This list is full. Remove a restaurant first.',
+      favorites_list: 'The favorites list cannot be renamed or deleted.',
+      not_creator: 'Only the person who made the list can change it.',
+      not_approved: notApprovedText,
+    }
+    for (const [code, text] of Object.entries(texts)) {
+      const problem = { code: code as Problem['code'] }
+      expect(await listFailureText(rejectWith(code.startsWith('list_') ? 409 : 403, problem), fallback)).toBe(text)
+    }
+    expect(await listFailureText(rejectWith(409), fallback)).toBe(fallback)
   })
 })

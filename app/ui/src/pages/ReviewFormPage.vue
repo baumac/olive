@@ -15,7 +15,7 @@ import { RatingInput } from '@/components/ui/rating-input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, fieldErrors, restaurantsApi, writeLimitText } from '@/lib/api'
+import { apiFailure, fieldErrors, notApprovedText, restaurantsApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
 import { formatScore } from '@/lib/format'
@@ -173,8 +173,15 @@ async function addSelected(file: File, alt: string) {
 
 async function uploadFailure(error: unknown): Promise<string> {
   const { status, problem, retryAfter } = await apiFailure(error)
-  if (status === 409) {
+  const code = problem?.code
+  if (code === 'photo_limit') {
     return `A review can have at most ${maxPhotos} photos.`
+  }
+  if (code === 'not_approved') {
+    return notApprovedText
+  }
+  if (code === 'not_creator') {
+    return 'Only the person who wrote the review can add photos.'
   }
   if (status === 413 || status === 415 || status === 422) {
     return problem?.detail ?? 'Select a JPEG, PNG, or WebP image of at most 10 MB.'
@@ -257,6 +264,7 @@ async function submit() {
     void router.push(restaurantPath.value)
   } catch (error) {
     const { status, problem } = await apiFailure(error)
+    const code = problem?.code
     // A 401 opens the sign in page. The draft then waits for the return.
     // After a 429, the draft waits for the end of the rate limit.
     if (status !== 401 && status !== 429) {
@@ -266,12 +274,14 @@ async function submit() {
     }
     if (status === 422) {
       errors.value = fieldErrors(problem)
-    } else if (status === 409) {
+    } else if (code === 'review_exists') {
       alert.value = {
         title: 'You already reviewed this restaurant',
         description: 'Each person can write one review per restaurant. Edit your review instead.',
         link: restaurantPath.value,
       }
+    } else if (code === 'not_approved') {
+      alert.value = { title: 'Your account waits for approval', description: notApprovedText }
     } else if (status === 403) {
       alert.value = { title: 'You cannot change this review', description: 'Only the person who wrote it can change it.' }
     } else if (status === 404) {

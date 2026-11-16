@@ -1,5 +1,4 @@
 import type { Restaurant, SavedList } from '@reviews/sdk'
-import { ResponseError } from '@reviews/sdk'
 import { DOMWrapper, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -10,6 +9,7 @@ import { listsApi } from '@/lib/api'
 import { clearSession, saveSession } from '@/lib/session'
 import ListPage from '@/pages/ListPage.vue'
 import { expectAccessible } from './axe'
+import { rejectWith } from './problem'
 
 const ana = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', approved: true, created: '2024-11-04T01:26:55.002Z', updated: '2024-11-04T01:26:55.002Z' }
 
@@ -40,11 +40,6 @@ const restaurant: Restaurant = {
   favorite: false,
   created: '2024-11-04T01:26:55.002Z',
   updated: '2024-11-04T01:26:55.002Z',
-}
-
-function rejectWith(status: number, property?: string) {
-  const problem = { type: 'about:blank', title: 'Error', status, property }
-  return new ResponseError(new Response(JSON.stringify(problem), { status, headers: { 'Content-Type': 'application/problem+json' } }))
 }
 
 function attach() {
@@ -214,6 +209,16 @@ describe('SaveToListMenu', () => {
     expect(body().querySelector<HTMLInputElement>('#save-to-list-name')!.value).toBe('')
   })
 
+  it('tells that a list is full', async () => {
+    signIn()
+    vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [] })
+    vi.spyOn(listsApi, 'createList').mockResolvedValue(list('custom', 'Date night', 0))
+    vi.spyOn(listsApi, 'addListRestaurant').mockRejectedValue(rejectWith(409, { code: 'list_restaurant_limit' }))
+    await openMenu()
+    await createList('Date night')
+    expect(alertText()).toBe('This list is full. Remove a restaurant first.')
+  })
+
   it('keeps a new list when the add fails', async () => {
     signIn()
     vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [] })
@@ -271,7 +276,7 @@ describe('ReviewerLists', () => {
 
   it('tells that the name is taken', async () => {
     vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [list('favorites', 'Favorites')] })
-    vi.spyOn(listsApi, 'createList').mockRejectedValue(rejectWith(409, 'name'))
+    vi.spyOn(listsApi, 'createList').mockRejectedValue(rejectWith(409, { code: 'list_name_taken' }))
     const w = await mountLists(true)
     await w.get('input').setValue('favorites')
     await w.get('form').trigger('submit')

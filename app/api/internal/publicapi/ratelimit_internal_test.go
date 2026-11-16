@@ -97,3 +97,10 @@ func TestClientKey(t *testing.T) {
 		}
 	}
 }
+
+func TestWrongPasswordLimiterHasACap(t *testing.T) {
+	s := newTestServerWith(t, Options{})
+	if s.signInFailures.maxWindows != maxFailureWindows {
+		t.Errorf("cap %d, want %d", s.signInFailures.maxWindows, maxFailureWindows)
+	}
+}

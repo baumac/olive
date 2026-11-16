@@ -36,7 +36,10 @@ How people sign up, sign in and stay signed in. The API is the Users API: the `u
 2. The UI calls `signUp` (`POST /v1/users`) with `name`, `email` and `password`.
 3. The response is `202` for a new and for a used email address. The page shows the card "Check your email" with the email address. The person is not signed in.
 4. The card has the `outline` button "Send the email again". It sends the same sign up again.
-5. The person opens the link of the email and selects "Confirm email address". `ConfirmEmailPage` then calls `confirmEmail` (`POST /v1/users/confirmations`) and stores `expires` and `user`. The page sends no request before the click, so a mail scanner does not use the link.
+5. The person opens the link of the email, fills in the "Password" field with the password of the sign up, and selects "Confirm email address". `ConfirmEmailPage` then calls `confirmEmail` (`POST /v1/users/confirmations`) with the token and the password and stores `expires` and `user`. The page sends no request before the click, so a mail scanner does not use the link.
+   - A wrong password is a `422` with the property `password`. Show "The password is not correct. Enter the password of your sign up." next to the field and keep the form. The link still works.
+   - A `429` with the `code` `wrong_password_limit` shows "Too many wrong passwords. Try again later." next to the field.
+   - The field has the link "Forgot your password?" below it. A password reset also confirms the email address.
 6. The UI opens the `redirect` path of the sign up and shows the "Welcome to Sponga47 Reviews" `Toast`. For an account that is not approved, the `Toast` also tells that an administrator must approve it.
 7. A link that is not valid, is too old, or was used shows the destructive `Alert` "This link does not work" and a link to the sign in page.
 

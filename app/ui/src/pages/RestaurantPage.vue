@@ -21,7 +21,7 @@ import { MapView } from '@/components/ui/map'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, restaurantsApi, retryText } from '@/lib/api'
+import { apiFailure, failureText, restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { useMapConfig } from '@/lib/mapConfig'
 import { directionsLink, osmLink } from '@/lib/places'
@@ -108,13 +108,13 @@ async function remove() {
     toast.success('Restaurant deleted', { description: name })
     void router.push('/restaurants')
   } catch (error) {
-    const { status } = await apiFailure(error)
+    const failure = await apiFailure(error)
     const description =
-      status === 409
+      failure.problem?.code === 'other_reviews'
         ? 'A restaurant with reviews of other people cannot be deleted.'
-        : status === 403
+        : failure.problem?.code === 'not_creator'
           ? 'You do not have permission to delete it.'
-          : retryText(status)
+          : failureText(failure)
     toast.error('Restaurant not deleted', { description })
   }
 }

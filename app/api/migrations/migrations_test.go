@@ -544,6 +544,40 @@ func TestConfirmExistingUsersMigration(t *testing.T) {
 	}
 }
 
+func TestTrimStoredNamesMigration(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268817_trim_stored_names.go")
+	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": " Ana  "})
+	padded := newRecord(t, app, "restaurants", map[string]any{"name": "  Luigi's ", "address": " Carrer Nou 1 "})
+	// SQLite removes only the ASCII space. A no-break space stays.
+	plain := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé\u00a0", "address": "Carrer Nou 2"})
+	updated := padded.GetString("updated")
+	redo()
+
+	for _, want := range []struct{ collection, id, field, value string }{
+		{"users", user.Id, "name", "Ana"},
+		{"restaurants", padded.Id, "name", "Luigi's"},
+		{"restaurants", padded.Id, "address", "Carrer Nou 1"},
+		{"restaurants", plain.Id, "name", "Café Olé\u00a0"},
+		{"restaurants", plain.Id, "address", "Carrer Nou 2"},
+	} {
+		r, err := app.FindRecordById(want.collection, want.id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := r.GetString(want.field); got != want.value {
+			t.Errorf("%s %s: %q, want %q", want.collection, want.field, got, want.value)
+		}
+	}
+	if r, _ := app.FindRecordById("restaurants", padded.Id); r.GetString("updated") != updated {
+		t.Errorf("the migration changed updated: %s, want %s", r.GetString("updated"), updated)
+	}
+}
+
 func TestRestaurantDetailsMigration(t *testing.T) {
 	app, err := tests.NewTestApp(t.TempDir())
 	if err != nil {

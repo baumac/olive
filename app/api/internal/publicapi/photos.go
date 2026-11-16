@@ -46,14 +46,14 @@ func (s *Server) AddReviewPhoto(ctx context.Context, req reviewsapi.AddReviewPho
 			return reviewsapi.AddReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}, nil
 		}
 		if review.GetString("creator") != user.Id {
-			return reviewsapi.AddReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden("Only the creator of the review can add photos.")}, nil
+			return reviewsapi.AddReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can add photos.")}, nil
 		}
 		n, err := app.CountRecords("review_photos", dbx.HashExp{"review": req.ReviewId})
 		if err != nil {
 			return nil, err
 		}
 		if n >= maxPhotosPerReview {
-			return reviewsapi.AddReviewPhoto409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict("A review can have at most 5 photos.")}, nil
+			return reviewsapi.AddReviewPhoto409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(reviewsapi.ProblemCodePhotoLimit, "A review can have at most 5 photos.")}, nil
 		}
 		return nil, nil
 	}
@@ -160,7 +160,7 @@ func (s *Server) UpdateReviewPhoto(ctx context.Context, req reviewsapi.UpdateRev
 			return nil
 		}
 		if review.GetString("creator") != user.Id {
-			response = reviewsapi.UpdateReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden("Only the creator of the review can change its photos.")}
+			response = reviewsapi.UpdateReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can change its photos.")}
 			return nil
 		}
 		saved = photo
@@ -192,7 +192,7 @@ func (s *Server) DeleteReviewPhoto(ctx context.Context, req reviewsapi.DeleteRev
 			return nil
 		}
 		if review.GetString("creator") != user.Id {
-			response = reviewsapi.DeleteReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden("Only the creator of the review can delete its photos.")}
+			response = reviewsapi.DeleteReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can delete its photos.")}
 			return nil
 		}
 		return tx.Delete(photo)

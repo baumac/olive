@@ -136,6 +136,20 @@ func (e *env) expect(req request, status int) response {
 	if status >= 400 && res.header.Get("Content-Type") != "application/problem+json" {
 		e.t.Fatalf("%s %s: content type %q, want application/problem+json", req.method, req.path, res.header.Get("Content-Type"))
 	}
+	needsCode := status == http.StatusForbidden || status == http.StatusConflict
+	if needsCode && strings.HasPrefix(req.path, "/v1/") && res.object(e.t)["code"] == nil {
+		e.t.Errorf("%s %s: the %d problem has no code: %s", req.method, req.path, status, res.body)
+	}
+	return res
+}
+
+// expectCode is expect for a problem with code.
+func (e *env) expectCode(req request, status int, code string) response {
+	e.t.Helper()
+	res := e.expect(req, status)
+	if got := res.object(e.t)["code"]; got != code {
+		e.t.Errorf("%s %s: code %v, want %s", req.method, req.path, got, code)
+	}
 	return res
 }
 
@@ -167,11 +181,16 @@ func (e *env) signUpPending(email, name string) authToken {
 	e.t.Helper()
 	e.expect(request{method: "POST", path: "/v1/users",
 		body: fmt.Sprintf(`{"email":%q,"password":"correct-horse-battery","name":%q}`, email, name)}, http.StatusAccepted)
-	res := e.expect(request{method: "POST", path: "/v1/users/confirmations",
-		body: fmt.Sprintf(`{"token":%q}`, e.emailToken(email))}, http.StatusOK)
 	var tok authToken
-	res.decode(e.t, &tok)
+	e.confirm(e.emailToken(email), "correct-horse-battery", http.StatusOK).decode(e.t, &tok)
 	return tok
+}
+
+// confirm sends the token of a confirmation link with the password.
+func (e *env) confirm(token, password string, status int) response {
+	e.t.Helper()
+	return e.expect(request{method: "POST", path: "/v1/users/confirmations",
+		body: fmt.Sprintf(`{"token":%q,"password":%q}`, token, password)}, status)
 }
 
 // lastEmail returns the text of the last email to address. It returns an
@@ -548,6 +567,53 @@ func TestWriteRateLimit(t *testing.T) {
 	e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Wait"}`, token: pending.Token}, http.StatusCreated)
 }
 
+func TestSpacesAroundNamesAndTitles(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "  Ana ")
+	if ana.User.Name != "Ana" {
+		t.Errorf("sign up: name %q", ana.User.Name)
+	}
+	user := e.expect(request{method: "PATCH", path: "/v1/users/me", body: `{"name":" Ana Maria  "}`, token: ana.Token}, http.StatusOK).object(t)
+	if user["name"] != "Ana Maria" {
+		t.Errorf("user patch: name %q", user["name"])
+	}
+
+	restaurant := e.createRestaurant(ana.Token, `{"name":"  Luigi's ","location":`+locationJSON(41.3766, 2.1893, "  Sant Carles 4 ", "")+`}`)
+	if restaurant["name"] != "Luigi's" || restaurant["location"].(map[string]any)["address"] != "Sant Carles 4" {
+		t.Errorf("create: restaurant %v", restaurant)
+	}
+	path := "/v1/restaurants/" + restaurant["id"].(string)
+	// The same name with spaces is not a change.
+	same := e.expect(request{method: "PATCH", path: path, body: `{"name":" Luigi's  "}`, token: ana.Token}, http.StatusOK).object(t)
+	if same["name"] != "Luigi's" || same["updated"] != restaurant["updated"] {
+		t.Errorf("same name: name %q, updated %v, want %v", same["name"], same["updated"], restaurant["updated"])
+	}
+	renamed := e.expect(request{method: "PATCH", path: path, body: `{"name":" Luigi "}`, token: ana.Token}, http.StatusOK).object(t)
+	if renamed["name"] != "Luigi" {
+		t.Errorf("rename: name %q", renamed["name"])
+	}
+
+	review := e.createReview(ana.Token, restaurant["id"].(string), `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"  Good "}`)
+	if review["title"] != "Good" {
+		t.Errorf("create: title %q", review["title"])
+	}
+	patched := e.expect(request{method: "PATCH", path: path + "/reviews/" + review["id"].(string), body: `{"title":" Great  "}`, token: ana.Token}, http.StatusOK).object(t)
+	if patched["title"] != "Great" {
+		t.Errorf("patch: title %q", patched["title"])
+	}
+
+	// A no-break space is a character of the value. The patterns allow it.
+	const nbsp = "\u00a0"
+	other := e.createRestaurant(ana.Token, `{"name":" `+nbsp+` ","location":`+locationJSON(41.38, 2.19, nbsp, "")+`}`)
+	if other["name"] != nbsp || other["location"].(map[string]any)["address"] != nbsp {
+		t.Errorf("no-break space: restaurant %v", other)
+	}
+	list := e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"` + nbsp + `"}`, token: ana.Token}, http.StatusCreated).object(t)
+	if list["name"] != nbsp {
+		t.Errorf("no-break space: list name %q", list["name"])
+	}
+}
+
 func TestSignInFailureLimit(t *testing.T) {
 	opts := testOptions
 	opts.SignInFailureLimit, opts.SignInFailureWindow = 3, time.Minute
@@ -576,8 +642,15 @@ func TestSignInFailureLimit(t *testing.T) {
 	signIn("ana@example.com", "wrong-password", http.StatusTooManyRequests)
 
 	signIn("joe@example.com", "correct-horse-battery", http.StatusOK)
-	for range 5 {
+
+	// An email address without a user has the same limit. The limit then
+	// does not show if a user has the address.
+	for range 3 {
 		signIn("nobody@example.com", "wrong-password", http.StatusUnauthorized)
+	}
+	res = signIn("Nobody@example.com", "wrong-password", http.StatusTooManyRequests)
+	if code := res.object(t)["code"]; code != "wrong_password_limit" {
+		t.Errorf("code %v, want wrong_password_limit", code)
 	}
 }
 
@@ -670,7 +743,7 @@ func TestRestaurants(t *testing.T) {
 	})
 
 	t.Run("patch", func(t *testing.T) {
-		e.expect(request{method: "PATCH", path: path, body: `{"description":"x"}`, token: joe.Token}, http.StatusForbidden)
+		e.expectCode(request{method: "PATCH", path: path, body: `{"description":"x"}`, token: joe.Token}, http.StatusForbidden, "not_creator")
 		e.expect(request{method: "PATCH", path: path, body: `{"description":"x"}`, token: ana.Token, contentType: "application/json"}, http.StatusUnsupportedMediaType)
 		e.expect(request{method: "PATCH", path: path, body: `{"name":null}`, token: ana.Token}, http.StatusUnprocessableEntity)
 
@@ -695,13 +768,13 @@ func TestRestaurants(t *testing.T) {
 	review := e.createReview(joe.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`)
 
 	t.Run("name cannot change with reviews", func(t *testing.T) {
-		e.expect(request{method: "PATCH", path: path, body: `{"name":"New name"}`, token: ana.Token}, http.StatusConflict)
+		e.expectCode(request{method: "PATCH", path: path, body: `{"name":"New name"}`, token: ana.Token}, http.StatusConflict, "other_reviews")
 		e.expect(request{method: "PATCH", path: path, body: `{"name":"Luigi's Trattoria","tags":["italian"]}`, token: ana.Token}, http.StatusOK)
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		e.expect(request{method: "DELETE", path: path, token: joe.Token}, http.StatusForbidden)
-		e.expect(request{method: "DELETE", path: path, token: ana.Token}, http.StatusConflict)
+		e.expectCode(request{method: "DELETE", path: path, token: joe.Token}, http.StatusForbidden, "not_creator")
+		e.expectCode(request{method: "DELETE", path: path, token: ana.Token}, http.StatusConflict, "other_reviews")
 		e.expect(request{method: "DELETE", path: path + "/reviews/" + review["id"].(string), token: joe.Token}, http.StatusNoContent)
 		res := e.expect(request{method: "DELETE", path: path, token: ana.Token}, http.StatusNoContent)
 		if len(res.body) != 0 {
@@ -739,7 +812,7 @@ func TestReviews(t *testing.T) {
 	})
 
 	t.Run("create errors", func(t *testing.T) {
-		e.expect(request{method: "POST", path: reviews, body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Again"}`, token: joe.Token}, http.StatusConflict)
+		e.expectCode(request{method: "POST", path: reviews, body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Again"}`, token: joe.Token}, http.StatusConflict, "review_exists")
 		e.expect(request{method: "POST", path: "/v1/restaurants/aaaaaaaaaaaaaaa/reviews", body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusNotFound)
 		e.expect(request{method: "POST", path: otherReviews, body: `{"kind":"joc_de_cartes","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "POST", path: otherReviews, body: `{"rating":3,"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
@@ -790,7 +863,7 @@ func TestReviews(t *testing.T) {
 	})
 
 	t.Run("patch", func(t *testing.T) {
-		e.expect(request{method: "PATCH", path: goodPath, body: `{"price":1}`, token: ana.Token}, http.StatusForbidden)
+		e.expectCode(request{method: "PATCH", path: goodPath, body: `{"price":1}`, token: ana.Token}, http.StatusForbidden, "not_creator")
 		e.expect(request{method: "PATCH", path: goodPath, body: `{"kind":"joc_de_cartes","price":3}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "PATCH", path: goodPath, body: `{"rating":3}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "PATCH", path: goodPath, body: `{"title":null}`, token: joe.Token}, http.StatusUnprocessableEntity)

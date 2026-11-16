@@ -71,7 +71,7 @@ func TestSignUpConfirmation(t *testing.T) {
 
 	t.Run("a token that is not valid", func(t *testing.T) {
 		for _, token := range []string{"not-a-token", first + "x"} {
-			res := e.expect(request{method: "POST", path: "/v1/users/confirmations", body: `{"token":"` + token + `"}`}, http.StatusUnprocessableEntity)
+			res := e.confirm(token, "correct-horse-battery", http.StatusUnprocessableEntity)
 			if got := strings.Join(errorProperties(t, res), ","); got != tokenProperty {
 				t.Errorf("properties %q, want token", got)
 			}
@@ -81,15 +81,26 @@ func TestSignUpConfirmation(t *testing.T) {
 	t.Run("a second sign up replaces the user without confirmation", func(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/users",
 			body: `{"email":"ANA@example.com","password":"second-horse-battery","name":"Ana B"}`}, http.StatusAccepted)
-		e.expect(request{method: "POST", path: "/v1/users/confirmations", body: `{"token":"` + first + `"}`}, http.StatusUnprocessableEntity)
+		e.confirm(first, "correct-horse-battery", http.StatusUnprocessableEntity)
 		e.signIn(anaSignIn, http.StatusUnauthorized)
+		e.signIn(`{"email":"ana@example.com","password":"second-horse-battery"}`, http.StatusForbidden)
+		// The person of the first sign up opens the new link. The password of
+		// the second sign up stays unknown to this person.
+		res := e.confirm(e.emailToken("ANA@example.com"), "correct-horse-battery", http.StatusUnprocessableEntity)
+		if got := strings.Join(errorProperties(t, res), ","); got != "password" {
+			t.Errorf("properties %q, want password", got)
+		}
 		e.signIn(`{"email":"ana@example.com","password":"second-horse-battery"}`, http.StatusForbidden)
 		// The first sign up of this test has the password of anaSignIn again.
 		e.expect(request{method: "POST", path: "/v1/users", body: anaSignUp}, http.StatusAccepted)
 	})
 
 	token := e.emailToken("ana@example.com")
-	res = e.expect(request{method: "POST", path: "/v1/users/confirmations", body: `{"token":"` + token + `"}`}, http.StatusOK)
+	t.Run("a confirmation without the password", func(t *testing.T) {
+		e.expect(request{method: "POST", path: "/v1/users/confirmations", body: `{"token":"` + token + `"}`}, http.StatusUnprocessableEntity)
+		e.confirm(token, "wrong-password", http.StatusUnprocessableEntity)
+	})
+	res = e.confirm(token, "correct-horse-battery", http.StatusOK)
 	var ana authToken
 	res.decode(t, &ana)
 	if ana.Token == "" || ana.User.Email != "ana@example.com" || ana.User.Name != "Ana" {
@@ -104,7 +115,10 @@ func TestSignUpConfirmation(t *testing.T) {
 	})
 
 	t.Run("a token works one time", func(t *testing.T) {
-		e.expect(request{method: "POST", path: "/v1/users/confirmations", body: `{"token":"` + token + `"}`}, http.StatusUnprocessableEntity)
+		res := e.confirm(token, "correct-horse-battery", http.StatusUnprocessableEntity)
+		if got := strings.Join(errorProperties(t, res), ","); got != tokenProperty {
+			t.Errorf("properties %q, want token", got)
+		}
 	})
 
 	t.Run("sign in after the confirmation", func(t *testing.T) {
@@ -245,7 +259,9 @@ func TestEmailLimit(t *testing.T) {
 		if e.emailCount() != before {
 			t.Error("a sign up at the limit sent an email")
 		}
-		e.expect(request{method: "POST", path: "/v1/users/confirmations", body: `{"token":"` + token + `"}`}, http.StatusOK)
+		// The user did not get the password of the sign up at the limit.
+		e.confirm(token, "third-horse-battery", http.StatusUnprocessableEntity)
+		e.confirm(token, "second-horse-battery", http.StatusOK)
 		e.signIn(`{"email":"joe@example.com","password":"second-horse-battery"}`, http.StatusOK)
 	})
 }
@@ -279,6 +295,30 @@ func TestUpdateUser(t *testing.T) {
 	}
 	patch(`{"email":"eve@example.com"}`, http.StatusBadRequest)
 	e.expect(request{method: "PATCH", path: "/v1/users/me", body: `{"name":"Eve"}`}, http.StatusUnauthorized)
+}
+
+func TestConfirmEmailPasswordLimit(t *testing.T) {
+	e := newEnv(t, publicapi.Options{SignInLimit: 1000, SignInWindow: time.Minute, SignInFailureLimit: 2})
+	e.expect(request{method: "POST", path: "/v1/users", body: anaSignUp}, http.StatusAccepted)
+	token := e.emailToken("ana@example.com")
+	for range 2 {
+		e.confirm(token, "wrong-password", http.StatusUnprocessableEntity)
+	}
+	res := e.confirm(token, "correct-horse-battery", http.StatusTooManyRequests)
+	if code := res.object(t)["code"]; code != "wrong_password_limit" {
+		t.Errorf("code %v, want wrong_password_limit", code)
+	}
+	// The confirmation has its own count.
+	e.signIn(anaSignIn, http.StatusForbidden)
+
+	// A person without the link cannot block the confirmation.
+	e.expect(request{method: "POST", path: "/v1/users",
+		body: `{"email":"joe@example.com","password":"correct-horse-battery","name":"Joe"}`}, http.StatusAccepted)
+	for range 2 {
+		e.signIn(`{"email":"joe@example.com","password":"wrong-password"}`, http.StatusUnauthorized)
+	}
+	e.signIn(`{"email":"joe@example.com","password":"correct-horse-battery"}`, http.StatusTooManyRequests)
+	e.confirm(e.emailToken("joe@example.com"), "correct-horse-battery", http.StatusOK)
 }
 
 func TestChangePassword(t *testing.T) {

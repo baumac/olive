@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 3.0.0
+  version: 4.0.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants.
 
@@ -14,14 +14,23 @@ info:
     A request with an invalid token gets `401 Unauthorized`, also on read operations.
 
     Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.
-    Version 1.0.0 had a space in the place of the `T`. This is the only change of version 2.0.0. The path stays `/v1`.
-    Version 2.1.0 adds the `reviews_session` cookie.
-    Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation.
-    Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.
-    It also adds the password reset and the operations of `/users/me`. The path stays `/v1`.
 
     Request bodies with unknown or read-only properties get `400 Bad Request`.
     Property values that break a schema rule get `422 Unprocessable Content`.
+    Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.
+
+    The `/v1` of the path is the name of the API. It does not change with the version of this document.
+    The first number of the version changes when a change can break a client.
+
+    - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`.
+    - Version 2.1.0 adds the `reviews_session` cookie.
+    - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation.
+    - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.
+      It adds the password reset and the operations of `/users/me`.
+      It also adds the lists of restaurants, the approval of new users, and the limits of the write operations.
+    - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.
+      It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.
+      It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts.
 
 servers:
   - url: /v1
@@ -50,7 +59,7 @@ paths:
       summary: Sign up a user
       description: |
         Creates a user and sends an email with a confirmation link to the email address.
-        `confirmEmail` then signs the user in. The user cannot sign in before that.
+        `confirmEmail` then signs the user in with the token of the link and this `password`. The user cannot sign in before that.
         The response is the same for a new email address and for an email address that a user has.
         An email address of a confirmed user gets an email that tells about the account. The user does not change.
         An email address of a user without confirmation gets a new link. The user then has the new `name` and `password`.
@@ -93,6 +102,11 @@ paths:
       description: |
         Confirms the email address with the token of the confirmation link and signs the user in.
         A token works one time and for one day.
+        The request also needs the `password` of the user. A link alone does not confirm a user.
+        A person who does not own the address then cannot set the password of a confirmed user.
+        A wrong `password` causes `422`. The token stays valid.
+        Too many wrong passwords for one user cause `429` with the `code` `wrong_password_limit`.
+        This count is not the count of sign in. Only a request with a valid token adds to it.
         The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
       tags: [users]
       security:
@@ -100,7 +114,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/SessionCookie'
       requestBody:
-        description: The token of the confirmation link.
+        description: The token of the confirmation link and the password of the user.
         required: true
         content:
           application/json:
@@ -341,8 +355,9 @@ paths:
       summary: Sign in a user with email and password
       description: |
         The API ignores the `Authorization` header and the `reviews_session` cookie on this operation.
-        Too many wrong passwords for one user cause `429 Too Many Requests` for this user.
+        Too many wrong passwords for one email address cause `429 Too Many Requests` for this address.
         A correct password then also gets `429` until the time of `Retry-After`.
+        The limit counts an email address without a user in the same way. The `429` does not show if a user has the address.
         A user who did not confirm the email address gets `403` for the correct password.
         The API then sends a new confirmation link.
       tags: [users]
@@ -389,6 +404,7 @@ paths:
         Makes all auth tokens of the user of the current token invalid.
         This includes the current token and the tokens of other devices.
         A request with the `reviews_session` cookie also deletes the cookie.
+        The operation has no rate limit. A user can always sign out.
       tags: [users]
       security:
         - bearerAuth: []
@@ -415,6 +431,7 @@ paths:
         Clients also use this operation to check a stored token.
         A request with the `reviews_session` cookie gets a new cookie, also without `cookie=true`.
         A bearer token and `cookie=true` move the token into the cookie.
+        The operation has no rate limit. It changes no data.
       tags: [users]
       security:
         - bearerAuth: []
@@ -433,6 +450,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthToken'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -858,6 +877,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Reviewer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -1248,7 +1269,6 @@ paths:
         The list is public. The user of the token is its creator.
         A name that another list of the user has causes `409 Conflict`. The comparison ignores the case of ASCII letters.
         A user with 50 lists gets `409 Conflict`.
-        The API removes the spaces at the start and the end of the name.
       tags: [lists]
       security:
         - bearerAuth: []
@@ -1322,7 +1342,6 @@ paths:
       description: |
         Only the creator of the list can rename it. The favorites list cannot be renamed.
         A name that another list of the user has causes `409 Conflict`.
-        The API removes the spaces at the start and the end of the name.
       tags: [lists]
       security:
         - bearerAuth: []
@@ -1498,7 +1517,7 @@ components:
       description: |
         The auth token in the cookie that `confirmEmail`, `signIn`, `refreshToken`, or `changePassword` set with `cookie=true`.
         The API ignores the cookie when the request has an `Authorization` header.
-        The API also ignores it on a cross-origin `POST`, `PATCH`, or `DELETE` request from a browser.
+        The API also ignores it on a cross-origin `POST`, `PUT`, `PATCH`, or `DELETE` request from a browser.
 
   headers:
     SetSessionCookie:
@@ -1549,7 +1568,7 @@ components:
       in: query
       description: |
         `true` puts the auth token in the `reviews_session` cookie. The response body then has no `token`.
-        The API ignores this parameter on a cross-origin `POST` request from a browser.
+        The API ignores this parameter on a cross-origin `POST` or `PUT` request from a browser.
       schema:
         type: boolean
         default: false
@@ -1584,7 +1603,10 @@ components:
     ListRef:
       name: listRef
       in: path
-      description: The ID of the list, or `favorites` for the favorites list of the user of the token.
+      description: |
+        The ID of the list, or `favorites` for the favorites list of the user of the token.
+        Only `addListRestaurant` and `removeListRestaurant` take `favorites`. A client then changes the favorites without a request for the ID of the list.
+        The other operations of `/lists` need the ID. `listReviewerLists` gives it.
       required: true
       schema:
         type: string
@@ -1955,7 +1977,8 @@ components:
     Forbidden:
       description: |
         The user is not the creator of the resource. For a restaurant without a creator, the user has no review of it.
-        A rename or a delete of a favorites list gets this response also.
+        The problem then has the `code` `not_creator`.
+        A rename or a delete of a favorites list gets this response also. The `code` is `favorites_list`.
         A user who is not approved gets this response for each operation that needs a token.
         The problem then has the `code` `not_approved`.
         `signOut`, `refreshToken`, and the operations of `/users/me` are the exceptions.
@@ -1971,13 +1994,15 @@ components:
             $ref: '#/components/schemas/Problem'
     Conflict:
       description: |
-        The request conflicts with the current state.
-        Examples are a duplicate review for a restaurant,
-        a delete of a restaurant that has a review of another user,
-        a change of `name` or `location` on a restaurant that has a review of another user,
-        a `location.place_id` that another restaurant has,
-        a sixth photo of a review, a list name that another list of the user has,
-        or a list or a restaurant above the list limits.
+        The request conflicts with the current state. The `code` of the problem tells the reason.
+
+        - `review_exists` is a second review of one user for a restaurant.
+        - `other_reviews` is a delete of a restaurant that has a review of another user, or a change of its `name` or `location`.
+        - `place_taken` is a `location.place_id` that another restaurant has.
+        - `photo_limit` is a sixth photo of a review.
+        - `list_name_taken` is a list name that another list of the user has.
+        - `list_limit` is a list above the 50 lists of a user.
+        - `list_restaurant_limit` is a restaurant above the 500 restaurants of a list.
       content:
         application/problem+json:
           schema:
@@ -2059,7 +2084,8 @@ components:
         Sign up, sign in, `confirmEmail`, and the password reset count each IP address.
         The other operations with a limit count each user.
         Each operation has its own count.
-        Sign in, `changePassword`, and `deleteUser` also get it when one user has too many wrong passwords in a short time.
+        Sign in, `changePassword`, and `deleteUser` also get it when one email address has too many wrong passwords in a short time.
+        `confirmEmail` has its own count of wrong passwords for each user.
         A photo upload also gets it when the server holds too many photos in memory.
         This upload does not count for the rate limit of the user.
       headers:
@@ -2089,21 +2115,25 @@ components:
     Name:
       description: |
         A name with at least one character that is not ASCII whitespace.
+        The API removes the ASCII spaces at the start and the end.
         Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
       type: string
       minLength: 1
       maxLength: 255
       pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
       x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters
+      x-trim: true
     Title:
       description: |
         A title with at least one character that is not ASCII whitespace.
+        The API removes the ASCII spaces at the start and the end.
         Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
       type: string
       minLength: 1
       maxLength: 255
       pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
       x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters
+      x-trim: true
     LongText:
       description: |
         A text of at most 10,000 characters.
@@ -2147,11 +2177,13 @@ components:
     Address:
       description: |
         The address of a place in one line. It has the rules of a name.
+        The API removes the ASCII spaces at the start and the end.
       type: string
       minLength: 1
       maxLength: 255
       pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
       x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters
+      x-trim: true
     PlaceId:
       description: |
         The ID of a place at the geocoder. It starts with the source of the ID, for example `osm` for OpenStreetMap.
@@ -2968,12 +3000,14 @@ components:
     AltText:
       description: |
         A text with at least one character that is not ASCII whitespace.
+        The API removes the ASCII spaces at the start and the end.
         Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
       type: string
       minLength: 1
       maxLength: 255
       pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
       x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters
+      x-trim: true
     PhotoPatch:
       description: A JSON Merge Patch. `null` clears the alt text. An empty patch changes nothing.
       type: object
@@ -3021,11 +3055,24 @@ components:
         code:
           description: |
             A fixed value for a reason that a client must tell apart from others.
+            Each `403` and each `409` has it. The `Forbidden` and `Conflict` responses tell their values.
             `not_approved` is the `403` of a user that no superuser approved.
             `email_not_confirmed` is the `403` of a sign in before the user confirmed the email address.
-            `wrong_password_limit` is the `429` of a user with too many wrong passwords.
+            `wrong_password_limit` is the `429` of an email address or a confirmation with too many wrong passwords.
           type: string
-          enum: [not_approved, email_not_confirmed, wrong_password_limit]
+          enum:
+            - not_approved
+            - email_not_confirmed
+            - wrong_password_limit
+            - not_creator
+            - favorites_list
+            - review_exists
+            - other_reviews
+            - place_taken
+            - photo_limit
+            - list_name_taken
+            - list_limit
+            - list_restaurant_limit
         property:
           description: |
             The request property that causes a conflict, such as `name` or `location`.
@@ -3125,13 +3172,21 @@ components:
           password: correct-horse-battery
           name: Ana
     EmailConfirmation:
-      description: The token of a confirmation link.
+      description: The token of a confirmation link and the password of the user.
       type: object
       additionalProperties: false
-      required: [token]
+      required: [token, password]
       properties:
         token:
           $ref: '#/components/schemas/EmailToken'
+        password:
+          description: The password of the user. It is the `password` of the last sign up with this email address.
+          type: string
+          format: password
+          maxLength: 255
+      examples:
+        - token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InU1bjFjOHIzdDZ5MGIyZSJ9.c2lnbmF0dXJl
+          password: correct-horse-battery
     EmailToken:
       description: |
         The token of a link in an email. The link has it after `#token=`.
@@ -3208,10 +3263,12 @@ components:
           description: The email address of the user.
           type: string
           format: email
+          maxLength: 255
         password:
           description: The password of the user.
           type: string
           format: password
+          maxLength: 255
       examples:
         - email: ana@example.com
           password: correct-horse-battery

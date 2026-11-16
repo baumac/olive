@@ -78,6 +78,7 @@ func TestSessionCookie(t *testing.T) {
 	})
 
 	t.Run("a bearer token moves into the cookie", func(t *testing.T) {
+		e.expect(request{method: "POST", path: "/v1/users/tokens/refresh?cookie=maybe", token: joe.Token}, http.StatusBadRequest)
 		res := e.expect(request{method: "POST", path: "/v1/users/tokens/refresh?cookie=true", token: joe.Token}, http.StatusOK)
 		cookieToken(t, res)
 	})
@@ -86,7 +87,7 @@ func TestSessionCookie(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/users",
 			body: `{"email":"eve@example.com","password":"correct-horse-battery","name":"Eve"}`}, http.StatusAccepted)
 		res := e.expect(request{method: "POST", path: "/v1/users/confirmations?cookie=true",
-			body: `{"token":"` + e.emailToken("eve@example.com") + `"}`}, http.StatusOK)
+			body: `{"token":"` + e.emailToken("eve@example.com") + `","password":"correct-horse-battery"}`}, http.StatusOK)
 		cookieToken(t, res)
 	})
 
