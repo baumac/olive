@@ -22,6 +22,7 @@ models/PhotoPatch.ts
 models/PhotoUrls.ts
 models/Place.ts
 models/PlaceList.ts
+models/PriceLevelRange.ts
 models/Problem.ts
 models/Restaurant.ts
 models/RestaurantCreate.ts

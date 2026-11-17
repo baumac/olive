@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -119,5 +120,81 @@ func TestSearchPlacesDetails(t *testing.T) {
 		if v, ok := list.Items[1][k]; ok {
 			t.Errorf("an invalid %s is in the answer: %v", k, v)
 		}
+	}
+}
+
+func TestPriceLevelFilter(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	ids := map[string]string{}
+	for i, name := range []string{"L1", "L2", "L3", "L4"} {
+		ids[name] = e.createRestaurant(ana.Token, fmt.Sprintf(`{"name":%q,"price_level":%d}`, name, i+1))["id"].(string)
+	}
+	e.createRestaurant(ana.Token, `{"name":"None"}`)
+
+	page := func(query string) (string, string) {
+		t.Helper()
+		var p struct {
+			Items      []struct{ Name string } `json:"items"`
+			NextCursor *string                 `json:"next_cursor"`
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?sort=name&" + query}, http.StatusOK).decode(t, &p)
+		var names []string
+		for _, r := range p.Items {
+			names = append(names, r.Name)
+		}
+		cursor := ""
+		if p.NextCursor != nil {
+			cursor = *p.NextCursor
+		}
+		return strings.Join(names, ","), cursor
+	}
+
+	// A restaurant without a price level matches no comparison.
+	for query, want := range map[string]string{
+		"price_level[lte]=2":                    "L1,L2",
+		"price_level[lt]=2":                     "L1",
+		"price_level[eq]=3":                     "L3",
+		"price_level[gte]=3":                    "L3,L4",
+		"price_level[gt]=1&price_level[lt]=4":   "L2,L3",
+		"price_level[gte]=3&price_level[lte]=2": "",
+		"":                                      "L1,L2,L3,L4,None",
+	} {
+		if got, _ := page(query); got != want {
+			t.Errorf("%q: %q, want %q", query, got, want)
+		}
+	}
+
+	// The restaurants page sends the overall sort, near, and within.
+	e.createReview(ana.Token, ids["L2"], `{"space":9,"service":9,"food":9,"price":9,"cleanliness":9,"title":"Top"}`)
+	e.createReview(ana.Token, ids["L3"], `{"space":5,"service":5,"food":5,"price":5,"cleanliness":5,"title":"Fine"}`)
+	box := "within[west]=2&within[south]=41&within[east]=3&within[north]=42"
+	for query, want := range map[string]string{
+		"sort=-overall&price_level[lte]=2":                                                             "L2,L1",
+		"sort=-overall&price_level[gte]=2&" + box:                                                      "L2,L3,L4",
+		"sort=distance&near[latitude]=41.3766&near[longitude]=2.1893&price_level[eq]=1":                "L1",
+		"sort=name&price_level[lte]=4&within[west]=3&within[south]=41&within[east]=4&within[north]=42": "",
+	} {
+		var p struct {
+			Items []struct{ Name string } `json:"items"`
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusOK).decode(t, &p)
+		var names []string
+		for _, r := range p.Items {
+			names = append(names, r.Name)
+		}
+		if got := strings.Join(names, ","); got != want {
+			t.Errorf("%q: %q, want %q", query, got, want)
+		}
+	}
+
+	first, cursor := page("price_level[lte]=2&limit=1")
+	if next, _ := page("price_level[lte]=2&limit=1&cursor=" + url.QueryEscape(cursor)); first != "L1" || next != "L2" {
+		t.Errorf("pages %q and %q, want L1 and L2", first, next)
+	}
+	e.expect(request{method: "GET", path: "/v1/restaurants?sort=name&price_level[lte]=3&cursor=" + url.QueryEscape(cursor)}, http.StatusBadRequest)
+
+	for _, query := range []string{"price_level[lte]=0", "price_level[lte]=5", "price_level[lte]=x", "price_level[lte]=1.5", "price_level[in]=1", "price_level=1"} {
+		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
 	}
 }

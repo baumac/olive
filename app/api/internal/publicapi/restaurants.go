@@ -85,6 +85,7 @@ func (s *Server) ListRestaurants(ctx context.Context, req reviewsapi.ListRestaur
 		w.joinOverall()
 	}
 	w.compare(overallColumn, averageComparisons(p.Overall))
+	w.compare(priceLevelColumn, priceLevelComparisons(p.PriceLevel))
 	w.near(p.Near)
 	w.within(p.Within)
 	w.tagFilters(p.TagsHas, p.TagsHasAny, p.TagsHasAll)
@@ -531,6 +532,17 @@ func (c *changes) patchTags(v nullable.Nullable[reviewsapi.Tags]) {
 		c.r.Set("tags", next)
 	}
 	c.changed = true
+}
+
+// priceLevelColumn is NULL for a restaurant without a price level. The
+// column stores 0. PocketBase makes each number column NOT NULL.
+const priceLevelColumn = "NULLIF([[restaurants.price_level]], 0)"
+
+func priceLevelComparisons(r *reviewsapi.PriceLevelRange) []comparison {
+	if r == nil {
+		return nil
+	}
+	return comparisons(r.Lt, r.Lte, r.Eq, r.Gte, r.Gt)
 }
 
 func timestampComparisons(r *reviewsapi.TimestampRange) []comparison {

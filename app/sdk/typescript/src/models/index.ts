@@ -16,6 +16,7 @@ export * from './PhotoPatch.js';
 export * from './PhotoUrls.js';
 export * from './Place.js';
 export * from './PlaceList.js';
+export * from './PriceLevelRange.js';
 export * from './Problem.js';
 export * from './Restaurant.js';
 export * from './RestaurantCreate.js';

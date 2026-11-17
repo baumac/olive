@@ -268,6 +268,26 @@ test('restaurants filter and sort by the overall rating', async ({ page, api }) 
   await expect(names).toHaveCount(3)
 })
 
+test('restaurants filter by the price level', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const tag = uniqueTag('price')
+  await api.createRestaurant(owner, { name: 'Cheap Place', tags: [tag], priceLevel: 1 })
+  await api.createRestaurant(owner, { name: 'Moderate Place', tags: [tag], priceLevel: 2 })
+  await api.createRestaurant(owner, { name: 'Fancy Place', tags: [tag], priceLevel: 4 })
+  await api.createRestaurant(owner, { name: 'Unknown Place', tags: [tag] })
+  const names = page.getByRole('heading', { level: 2, name: / Place$/ })
+
+  await page.goto(`/restaurants?tags=${tag}&sort=name&price_level=1-2`)
+  await expect(names).toHaveText(['Cheap Place', 'Moderate Place'])
+  await expect(page.getByText('Price level: Moderate or less')).toBeVisible()
+  await page.getByRole('button', { name: 'Remove filter price level moderate or less' }).click()
+  await expect(names).toHaveCount(4)
+
+  await page.goto(`/restaurants?tags=${tag}&sort=name&price_level=4`)
+  await expect(names).toHaveText(['Fancy Place'])
+  await expect(page.getByText('Price level: Very expensive')).toBeVisible()
+})
+
 test('the search box finds restaurants by name, description, and tags', async ({ page, api }) => {
   const owner = await api.signUp('Joe')
   const word = uniqueTag('find')

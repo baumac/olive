@@ -8,7 +8,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For Claude
 3. Design gaps
-- No price_level filter, though the field exists.
 - Increase test coverage
 - Improve test performance
 

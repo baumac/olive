@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import spec from '../../../specs/api/public-openapi.yaml?raw'
 import { apiFailure, failureText, fieldErrors, notApprovedText, notCreatorText } from '@/lib/api'
 import { listFailureText } from '@/lib/lists'
-import { restaurantFilterParams } from '@/lib/restaurantFilters'
+import { restaurantFilterDefs, restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
 import { restaurantAccess } from '@/lib/restaurants'
@@ -140,13 +140,33 @@ describe('ratings', () => {
 
 describe('restaurantFilterParams', () => {
   it('changes the filters to SDK parameters', () => {
-    expect(restaurantFilterParams({ search: 'lui', tags: ['pasta'], overall: '8', list: 'l7d2f9h4j1k8m3p' })).toEqual({
+    expect(restaurantFilterParams({ search: 'lui', tags: ['pasta'], overall: '8', list: 'l7d2f9h4j1k8m3p', price_level: '1-2' })).toEqual({
       search: 'lui',
       tagsHasAny: ['pasta'],
       overall: { gte: 8 },
       listEq: 'l7d2f9h4j1k8m3p',
+      priceLevel: { gte: 1, lte: 2 },
     })
-    expect(restaurantFilterParams({})).toEqual({ search: undefined, tagsHasAny: undefined, overall: undefined, listEq: undefined })
+    expect(restaurantFilterParams({})).toEqual({ search: undefined, tagsHasAny: undefined, overall: undefined, listEq: undefined, priceLevel: undefined })
+  })
+
+  it('selects a range of price levels', () => {
+    const def = restaurantFilterDefs.find((d) => d.key === 'price_level')!
+    expect(def.options?.map((o) => `${o.value} ${o.label}`)).toEqual([
+      '1 Inexpensive',
+      '1-2 Moderate or less',
+      '1-3 Expensive or less',
+      '2-4 Moderate or more',
+      '3-4 Expensive or more',
+      '4 Very expensive',
+    ])
+    expect(def.chip('3-4')).toBe('Price level: Expensive or more')
+    expect(def.chip('9')).toBe('Price level: 9')
+    expect(restaurantFilterParams({ price_level: '4' }).priceLevel).toEqual({ eq: 4 })
+    for (const v of ['2', '1-4', 'x', '']) {
+      expect(restaurantFilterParams({ price_level: v }).priceLevel, v).toBeUndefined()
+    }
+    expect(restaurantFilterParams({ price_level: ['1'] }).priceLevel).toBeUndefined()
   })
 })
 

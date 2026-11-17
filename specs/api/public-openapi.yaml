@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 5.2.0
+  version: 5.3.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants.
 
@@ -36,6 +36,7 @@ info:
       The API changes tags to Unicode normalization form C.
     - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token.
     - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`.
+    - Version 5.3.0 adds the `price_level` filter of `listRestaurants`.
 
 servers:
   - url: /v1
@@ -545,6 +546,7 @@ paths:
         - $ref: '#/components/parameters/RestaurantSort'
         - $ref: '#/components/parameters/RestaurantSearch'
         - $ref: '#/components/parameters/OverallFilter'
+        - $ref: '#/components/parameters/PriceLevelFilter'
         - $ref: '#/components/parameters/NearFilter'
         - $ref: '#/components/parameters/WithinFilter'
         - $ref: '#/components/parameters/TagsHas'
@@ -1854,6 +1856,18 @@ components:
         $ref: '#/components/schemas/AverageRange'
       example: {gte: 7.5}
 
+    PriceLevelFilter:
+      name: price_level
+      in: query
+      description: |
+        Compares the `price_level` of the restaurant. Each key is an operator, for example `price_level[lte]=2`.
+        A restaurant without a `price_level` matches no `price_level` filter.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/PriceLevelRange'
+      example: {lte: 2}
+
     NearFilter:
       name: near
       in: query
@@ -2443,6 +2457,21 @@ components:
           $ref: '#/components/schemas/AverageScore'
         gt:
           $ref: '#/components/schemas/AverageScore'
+    PriceLevelRange:
+      description: Comparisons for a price level. All comparisons must match.
+      type: object
+      additionalProperties: false
+      properties:
+        lt:
+          $ref: '#/components/schemas/PriceLevel'
+        lte:
+          $ref: '#/components/schemas/PriceLevel'
+        eq:
+          $ref: '#/components/schemas/PriceLevel'
+        gte:
+          $ref: '#/components/schemas/PriceLevel'
+        gt:
+          $ref: '#/components/schemas/PriceLevel'
     TimestampRange:
       description: Comparisons for a timestamp. All comparisons must match.
       type: object
