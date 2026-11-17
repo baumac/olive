@@ -8,7 +8,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For Claude
 3. Design gaps
-- Only the creator can edit a restaurant. If the creator is inactive, the website, phone, hours and tags are frozen. In a trusted group, let any approved user edit the non-identity fields.
 - No GET /users/me. The UI calls refreshToken on every load just to learn who is signed in, minting a new token each time.
 - listListRestaurants has no search, sort or filters, so favorites cannot be shown on a map or sorted by distance. A list[eq] filter on listRestaurants would give all of that for free.
 - No price_level filter, though the field exists.
@@ -28,6 +27,7 @@ Each sub-bullet point contains notes about the incomplete decision.
 ## Won't do
 - Expose operations that can be worked around by having an admin use the PocketBase dashboard
   - No email change. UserPatch has only name; a new address needs the dashboard.
+  - Only the creator can edit a restaurant. If the creator is inactive, the website, phone, hours and tags are frozen.
 - Add IOS app: won't do for now as this requires a mac laptop and side-loading the app from that device, or a 99$ per year subscription to host the app in the app store
 - Add load tests: not needed as the number of users are quite low
 - Support oauth2 logins: not needed since email/password based authentication is sufficient
