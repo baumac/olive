@@ -22,7 +22,7 @@ const text = ref('')
 const announcement = ref('')
 
 function add() {
-  const tag = text.value.trim()
+  const tag = text.value.trim().normalize('NFC')
   if (tag === '') {
     return
   }

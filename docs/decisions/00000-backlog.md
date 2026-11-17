@@ -13,7 +13,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 - No email change. UserPatch has only name; a new address needs the dashboard.
 - listListRestaurants has no search, sort or filters, so favorites cannot be shown on a map or sorted by distance. A list[eq] filter on listRestaurants would give all of that for free.
 - No price_level filter, though the field exists.
-- Tags are ASCII-only ([a-z0-9]), so café or non-Latin tags are impossible.
 
 ## For Me
 - write 00000-create-reviews-app decision doc that covers the decision to create the app, its intended users, and what it does/does not need to do

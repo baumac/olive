@@ -20,6 +20,7 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
+	"golang.org/x/text/unicode/norm"
 )
 
 // maxBodyBytes is far above the largest valid body of about 100 KB. A larger
@@ -92,6 +93,11 @@ func readBody(ctx context.Context, in *openapi3filter.RequestValidationInput, va
 		return nil, &p
 	}
 
+	if changeProperties(schema, props, "x-nfc", norm.NFC.String) {
+		raw, _ = json.Marshal(props)
+		r.Body = io.NopCloser(bytes.NewReader(raw))
+	}
+
 	errs := integerLiterals(schema, props)
 	if validate {
 		err = openapi3filter.ValidateRequestBody(ctx, in, in.Route.Operation.RequestBody.Value)
@@ -102,52 +108,75 @@ func readBody(ctx context.Context, in *openapi3filter.RequestValidationInput, va
 		p := reviewsapi.Problem(unprocessable(sortedErrors(errs)))
 		return nil, &p
 	}
-	if trimProperties(schema, props) {
+	if changeProperties(schema, props, "x-trim", trimSpaces) {
 		trimmed, _ := json.Marshal(props)
 		r.Body = io.NopCloser(bytes.NewReader(trimmed))
 	}
 	return props, nil
 }
 
-// trimProperties removes the ASCII spaces around each string of a schema
-// with x-trim. The pattern of such a schema needs one other character. A
-// valid value then does not become empty.
-func trimProperties(schema *openapi3.Schema, props map[string]json.RawMessage) bool {
+// trimSpaces removes the ASCII spaces around s. The pattern of a schema with
+// x-trim needs one other character. A valid value then does not become empty.
+func trimSpaces(s string) string {
+	return strings.Trim(s, " ")
+}
+
+// changeProperties uses change on each string of a schema with the extension
+// ext. It returns true when a value changes.
+func changeProperties(schema *openapi3.Schema, props map[string]json.RawMessage, ext string, change func(string) string) bool {
 	changed := false
 	for name, value := range props {
 		property := schema.Properties[name]
 		if property == nil {
 			continue
 		}
-		if trimmed := trimValue(property.Value, value); !bytes.Equal(trimmed, value) {
-			props[name] = trimmed
+		if next := changeValue(property.Value, value, ext, change); !bytes.Equal(next, value) {
+			props[name] = next
 			changed = true
 		}
 	}
 	return changed
 }
 
-func trimValue(schema *openapi3.Schema, raw json.RawMessage) json.RawMessage {
+func changeValue(schema *openapi3.Schema, raw json.RawMessage, ext string, change func(string) string) json.RawMessage {
 	for _, option := range schema.OneOf {
-		raw = trimValue(option.Value, raw)
+		raw = changeValue(option.Value, raw, ext, change)
 	}
-	if schema.Extensions["x-trim"] == true {
+	if schema.Extensions[ext] == true {
 		var text string
-		if json.Unmarshal(raw, &text) != nil || strings.Trim(text, " ") == text {
+		if json.Unmarshal(raw, &text) != nil || change(text) == text {
 			return raw
 		}
-		trimmed, _ := json.Marshal(strings.Trim(text, " "))
-		return trimmed
+		next, _ := json.Marshal(change(text))
+		return next
+	}
+	if schema.Items != nil {
+		var items []json.RawMessage
+		if json.Unmarshal(raw, &items) != nil {
+			return raw
+		}
+		changed := false
+		for i, item := range items {
+			if next := changeValue(schema.Items.Value, item, ext, change); !bytes.Equal(next, item) {
+				items[i] = next
+				changed = true
+			}
+		}
+		if !changed {
+			return raw
+		}
+		next, _ := json.Marshal(items)
+		return next
 	}
 	if len(schema.Properties) == 0 {
 		return raw
 	}
 	props, err := decodeObject(raw)
-	if err != nil || !trimProperties(schema, props) {
+	if err != nil || !changeProperties(schema, props, ext, change) {
 		return raw
 	}
-	trimmed, _ := json.Marshal(props)
-	return trimmed
+	next, _ := json.Marshal(props)
+	return next
 }
 
 // decodeObject rejects repeated properties. The later decoders read the
@@ -285,6 +314,9 @@ func schemaMessage(e *openapi3.SchemaError) string {
 	case "format":
 		if s.Format == "email" {
 			return "must be an email address"
+		}
+		if s.Format == "tag" {
+			return "must not have invisible characters"
 		}
 	case "minimum", "maximum":
 		if s.Min != nil && s.Max != nil {

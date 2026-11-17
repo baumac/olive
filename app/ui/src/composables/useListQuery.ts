@@ -42,7 +42,7 @@ export function useListQuery(
       return text && Array.from(text).length <= 255 ? text : undefined
     }
     if (def.type === 'tags') {
-      const tags = [...new Set(raw.split(',').filter(isTag))].slice(0, maxTags)
+      const tags = [...new Set(raw.split(',').map((t) => t.normalize('NFC')).filter(isTag))].slice(0, maxTags)
       return tags.length ? tags : undefined
     }
     return def.options?.some((o) => o.value === raw) ? raw : undefined

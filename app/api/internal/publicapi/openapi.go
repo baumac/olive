@@ -9,11 +9,13 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"unicode"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"
+	"golang.org/x/text/unicode/norm"
 )
 
 // operation has the spec of one operation and the checks that prepare does
@@ -22,7 +24,9 @@ type operation struct {
 	pattern string
 	route   *routers.Route
 	query   map[string]bool
-	auth    authMode
+	// nfcQuery has the query parameters with the x-nfc extension.
+	nfcQuery map[string]bool
+	auth     authMode
 	// approval is true when the operation needs an approved user.
 	approval bool
 	limit    *rateLimit
@@ -81,6 +85,7 @@ func loadSpec() (*apiSpec, error) {
 				approval:     approval,
 				route:        &routers.Route{Spec: doc, Path: path, PathItem: item, Method: method, Operation: op},
 				query:        queryNames(item, op),
+				nfcQuery:     nfcQueryNames(item, op),
 				auth:         authOf(doc, op),
 				limit:        limit,
 				fileBody:     op.RequestBody != nil && !hasJSON(op.RequestBody.Value.Content),
@@ -188,6 +193,7 @@ var validationOptions = &openapi3filter.Options{
 	AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
 	SchemaValidationOptions: []openapi3.SchemaValidationOption{
 		openapi3.WithStringFormatValidator("email", openapi3.NewCallbackValidator(checkEmailFormat)),
+		openapi3.WithStringFormatValidator("tag", openapi3.NewCallbackValidator(checkTagFormat)),
 	},
 }
 
@@ -243,6 +249,17 @@ func checkEmailFormat(s string) error {
 	return errors.New("not a bare email address")
 }
 
+// checkTagFormat refuses the default ignorable code points. A tag with one
+// looks like the tag without it. The tag pattern refuses the ones in Cf.
+func checkTagFormat(s string) error {
+	if strings.ContainsFunc(s, func(r rune) bool {
+		return unicode.In(r, unicode.Other_Default_Ignorable_Code_Point, unicode.Variation_Selector)
+	}) {
+		return errors.New("has a default ignorable code point")
+	}
+	return nil
+}
+
 // input makes the validation input of r. The ServeMux pattern gives the
 // path parameters.
 func (op *operation) input(r *http.Request) (*openapi3filter.RequestValidationInput, error) {
@@ -276,6 +293,48 @@ func pathParams(pattern, escapedPath string) (map[string]string, error) {
 		}
 	}
 	return params, nil
+}
+
+func nfcQueryNames(item *openapi3.PathItem, op *openapi3.Operation) map[string]bool {
+	names := map[string]bool{}
+	for _, ref := range slices.Concat(item.Parameters, op.Parameters) {
+		p := ref.Value
+		if p.In != openapi3.ParameterInQuery || p.Style == openapi3.SerializationDeepObject {
+			continue
+		}
+		s := p.Schema.Value
+		if s.Items != nil {
+			s = s.Items.Value
+		}
+		if s.Extensions["x-nfc"] == true {
+			names[p.Name] = true
+		}
+	}
+	return names
+}
+
+// normalizeQuery changes the values of nfcQuery to Unicode normalization
+// form C. The validation and the handler then get the changed values.
+func (op *operation) normalizeQuery(r *http.Request) {
+	if len(op.nfcQuery) == 0 {
+		return
+	}
+	query := r.URL.Query()
+	changed := false
+	for name, values := range query {
+		if !op.nfcQuery[name] {
+			continue
+		}
+		for i, v := range values {
+			if n := norm.NFC.String(v); n != v {
+				values[i] = n
+				changed = true
+			}
+		}
+	}
+	if changed {
+		r.URL.RawQuery = query.Encode()
+	}
 }
 
 // checkQuery returns a detail for the 400 response. The spec does not

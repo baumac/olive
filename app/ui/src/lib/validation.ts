@@ -2,7 +2,9 @@
 // errors before a request.
 
 const space = /^[\t\n\v\f\r ]*$/
-const tagPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/
+const tagPattern =
+  /^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*(-[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*)*$/u
+const ignorable = /\p{Default_Ignorable_Code_Point}/gu
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const maxTags = 20
@@ -59,15 +61,20 @@ export function checkPassword(v: string): string {
 // suggestTag gives the valid form of a tag, such as "wood-fired" for
 // "Wood Fired".
 export function suggestTag(v: string): string {
-  return v
+  const words = v
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 63)
+    // toLowerCase changes İ to i and a combining dot above.
+    .replace(/i\u0307/g, 'i')
+    .replace(ignorable, '')
+    .normalize('NFC')
+    .split(/[^\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]+/u)
+    .map((w) => w.replace(/^[\p{Mn}\p{Mc}]+/u, ''))
+    .filter((w) => w !== '')
+  return Array.from(words.join('-')).slice(0, 63).join('').replace(/-+$/, '')
 }
 
 export function isTag(v: string): boolean {
-  return v.length <= 63 && tagPattern.test(v)
+  return length(v) <= 63 && tagPattern.test(v) && v.search(ignorable) === -1
 }
 
 export function checkTag(tag: string, tags: string[]): string {
@@ -77,7 +84,7 @@ export function checkTag(tag: string, tags: string[]): string {
   if (tags.length >= maxTags) {
     return `Use at most ${maxTags} tags.`
   }
-  if (tag.length > 63 || !tagPattern.test(tag)) {
+  if (!isTag(tag)) {
     const suggestion = suggestTag(tag)
     return suggestion
       ? `Use lowercase letters, digits and single hyphens, for example ${suggestion}.`

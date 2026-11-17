@@ -88,6 +88,14 @@ describe('TagInput', () => {
     expect(w.emitted('error')?.at(-1)).toEqual([''])
   })
 
+  it('adds a tag in Unicode normalization form C', async () => {
+    const w = mount(TagInput, { props: { modelValue: [] } })
+    const input = w.get('input')
+    await input.setValue('cafe\u0301')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('update:modelValue')?.at(-1)).toEqual([['café']])
+  })
+
   it('does not change an invalid tag and suggests the valid form', async () => {
     const w = mount(TagInput, { props: { modelValue: [] } })
     const input = w.get('input')

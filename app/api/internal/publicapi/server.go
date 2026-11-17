@@ -408,6 +408,7 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 		}()
 	}
 
+	op.normalizeQuery(r)
 	if detail := op.checkQuery(r); detail != "" {
 		writeProblem(w, newProblem(http.StatusBadRequest, detail))
 		return

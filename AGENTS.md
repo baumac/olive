@@ -123,6 +123,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. Sign out and the token refresh are the exceptions. See decision 00036.
     - each `403` and `409` problem has a `code`. A new reason needs a value in the `code` enum of `Problem`. See decision 00040.
     - a schema with `x-trim: true` loses the ASCII spaces around its value. Names, titles, addresses, and alt texts have it. See decision 00040.
+    - a `Tag` has the lowercase letters and digits of all scripts. A schema with `x-nfc: true` gets Unicode normalization form C before the validation, in the body and in the query. See decision 00041.
     - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out, token refresh, and the operations of `/users/me`. See decision 00034.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user

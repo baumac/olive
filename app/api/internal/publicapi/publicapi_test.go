@@ -458,7 +458,7 @@ func TestValidationMessages(t *testing.T) {
 	want := map[string]string{
 		"name":        "must have a character that is not whitespace, and no control, direction, or invisible characters",
 		"description": "must not have control, direction, or invisible characters other than line breaks and tabs",
-		"tags[0]":     "must have lowercase letters, digits, and single hyphens between them",
+		"tags[0]":     "must have words of lowercase letters, digits, and marks with single hyphens between them, and each word must start with a letter or a digit",
 	}
 	for property, message := range want {
 		if got[property] != message {
@@ -483,6 +483,67 @@ func TestValidationMessages(t *testing.T) {
 			t.Errorf("%s: message %q, want %q", property, got[property], message)
 		}
 	}
+}
+
+func TestUnicodeTags(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	tags := []string{"café", "ラーメン", "चाय", "2-für-1", "ψάρι"}
+	body, _ := json.Marshal(map[string]any{"name": "Kissa", "tags": tags})
+	r := e.createRestaurant(ana.Token, string(body))
+	if got := fmt.Sprint(r["tags"]); got != fmt.Sprint(tags) {
+		t.Errorf("tags %s, want %s", got, tags)
+	}
+
+	// cafe\u0301 has a separate accent. The API changes it to café.
+	for _, query := range []string{"tags[has]=" + url.QueryEscape("ラーメン"), "search=cafe",
+		"tags[has]=cafe%CC%81", "tags[has_any]=x&tags[has_any]=cafe%CC%81", "tags[has_all]=cafe%CC%81"} {
+		items := e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusOK).object(t)["items"].([]any)
+		if len(items) != 1 {
+			t.Errorf("%s: %d items, want 1", query, len(items))
+		}
+	}
+	nfc := e.createRestaurant(ana.Token, `{"name":"Second","tags":["cafe\u0301","cre\u0300me"]}`)
+	if got := fmt.Sprint(nfc["tags"]); got != "[café crème]" {
+		t.Errorf("tags %s, want [café crème]", got)
+	}
+	patched := e.expect(request{method: "PATCH", path: "/v1/restaurants/" + nfc["id"].(string), token: ana.Token,
+		body: `{"tags":["ψα\u0301ρι"]}`}, http.StatusOK).object(t)
+	if got := fmt.Sprint(patched["tags"]); got != "[ψάρι]" {
+		t.Errorf("patched tags %s, want [ψάρι]", got)
+	}
+
+	pattern := "must have words of lowercase letters, digits, and marks with single hyphens between them, and each word must start with a letter or a digit"
+	invisible := "must not have invisible characters"
+	invalid := map[string]string{
+		"Café":             pattern,
+		"\u0301a":          pattern,
+		"caf\u00e9-\u0301": pattern,
+		"dim\u00a0sum":     pattern,
+		"pasta\ufe0f":      invisible,
+		"pasta\u17b4":      invisible,
+		"pasta\u034f":      invisible,
+		"\u3164":           invisible,
+	}
+	for tag, message := range invalid {
+		res := e.expect(request{method: "POST", path: "/v1/restaurants", token: ana.Token,
+			body: `{"name":"A","location":` + testLocation + `,"tags":["` + tag + `"]}`}, http.StatusUnprocessableEntity)
+		var p struct {
+			Errors []struct{ Property, Message string } `json:"errors"`
+		}
+		res.decode(t, &p)
+		if len(p.Errors) != 1 || p.Errors[0].Message != message {
+			t.Errorf("%q: errors %+v, want %q", tag, p.Errors, message)
+		}
+	}
+
+	// Two forms of one tag are the same tag after the change.
+	res := e.expect(request{method: "POST", path: "/v1/restaurants", token: ana.Token,
+		body: `{"name":"A","location":` + testLocation + `,"tags":["café","cafe\u0301"]}`}, http.StatusUnprocessableEntity)
+	if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
+		t.Errorf("errors of a repeated tag: %s", got)
+	}
+	e.expect(request{method: "GET", path: "/v1/restaurants?tags[has]=pasta%E1%9E%B4"}, http.StatusBadRequest)
 }
 
 func TestSkipRequestValidation(t *testing.T) {

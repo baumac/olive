@@ -54,6 +54,11 @@ describe('useListQuery', () => {
     expect(q.active.value).toBe(true)
   })
 
+  it('changes the tags of a link to the composed form', async () => {
+    const q = await queryAt('/r?tags=cafe%CC%81,caf%C3%A9')
+    expect(q.filters.value.tags).toEqual(['café'])
+  })
+
   it('keeps at most 20 different tags like the API', async () => {
     const tags = Array.from({ length: 25 }, (_, i) => `t${i}`)
     const q = await queryAt(`/r?tags=t0,t0,${tags.join(',')}`)

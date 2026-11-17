@@ -52,6 +52,23 @@ describe('validation', () => {
     expect(suggestTag('  Date Night!! ')).toBe('date-night')
   })
 
+  it('accepts the letters and digits of all scripts in tags', () => {
+    for (const tag of ['café', 'ラーメン', 'चाय', '2-für-1', 'ψάρι']) {
+      expect(checkTag(tag, [])).toBe('')
+    }
+    // The API changes a separate accent to the composed form.
+    expect(checkTag('cafe\u0301', [])).toBe('')
+    expect(checkTag('pasta\ufe0f', [])).toContain('pasta')
+    expect(checkTag('pasta\u17b4', [])).toContain('pasta')
+    expect(checkTag('Ψάρι', [])).toContain('ψάρι')
+    expect(checkTag('\u3164', [])).not.toBe('')
+    expect(suggestTag('Crème Brûlée')).toBe('crème-brûlée')
+    expect(suggestTag('İstanbul')).toBe('istanbul')
+    expect(suggestTag('\u0301a-\u0301b')).toBe('a-b')
+    expect(suggestTag('😀'.repeat(70))).toBe('')
+    expect(Array.from(suggestTag('é'.repeat(70)))).toHaveLength(63)
+  })
+
   it('refuses hidden characters like the API', () => {
     expect(checkName('Luigi\u202es', 'empty')).toContain('hidden')
     expect(checkName('Luigi\u200b', 'empty')).toContain('hidden')

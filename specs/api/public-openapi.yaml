@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 4.0.0
+  version: 5.0.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants.
 
@@ -31,6 +31,9 @@ info:
     - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.
       It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.
       It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts.
+    - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.
+      A client that checks the responses against the old `Tag` pattern refuses these tags.
+      The API changes tags to Unicode normalization form C.
 
 servers:
   - url: /v1
@@ -2148,12 +2151,19 @@ components:
       minimum: 1
       maximum: 10
     Tag:
-      description: A lowercase tag. Words are separated by single hyphens.
+      description: |
+        A lowercase tag. Words are separated by single hyphens.
+        Letters and digits of all scripts are allowed, for example `café` or `ラーメン`.
+        Each word starts with a lowercase letter, a letter without case, or a digit. Combining marks can follow.
+        The API changes the tag to Unicode normalization form C before the other checks.
+        Characters with the Unicode property `Default_Ignorable_Code_Point`, such as variation selectors, are not allowed.
       type: string
+      format: tag
+      x-nfc: true
       minLength: 1
       maxLength: 63
-      pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
-      x-pattern-message: must have lowercase letters, digits, and single hyphens between them
+      pattern: '^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*(-[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*)*$'
+      x-pattern-message: must have words of lowercase letters, digits, and marks with single hyphens between them, and each word must start with a letter or a digit
     Tags:
       description: Unique tags.
       type: array

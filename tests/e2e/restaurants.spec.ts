@@ -54,6 +54,22 @@ test('a signed in user adds, edits, and deletes a restaurant', async ({ page, us
   await expect(page.getByText('Restaurant deleted')).toBeVisible()
 })
 
+test('a tag can have the letters of all scripts', async ({ page, user: _user }) => {
+  const tag = uniqueTag('café-ラーメン')
+  await page.goto('/restaurants/new')
+  await selectPlace(page, uniqueTag('kissa'))
+  await page.getByLabel('Name').fill('Kissa Ramen')
+  // A decomposed é becomes the composed form of the API.
+  await page.getByLabel('Tags').fill(tag.normalize('NFD'))
+  await page.getByLabel('Tags').press('Enter')
+  await page.getByRole('button', { name: 'Add restaurant' }).click()
+  await expect(page.getByRole('list', { name: 'Tags' }).getByText(tag, { exact: true })).toBeVisible()
+
+  await page.goto(`/restaurants?tags=${encodeURIComponent(tag)}`)
+  await expect(page.getByText(`Tag: ${tag}`)).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Kissa Ramen' })).toBeVisible()
+})
+
 test('the place search fills the details, and the creator changes and removes them', async ({ page, user: _user }) => {
   await page.goto('/restaurants/new')
   await page.getByLabel('Phone').fill('+34 600 11 22 33')
