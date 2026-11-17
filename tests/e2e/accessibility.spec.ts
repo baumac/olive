@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { expect, signIn, test } from '../fixtures'
+import type { TestApi, TestUser } from '../api'
+import { uniqueTag } from '../api'
+import { expect, test } from '../fixtures'
 
 const wcag = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
@@ -12,11 +14,44 @@ async function expectNoViolations(page: Page) {
   expect(violations).toEqual([])
 }
 
+// The open animation changes the colors. axe runs after it.
+async function waitForAnimations(page: Page) {
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'))
+}
+
+async function restaurantWithReview(api: TestApi, owner: TestUser) {
+  const restaurant = await api.createRestaurant(owner, {
+    name: uniqueTag("Luigi's"),
+    description: 'A family-run Italian restaurant.',
+    tags: ['italian'],
+  })
+  await api.createReview(owner, restaurant.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 6, title: 'Great food' })
+  return restaurant
+}
+
+async function restaurantWithTwoReviews(api: TestApi) {
+  const restaurant = await restaurantWithReview(api, await api.signUp('Joe'))
+  const reviewer = await api.signUp('Ana')
+  await api.createReview(reviewer, restaurant.id, { space: 4, service: 4, food: 4, price: 4, cleanliness: 4, title: 'Good' })
+  return restaurant
+}
+
+async function reviewWithPhotos(api: TestApi, user: TestUser) {
+  const restaurant = await api.createRestaurant(user, { name: uniqueTag('Photo Spot') })
+  const review = await api.createReview(user, restaurant.id, {
+    space: 6, service: 6, food: 6, price: 6, cleanliness: 6, title: 'With photos',
+  })
+  await api.addPhoto(user, review, 'menu.png', 'The menu')
+  await api.addPhoto(user, review, 'gps-rotated.jpg')
+  return { restaurant, review }
+}
+
+// Each screen has its own test. The tests then run in parallel.
 for (const colorScheme of ['light', 'dark'] as const) {
   test.describe(`in the ${colorScheme} theme`, () => {
     test.use({ colorScheme })
 
-    test('the account screens have no axe violations', async ({ page, api }) => {
+    test('the password screens have no axe violations', async ({ page }) => {
       await page.goto('/forgot-password')
       await expect(page.getByRole('heading', { name: 'Forgot your password?' })).toBeVisible()
       await expectNoViolations(page)
@@ -24,38 +59,36 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.goto('/reset-password#token=not-a-token')
       await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible()
       await expectNoViolations(page)
+    })
 
-      await signIn(page, await api.signUp('Ana'))
+    // The user fixture signs the page in. Its value is not used.
+    test('the account screens have no axe violations', async ({ page, user: _ }) => {
       await page.goto('/account')
       await expect(page.getByRole('heading', { name: 'Account', level: 1 })).toBeVisible()
       await expectNoViolations(page)
       await page.getByRole('button', { name: 'Delete account' }).click()
       await expect(page.getByRole('alertdialog')).toBeVisible()
-      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'))
+      await waitForAnimations(page)
       await expectNoViolations(page)
       await page.keyboard.press('Escape')
     })
 
-    test('the main screens have no axe violations', async ({ page, api }) => {
-      const owner = await api.signUp('Joe')
-      const restaurant = await api.createRestaurant(owner, {
-        name: "Luigi's",
-        description: 'A family-run Italian restaurant.',
-        tags: ['italian'],
-      })
-      const reviewer = await api.signUp('Ana')
-      await api.createReview(reviewer, restaurant.id, { space: 4, service: 4, food: 4, price: 4, cleanliness: 4, title: 'Good' })
-      await api.createReview(owner, restaurant.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 6, title: 'Great food' })
-
+    test('the restaurant list has no axe violations', async ({ page, api }) => {
+      await restaurantWithTwoReviews(api)
       await page.goto('/restaurants')
       await expect(page.getByRole('heading', { name: 'Restaurants', level: 1 })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading restaurants')
       await expectNoViolations(page)
+    })
 
+    test('the restaurant page has no axe violations', async ({ page, api }) => {
+      const restaurant = await restaurantWithTwoReviews(api)
       await page.goto(`/restaurants/${restaurant.id}`)
       await expect(page.getByRole('heading', { name: 'Good' })).toBeVisible()
       await expectNoViolations(page)
+    })
 
+    test('the sign in and not found screens have no axe violations', async ({ page }) => {
       await page.goto('/sign-in')
       await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
       await expectNoViolations(page)
@@ -63,40 +96,47 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.goto('/nothing-here')
       await expect(page.getByRole('heading', { name: 'We cannot find this page' })).toBeVisible()
       await expectNoViolations(page)
+    })
 
-      await signIn(page, reviewer)
+    test('the review form has no axe violations', async ({ page, api, user }) => {
+      const restaurant = await restaurantWithReview(api, user)
       await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
       await expect(page.getByRole('heading', { name: 'Edit review' })).toBeVisible()
       await expectNoViolations(page)
+    })
 
-      const photoReview = await api.createReview(reviewer, (await api.createRestaurant(owner, { name: 'Photo Spot' })).id, {
-        space: 6, service: 6, food: 6, price: 6, cleanliness: 6, title: 'With photos',
-      })
-      await api.addPhoto(reviewer, photoReview, 'menu.png', 'The menu')
-      await api.addPhoto(reviewer, photoReview, 'gps-rotated.jpg')
-      await page.goto(`/restaurants/${photoReview.restaurant}/reviews/${photoReview.id}`)
+    test('the review photos and the photo dialog have no axe violations', async ({ page, api, user }) => {
+      const { review } = await reviewWithPhotos(api, user)
+      await page.goto(`/restaurants/${review.restaurant}/reviews/${review.id}`)
       await expect(page.getByRole('button', { name: 'The menu' })).toBeVisible()
       await expectNoViolations(page)
       await page.getByRole('button', { name: 'The menu' }).click()
       await expect(page.getByRole('dialog').getByRole('heading', { name: 'Photo 1 of 2' })).toBeVisible()
-      // The open animation changes the colors. axe runs after it.
-      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'))
+      await waitForAnimations(page)
       await expectNoViolations(page)
       await page.keyboard.press('Escape')
+    })
 
-      await page.goto(`/restaurants/${photoReview.restaurant}`)
-      await expect(page.getByRole('list', { name: 'Photos of Photo Spot' })).toBeVisible()
+    test('the gallery and the photo editor have no axe violations', async ({ page, api, user }) => {
+      const { restaurant, review } = await reviewWithPhotos(api, user)
+      await page.goto(`/restaurants/${restaurant.id}`)
+      await expect(page.getByRole('list', { name: `Photos of ${restaurant.name}` })).toBeVisible()
       await expectNoViolations(page)
 
-      await page.goto(`/restaurants/${photoReview.restaurant}/reviews/${photoReview.id}/edit`)
+      await page.goto(`/restaurants/${restaurant.id}/reviews/${review.id}/edit`)
       await expect(page.getByRole('heading', { name: 'Photos' })).toBeVisible()
       await expectNoViolations(page)
+    })
 
-      await page.goto(`/restaurants?view=map&search=${encodeURIComponent("Luigi's")}`)
+    test('the map view has no axe violations', async ({ page, api, user }) => {
+      const restaurant = await restaurantWithReview(api, user)
+      await page.goto(`/restaurants?view=map&search=${encodeURIComponent(restaurant.name)}`)
       await expect(page.getByRole('region', { name: 'Map of the restaurants' })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading restaurants')
       await expectNoViolations(page)
+    })
 
+    test('the restaurant form has no axe violations', async ({ page, user: _ }) => {
       await page.goto('/restaurants/new')
       await page.getByLabel('Location').fill(`axe ${colorScheme}`)
       await expect(page.getByRole('list', { name: 'Places' })).toBeVisible()
@@ -104,12 +144,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'Enter the location by hand' }).click()
       await expect(page.getByLabel('Latitude')).toBeVisible()
       await expectNoViolations(page)
+    })
 
+    test('my reviews has no axe violations', async ({ page, api, user }) => {
+      await restaurantWithReview(api, user)
       await page.goto('/my-reviews')
       await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading reviews')
       await expectNoViolations(page)
+    })
 
+    test('the reviewer page has no axe violations', async ({ page, api, user: _ }) => {
+      const owner = await api.signUp('Joe')
+      await restaurantWithReview(api, owner)
       await page.goto(`/reviewers/${owner.auth.user.id}`)
       await expect(page.getByRole('heading', { name: 'Joe', level: 1 })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading reviews')

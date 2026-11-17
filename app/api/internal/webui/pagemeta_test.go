@@ -10,6 +10,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -131,7 +132,7 @@ func TestShorten(t *testing.T) {
 }
 
 func TestPageMeta(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +362,7 @@ func with(a, b map[string]any) map[string]any {
 }
 
 func TestCrawlerFiles(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

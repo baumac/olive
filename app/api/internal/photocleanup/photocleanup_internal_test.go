@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 )
@@ -11,7 +12,7 @@ import (
 // TestExistingIDsReadsEachBatch puts real IDs at the start, in the middle,
 // and at the end of more than two batches.
 func TestExistingIDsReadsEachBatch(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

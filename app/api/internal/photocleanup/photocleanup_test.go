@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/baumac/reviews-app/app/api/internal/photocleanup"
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -60,7 +61,7 @@ func age(t *testing.T, dir string, by time.Duration) {
 }
 
 func TestRunDeletesOnlyOldFoldersWithoutARecord(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +120,7 @@ func TestRunDeletesOnlyOldFoldersWithoutARecord(t *testing.T) {
 }
 
 func TestRegisterAddsTheJob(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +155,7 @@ func TestRunKeepsAFolderThatItCannotDelete(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root can delete files in a read-only folder")
 	}
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +182,7 @@ func TestRunKeepsAFolderThatItCannotDelete(t *testing.T) {
 // TestSuperusersCanStartTheJob uses the cron API of the dashboard page
 // Settings, Crons.
 func TestSuperusersCanStartTheJob(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +230,7 @@ func TestSuperusersCanStartTheJob(t *testing.T) {
 
 // The job logs the error of Run. It does not stop the app.
 func TestRegisteredJobWithoutPhotoCollection(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

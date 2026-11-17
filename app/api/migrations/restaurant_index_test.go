@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -14,7 +15,7 @@ import (
 
 func newIndexApp(t *testing.T) *tests.TestApp {
 	t.Helper()
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

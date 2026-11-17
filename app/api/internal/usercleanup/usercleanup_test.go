@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	"github.com/baumac/reviews-app/app/api/internal/usercleanup"
 	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/pocketbase/core"
@@ -25,7 +26,7 @@ func save(t *testing.T, app core.App, collection string, data map[string]any) *c
 }
 
 func TestRun(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +87,7 @@ func runJob(t *testing.T, app core.App) {
 }
 
 func TestRegisteredJob(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

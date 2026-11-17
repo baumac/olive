@@ -1,4 +1,4 @@
-import { photoFile } from '../api'
+import { photoFile, uniqueTag } from '../api'
 import { expect, signIn, test } from '../fixtures'
 
 const scores = { space: 7, service: 8, food: 9, price: 6, cleanliness: 8 }
@@ -66,22 +66,24 @@ test('the viewer moves between photos and closes with Escape', async ({ page, ap
 
 test('the restaurant card and page show the cover and the gallery', async ({ page, api }) => {
   const owner = await api.signUp('Joe')
-  const restaurant = await api.createRestaurant(owner, { name: 'Gallery Place' })
+  // The projects share one app. The search then finds only this restaurant.
+  const name = uniqueTag('Gallery Place')
+  const restaurant = await api.createRestaurant(owner, { name })
   const best = await api.createReview(owner, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
   const cover = await api.addPhoto(owner, best, 'gps-rotated.jpg', 'The best dish')
   const other = await api.signUp('Bo')
   const worse = await api.createReview(other, restaurant.id, { ...scores, title: 'Fine' })
   await api.addPhoto(other, worse, 'menu.png')
 
-  await page.goto(`/restaurants?search=${encodeURIComponent('Gallery Place')}`)
-  const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: 'Gallery Place' }) })
+  await page.goto(`/restaurants?search=${encodeURIComponent(name)}`)
+  const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name }) })
   await expect(card.locator('img')).toHaveAttribute('src', cover.urls.thumb)
   await expect(card.locator('img')).toHaveJSProperty('complete', true)
 
   await page.goto(`/restaurants/${restaurant.id}`)
   const coverButton = page.getByRole('button', { name: 'Open the cover photo: The best dish' })
   await expect(coverButton.locator('img')).toHaveAttribute('src', cover.urls.full)
-  const gallery = page.getByRole('list', { name: 'Photos of Gallery Place' }).getByRole('button')
+  const gallery = page.getByRole('list', { name: `Photos of ${name}` }).getByRole('button')
   await expect(gallery).toHaveCount(2)
   await expect(gallery.first()).toHaveAccessibleName('The best dish')
 

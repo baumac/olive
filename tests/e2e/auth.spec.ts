@@ -56,6 +56,8 @@ test('a person sets a new password with the link of an email', async ({ page, ap
   const user = await api.signUp('Gus')
   await page.goto('/sign-in')
   await page.getByRole('link', { name: 'Forgot your password?' }).click()
+  // The sign in page also has an Email field until the new page shows.
+  await expect(page.getByRole('heading', { name: 'Forgot your password?' })).toBeVisible()
   await page.getByLabel('Email').fill(user.email)
   await page.getByRole('button', { name: 'Send the link' }).click()
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()

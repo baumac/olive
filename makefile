@@ -32,7 +32,7 @@ UI_DIST := app/api/internal/webui/dist
 # npm ci runs again only when the lockfile changes.
 NODE_MODULES := node_modules/.package-lock.json
 
-.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui lint-eslint security-scan generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-ui test-coverage test-coverage-app test-coverage-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app build-image run-app dev-ui renovate-local renovate
+.PHONY: install-tools install-browsers install-browser-deps check-ci-matrix lint lint-spec lint-go lint-ui lint-eslint security-scan generate generate-sdk-go generate-sdk-ts check-generate test test-sdk test-sdk-go test-sdk-ts test-app test-race test-ui test-coverage test-coverage-app test-coverage-ui test-e2e test-e2e-ui build-sdk-ts build-ui build-app build-image run-app dev-ui renovate-local renovate
 
 install-tools: $(VACUUM) $(OAPI_CODEGEN) $(GOVULNCHECK)
 
@@ -111,11 +111,16 @@ test-sdk-go:
 test-sdk-ts: $(NODE_MODULES)
 	npm test --workspace @reviews/sdk
 
-# The race run of publicapi takes about 7 minutes. The default timeout of
-# go test is 10 minutes. The CI job stops after 20 minutes.
+# The race detector makes the tests of the app about 7 times slower. The
+# default timeout of go test is 10 minutes. The CI job stops after 20 minutes.
 GO_TEST_TIMEOUT := 15m
 
+# test-app has no race detector. test-race and test-coverage-app have it. See
+# decision 00045.
 test-app:
+	cd app/api && go test -timeout $(GO_TEST_TIMEOUT) ./...
+
+test-race:
 	cd app/api && go test -race -timeout $(GO_TEST_TIMEOUT) ./...
 
 test-ui: build-sdk-ts
@@ -124,10 +129,12 @@ test-ui: build-sdk-ts
 test-coverage: test-coverage-app test-coverage-ui
 
 # The target fails when the Go tests cover less than COVERAGE_MIN_APP percent
-# of the statements of the app. It uses the race detector like test-app.
+# of the statements of the app. It uses the race detector like test-race.
+# The coverage leaves out internal/testapp. Only the tests use it.
 test-coverage-app:
 	mkdir -p $(BIN)
-	cd app/api && go test -race -timeout $(GO_TEST_TIMEOUT) -coverpkg=./... -coverprofile=$(COVERAGE_APP) ./...
+	cd app/api && go test -race -timeout $(GO_TEST_TIMEOUT) \
+		-coverpkg=$$(go list ./... | grep -v /internal/testapp$$ | paste -sd, -) -coverprofile=$(COVERAGE_APP) ./...
 	@cd app/api && go tool cover -func=$(COVERAGE_APP) | awk -v min=$(COVERAGE_MIN_APP) \
 		'/^total:/ { sub("%", "", $$3); printf "Go coverage: %s%%. The minimum is %s%%.\n", $$3, min; if ($$3 + 0 < min) exit 1 }'
 
@@ -137,8 +144,11 @@ test-coverage-ui: build-sdk-ts
 
 # The end-to-end tests start ./bin/reviews-app. See decision 00006.
 # PROJECT runs one Playwright project, such as make test-e2e PROJECT=webkit.
+# E2E_FILE runs the spec files that match it, such as
+# E2E_FILE=e2e/auth.spec.ts. Make also reads it from the environment.
+E2E_ARGS = $(strip $(if $(PROJECT),--project=$(PROJECT)) $(E2E_FILE))
 test-e2e: build-app
-	npm test --workspace @reviews/tests $(if $(PROJECT),-- --project=$(PROJECT))
+	npm test --workspace @reviews/tests $(if $(E2E_ARGS),-- $(E2E_ARGS))
 
 # BROWSER installs one browser, such as make install-browsers BROWSER=firefox.
 install-browsers: $(NODE_MODULES)

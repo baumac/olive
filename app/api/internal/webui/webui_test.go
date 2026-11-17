@@ -7,6 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -40,7 +41,7 @@ func TestNoDotFiles(t *testing.T) {
 
 // TestRegister uses the embedded build or the placeholder.
 func TestRegister(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +71,7 @@ func TestRegister(t *testing.T) {
 }
 
 func TestWatchAppURL(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +101,7 @@ func TestWatchAppURL(t *testing.T) {
 }
 
 func TestRoutes(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +195,7 @@ func TestTileOrigin(t *testing.T) {
 	if got := contentSecurityPolicy(""); !strings.Contains(got, "img-src 'self' blob:; ") {
 		t.Errorf("policy without tiles: %q", got)
 	}
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

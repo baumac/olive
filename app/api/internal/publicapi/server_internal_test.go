@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	"github.com/pocketbase/pocketbase/tests"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func newTestServer(t *testing.T) *Server {
@@ -18,7 +20,7 @@ func newTestServer(t *testing.T) *Server {
 
 func newTestServerWith(t *testing.T, opts Options) *Server {
 	t.Helper()
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.LowCostDir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,6 +30,34 @@ func newTestServerWith(t *testing.T, opts Options) *Server {
 		t.Fatal(err)
 	}
 	return s
+}
+
+// TestDummyHashUsesThePasswordCost checks both costs. A sign in with an
+// unknown email then takes as long as one with a wrong password.
+func TestDummyHashUsesThePasswordCost(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		dir  string
+		want int
+	}{
+		{"production schema", testapp.Dir(t), bcrypt.DefaultCost},
+		{"low cost schema", testapp.LowCostDir(t), bcrypt.MinCost},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			app, err := tests.NewTestApp(c.dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(app.Cleanup)
+			s, err := New(app, Options{SignInLimit: 10, SignInWindow: time.Minute})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, err := bcrypt.Cost(s.dummyHash); err != nil || got != c.want {
+				t.Errorf("cost %d, %v, want %d", got, err, c.want)
+			}
+		})
+	}
 }
 
 func serveProblem(t *testing.T, s *Server, h http.HandlerFunc) *httptest.ResponseRecorder {

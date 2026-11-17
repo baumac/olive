@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/baumac/reviews-app/app/api/internal/searchindex"
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -22,7 +23,7 @@ type env struct {
 // this project, and the hooks of searchindex.
 func newEnv(t *testing.T) *env {
 	t.Helper()
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

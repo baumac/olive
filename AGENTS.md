@@ -32,7 +32,8 @@ make test             # Run the tests of the SDKs, the app, and the UI. Needs No
 make test-sdk         # Run the tests of both SDKs. Needs Node.js.
 make test-sdk-go      # Run the tests of the Go SDK
 make test-sdk-ts      # Run the tests of the TypeScript SDK. Needs Node.js.
-make test-app         # Run the Go tests of the app with the race detector. Needs a C compiler.
+make test-app         # Run the Go tests of the app without the race detector
+make test-race        # Run the Go tests of the app with the race detector. Needs a C compiler.
 make test-ui          # Run the UI tests. Needs Node.js.
 make test-coverage    # Run the Go and UI tests with coverage. Fail below the minimum. Needs Node.js and a C compiler.
 make build-sdk-ts     # Build the TypeScript SDK into app/sdk/typescript/dist. Needs Node.js.
@@ -41,7 +42,7 @@ make build-app        # Build the UI, then the app server to ./bin/reviews-app
 make build-image      # Build the Docker image reviews-app:local from deploy/Dockerfile. Needs Docker.
 make run-app          # Run the app server on 127.0.0.1:8090 with data in app/api/pb_data
 make dev-ui           # Run the Vite dev server. It sends /v1 to make run-app.
-make test-e2e         # Build the app, then run the end-to-end tests in tests/. PROJECT=webkit runs one project.
+make test-e2e         # Build the app, then run the end-to-end tests in tests/. PROJECT=webkit runs one project. E2E_FILE=e2e/auth.spec.ts runs one file.
 make install-browsers # Install the Playwright browsers. BROWSER=firefox installs one.
 make install-browser-deps # Install the system packages of the browsers on Linux. Needs sudo.
 make check-ci-matrix  # Fail if the e2e matrix of CI misses a Playwright project
@@ -59,10 +60,16 @@ For UI work, run `make run-app` and `make dev-ui` at the same time, and open the
 
 Before the first `make test-e2e`, install the browsers with `make install-browsers`.
 On Linux, the browsers also need system packages. Install them with `make install-browser-deps`. It needs sudo.
-Run one browser with `make test-e2e PROJECT=chromium`.
+While you work, run one browser with `make test-e2e PROJECT=chromium`. Add `E2E_FILE=e2e/NAME.spec.ts` for the specs of your change. The CI runs all projects. See decision 00046.
+A test that searches or filters must use a name or tag from `uniqueTag`. All projects of one run share one app.
+Playwright records a trace and a video only on the retry of a failed test.
+
+While you work, run `make test-app`. It takes seconds.
+Run `make test-race` or `make test-coverage` one time before the end. Each has the race detector. Do not run both.
+For one test, run `go test ./internal/publicapi -run TestName` in `app/api`. See decision 00045.
 
 `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. See decision 00010.
-The `lint` job runs `make lint`. The `test` job runs `make test-sdk test-coverage`. These are the tests of `make test` with a coverage minimum.
+The `lint` job runs `make lint`. The `test` job runs `make test-sdk test-coverage`. These are the tests of `make test` with the race detector and a coverage minimum.
 The `security-scan` job runs `make security-scan`.
 The makefile and `app/ui/vite.config.ts` have the minimum coverage values.
 The `docker` job runs `make build-image` and checks `deploy/compose.yaml`.
@@ -162,6 +169,10 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/api/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/api/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/api/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00034.
+  - **`app/api/internal/testapp`** - the migrated database of the Go tests. See decision 00045.
+    - A test makes its app with `tests.NewTestApp(testapp.Dir(t))`. Each test package needs a `TestMain` that calls `testapp.Main`.
+    - `testapp.LowCostDir` has the bcrypt cost 4 in the password fields. The `publicapi` tests use it. Production and `testapp.Dir` have the default cost 10.
+    - `make test-coverage` does not count `testapp`.
   - **`app/api/internal/webui`** - embeds the UI build and serves it. See decision 00005.
     - It writes the title and link preview tags of restaurant, review, reviewer, and list pages into `index.html`. See decision 00013.
     - It writes the schema.org JSON-LD of these pages and of reviewer pages, and serves `/robots.txt` and `/sitemap.xml`. See decision 00021.

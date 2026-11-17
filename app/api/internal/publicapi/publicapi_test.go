@@ -15,6 +15,7 @@ import (
 
 	"github.com/baumac/reviews-app/app/api/internal/publicapi"
 	"github.com/baumac/reviews-app/app/api/internal/searchindex"
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/dbx"
 	validation "github.com/pocketbase/ozzo-validation/v4"
@@ -39,7 +40,7 @@ type env struct {
 // of this project. Requests go through the PocketBase router.
 func newEnv(t *testing.T, opts publicapi.Options) *env {
 	t.Helper()
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.LowCostDir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

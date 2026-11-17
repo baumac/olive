@@ -20,9 +20,11 @@ export default defineConfig({
   globalSetup: './global-setup.ts',
   use: {
     baseURL,
-    trace: 'retain-on-failure',
+    // A trace and a video of each test make a run about one third slower.
+    // A failed test gets them on its retry. See decision 00046.
+    trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: 'on-first-retry',
   },
   projects: [
     { name: 'chromium', testIgnore: rateLimit, use: { ...devices['Desktop Chrome'], ...desktop } },

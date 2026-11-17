@@ -50,7 +50,7 @@ Major updates are in the same pull request. A person can remove one update from 
 [implementation-details]: #implementation-details
 
 - the Go command uses `-coverpkg=./...`. A test of one package then counts the code that it runs in other packages.
-- the Go target uses the race detector, like `make test-app`. One run then gives the test result and the coverage.
+- the Go target uses the race detector, like `make test-race`. One run then gives the test result and the coverage. Decision 00045 took the race detector out of `make test-app`.
 - the UI uses `@vitest/coverage-v8` with the version of Vitest
 - the `test` job of CI runs `make test-sdk test-coverage`. The tests of the app and the UI then run one time for each push.
 - Renovate uses the presets `config:recommended`, `group:all`, and `schedule:monthly`. `rangeStrategy` is `pin`, so the versions stay exact.

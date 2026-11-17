@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -12,7 +13,7 @@ import (
 )
 
 func TestDownRestoresUsers(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +44,7 @@ func TestDownRestoresUsers(t *testing.T) {
 }
 
 func TestRateLimitsAreOn(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +58,7 @@ func TestRateLimitsAreOn(t *testing.T) {
 }
 
 func TestUsersHaveNoFileFields(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +75,7 @@ func TestUsersHaveNoFileFields(t *testing.T) {
 }
 
 func TestSingleReviewKindKeepsBasicReviews(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestSingleReviewKindKeepsBasicReviews(t *testing.T) {
 }
 
 func TestCleanlinessCopiesSpace(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +170,7 @@ func newRecord(t *testing.T, app core.App, collection string, data map[string]an
 }
 
 func TestSearchIndexFillsExistingRecords(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +197,7 @@ func TestSearchIndexFillsExistingRecords(t *testing.T) {
 }
 
 func TestRemoveReviewTags(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +245,7 @@ func TestRemoveReviewTags(t *testing.T) {
 }
 
 func TestReviewPhotos(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +275,7 @@ func TestReviewPhotos(t *testing.T) {
 }
 
 func TestRestaurantIndexFillsExistingRecords(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +314,7 @@ func TestRestaurantIndexFillsExistingRecords(t *testing.T) {
 }
 
 func TestRestaurantLocation(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -376,7 +377,7 @@ func reviewOverall(t *testing.T, app core.App, id string) float64 {
 }
 
 func TestReviewOverallColumn(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -438,7 +439,7 @@ func TestReviewOverallColumn(t *testing.T) {
 }
 
 func TestListsMigration(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +500,7 @@ func TestListsMigration(t *testing.T) {
 }
 
 func TestUserApprovalMigration(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -522,7 +523,7 @@ func TestUserApprovalMigration(t *testing.T) {
 }
 
 func TestConfirmExistingUsersMigration(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -545,7 +546,7 @@ func TestConfirmExistingUsersMigration(t *testing.T) {
 }
 
 func TestTrimStoredNamesMigration(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -601,7 +602,7 @@ func TestTrimStoredNamesMigration(t *testing.T) {
 }
 
 func TestRestaurantDetailsMigration(t *testing.T) {
-	app, err := tests.NewTestApp(t.TempDir())
+	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
