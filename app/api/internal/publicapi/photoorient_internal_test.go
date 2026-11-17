@@ -49,6 +49,11 @@ func littleEndianExif(orientation uint16) []byte {
 	return append([]byte{0xFF, 0xE1, 0, byte(len(payload) + 2)}, payload...)
 }
 
+func jpegWithTIFF(tiff []byte) []byte {
+	payload := append([]byte("Exif\x00\x00"), tiff...)
+	return append([]byte{0xFF, 0xD8, 0xFF, 0xE1, 0, byte(len(payload) + 2)}, payload...)
+}
+
 func TestExifOrientation(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -61,6 +66,17 @@ func TestExifOrientation(t *testing.T) {
 		{"orientation 9", append([]byte{0xFF, 0xD8}, littleEndianExif(9)...), 1},
 		{"cut segment", append([]byte{0xFF, 0xD8}, littleEndianExif(6)[:20]...), 1},
 		{"segment size 0", []byte{0xFF, 0xD8, 0xFF, 0xE1, 0, 0, 0, 0}, 1},
+		{"no marker", []byte{0xFF, 0xD8, 0, 0, 0, 0}, 1},
+		{"fill bytes", []byte{0xFF, 0xD8, 0xFF, 0xFF, 0xFF, 0xDA, 0, 2}, 1},
+		{"no segment after APP0", []byte{0xFF, 0xD8, 0xFF, 0xE0, 0, 2}, 1},
+		{"short TIFF", jpegWithTIFF([]byte("II*\x00")), 1},
+		{"unknown byte order", jpegWithTIFF([]byte("XX*\x00\x08\x00\x00\x00\x00\x00")), 1},
+		{"IFD offset in the header", jpegWithTIFF([]byte("II*\x00\x04\x00\x00\x00\x00\x00")), 1},
+		{"no IFD entries", jpegWithTIFF([]byte("II*\x00\x08\x00\x00\x00\x00\x00")), 1},
+		{"cut IFD entry", jpegWithTIFF([]byte("II*\x00\x08\x00\x00\x00\x02\x00\x12\x01")), 1},
+		{"orientation after another tag", jpegWithTIFF(append([]byte("II*\x00\x08\x00\x00\x00\x02\x00"),
+			0x0F, 0x01, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+			0x12, 0x01, 3, 0, 1, 0, 0, 0, 3, 0, 0, 0)), 3},
 	} {
 		if got := exifOrientation(tc.data); got != tc.want {
 			t.Errorf("%s: orientation %d, want %d", tc.name, got, tc.want)

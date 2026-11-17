@@ -20,26 +20,31 @@ import (
 )
 
 func main() {
-	opts, err := options(os.Getenv)
-	if err != nil {
-		log.Fatal(err)
-	}
 	app := pocketbase.New()
-	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{TemplateLang: migratecmd.TemplateLangGo})
-	searchindex.Register(app)
-	publicapi.Register(app, opts)
-	photocleanup.Register(app)
-	usercleanup.Register(app)
-	ui, err := uiOptions(os.Getenv)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := webui.Register(app, ui); err != nil {
+	if err := setup(app, os.Getenv); err != nil {
 		log.Fatal(err)
 	}
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// setup adds the commands, hooks, routes, and jobs of the project to app.
+func setup(app *pocketbase.PocketBase, getenv func(string) string) error {
+	opts, err := options(getenv)
+	if err != nil {
+		return err
+	}
+	ui, err := uiOptions(getenv)
+	if err != nil {
+		return err
+	}
+	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{TemplateLang: migratecmd.TemplateLangGo})
+	searchindex.Register(app)
+	publicapi.Register(app, opts)
+	photocleanup.Register(app)
+	usercleanup.Register(app)
+	return webui.Register(app, ui)
 }
 
 // uiOptions reads the settings of the UI from the environment. The

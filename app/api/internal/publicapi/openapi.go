@@ -67,6 +67,12 @@ func loadSpec() (*apiSpec, error) {
 	if err != nil {
 		return nil, err
 	}
+	return specOf(doc)
+}
+
+// specOf makes the operations of doc. It refuses a spec that breaks the
+// rules of decisions 00034 and 00036.
+func specOf(doc *openapi3.T) (*apiSpec, error) {
 	s := &apiSpec{operations: map[string]*operation{}}
 	for path, item := range doc.Paths.Map() {
 		for method, op := range item.Operations() {

@@ -215,6 +215,11 @@ func TestPasswordReset(t *testing.T) {
 	if got := strings.Join(errorProperties(t, reset(token, "short", 422)), ","); got != "password" {
 		t.Errorf("properties %q, want password", got)
 	}
+	// The spec counts characters. bcrypt counts bytes. PocketBase then
+	// refuses this password. The token stays valid.
+	if got := strings.Join(errorProperties(t, reset(token, strings.Repeat("é", 40), 422)), ","); got != "password" {
+		t.Errorf("properties %q for 80 bytes, want password", got)
+	}
 	reset(token, "new-horse-battery", http.StatusNoContent)
 
 	e.signIn(anaSignIn, http.StatusUnauthorized)
@@ -358,6 +363,9 @@ func TestChangePassword(t *testing.T) {
 	}
 	if got := strings.Join(errorProperties(t, change(ana.Token, "correct-horse-battery", "short", 422)), ","); got != "password" {
 		t.Errorf("properties %q, want password", got)
+	}
+	if got := strings.Join(errorProperties(t, change(ana.Token, "correct-horse-battery", strings.Repeat("é", 40), 422)), ","); got != "password" {
+		t.Errorf("properties %q for 80 bytes, want password", got)
 	}
 	var next authToken
 	change(ana.Token, "correct-horse-battery", "new-horse-battery", http.StatusOK).decode(t, &next)

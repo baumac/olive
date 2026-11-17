@@ -184,6 +184,7 @@ func TestTileOrigin(t *testing.T) {
 		"", "https://tiles.example.com/", "https://tiles.example.com/{z}/{x}.png", "tiles.example.com/{z}/{x}/{y}.png",
 		"ftp://tiles.example.com/{z}/{x}/{y}.png", "https://{s}.tiles.example.com/{z}/{x}/{y}.png",
 		"https://tiles.example.com;script-src */{z}/{x}/{y}.png", "https://a b/{z}/{x}/{y}.png",
+		"https://tiles.example.com;x/{z}/{x}/{y}.png",
 		"https://{z}.tiles.example.com/{x}/{y}.png", "https://tiles{x}.example.com/{z}/{y}.png", "{z}://example.com/{x}/{y}.png",
 	} {
 		if got, err := TileOrigin(tileURL); err == nil {

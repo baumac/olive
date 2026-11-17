@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -290,7 +291,7 @@ func TestPageMeta(t *testing.T) {
 	}
 }
 
-func newHandler(t *testing.T, app core.App, files fstest.MapFS) http.Handler {
+func newHandler(t *testing.T, app core.App, files fs.FS) http.Handler {
 	t.Helper()
 	if err := register(app, files, Options{}); err != nil {
 		t.Fatal(err)

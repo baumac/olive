@@ -226,3 +226,32 @@ func TestSuperusersCanStartTheJob(t *testing.T) {
 	}
 	t.Error("the job did not delete the orphan folder")
 }
+
+// The job logs the error of Run. It does not stop the app.
+func TestRegisteredJobWithoutPhotoCollection(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	photocleanup.Register(app)
+	photos, err := app.FindCollectionByNameOrId("review_photos")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := app.Delete(photos); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := photocleanup.Run(app, time.Now()); err == nil {
+		t.Fatal("Run without the review_photos collection gives no error")
+	}
+	jobs := app.Cron().Jobs()
+	i := slices.IndexFunc(jobs, func(j *cron.Job) bool { return j.Id() == photocleanup.JobID })
+	if i < 0 {
+		t.Fatalf("no job %s", photocleanup.JobID)
+	}
+	jobs[i].Run()
+	if !slices.ContainsFunc(app.Cron().Jobs(), func(j *cron.Job) bool { return j.Id() == photocleanup.JobID }) {
+		t.Error("the failed run removed the job")
+	}
+}

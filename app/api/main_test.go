@@ -1,10 +1,15 @@
 package main
 
 import (
+	"slices"
 	"testing"
 
+	"github.com/baumac/reviews-app/app/api/internal/photocleanup"
 	"github.com/baumac/reviews-app/app/api/internal/publicapi"
+	"github.com/baumac/reviews-app/app/api/internal/usercleanup"
 	"github.com/baumac/reviews-app/app/api/internal/webui"
+	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/tools/cron"
 )
 
 func TestOptions(t *testing.T) {
@@ -77,6 +82,37 @@ func TestOptions(t *testing.T) {
 		{"REVIEWS_VALIDATE_RESPONSES": "yes"},
 	} {
 		if _, err := options(env(vars)); err == nil {
+			t.Errorf("%v: no error", vars)
+		}
+	}
+}
+
+func TestSetup(t *testing.T) {
+	env := func(vars map[string]string) func(string) string {
+		return func(name string) string { return vars[name] }
+	}
+	newApp := func() *pocketbase.PocketBase {
+		return pocketbase.NewWithConfig(pocketbase.Config{DefaultDataDir: t.TempDir()})
+	}
+
+	app := newApp()
+	if err := setup(app, env(nil)); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{photocleanup.JobID, usercleanup.JobID} {
+		if !slices.ContainsFunc(app.Cron().Jobs(), func(j *cron.Job) bool { return j.Id() == id }) {
+			t.Errorf("no job %s", id)
+		}
+	}
+	if cmd, _, err := app.RootCmd.Find([]string{"migrate"}); err != nil || cmd.Name() != "migrate" {
+		t.Errorf("no migrate command: %v", err)
+	}
+
+	for _, vars := range []map[string]string{
+		{"REVIEWS_SIGN_IN_LIMIT": "many"},
+		{"REVIEWS_MAP_TILE_URL": "https://t.example.com/"},
+	} {
+		if err := setup(newApp(), env(vars)); err == nil {
 			t.Errorf("%v: no error", vars)
 		}
 	}

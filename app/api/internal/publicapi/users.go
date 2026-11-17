@@ -292,6 +292,8 @@ func (s *Server) SignIn(ctx context.Context, req reviewsapi.SignInRequestObject)
 		return invalidCredentials(), nil
 	}
 	if err != nil {
+		// A failed lookup checks no password.
+		s.signInFailures.giveBack(key, window)
 		return nil, err
 	}
 	if !user.ValidatePassword(req.Body.Password) {

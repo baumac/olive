@@ -6,6 +6,7 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -127,6 +128,48 @@ func TestPlaceDetails(t *testing.T) {
 	} {
 		if got := text(placeOpeningHours(in)); got != want {
 			t.Errorf("placeOpeningHours(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestPlaceFetchErrors(t *testing.T) {
+	broken := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"features":`)
+	}))
+	defer broken.Close()
+	closed := httptest.NewServer(http.NotFoundHandler())
+	closed.Close()
+	for name, base := range map[string]string{"cut JSON": broken.URL, "closed server": closed.URL, "bad URL": "http://bad host"} {
+		p := newPlaceSearch(base, func() string { return "reviews-app" }, 100, time.Minute)
+		if _, err := p.fetch(context.Background(), url.Values{"q": {"cafe"}}); err == nil {
+			t.Errorf("%s: no error", name)
+		}
+	}
+}
+
+func TestPlaceFetchKeepsAtMostMaxPlaces(t *testing.T) {
+	photon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		features := make([]string, maxPlaces+2)
+		for i := range features {
+			features[i] = fmt.Sprintf(`{"geometry":{"coordinates":[2.1,41.3]},"properties":{"name":"Cafe %d","street":"Carrer"}}`, i)
+		}
+		fmt.Fprintf(w, `{"features":[%s]}`, strings.Join(features, ","))
+	}))
+	defer photon.Close()
+	p := newPlaceSearch(photon.URL, func() string { return "reviews-app" }, 100, time.Minute)
+	places, err := p.fetch(context.Background(), url.Values{"q": {"cafe"}})
+	if err != nil || len(places) != maxPlaces {
+		t.Errorf("%d places, error %v, want %d places", len(places), err, maxPlaces)
+	}
+}
+
+func TestCleanPlaceText(t *testing.T) {
+	for in, want := range map[string]string{
+		"Ca\x01n\u202a So\u00adle": "Can Sole",
+		strings.Repeat("a ", 200):  strings.TrimSpace(strings.Repeat("a ", 128)),
+	} {
+		if got := cleanPlaceText(in); got != want {
+			t.Errorf("cleanPlaceText(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

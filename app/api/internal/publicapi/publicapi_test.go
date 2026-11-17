@@ -562,6 +562,23 @@ func TestSkipRequestValidation(t *testing.T) {
 	e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A"}`, contentType: "text/plain", token: ana.Token}, http.StatusUnsupportedMediaType)
 	e.expect(request{method: "GET", path: "/v1/restaurants?name[eq]=x"}, http.StatusBadRequest)
 
+	// The handlers check the values that the spec validation checks.
+	restaurantID := e.createRestaurant(ana.Token, `{"name":"Cafe"}`)["id"].(string)
+	for _, path := range []string{
+		"/v1/restaurants?near[latitude]=NaN&near[longitude]=2",
+		"/v1/reviews?search=***",
+		"/v1/reviews?sort=nothing",
+		"/v1/reviews?overall[gte]=NaN",
+		"/v1/restaurants/" + restaurantID + "/reviews?sort=nothing",
+	} {
+		e.expect(request{method: "GET", path: path}, http.StatusBadRequest)
+	}
+	res := e.expect(request{method: http.MethodPatch, path: "/v1/users/me", token: ana.Token,
+		body: `{"name":"` + strings.Repeat("a", 256) + `"}`}, http.StatusUnprocessableEntity)
+	if got := strings.Join(errorProperties(t, res), ","); got != "name" {
+		t.Errorf("properties %q, want name", got)
+	}
+
 	opts.SkipResponseValidation = true
 	e = newEnv(t, opts)
 	ana = e.signUp("ana@example.com", "Ana")
@@ -713,6 +730,20 @@ func TestSignInFailureLimit(t *testing.T) {
 	if code := res.object(t)["code"]; code != "wrong_password_limit" {
 		t.Errorf("code %v, want wrong_password_limit", code)
 	}
+
+	// A database error does not count.
+	rename := func(from, to string) {
+		t.Helper()
+		if _, err := e.app.DB().NewQuery("ALTER TABLE " + from + " RENAME TO " + to).Execute(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rename("users", "users_off")
+	for range 4 {
+		signIn("joe@example.com", "correct-horse-battery", http.StatusInternalServerError)
+	}
+	rename("users_off", "users")
+	signIn("joe@example.com", "correct-horse-battery", http.StatusOK)
 }
 
 func TestSignOut(t *testing.T) {

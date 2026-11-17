@@ -73,3 +73,52 @@ func TestRun(t *testing.T) {
 		t.Errorf("%d lists (%v), want only the list of the lister", lists, err)
 	}
 }
+
+func runJob(t *testing.T, app core.App) {
+	t.Helper()
+	for _, job := range app.Cron().Jobs() {
+		if job.Id() == usercleanup.JobID {
+			job.Run()
+			return
+		}
+	}
+	t.Fatalf("no job %s", usercleanup.JobID)
+}
+
+func TestRegisteredJob(t *testing.T) {
+	app, err := tests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	usercleanup.Register(app)
+
+	oldUser := func(name string) *core.Record {
+		r := save(t, app, "users", map[string]any{"email": name + "@example.com", "password": "correct-horse", "name": name})
+		if _, err := app.DB().NewQuery("UPDATE users SET created = '2000-01-01 00:00:00.000Z' WHERE id = {:id}").
+			Bind(map[string]any{"id": r.Id}).Execute(); err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	exists := func(r *core.Record) bool {
+		_, err := app.FindRecordById("users", r.Id)
+		return err == nil
+	}
+
+	waiting := oldUser("waiting")
+	runJob(t, app)
+	if exists(waiting) {
+		t.Error("the job did not delete the old user without approval")
+	}
+
+	// The job logs the error. It deletes no user.
+	other := oldUser("other")
+	if _, err := app.DB().NewQuery("DROP TABLE list_items").Execute(); err != nil {
+		t.Fatal(err)
+	}
+	runJob(t, app)
+	if !exists(other) {
+		t.Error("the job deleted a user after a failed query")
+	}
+}

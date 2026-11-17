@@ -556,6 +556,15 @@ func TestTrimStoredNamesMigration(t *testing.T) {
 	// SQLite removes only the ASCII space. A no-break space stays.
 	plain := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé\u00a0", "address": "Carrer Nou 2"})
 	updated := padded.GetString("updated")
+	// The tests register no search index hooks. The rows come from SQL.
+	for _, q := range []string{
+		"INSERT INTO {{restaurants_fts}} (id, name, description, tags, address) VALUES ({:id}, '  Luigi''s ', '', '', ' Carrer Nou 1 ')",
+		"INSERT INTO {{reviews_fts}} (id, title, feedback, restaurant_name) VALUES ('review000000001', ' Good ', '', '  Luigi''s ')",
+	} {
+		if _, err := app.DB().NewQuery(q).Bind(dbx.Params{"id": padded.Id}).Execute(); err != nil {
+			t.Fatal(err)
+		}
+	}
 	redo()
 
 	for _, want := range []struct{ collection, id, field, value string }{
@@ -575,6 +584,19 @@ func TestTrimStoredNamesMigration(t *testing.T) {
 	}
 	if r, _ := app.FindRecordById("restaurants", padded.Id); r.GetString("updated") != updated {
 		t.Errorf("the migration changed updated: %s, want %s", r.GetString("updated"), updated)
+	}
+	var restaurant struct{ Name, Address string }
+	if err := app.DB().NewQuery("SELECT name, address FROM {{restaurants_fts}} WHERE id = {:id}").
+		Bind(dbx.Params{"id": padded.Id}).One(&restaurant); err != nil || restaurant.Name != "Luigi's" || restaurant.Address != "Carrer Nou 1" {
+		t.Errorf("restaurant index %+v, error %v", restaurant, err)
+	}
+	var review struct {
+		Title          string
+		RestaurantName string `db:"restaurant_name"`
+	}
+	if err := app.DB().NewQuery("SELECT title, restaurant_name FROM {{reviews_fts}} WHERE id = 'review000000001'").
+		One(&review); err != nil || review.Title != "Good" || review.RestaurantName != "Luigi's" {
+		t.Errorf("review index %+v, error %v", review, err)
 	}
 }
 

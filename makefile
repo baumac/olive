@@ -23,7 +23,7 @@ RENOVATE_IMAGE := ghcr.io/renovatebot/renovate:44.239.1
 RENOVATE_REPORT := $(BIN)/renovate-report.json
 
 COVERAGE_APP := $(BIN)/coverage-app.out
-COVERAGE_MIN_APP := 65
+COVERAGE_MIN_APP := 90
 
 APP_BIN := $(BIN)/reviews-app
 APP_DATA := app/api/pb_data
@@ -111,8 +111,12 @@ test-sdk-go:
 test-sdk-ts: $(NODE_MODULES)
 	npm test --workspace @reviews/sdk
 
+# The race run of publicapi takes about 7 minutes. The default timeout of
+# go test is 10 minutes. The CI job stops after 20 minutes.
+GO_TEST_TIMEOUT := 15m
+
 test-app:
-	cd app/api && go test -race ./...
+	cd app/api && go test -race -timeout $(GO_TEST_TIMEOUT) ./...
 
 test-ui: build-sdk-ts
 	npm test --workspace @reviews/ui
@@ -123,7 +127,7 @@ test-coverage: test-coverage-app test-coverage-ui
 # of the statements of the app. It uses the race detector like test-app.
 test-coverage-app:
 	mkdir -p $(BIN)
-	cd app/api && go test -race -coverpkg=./... -coverprofile=$(COVERAGE_APP) ./...
+	cd app/api && go test -race -timeout $(GO_TEST_TIMEOUT) -coverpkg=./... -coverprofile=$(COVERAGE_APP) ./...
 	@cd app/api && go tool cover -func=$(COVERAGE_APP) | awk -v min=$(COVERAGE_MIN_APP) \
 		'/^total:/ { sub("%", "", $$3); printf "Go coverage: %s%%. The minimum is %s%%.\n", $$3, min; if ($$3 + 0 < min) exit 1 }'
 

@@ -34,11 +34,11 @@ Decision 00026 replaces the Renovate app with a workflow, removes the `schedule:
 
 `make test-coverage` runs the Go tests of the app and the UI tests with coverage.
 
-| Part | Minimum | Value on 2026-11-14 | Where the minimum is |
+| Part | Minimum | Value | Where the minimum is |
 | --- | --- | --- | --- |
-| Go statements of `app` | 65% | 68.8% | `COVERAGE_MIN_APP` in the makefile |
-| UI statements | 55% | 58.2% | `app/ui/vite.config.ts` |
-| UI lines | 55% | 59.1% | `app/ui/vite.config.ts` |
+| Go statements of `app` | 90% | 92.7% on 2026-11-17 | `COVERAGE_MIN_APP` in the makefile |
+| UI statements | 55% | 58.2% on 2026-11-14 | `app/ui/vite.config.ts` |
+| UI lines | 55% | 59.1% on 2026-11-14 | `app/ui/vite.config.ts` |
 
 Each minimum is about three points below the value. A small change then does not fail CI, and a large fall does.
 Raise a minimum when the value grows.

@@ -3,6 +3,7 @@ package publicapi
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestEmailHTMLLinksOnlyAURLParagraph(t *testing.T) {
@@ -19,5 +20,13 @@ func TestEmailHTMLLinksOnlyAURLParagraph(t *testing.T) {
 	}
 	if strings.Count(got, "<a ") != 1 {
 		t.Errorf("%d links, want 1", strings.Count(got, "<a "))
+	}
+}
+
+func TestDurationText(t *testing.T) {
+	for d, want := range map[time.Duration]string{72 * time.Hour: "3 days", 5 * time.Hour: "5 hours"} {
+		if got := durationText(d); got != want {
+			t.Errorf("durationText(%v) = %q, want %q", d, got, want)
+		}
 	}
 }
