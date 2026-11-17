@@ -156,6 +156,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - Its timestamps are RFC 3339. The database has the PocketBase format with a space. See decision 00023.
     - It gets the places of the place search from a Photon geocoder. See decision 00017.
     - A record hook gives each new user a favorites list. See decision 00033.
+    - A record hook gives a restaurant save in the dashboard the checks of the spec. See decision 00016.
     - `mail.go` sends the emails of the sign up, the password reset, and the approval. See decision 00037.
   - **`app/api/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/api/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.

@@ -25,7 +25,7 @@ func (e *env) signIn(body string, status int) response {
 	return e.expect(request{method: "POST", path: "/v1/users/tokens", body: body}, status)
 }
 
-func (e *env) addSuperuser(email string) {
+func (e *env) addSuperuser(email string) *core.Record {
 	e.t.Helper()
 	superusers, err := e.app.FindCollectionByNameOrId(core.CollectionNameSuperusers)
 	if err != nil {
@@ -37,6 +37,7 @@ func (e *env) addSuperuser(email string) {
 	if err := e.app.Save(su); err != nil {
 		e.t.Fatal(err)
 	}
+	return su
 }
 
 func TestSignUpConfirmation(t *testing.T) {

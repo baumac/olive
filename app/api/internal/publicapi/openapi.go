@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"sync"
 	"unicode"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
@@ -56,9 +57,13 @@ type apiSpec struct {
 	operations map[string]*operation
 }
 
+// embeddedSpec decodes the spec that the Go SDK embeds one time. The callers
+// only read it.
+var embeddedSpec = sync.OnceValues(reviewsapi.GetSwagger)
+
 // loadSpec reads the spec that the Go SDK embeds.
 func loadSpec() (*apiSpec, error) {
-	doc, err := reviewsapi.GetSwagger()
+	doc, err := embeddedSpec()
 	if err != nil {
 		return nil, err
 	}

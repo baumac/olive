@@ -115,6 +115,14 @@ Alternatives that this decision does not use:
 - the triggers of decision 00012 and the hooks of `searchindex` remove the index rows of the review and the restaurant
 - a rename of a restaurant with a review changes `restaurant_name` in `reviews_fts`. The `searchindex` hook did this before for a rename in the dashboard.
 - PocketBase uses one SQLite writer. A review that another user adds at the same time cannot pass between the check and the save.
+- a superuser can change each field of each restaurant in the dashboard. The ownership checks do not apply.
+- `guardRestaurantFields` in `app/api/internal/publicapi/restaurantguard.go` gives these saves the checks of the `RestaurantCreate` schema.
+  It applies `x-nfc` before the checks and `x-trim` after them, as for a body. The responses then do not fail with a value from the dashboard.
+  It uses the record request hooks. Saves of the Public API, migrations, and the CLI do not run it.
+  An update checks only the changed properties. An old invalid value then does not block a change of another field.
+  A new restaurant needs an address. A latitude, longitude, or place ID without an address gets an error of the address.
+  The dashboard shows each error under its field. An error of the location names the `address`, `latitude`, `longitude`, or `place_id` field.
+- the field patterns of decision 00038 stay for the saves outside the PocketBase API. `TestRestaurantFieldPatterns` fails when they differ from the spec.
 
 ## UI
 
@@ -131,6 +139,7 @@ Alternatives that this decision does not use:
 ## Tests
 
 - `TestRestaurantOwnership` in `app/internal/publicapi/publicapi_test.go` has the cases of the guide-level explanation. It also checks the index tables after a delete and the search by the new name after a rename.
+- `TestDashboardRestaurantEdit` in `app/api/internal/publicapi/restaurantguard_test.go` changes a restaurant of another user with a superuser token. It checks the trim, the NFC tags, the refused values, and a change next to an old invalid value.
 - `TestPhotosOfDeletedReviewsRestaurantsAndUsers` checks the photo files after the delete of a restaurant
 - `app/ui/test/lib.test.ts` tests `restaurantAccess`
 - `tests/e2e/restaurants.spec.ts` tests the locked name, the missing delete button, the `409` of a late review, and the rename and delete with the own review

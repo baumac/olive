@@ -118,6 +118,7 @@ var _ reviewsapi.StrictServerInterface = (*Server)(nil)
 // Register mounts the Public API on the router of app under /v1.
 func Register(app core.App, opts Options) {
 	guardReviewOverall(app)
+	guardRestaurantFields(app)
 	registerFavorites(app)
 	post := newPostman(app, opts)
 	notifyApproval(app, post)
