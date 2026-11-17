@@ -4,7 +4,7 @@ import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { refreshSession } from '@/composables/useAuth'
+import { checkSession } from '@/composables/useAuth'
 import { pendingApproval } from '@/lib/session'
 
 const checking = ref(false)
@@ -12,14 +12,14 @@ const checking = ref(false)
 // check gets the user again. An approval changes the stored user.
 async function check() {
   checking.value = true
-  const result = await refreshSession()
+  const result = await checkSession()
   checking.value = false
   if (result === 'failed') {
     toast.error('The check did not work', { description: 'Check your connection and try again.' })
     return
   }
   // The session ended handler tells a person whose session ended.
-  if (result !== 'refreshed') {
+  if (result !== 'checked') {
     return
   }
   if (pendingApproval.value) {

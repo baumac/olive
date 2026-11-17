@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ErrorPage from '@/components/app/ErrorPage.vue'
-import { refreshSession, signInPath } from '@/composables/useAuth'
+import { checkSession, signInPath } from '@/composables/useAuth'
 import { tellPendingApproval } from '@/lib/approval'
 import { pendingApproval, signedIn } from '@/lib/session'
 import { safeRedirect } from '@/lib/validation'
@@ -72,7 +72,7 @@ router.beforeEach(async (to, from) => {
     const firstLoad = from.matched.length === 0
     // The stored user of a first load can be from before the approval.
     if (firstLoad) {
-      await refreshSession()
+      await checkSession()
       if (!signedIn.value) {
         return signInPath(to.fullPath)
       }

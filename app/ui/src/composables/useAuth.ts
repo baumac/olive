@@ -2,36 +2,42 @@ import type { Router } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { ResponseError } from '@reviews/sdk'
 import { apiFailure, endSession, usersApi } from '@/lib/api'
-import { clearSession, legacyToken, saveSession, sessionExpires, signedIn } from '@/lib/session'
+import { clearSession, legacyToken, refreshDue, saveSession, saveUser, sessionExpires, signedIn } from '@/lib/session'
 import { clearAllDrafts } from '@/lib/drafts'
 import { parseTimestamp } from '@/lib/format'
 
-const day = 24 * 60 * 60 * 1000
 const hour = 60 * 60 * 1000
 
-// RefreshResult tells how a refresh ended. "ended" means that the server
+// CheckResult tells how a check ended. "ended" means that the server
 // refused the token and the session is deleted.
-export type RefreshResult = 'refreshed' | 'ended' | 'failed' | 'signed-out'
+export type CheckResult = 'checked' | 'ended' | 'failed' | 'signed-out'
 
-let refreshing: Promise<RefreshResult> | null = null
+let checking: Promise<CheckResult> | null = null
 
-// refreshSession gets a new token and the current user. Calls at the same
+// checkSession gets the current user from the server. Calls at the same
 // time share one request.
-export function refreshSession(): Promise<RefreshResult> {
-  refreshing ??= refresh().finally(() => (refreshing = null))
-  return refreshing
+export function checkSession(): Promise<CheckResult> {
+  checking ??= check().finally(() => (checking = null))
+  return checking
 }
 
-async function refresh(): Promise<RefreshResult> {
+// check gets a new token only when half of the token time is over or the
+// token is not in the cookie yet. A visit then keeps the session alive.
+// Otherwise it gets the user without a new token.
+async function check(): Promise<CheckResult> {
   if (!signedIn.value) {
     return 'signed-out'
   }
   const token = legacyToken()
   try {
-    // A bearer token with cookie=true moves the token into the cookie.
-    const init = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
-    saveSession(await usersApi.refreshToken({ cookie: true }, init))
-    return 'refreshed'
+    if (token || refreshDue()) {
+      // A bearer token with cookie=true moves the token into the cookie.
+      const init = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+      saveSession(await usersApi.refreshToken({ cookie: true }, init))
+    } else {
+      saveUser(await usersApi.getCurrentUser())
+    }
+    return 'checked'
   } catch (error) {
     const { status } = await apiFailure(error)
     if (status === 401) {
@@ -42,16 +48,16 @@ async function refresh(): Promise<RefreshResult> {
   }
 }
 
-// startSessionRefresh refreshes the token at start and when less than one
-// day is left before it expires.
-export function startSessionRefresh() {
-  void refreshSession()
-  window.setInterval(() => {
-    const expires = sessionExpires()
-    if (expires && parseTimestamp(expires).getTime() - Date.now() < day) {
-      void refreshSession()
+// startSessionCheck checks the session at start and each hour. It returns
+// a function that stops the hourly check.
+export function startSessionCheck(): () => void {
+  void checkSession()
+  const timer = window.setInterval(() => {
+    if (refreshDue()) {
+      void checkSession()
     }
   }, hour)
+  return () => window.clearInterval(timer)
 }
 
 export function signInPath(redirect: string, reason?: 'session-ended') {

@@ -68,6 +68,13 @@ func TestSessionCookie(t *testing.T) {
 		}
 	})
 
+	t.Run("the cookie gets the user without a new cookie", func(t *testing.T) {
+		res := e.expect(request{method: "GET", path: "/v1/users/me", header: withCookie(ana, nil)}, http.StatusOK)
+		if res.object(t)["name"] != "Ana" || sessionCookieOf(t, res) != nil {
+			t.Errorf("user: %s %v", res.body, res.header.Values("Set-Cookie"))
+		}
+	})
+
 	t.Run("the Authorization header wins over the cookie", func(t *testing.T) {
 		res := e.expect(request{method: "POST", path: "/v1/users/tokens/refresh", token: joe.Token, header: withCookie(ana, nil)}, http.StatusOK)
 		var tok authToken

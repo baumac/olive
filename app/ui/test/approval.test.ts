@@ -46,13 +46,15 @@ describe('ApprovalBanner', () => {
     expect(w.text()).toContain('Your account waits for approval')
     await expectAccessible(w.element)
 
-    const refresh = vi.spyOn(usersApi, 'refreshToken').mockResolvedValue({ expires, user })
+    const getUser = vi.spyOn(usersApi, 'getCurrentUser').mockResolvedValue(user)
+    const refresh = vi.spyOn(usersApi, 'refreshToken')
     await w.get('button').trigger('click')
     await flushPromises()
-    expect(refresh).toHaveBeenCalledWith({ cookie: true }, undefined)
+    expect(getUser).toHaveBeenCalledOnce()
+    expect(refresh).not.toHaveBeenCalled()
     expect(w.text()).toContain('Your account waits for approval')
 
-    refresh.mockResolvedValue({ expires, user: { ...user, approved: true } })
+    getUser.mockResolvedValue({ ...user, approved: true })
     await w.get('button').trigger('click')
     await flushPromises()
     expect(w.text()).toBe('')
@@ -60,11 +62,11 @@ describe('ApprovalBanner', () => {
   })
 })
 
-describe('ApprovalBanner after a refresh that did not work', () => {
+describe('ApprovalBanner after a check that did not work', () => {
   it('tells that the check did not work', async () => {
     saveSession({ expires, user })
     const w = mount(ApprovalBanner, { attachTo: attach() })
-    vi.spyOn(usersApi, 'refreshToken').mockRejectedValue(new FetchError(new Error('offline')))
+    vi.spyOn(usersApi, 'getCurrentUser').mockRejectedValue(new FetchError(new Error('offline')))
     const info = vi.spyOn(toast, 'info')
     const error = vi.spyOn(toast, 'error')
     await w.get('button').trigger('click')
@@ -77,7 +79,7 @@ describe('ApprovalBanner after a refresh that did not work', () => {
   it('does not tell an approval when the session ended', async () => {
     saveSession({ expires, user })
     const w = mount(ApprovalBanner, { attachTo: attach() })
-    vi.spyOn(usersApi, 'refreshToken').mockRejectedValue(rejectWith(401))
+    vi.spyOn(usersApi, 'getCurrentUser').mockRejectedValue(rejectWith(401))
     const success = vi.spyOn(toast, 'success')
     await w.get('button').trigger('click')
     await flushPromises()
@@ -96,14 +98,14 @@ describe('the route guard', () => {
   it('keeps a user who waits on the page', async () => {
     await onPage()
     saveSession({ expires, user })
-    const refresh = vi.spyOn(usersApi, 'refreshToken')
+    const getUser = vi.spyOn(usersApi, 'getCurrentUser')
     const info = vi.spyOn(toast, 'info')
     for (const path of ['/restaurants/new', '/restaurants/k3x9m2p7q1w8z4a/edit', '/restaurants/k3x9m2p7q1w8z4a/reviews/new', '/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/edit']) {
       await router.push(path)
       expect(router.currentRoute.value.path).toBe('/my-reviews')
     }
     expect(info).toHaveBeenCalledTimes(4)
-    expect(refresh).not.toHaveBeenCalled()
+    expect(getUser).not.toHaveBeenCalled()
   })
 
   it('lets an approved user open a form', async () => {

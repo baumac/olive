@@ -177,6 +177,11 @@ func (s *Server) ResetPassword(_ context.Context, req reviewsapi.ResetPasswordRe
 	return reviewsapi.ResetPassword204Response{}, nil
 }
 
+// GetCurrentUser returns the user of the token.
+func (s *Server) GetCurrentUser(ctx context.Context, _ reviewsapi.GetCurrentUserRequestObject) (reviewsapi.GetCurrentUserResponseObject, error) {
+	return reviewsapi.GetCurrentUser200JSONResponse(apiUser(stateFrom(ctx).user)), nil
+}
+
 // UpdateUser changes the name of the user of the token.
 func (s *Server) UpdateUser(ctx context.Context, req reviewsapi.UpdateUserRequestObject) (reviewsapi.UpdateUserResponseObject, error) {
 	user := stateFrom(ctx).user

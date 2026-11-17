@@ -1,14 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Router } from 'vue-router'
 import { toast } from 'vue-sonner'
-import { refreshSession, signOut } from '@/composables/useAuth'
+import { checkSession, signOut, startSessionCheck } from '@/composables/useAuth'
 import { handleSessionEnded, restaurantsApi, usersApi } from '@/lib/api'
 import { saveDraft, takeDraft } from '@/lib/drafts'
 import { clearSession, currentUser, saveSession, signedIn, watchOtherTabs } from '@/lib/session'
 
 const user = { id: 'u5n1c8r3t6y0b2e', email: 'ana@example.com', name: 'Ana', approved: true, created: '', updated: '' }
 
+const hour = 60 * 60 * 1000
+const day = 24 * hour
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   clearSession()
@@ -25,6 +29,15 @@ describe('session', () => {
     new Response(JSON.stringify({ items: [], next_cursor: null }), { headers: { 'Content-Type': 'application/json' } })
   const authToken = () =>
     new Response(JSON.stringify({ expires, user }), { headers: { 'Content-Type': 'application/json' } })
+  const userResponse = (u = user) =>
+    new Response(JSON.stringify(u), { headers: { 'Content-Type': 'application/json' } })
+  // settle lets the pending fetch calls finish. The fake timers do not change
+  // setTimeout.
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 10))
+  const sendTo = (sent: string[]) => async (url: string) => {
+    sent.push(url)
+    return url.endsWith('/users/me') ? userResponse() : authToken()
+  }
 
   // fromOtherTab writes the session as another tab does. The browser then
   // sends a storage event to this tab.
@@ -70,14 +83,79 @@ describe('session', () => {
     ])
   })
 
-  it('ends the session when the token refresh gets 401', async () => {
+  it('ends the session when the check gets 401', async () => {
     saveSession({ expires, user })
     const ended = vi.fn()
     handleSessionEnded(ended)
     vi.stubGlobal('fetch', async () => unauthorized())
-    await refreshSession()
+    expect(await checkSession()).toBe('ended')
     expect(signedIn.value).toBe(false)
     expect(ended).toHaveBeenCalledOnce()
+  })
+
+  it('gets the user without a new token before half of the token time is over', async () => {
+    saveSession({ expires, user })
+    const sent: { url: string; method?: string }[] = []
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      sent.push({ url, method: init.method })
+      return userResponse({ ...user, name: 'Ana Maria' })
+    })
+
+    expect(await checkSession()).toBe('checked')
+    expect(sent).toEqual([{ url: '/v1/users/me', method: 'GET' }])
+    expect(currentUser.value?.name).toBe('Ana Maria')
+    expect(JSON.parse(localStorage.getItem('reviews-session')!).expires).toBe(expires)
+  })
+
+  it('refreshes the token on a visit after half of the token time', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    saveSession({ expires: new Date(Date.now() + 7 * day).toISOString(), user })
+    const sent: string[] = []
+    vi.stubGlobal('fetch', sendTo(sent))
+
+    vi.setSystemTime(Date.now() + 3 * day)
+    await checkSession()
+    vi.setSystemTime(Date.now() + 1 * day)
+    await checkSession()
+    expect(sent).toEqual(['/v1/users/me', '/v1/users/tokens/refresh?cookie=true'])
+    expect(JSON.parse(localStorage.getItem('reviews-session')!).expires).toBe(expires)
+  })
+
+  it('refreshes a stored session without an issued value', async ({ onTestFinished }) => {
+    onTestFinished(watchOtherTabs(() => {}))
+    fromOtherTab(JSON.stringify({ expires, user }))
+    const sent: string[] = []
+    vi.stubGlobal('fetch', sendTo(sent))
+
+    await checkSession()
+    expect(sent).toEqual(['/v1/users/tokens/refresh?cookie=true'])
+    expect(JSON.parse(localStorage.getItem('reviews-session')!)).toHaveProperty('issued')
+  })
+
+  it('does not write an unchanged user', async () => {
+    saveSession({ expires, user })
+    vi.stubGlobal('fetch', async () => userResponse())
+    const write = vi.spyOn(Storage.prototype, 'setItem')
+
+    await checkSession()
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it('refreshes the token each hour after half of the token time', async ({ onTestFinished }) => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    saveSession({ expires: new Date(Date.now() + 7 * day).toISOString(), user })
+    const sent: string[] = []
+    vi.stubGlobal('fetch', sendTo(sent))
+
+    onTestFinished(startSessionCheck())
+    await settle()
+    vi.advanceTimersByTime(3 * day)
+    await settle()
+    expect(sent).toEqual(['/v1/users/me'])
+
+    vi.advanceTimersByTime(day)
+    await settle()
+    expect(sent).toEqual(['/v1/users/me', '/v1/users/tokens/refresh?cookie=true'])
   })
 
   it('moves the token of an older version into the cookie', async ({ onTestFinished }) => {
@@ -86,14 +164,14 @@ describe('session', () => {
     const sent: { url: string; auth: string | null }[] = []
     vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
       sent.push({ url, auth: new Headers(init.headers).get('Authorization') })
-      return authToken()
+      return url.endsWith('/users/me') ? userResponse() : authToken()
     })
 
-    await refreshSession()
-    await refreshSession()
+    await checkSession()
+    await checkSession()
     expect(sent).toEqual([
       { url: '/v1/users/tokens/refresh?cookie=true', auth: 'Bearer old-token' },
-      { url: '/v1/users/tokens/refresh?cookie=true', auth: null },
+      { url: '/v1/users/me', auth: null },
     ])
     expect(localStorage.getItem('reviews-session')).not.toContain('old-token')
   })

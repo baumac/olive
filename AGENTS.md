@@ -119,6 +119,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `restaurants` tag has the restaurant and review operations
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
     - the operations of `/users/me` change the name and the password and delete the user. See decision 00037.
+    - `getCurrentUser` returns the user of the token without a new token. The UI uses it at start. See decision 00042.
     - `confirmEmail` needs the token of the link and the password. The wrong password limit counts each email address, with or without a user. Its limiter has a cap of 100,000 addresses. See decision 00039.
     - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. Sign out and the token refresh are the exceptions. See decision 00036.
     - each `403` and `409` problem has a `code`. A new reason needs a value in the `code` enum of `Problem`. See decision 00040.

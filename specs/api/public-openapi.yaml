@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 5.0.0
+  version: 5.1.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants.
 
@@ -34,6 +34,7 @@ info:
     - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.
       A client that checks the responses against the old `Tag` pattern refuses these tags.
       The API changes tags to Unicode normalization form C.
+    - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token.
 
 servers:
   - url: /v1
@@ -218,6 +219,29 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
 
   /users/me:
+    get:
+      operationId: getCurrentUser
+      x-allow-unapproved: true
+      summary: Get the signed in user
+      description: |
+        Returns the user of the auth token.
+        Clients use this operation to check a stored token. It makes no new token.
+        A user who is not approved also gets the user.
+      tags: [users]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The signed in user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     patch:
       operationId: updateUser
       x-allow-unapproved: true
@@ -431,7 +455,7 @@ paths:
       description: |
         Returns a new auth token for the user of the current token.
         The current token must be valid and not expired.
-        Clients also use this operation to check a stored token.
+        To check a stored token without a new token, use `getCurrentUser`.
         A request with the `reviews_session` cookie gets a new cookie, also without `cookie=true`.
         A bearer token and `cookie=true` move the token into the cookie.
         The operation has no rate limit. It changes no data.

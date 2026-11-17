@@ -8,7 +8,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For Claude
 3. Design gaps
-- No GET /users/me. The UI calls refreshToken on every load just to learn who is signed in, minting a new token each time.
 - listListRestaurants has no search, sort or filters, so favorites cannot be shown on a map or sorted by distance. A list[eq] filter on listRestaurants would give all of that for free.
 - No price_level filter, though the field exists.
 - Increase test coverage

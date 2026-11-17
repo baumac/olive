@@ -70,7 +70,7 @@ test('a person sets a new password with the link of an email', async ({ page, ap
 
   await expect(page).toHaveURL(/\/sign-in$/)
   await expect(page.getByText('Your password is changed')).toBeVisible()
-  expect(await api.refreshStatus(user.token)).toBe(401)
+  expect(await api.tokenStatus(user.token)).toBe(401)
   await page.getByLabel('Email').fill(user.email)
   await page.getByLabel('Password', { exact: true }).fill('better-horse-battery')
   await page.getByRole('button', { name: 'Sign in' }).click()
@@ -98,7 +98,7 @@ test('a user changes the name and the password on the account page', async ({ pa
   await page.getByLabel('Current password').fill(user.password)
   await page.getByRole('button', { name: 'Change password' }).click()
   await expect(page.getByText('Your password is changed')).toBeVisible()
-  expect(await api.refreshStatus(user.token)).toBe(401)
+  expect(await api.tokenStatus(user.token)).toBe(401)
 
   // The page has the new token in its cookie.
   await page.reload()
@@ -122,7 +122,7 @@ test('a user deletes the account', async ({ page, api }) => {
 
   await expect(page.getByText('Your account is deleted')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
-  expect(await api.refreshStatus(user.token)).toBe(401)
+  expect(await api.tokenStatus(user.token)).toBe(401)
   await page.goto(`/restaurants/${restaurant.id}`)
   await expect(page.getByRole('heading', { name: 'Leftover Kitchen' })).toBeVisible()
   await expect(page.getByText('Gone soon')).toHaveCount(0)
@@ -177,7 +177,7 @@ test('the auth token is only in an HttpOnly cookie', async ({ page, api, context
 
   const cookie = (await context.cookies()).find((c) => c.name === 'reviews_session')
   expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Strict', path: '/v1' })
-  expect(await api.refreshStatus(cookie!.value)).toBe(200)
+  expect(await api.tokenStatus(cookie!.value)).toBe(200)
   const stored = await page.evaluate(() => ({ cookies: document.cookie, session: localStorage.getItem('reviews-session') }))
   expect(stored.cookies).not.toContain(cookie!.value)
   expect(stored.session).not.toContain(cookie!.value)
@@ -259,7 +259,7 @@ test('sign out makes the token invalid on the server', async ({ page, user, api 
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
 
   expect((await revoked).status()).toBe(204)
-  expect(await api.refreshStatus(user.token)).toBe(401)
+  expect(await api.tokenStatus(user.token)).toBe(401)
 })
 
 test('sign out in one tab signs out the other tabs', async ({ page, user, context }) => {

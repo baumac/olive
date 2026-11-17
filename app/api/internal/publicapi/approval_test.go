@@ -55,6 +55,9 @@ func TestUserApproval(t *testing.T) {
 		if refreshed["user"].(map[string]any)["approved"] != false {
 			t.Errorf("refresh: %v", refreshed["user"])
 		}
+		if me := e.expect(request{method: "GET", path: "/v1/users/me", token: joe.Token}, http.StatusOK).object(t); me["approved"] != false {
+			t.Errorf("current user: %v", me)
+		}
 		e.expect(request{method: "POST", path: "/v1/users/tokens", body: `{"email":"joe@example.com","password":"correct-horse-battery"}`}, http.StatusOK)
 	})
 

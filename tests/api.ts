@@ -128,11 +128,11 @@ export class TestApi {
     throw new Error(`No email with a ${linkPath} link to ${address}`)
   }
 
-  // refreshStatus gives the status of a token refresh. 200 means that the
-  // token is valid.
-  async refreshStatus(token: string): Promise<number> {
+  // tokenStatus gives the status of getCurrentUser. 200 means that the token
+  // is valid.
+  async tokenStatus(token: string): Promise<number> {
     try {
-      return (await new UsersApi(this.config(token)).refreshTokenRaw({})).raw.status
+      return (await new UsersApi(this.config(token)).getCurrentUserRaw()).raw.status
     } catch (error) {
       if (error instanceof ResponseError) {
         return error.response.status

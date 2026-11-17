@@ -275,6 +275,28 @@ func TestEmailWithoutSMTP(t *testing.T) {
 	}
 }
 
+func TestGetCurrentUser(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUpPending("ana@example.com", "Ana")
+
+	res := e.expect(request{method: "GET", path: "/v1/users/me", token: ana.Token}, http.StatusOK)
+	user := res.object(t)
+	if user["id"] != ana.User.ID || user["email"] != "ana@example.com" || user["name"] != "Ana" || user["approved"] != false {
+		t.Errorf("user %v", user)
+	}
+	if _, ok := user[tokenProperty]; ok || res.header.Get("Set-Cookie") != "" {
+		t.Errorf("the response has a new token: %s %v", res.body, res.header.Values("Set-Cookie"))
+	}
+
+	e.expect(request{method: "PATCH", path: "/v1/users/me", body: `{"name":"Ana Maria"}`, token: ana.Token}, http.StatusOK)
+	if user := e.expect(request{method: "GET", path: "/v1/users/me", token: ana.Token}, http.StatusOK).object(t); user["name"] != "Ana Maria" {
+		t.Errorf("user after the change: %v", user)
+	}
+
+	e.expect(request{method: "GET", path: "/v1/users/me"}, http.StatusUnauthorized)
+	e.expect(request{method: "GET", path: "/v1/users/me", token: "not-a-token"}, http.StatusUnauthorized)
+}
+
 func TestUpdateUser(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUpPending("ana@example.com", "Ana")

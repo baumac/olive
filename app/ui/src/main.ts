@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import './assets/main.css'
 import App from './App.vue'
-import { signInPath, startSessionRefresh } from './composables/useAuth'
+import { signInPath, startSessionCheck } from './composables/useAuth'
 import { handleSessionEnded } from './lib/api'
 import { clearAllDrafts } from './lib/drafts'
 import { watchOtherTabs } from './lib/session'
@@ -31,5 +31,5 @@ watchOtherTabs((before, after) => {
   }
 })
 
-startSessionRefresh()
+startSessionCheck()
 createApp(App).use(router).mount('#app')

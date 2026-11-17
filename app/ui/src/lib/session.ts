@@ -1,5 +1,6 @@
 import type { AuthToken, User } from '@reviews/sdk'
 import { computed, ref } from 'vue'
+import { parseTimestamp } from './format'
 
 const storageKey = 'reviews-session'
 
@@ -7,6 +8,9 @@ const storageKey = 'reviews-session'
 // 00027.
 export interface Session {
   expires: string
+  // issued is the browser time when the UI got the token. A session from
+  // before decision 00042 has no issued value.
+  issued?: string
   user: User
   // token is only in a session that an older version stored.
   token?: string
@@ -39,8 +43,27 @@ export function sessionExpires(): string | null {
   return session.value?.expires ?? null
 }
 
+// refreshDue is true when half of the time of the token is over. A session
+// without an issued value is due.
+export function refreshDue(): boolean {
+  const current = session.value
+  if (!current) {
+    return false
+  }
+  if (!current.issued) {
+    return true
+  }
+  const issued = parseTimestamp(current.issued).getTime()
+  const expires = parseTimestamp(current.expires).getTime()
+  return expires - Date.now() < (expires - issued) / 2
+}
+
 export function saveSession(auth: AuthToken) {
-  session.value = { expires: auth.expires, user: auth.user }
+  store({ expires: auth.expires, issued: new Date().toISOString(), user: auth.user })
+}
+
+function store(next: Session) {
+  session.value = next
   try {
     localStorage.setItem(storageKey, JSON.stringify(session.value))
   } catch {
@@ -48,10 +71,12 @@ export function saveSession(auth: AuthToken) {
   }
 }
 
-// saveUser replaces the stored user after a change of the account.
+// saveUser replaces the stored user after a change of the account. An equal
+// user makes no write. Each write sends a storage event to the other tabs.
 export function saveUser(user: User) {
-  if (session.value) {
-    saveSession({ expires: session.value.expires, user })
+  const current = session.value
+  if (current && JSON.stringify(current.user) !== JSON.stringify(user)) {
+    store({ ...current, user })
   }
 }
 
@@ -78,8 +103,9 @@ export function watchOtherTabs(onUserChange: (before: User | null, after: User |
 // markNotApproved changes the stored user after the API refused a write
 // with the code not_approved. A superuser took the approval back.
 export function markNotApproved() {
-  if (session.value?.user.approved) {
-    saveSession({ expires: session.value.expires, user: { ...session.value.user, approved: false } })
+  const current = session.value
+  if (current?.user.approved) {
+    store({ ...current, user: { ...current.user, approved: false } })
   }
 }
 
