@@ -6,11 +6,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 # Backlog
 
-## For Claude
-3. Design gaps
-- Increase test coverage
-- Improve test performance
-
 ## For Me
 - write 00000-create-reviews-app decision doc that covers the decision to create the app, its intended users, and what it does/does not need to do
   - rename and/or move the backlog doc to the /docs directory
