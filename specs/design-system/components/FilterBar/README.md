@@ -7,7 +7,7 @@ Project component built from `Button`, `Select`, `Popover` and chip buttons. Liv
 - Controls in a row: a search box for a `search` filter, a "Filters" button that opens a popover with the other filters, then sort. The label of the sort is visually hidden. The `end` slot puts the controls of the screen at the end of the row, such as the view buttons and the main action.
 - A review list with fewer than 10 reviews has no `FilterBar`. A filter or a sort in the URL shows it. See decision 00019.
 - Sorts: restaurants have "Highest rated", "Newest" and "Name". "Highest rated" is the default. With a preferred location, "Nearest" is first and the default. Reviews have "Newest", "Highest rated" and "Lowest rated".
-- Review filters: a full-text search (`search`) and the five scores (`food[gte]` and so on). Restaurant filters: a full-text search (`search`), tags, and the overall average (`overall[gte]`). The overall filter says that restaurants without reviews do not match.
+- Review filters: a full-text search (`search`) and the five scores (`food[gte]` and so on). Restaurant filters: a full-text search (`search`), tags, and the overall average (`overall[gte]`). The overall filter says that restaurants without reviews do not match. A signed in user also has a list filter (`list[eq]`) with the own lists. A link with `?list=` adds its list to the options, such as "Date night by Joe".
 - Each active filter shows as a removable chip: "Tag: italian". The remove button's label is "Remove filter tag italian". "Clear all" removes every chip.
 - Score filters say what they include: "Food: 8 or more".
 - After a change, show the result count in a polite `role="status"` region, and start again from the first page. A cursor works only with the filters that made it.

@@ -130,6 +130,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
     - the `places` tag has the place search for the location of a restaurant
     - the `lists` tag has the public lists of restaurants of users. Each user has a favorites list. See decision 00033.
+    - `listRestaurants` with `list[eq]` searches, sorts, and filters the restaurants of a list. See decision 00043.
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`

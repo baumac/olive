@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { listsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { listFailureText } from '@/lib/lists'
+import { forgetOwnLists, listFailureText } from '@/lib/lists'
 import { pendingApproval } from '@/lib/session'
 
 // own is true on the page of the signed in user. It shows the create form.
@@ -29,6 +29,7 @@ async function create() {
   error.value = ''
   try {
     const list = await listsApi.createList({ savedListCreate: { name: name.value.trim() } })
+    forgetOwnLists()
     const [favorites, ...others] = lists.data.value ?? []
     lists.data.value = favorites ? [favorites, list, ...others] : [list]
     name.value = ''

@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { signInPath } from '@/composables/useAuth'
 import { listsApi } from '@/lib/api'
 import { tellPendingApproval } from '@/lib/approval'
-import { listFailureText } from '@/lib/lists'
+import { forgetOwnLists, listFailureText } from '@/lib/lists'
 import { currentUser } from '@/lib/session'
 
 // The favorites list is not in the menu. The heart of FavoriteButton
@@ -76,6 +76,7 @@ async function create() {
   error.value = ''
   try {
     const list = await listsApi.createList({ savedListCreate: { name: name.value.trim() } })
+    forgetOwnLists()
     name.value = ''
     lists.value = [{ ...list, hasRestaurant: false }, ...lists.value]
     // The list exists also when the add fails. Its checkbox is the retry.

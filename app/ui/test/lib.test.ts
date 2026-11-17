@@ -140,12 +140,13 @@ describe('ratings', () => {
 
 describe('restaurantFilterParams', () => {
   it('changes the filters to SDK parameters', () => {
-    expect(restaurantFilterParams({ search: 'lui', tags: ['pasta'], overall: '8' })).toEqual({
+    expect(restaurantFilterParams({ search: 'lui', tags: ['pasta'], overall: '8', list: 'l7d2f9h4j1k8m3p' })).toEqual({
       search: 'lui',
       tagsHasAny: ['pasta'],
       overall: { gte: 8 },
+      listEq: 'l7d2f9h4j1k8m3p',
     })
-    expect(restaurantFilterParams({})).toEqual({ search: undefined, tagsHasAny: undefined, overall: undefined })
+    expect(restaurantFilterParams({})).toEqual({ search: undefined, tagsHasAny: undefined, overall: undefined, listEq: undefined })
   })
 })
 

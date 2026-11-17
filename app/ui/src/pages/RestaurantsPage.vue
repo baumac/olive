@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { FilterBar } from '@/components/ui/filter-bar'
 import type { MapPoint } from '@/components/ui/map'
 import { MapView } from '@/components/ui/map'
+import { useListFilter } from '@/composables/useListFilter'
 import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
@@ -44,21 +45,29 @@ const origin = computed(() => {
   const l = preferredLocation.value
   return l ? { latitude: l.latitude, longitude: l.longitude } : undefined
 })
-// near also has the radius of the list. The map has no radius. The SDK
-// sends a key with the value undefined.
-const near = computed(() => {
-  const radius = preferredLocation.value?.radius
-  return origin.value && radius ? { ...origin.value, radius } : origin.value
-})
+
+const { def: listFilter, favoritesId } = useListFilter()
+const filterDefs = computed(() => (listFilter.value ? [...restaurantFilterDefs, listFilter.value] : restaurantFilterDefs))
 
 const { filters, sort, active, sortOptions } = useListQuery(
-  restaurantFilterDefs,
+  filterDefs,
   () => (origin.value ? [nearestSort, ...restaurantSortOptions] : restaurantSortOptions),
   () => (origin.value ? nearestSort.value : '-overall'),
   searchRelevance,
   ['view'],
   oldRestaurantSortOptions,
 )
+// filterKey changes only with the values. A load of the lists of the user
+// gives new defs. filters then gives a new object with the same values.
+const filterKey = computed(() => JSON.stringify(filters.value))
+
+const listId = computed(() => (typeof filters.value.list === 'string' ? filters.value.list : undefined))
+// radius is the distance limit of the list view. A list filter shows all
+// restaurants of the list.
+const radius = computed(() => (listId.value ? null : (preferredLocation.value?.radius ?? null)))
+// near also has the radius. The map has no radius. The SDK sends a key with
+// the value undefined.
+const near = computed(() => (origin.value && radius.value ? { ...origin.value, radius: radius.value } : origin.value))
 
 // The map view is in the URL. A link to the map then opens the map.
 const mapView = computed(() => route.query.view === 'map' && mapConfig.value !== null)
@@ -87,7 +96,7 @@ const list = usePagedList<Restaurant>(async (cursor) => {
 // A link to the map view waits for the map config. The list then does not
 // load a page that the map view hides.
 watch(
-  [filters, sort, near, mapView, mapConfigLoaded],
+  [filterKey, sort, near, mapView, mapConfigLoaded],
   () => {
     const waiting = route.query.view === 'map' && !mapConfigLoaded.value
     if (!mapView.value && !waiting) {
@@ -145,7 +154,42 @@ function moved(next: Box, center: MapPoint, zoom: number) {
   moveTimer = setTimeout(() => void loadMap(), 300)
 }
 
-watch([filters, sort], () => mapView.value && void loadMap())
+watch([filterKey, sort], () => mapView.value && void loadMap())
+
+// fit is the box of the located restaurants of the list filter. The map
+// moves to it. The list can be far from the preferred location.
+const fit = ref<Box | null>(null)
+async function frameList() {
+  const id = listId.value
+  if (!id || !mapView.value) {
+    return
+  }
+  try {
+    const page = await restaurantsApi.listRestaurants({ limit: mapLimit, listEq: id })
+    const points = page.items.flatMap((r) => (r.location ? [r.location] : []))
+    if (listId.value !== id || points.length === 0) {
+      return
+    }
+    const latitudes = points.map((p) => p.latitude)
+    const longitudes = points.map((p) => p.longitude)
+    fit.value = { west: Math.min(...longitudes), south: Math.min(...latitudes), east: Math.max(...longitudes), north: Math.max(...latitudes) }
+  } catch {
+    // The map then stays at its view.
+  }
+}
+watch([listId, mapView], () => void frameList(), { immediate: true })
+
+// A card that leaves the favorites leaves a view of the favorites list.
+function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
+  if (favorite || !listId.value || listId.value !== favoritesId.value) {
+    return
+  }
+  list.items.value = list.items.value.filter((r) => r.id !== restaurant.id)
+  onMap.value = onMap.value.filter((r) => r.id !== restaurant.id)
+  if (selectedId.value === restaurant.id) {
+    selectedId.value = undefined
+  }
+}
 onBeforeUnmount(() => clearTimeout(moveTimer))
 
 // startView changes only with the preferred location. A new center moves
@@ -209,7 +253,7 @@ let lastView: { center: MapPoint; zoom: number } | undefined
     <FilterBar
       v-model:filters="filters"
       v-model:sort="sort"
-      :defs="restaurantFilterDefs"
+      :defs="filterDefs"
       :sort-options="sortOptions"
       sort-label="Sort by"
       :status="status"
@@ -239,6 +283,7 @@ let lastView: { center: MapPoint; zoom: number } | undefined
         :markers="markers"
         :selected="selectedId"
         :origin="preferredLocation"
+        :fit="fit"
         wheel-zoom
         cluster
         :cluster-label="clusterLabel"
@@ -256,7 +301,7 @@ let lastView: { center: MapPoint; zoom: number } | undefined
         <template v-if="preferredLocation">The blue dot is your location.</template>
       </p>
       <div class="max-w-md" aria-live="polite">
-        <RestaurantCard v-if="selected" :restaurant="selected" :from="preferredLocation" />
+        <RestaurantCard v-if="selected" :restaurant="selected" :from="preferredLocation" @favorite="favoriteChanged(selected, $event)" />
       </div>
     </div>
 
@@ -268,22 +313,24 @@ let lastView: { center: MapPoint; zoom: number } | undefined
       skeleton-class="h-36 rounded-xl"
       :skeleton-count="6"
     >
-      <template #item="{ item }"><RestaurantCard :restaurant="item" :from="preferredLocation" /></template>
+      <template #item="{ item }">
+        <RestaurantCard :restaurant="item" :from="preferredLocation" @favorite="favoriteChanged(item, $event)" />
+      </template>
       <template #empty>
         <EmptyState
           v-if="active"
           :icon="UtensilsIcon"
           title="No restaurants match these filters"
           :description="
-            preferredLocation?.radius
-              ? `The list shows only the restaurants within ${formatRadius(preferredLocation.radius)} of ${preferredLocation.label}. Remove a filter, or show the restaurants at any distance.`
+            radius && preferredLocation
+              ? `The list shows only the restaurants within ${formatRadius(radius)} of ${preferredLocation.label}. Remove a filter, or show the restaurants at any distance.`
               : 'Remove a filter or clear all filters.'
           "
         >
           <template #action>
             <div class="flex flex-wrap justify-center gap-2">
               <Button variant="outline" @click="filters = {}">Clear filters</Button>
-              <Button v-if="preferredLocation?.radius" variant="outline" @click="anyDistance">Show any distance</Button>
+              <Button v-if="radius" variant="outline" @click="anyDistance">Show any distance</Button>
             </div>
           </template>
         </EmptyState>

@@ -14,6 +14,13 @@ export interface RelevanceSort {
 // searchRelevance is the relevance sort of the API search filter.
 export const searchRelevance: RelevanceSort = { filter: 'search', option: { value: 'relevance', label: 'Best match' } }
 
+// firstQueryValue is the first value of a query key. An empty value is
+// undefined.
+export function firstQueryValue(v: unknown): string | undefined {
+  const s = Array.isArray(v) ? v[0] : v
+  return typeof s === 'string' && s !== '' ? s : undefined
+}
+
 // useListQuery keeps the filters and the sort of a list in the URL query.
 // It ignores values that defs do not allow. defs can change, for example
 // when the signed in user changes.
@@ -30,11 +37,7 @@ export function useListQuery(
 ) {
   const route = useRoute()
   const router = useRouter()
-
-  function first(v: unknown): string | undefined {
-    const s = Array.isArray(v) ? v[0] : v
-    return typeof s === 'string' && s !== '' ? s : undefined
-  }
+  const first = firstQueryValue
 
   function parse(def: FilterDef, raw: string): FilterValue {
     if (def.type === 'search') {

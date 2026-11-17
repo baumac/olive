@@ -1,4 +1,27 @@
-import { apiFailure, failureText, fieldErrors } from './api'
+import type { SavedList } from '@reviews/sdk'
+import { apiFailure, failureText, fieldErrors, listsApi } from './api'
+
+let cached: { userId: string; lists: Promise<SavedList[]> } | undefined
+
+// ownLists gets the lists of a user one time per page load. A failed
+// request is not kept.
+export function ownLists(userId: string): Promise<SavedList[]> {
+  if (cached?.userId !== userId) {
+    const lists = listsApi.listReviewerLists({ reviewerId: userId }).then((page) => page.items)
+    lists.catch(() => {
+      if (cached?.lists === lists) {
+        cached = undefined
+      }
+    })
+    cached = { userId, lists }
+  }
+  return cached.lists
+}
+
+// forgetOwnLists must follow each create, rename, and delete of a list.
+export function forgetOwnLists() {
+  cached = undefined
+}
 
 // listFailureText gives the text for a failed create, rename, or change of
 // a list. fallback is the text for a failure without a known reason.

@@ -344,3 +344,68 @@ func TestFavoritesListOfOtherUsers(t *testing.T) {
 		}
 	})
 }
+
+func TestListFilter(t *testing.T) {
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+	place := func(name string, lat float64) string {
+		body := fmt.Sprintf(`{"name":%q,"location":{"latitude":%v,"longitude":2,"address":"Street"}}`, name, lat)
+		return e.createRestaurant(ana.Token, body)["id"].(string)
+	}
+	far, near, other := place("Far", 41.5), place("Near", 41.1), place("Other", 41.0)
+	noLocation := e.createRestaurant(ana.Token, `{"name":"Nowhere","tags":["pizza"]}`)["id"].(string)
+	if _, err := e.app.DB().NewQuery("UPDATE restaurants SET address = '' WHERE id = {:id}").
+		Bind(map[string]any{"id": noLocation}).Execute(); err != nil {
+		t.Fatal(err)
+	}
+	favorites := e.lists(ana.User.ID, "").Items[0].ID
+	date := e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Date night"}`, token: ana.Token}, http.StatusCreated).object(t)["id"].(string)
+	for _, r := range []string{far, near, noLocation} {
+		e.expect(request{method: "PUT", path: "/v1/lists/favorites/restaurants/" + r, token: ana.Token}, http.StatusNoContent)
+	}
+	e.expect(request{method: "PUT", path: "/v1/lists/" + date + "/restaurants/" + other, token: ana.Token}, http.StatusNoContent)
+	e.expect(request{method: "PUT", path: "/v1/lists/favorites/restaurants/" + other, token: joe.Token}, http.StatusNoContent)
+
+	base := "/v1/restaurants?list[eq]=" + favorites
+	for name, c := range map[string]struct{ query, token, want string }{
+		"name":          {query: "&sort=name", want: "Far,Near,Nowhere"},
+		"favorite flag": {query: "&sort=name", token: ana.Token, want: "Far*,Near*,Nowhere*"},
+		"distance":      {query: "&sort=distance&near[latitude]=41&near[longitude]=2", want: "Near,Far,Nowhere"},
+		"radius":        {query: "&near[latitude]=41&near[longitude]=2&near[radius]=20000", want: "Near"},
+		"within":        {query: "&within[west]=1&within[south]=41.4&within[east]=3&within[north]=42", want: "Far"},
+		"tag":           {query: "&tags[has]=pizza", want: "Nowhere"},
+		"search":        {query: "&search=near", want: "Near"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			path := base + c.query
+			if got, _ := e.listRestaurants(path, c.token); got != c.want {
+				t.Errorf("%s: %q, want %q", path, got, c.want)
+			}
+		})
+	}
+
+	if got, _ := e.listRestaurants("/v1/restaurants?list[eq]="+date, ""); got != "Other" {
+		t.Errorf("restaurants of Date night: %q", got)
+	}
+
+	t.Run("pages", func(t *testing.T) {
+		first, cursor := e.listRestaurants(base+"&sort=name&limit=2", "")
+		if first != "Far,Near" || cursor == nil {
+			t.Fatalf("first page %q, cursor %v", first, cursor)
+		}
+		second, next := e.listRestaurants(base+"&sort=name&limit=2&cursor="+url.QueryEscape(*cursor), "")
+		if second != "Nowhere" || next != nil {
+			t.Errorf("second page %q, cursor %v", second, next)
+		}
+		other := "/v1/restaurants?list[eq]=" + date + "&sort=name&limit=2&cursor=" + url.QueryEscape(*cursor)
+		e.expect(request{method: "GET", path: other}, http.StatusBadRequest)
+	})
+
+	t.Run("an unknown list has no restaurants", func(t *testing.T) {
+		if got, next := e.listRestaurants("/v1/restaurants?list[eq]=aaaaaaaaaaaaaaa", ""); got != "" || next != nil {
+			t.Errorf("restaurants %q, cursor %v", got, next)
+		}
+		e.expect(request{method: "GET", path: "/v1/restaurants?list[eq]=favorites"}, http.StatusBadRequest)
+	})
+}

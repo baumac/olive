@@ -28,9 +28,11 @@ const props = withDefaults(
     clusterLabel?: (count: number) => string
     // origin is a dot at the location of the person. It is not a button.
     origin?: MapPoint | null
+    // fit is a box that the view shows. A new box moves the view to it.
+    fit?: Box | null
     class?: HTMLAttributes['class']
   }>(),
-  { zoom: 13, markers: () => [], selected: undefined, origin: null, pick: false, wheelZoom: false, cluster: false, clusterLabel: (count: number) => `${count} places`, class: undefined },
+  { zoom: 13, markers: () => [], selected: undefined, origin: null, fit: null, pick: false, wheelZoom: false, cluster: false, clusterLabel: (count: number) => `${count} places`, class: undefined },
 )
 
 const emit = defineEmits<{
@@ -298,12 +300,30 @@ onMounted(() => {
     }
   })
   map.setView([props.center.latitude, props.center.longitude], props.zoom)
+  fitView()
   draw()
   drawOrigin()
 })
 
+// fitMaxZoom keeps a box of one point at a street zoom.
+const fitMaxZoom = 16
+
+function fitView() {
+  const b = props.fit
+  if (map && b) {
+    map.fitBounds(
+      [
+        [b.south, b.west],
+        [b.north, b.east],
+      ],
+      { padding: [48, 48], maxZoom: fitMaxZoom },
+    )
+  }
+}
+
 watch(() => [props.markers, props.selected, props.pick], draw, { deep: true })
 watch(() => props.origin && `${props.origin.latitude},${props.origin.longitude}`, drawOrigin)
+watch(() => props.fit && JSON.stringify(props.fit), fitView)
 // The key is a string. A new center object with the same point then does
 // not move the map. A move of the map would start a new load of the page.
 watch(

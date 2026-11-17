@@ -1,11 +1,17 @@
 import type { Restaurant, SavedList } from '@reviews/sdk'
+import { FetchError } from '@reviews/sdk'
 import { DOMWrapper, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import FavoriteButton from '@/components/app/FavoriteButton.vue'
 import ReviewerLists from '@/components/app/ReviewerLists.vue'
 import SaveToListMenu from '@/components/app/SaveToListMenu.vue'
+import { useListFilter } from '@/composables/useListFilter'
+import { useListQuery } from '@/composables/useListQuery'
 import { listsApi } from '@/lib/api'
+import { forgetOwnLists } from '@/lib/lists'
+import { resetMapConfig } from '@/lib/mapConfig'
 import { clearSession, saveSession } from '@/lib/session'
 import ListPage from '@/pages/ListPage.vue'
 import { expectAccessible } from './axe'
@@ -57,6 +63,7 @@ async function routerAt(path: string) {
 afterEach(() => {
   vi.restoreAllMocks()
   clearSession()
+  forgetOwnLists()
 })
 
 describe('FavoriteButton', () => {
@@ -343,11 +350,117 @@ describe('ListPage', () => {
     expect(w.find('h3').exists()).toBe(false)
   })
 
+  it('links the restaurants page with the list filter', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ tiles: 'https://t/{z}/{x}/{y}.png' }))))
+    resetMapConfig()
+    const { w } = await mountPage(list('custom', 'Date night'))
+    vi.unstubAllGlobals()
+    resetMapConfig()
+    const links = Object.fromEntries(w.findAll('a').map((a) => [a.text(), a.attributes('href')]))
+    expect(links['Sort and filter']).toBe('/restaurants?list=l7d2f9h4j1k8m3p')
+    expect(links['Show on map']).toBe('/restaurants?list=l7d2f9h4j1k8m3p&view=map')
+  })
+
+  it('has no filter links for an empty list', async () => {
+    const { w } = await mountPage(list('custom', 'Date night', 0), [])
+    expect(w.text()).not.toContain('Sort and filter')
+    expect(w.text()).not.toContain('Show on map')
+  })
+
   it('shows the not found page for an unknown list', async () => {
     vi.spyOn(listsApi, 'getList').mockRejectedValue(rejectWith(404))
     vi.spyOn(listsApi, 'listListRestaurants').mockRejectedValue(rejectWith(404))
     const w = mount(ListPage, { props: { listId: 'aaaaaaaaaaaaaaa' }, global: { plugins: [await routerAt('/lists/aaaaaaaaaaaaaaa')] }, attachTo: attach() })
     await flushPromises()
     expect(w.text()).toContain('We cannot find this page')
+  })
+})
+
+describe('useListFilter', () => {
+  async function filterAt(path: string) {
+    const router = await routerAt(path)
+    let filter!: ReturnType<typeof useListFilter>
+    let query!: ReturnType<typeof useListQuery>
+    mount(
+      defineComponent({
+        setup() {
+          filter = useListFilter()
+          query = useListQuery(() => (filter.def.value ? [filter.def.value] : []), [], '-overall')
+          return () => null
+        },
+      }),
+      { global: { plugins: [router] } },
+    )
+    await flushPromises()
+    return { def: filter.def, favoritesId: filter.favoritesId, query }
+  }
+
+  it('has no filter for a signed out visitor without a list in the URL', async () => {
+    const { def } = await filterAt('/restaurants')
+    expect(def.value).toBeNull()
+  })
+
+  it('has the lists of the signed in user', async () => {
+    signIn()
+    const lists = vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [list('favorites', 'Favorites'), list('custom', 'Date night')] })
+    const { def, query, favoritesId } = await filterAt('/restaurants?list=f1a6c3e8g5i2k9m')
+    expect(lists).toHaveBeenCalledWith({ reviewerId: ana.id })
+    expect(favoritesId.value).toBe('f1a6c3e8g5i2k9m')
+    expect(def.value?.options).toEqual([
+      { value: 'f1a6c3e8g5i2k9m', label: 'Favorites' },
+      { value: 'l7d2f9h4j1k8m3p', label: 'Date night' },
+    ])
+    expect(query.filters.value).toEqual({ list: 'f1a6c3e8g5i2k9m' })
+    expect(def.value?.chip('f1a6c3e8g5i2k9m')).toBe('List: Favorites')
+  })
+
+  it('keeps the list of a link before and after it loads', async () => {
+    let answer!: (l: SavedList) => void
+    vi.spyOn(listsApi, 'getList').mockReturnValue(new Promise((resolve) => (answer = resolve)))
+    const { def, query } = await filterAt('/restaurants?list=l7d2f9h4j1k8m3p')
+    expect(query.filters.value).toEqual({ list: 'l7d2f9h4j1k8m3p' })
+    expect(def.value?.chip('l7d2f9h4j1k8m3p')).toBe('List: A list')
+    answer({ ...list('custom', 'Date night'), creator: { id: 'u2g6k0m4o8q1s5w', name: 'Joe' } })
+    await flushPromises()
+    expect(def.value?.chip('l7d2f9h4j1k8m3p')).toBe('List: Date night by Joe')
+  })
+
+  it('gets the lists of the user one time until a list changes', async () => {
+    signIn()
+    const lists = vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [list('favorites', 'Favorites')] })
+    await filterAt('/restaurants')
+    await filterAt('/restaurants')
+    expect(lists).toHaveBeenCalledTimes(1)
+    forgetOwnLists()
+    await filterAt('/restaurants')
+    expect(lists).toHaveBeenCalledTimes(2)
+  })
+
+  it('names a list that does not exist', async () => {
+    vi.spyOn(listsApi, 'getList').mockRejectedValue(rejectWith(404))
+    const { def } = await filterAt('/restaurants?list=aaaaaaaaaaaaaaa')
+    expect(def.value?.chip('aaaaaaaaaaaaaaa')).toBe('List: Unknown list')
+  })
+
+  it('tries a failed list again', async () => {
+    vi.useFakeTimers()
+    try {
+      const get = vi.spyOn(listsApi, 'getList').mockRejectedValueOnce(new FetchError(new Error('offline'))).mockResolvedValue(list('custom', 'Date night'))
+      const { def } = await filterAt('/restaurants?list=l7d2f9h4j1k8m3p')
+      expect(def.value?.chip('l7d2f9h4j1k8m3p')).toBe('List: A list')
+      await vi.advanceTimersByTimeAsync(2000)
+      await flushPromises()
+      expect(get).toHaveBeenCalledTimes(2)
+      expect(def.value?.chip('l7d2f9h4j1k8m3p')).toBe('List: Date night by Ana')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('ignores a malformed list ID', async () => {
+    const get = vi.spyOn(listsApi, 'getList')
+    const { def } = await filterAt('/restaurants?list=BAD')
+    expect(def.value).toBeNull()
+    expect(get).not.toHaveBeenCalled()
   })
 })

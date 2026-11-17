@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 5.1.0
+  version: 5.2.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants.
 
@@ -35,6 +35,7 @@ info:
       A client that checks the responses against the old `Tag` pattern refuses these tags.
       The API changes tags to Unicode normalization form C.
     - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token.
+    - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`.
 
 servers:
   - url: /v1
@@ -553,6 +554,7 @@ paths:
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
         - $ref: '#/components/parameters/CreatorIn'
+        - $ref: '#/components/parameters/ListEq'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -1440,7 +1442,9 @@ paths:
     get:
       operationId: listListRestaurants
       summary: List the restaurants of a list
-      description: The restaurant that was added last is first.
+      description: |
+        The restaurant that was added last is first.
+        `listRestaurants` with `list[eq]` can search, sort, and filter the restaurants of a list.
       tags: [lists]
       security:
         - {}
@@ -1955,6 +1959,14 @@ components:
         items:
           $ref: '#/components/schemas/RecordId'
         examples: [[u5n1c8r3t6y0b2e, u2g6k0m4o8q1s5w]]
+    ListEq:
+      name: list[eq]
+      in: query
+      description: |
+        Selects the restaurants of the list with this ID.
+        A list ID that does not exist selects no restaurant.
+      schema:
+        $ref: '#/components/schemas/RecordId'
     RestaurantEq:
       name: restaurant[eq]
       in: query
@@ -2680,7 +2692,9 @@ components:
         creator:
           $ref: '#/components/schemas/Creator'
         item_count:
-          description: The number of restaurants of the list.
+          description: |
+            The number of restaurants of the list.
+            `listListRestaurants` and `listRestaurants` with `list[eq]` list them.
           type: integer
           minimum: 0
         has_restaurant:

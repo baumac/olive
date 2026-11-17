@@ -39,5 +39,6 @@ export function restaurantFilterParams(f: Record<string, FilterValue>) {
     search: typeof f.search === 'string' ? f.search : undefined,
     tagsHasAny: tags?.length ? tags : undefined,
     overall: f.overall !== undefined && Number.isFinite(overall) ? { gte: overall } : undefined,
+    listEq: typeof f.list === 'string' ? f.list : undefined,
   }
 }

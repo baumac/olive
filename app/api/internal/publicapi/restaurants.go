@@ -89,6 +89,7 @@ func (s *Server) ListRestaurants(ctx context.Context, req reviewsapi.ListRestaur
 	w.within(p.Within)
 	w.tagFilters(p.TagsHas, p.TagsHasAny, p.TagsHasAll)
 	w.idFilters("restaurants", "creator", p.CreatorEq, p.CreatorIn)
+	w.inList(p.ListEq)
 	w.compare(column("restaurants", "created"), timestampComparisons(p.Created))
 	w.compare(column("restaurants", "updated"), timestampComparisons(p.Updated))
 	if after != nil {

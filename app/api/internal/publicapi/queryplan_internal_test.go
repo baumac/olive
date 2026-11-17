@@ -17,7 +17,10 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 		sort   string
 		filter func(w *where)
 		cursor bool
-		want   string
+		// sorts allows a temporary B-tree for the overall sort. A list has
+		// at most 500 restaurants.
+		sorts bool
+		want  string
 	}{
 		{name: "sort -overall", sort: "-overall", want: "SCAN restaurant_overall USING INDEX idx_restaurant_overall_desc"},
 		{name: "sort overall", sort: "overall", want: "SCAN restaurant_overall USING INDEX idx_restaurant_overall_asc"},
@@ -33,6 +36,9 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 		{name: "tags has any and all", sort: "-created", filter: func(w *where) {
 			w.tagFilters(nil, &[]string{"italian", "pizza"}, &[]string{"cheap", "late"})
 		}, want: "SEARCH restaurant_tags USING PRIMARY KEY (tag=?)"},
+		{name: "list -created", sort: "-created", filter: func(w *where) { w.inList(new("k3x9m2p7q1w8z4a")) }, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
+		{name: "list -overall", sort: "-overall", filter: func(w *where) { w.inList(new("k3x9m2p7q1w8z4a")) }, sorts: true, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
+		{name: "list name", sort: "name", filter: func(w *where) { w.inList(new("k3x9m2p7q1w8z4a")) }, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			keys, sort, detail := parseSort(&c.sort, "restaurants", restaurantSorts)
@@ -62,7 +68,7 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 					t.Errorf("plan has %q:\n%s", bad, plan)
 				}
 			}
-			if strings.TrimPrefix(sort, "-") == "overall" && strings.Contains(plan, "TEMP B-TREE") {
+			if !c.sorts && strings.TrimPrefix(sort, "-") == "overall" && strings.Contains(plan, "TEMP B-TREE") {
 				t.Errorf("plan sorts rows:\n%s", plan)
 			}
 		})

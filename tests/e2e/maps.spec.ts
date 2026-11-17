@@ -181,3 +181,60 @@ test('a click on the map sets the point of a location by hand', async ({ page, u
   const pinnedMap = await restaurantMap(page, 'Pinned')
   await expect(pinnedMap.getByRole('button', { name: 'Pinned' })).toBeVisible()
 })
+
+test('a user shows the favorites on the map and sorts them', async ({ page, api, user }) => {
+  const owner = await api.signUp('Joe')
+  const tag = uniqueTag('favorites')
+  const sole = await api.createRestaurant(owner, { name: 'Sole Place', tags: [tag], location: barceloneta })
+  const nou = await api.createRestaurant(owner, { name: 'Nou Place', tags: [tag], location: eixample })
+  await api.createRestaurant(owner, { name: 'Other Place', tags: [tag], location: { ...barceloneta, longitude: 2.17 } })
+  await api.addToList(user, 'favorites', sole.id)
+  await api.addToList(user, 'favorites', nou.id)
+
+  await page.goto(`/reviewers/${user.auth.user.id}`)
+  await page.getByRole('region', { name: 'Lists' }).getByRole('link', { name: /Favorites/ }).click()
+  await page.getByRole('link', { name: 'Show on map' }).click()
+  await expect(page).toHaveURL(/\/restaurants\?list=[a-z0-9]{15}&view=map$/)
+  await expect(page.getByText('List: Favorites')).toBeVisible()
+  const map = page.getByRole('region', { name: 'Map of the restaurants' })
+  await expect(map.getByRole('button', { name: 'Sole Place' })).toBeVisible()
+  await expect(map.getByRole('button', { name: 'Nou Place' })).toBeVisible()
+  await expect(map.getByRole('button', { name: 'Other Place' })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'List', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Sort by' }).click()
+  await page.getByRole('option', { name: 'Name' }).click()
+  const names = page.getByRole('heading', { level: 2, name: / Place$/ })
+  await expect(names).toHaveText(['Nou Place', 'Sole Place'])
+
+  await page.getByRole('button', { name: 'Remove filter list favorites' }).click()
+  await expect(page).not.toHaveURL(/list=/)
+  await page.goto(`/restaurants?tags=${tag}&sort=name`)
+  await expect(names).toHaveText(['Nou Place', 'Other Place', 'Sole Place'])
+})
+
+test('a list filter ignores the distance and frames the list on the map', async ({ page, api, user }) => {
+  const owner = await api.signUp('Joe')
+  const sole = await api.createRestaurant(owner, { name: 'Sole Trip', location: barceloneta })
+  const nou = await api.createRestaurant(owner, { name: 'Nou Trip', location: eixample })
+  await api.addToList(user, 'favorites', sole.id)
+  await api.addToList(user, 'favorites', nou.id)
+  // Madrid is far from the restaurants of the list.
+  await page.addInitScript(() => {
+    localStorage.setItem('reviews-location', JSON.stringify({ latitude: 40.4168, longitude: -3.7038, label: 'Madrid', radius: 10000 }))
+  })
+
+  await page.goto(`/reviewers/${user.auth.user.id}`)
+  await page.getByRole('region', { name: 'Lists' }).getByRole('link', { name: /Favorites/ }).click()
+  await page.getByRole('link', { name: 'Sort and filter' }).click()
+  const names = page.getByRole('heading', { level: 2, name: / Trip$/ })
+  await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Nearest')
+  await expect(names).toHaveText(['Nou Trip', 'Sole Trip'])
+
+  await page.getByRole('button', { name: 'Favorite Nou Trip' }).click()
+  await expect(names).toHaveText(['Sole Trip'])
+
+  await page.getByRole('button', { name: 'Map', exact: true }).click()
+  const map = page.getByRole('region', { name: 'Map of the restaurants' })
+  await expect(map.getByRole('button', { name: 'Sole Trip' })).toBeVisible()
+})

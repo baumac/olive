@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Restaurant, SavedList } from '@reviews/sdk'
-import { HeartIcon, ListIcon, PencilIcon } from 'lucide-vue-next'
+import { HeartIcon, ListIcon, MapIcon, PencilIcon, SlidersHorizontalIcon } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -18,7 +18,8 @@ import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { listsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { listFailureText } from '@/lib/lists'
+import { forgetOwnLists, listFailureText } from '@/lib/lists'
+import { useMapConfig } from '@/lib/mapConfig'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ listId: string }>()
@@ -45,6 +46,8 @@ usePageTitle(() => (list.data.value ? `${list.data.value.name} by ${list.data.va
 
 const isOwner = computed(() => !!list.data.value && currentUser.value?.id === list.data.value.creator.id)
 const isFavorites = computed(() => list.data.value?.kind === 'favorites')
+const mapConfig = useMapConfig()
+const filtered = computed(() => `/restaurants?list=${encodeURIComponent(props.listId)}`)
 
 // The API gives 400 for a malformed ID. The link then has a typo.
 const failedStatus = computed(() => {
@@ -80,6 +83,7 @@ async function rename() {
   renameError.value = ''
   try {
     const updated = await listsApi.updateList({ listId: props.listId, savedListPatch: { name: name.value.trim() } })
+    forgetOwnLists()
     list.data.value = updated
     await stopRename()
   } catch (e) {
@@ -93,6 +97,7 @@ async function remove() {
   const data = list.data.value
   try {
     await listsApi.deleteList({ listId: props.listId })
+    forgetOwnLists()
     toast.success('List deleted', { description: data?.name })
     void router.push(data ? `/reviewers/${data.creator.id}` : '/restaurants')
   } catch (e) {
@@ -161,6 +166,14 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
           A list by <ReviewerLink :creator="list.data.value.creator" class="text-foreground font-medium underline underline-offset-4" /> ·
           {{ list.data.value.itemCount ? formatCount(list.data.value.itemCount, 'restaurant') : 'No restaurants yet' }}
         </p>
+        <div v-if="list.data.value.itemCount" class="flex flex-wrap gap-2">
+          <Button as-child variant="outline" size="sm">
+            <RouterLink :to="filtered"><SlidersHorizontalIcon aria-hidden="true" />Sort and filter</RouterLink>
+          </Button>
+          <Button v-if="mapConfig" as-child variant="outline" size="sm">
+            <RouterLink :to="`${filtered}&view=map`"><MapIcon aria-hidden="true" />Show on map</RouterLink>
+          </Button>
+        </div>
       </section>
 
       <section aria-labelledby="list-restaurants-heading" class="flex flex-col gap-6">

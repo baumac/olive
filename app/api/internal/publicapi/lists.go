@@ -416,6 +416,20 @@ func (s *Server) ListListRestaurants(ctx context.Context, req reviewsapi.ListLis
 	return reviewsapi.ListListRestaurants200JSONResponse{Items: items, NextCursor: next}, nil
 }
 
+// inList keeps the restaurants of the list. The join lets SQLite start from
+// idx_list_items_list_restaurant for a small list.
+func (w *where) inList(listID *string) {
+	if listID == nil {
+		return
+	}
+	w.joins = append(w.joins, join{
+		inner: true,
+		table: "{{list_items}}",
+		on: dbx.NewExp(column("list_items", "restaurant") + " = [[restaurants.id]] AND " +
+			column("list_items", "list") + " = " + w.param(*listID)),
+	})
+}
+
 func listItemsWhere(listID string) *where {
 	w := newWhere()
 	w.compare(column("list_items", "list"), []comparison{{"=", listID}})
