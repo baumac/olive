@@ -32,7 +32,7 @@ const (
 const maxDescriptionRunes = 200
 
 // recordID is the RecordId pattern of the API spec. The path
-// /restaurants/new then does not match a restaurant.
+// /restaurants/new then does not match a restaurant or a recipe.
 var recordID = regexp.MustCompile(`^[a-z0-9]{15}$`)
 
 var (
@@ -168,11 +168,11 @@ func (p indexPage) pageTitle(title string) string {
 	return title + " · " + p.siteName
 }
 
-// errNoRecord tells that the path names a restaurant, a review, a user, or
-// a list that does not exist.
+// errNoRecord tells that the path names a restaurant, a recipe, a review, a
+// user, or a list that does not exist.
 var errNoRecord = errors.New("no record")
 
-// metaFor returns false for a path that is not a restaurant, review,
+// metaFor returns false for a path that is not a restaurant, recipe, review,
 // reviewer, or list page. appURL is the Application URL of the PocketBase settings.
 // The literal path parts ignore case like Vue Router.
 func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, error) {
@@ -274,13 +274,11 @@ type reviewedKind struct {
 	data          func(app core.App, parent *core.Record, baseURL string) (jsonLD, error)
 }
 
-var reviewedKinds = []reviewedKind{
-	{Tables: subjects.Restaurants, itemType: "Restaurant", photoFilePath: publicapi.PhotoFilePath, data: restaurantData},
-}
-
-// recipeKind joins reviewedKinds with the recipe pages of the UI. The UI
-// shows the not-found page for a recipe before them. See decision 00047.
-var recipeKind = reviewedKind{Tables: subjects.Recipes, itemType: "Recipe", photoFilePath: publicapi.RecipePhotoFilePath, data: recipeData}
+var (
+	restaurantKind = reviewedKind{Tables: subjects.Restaurants, itemType: "Restaurant", photoFilePath: publicapi.PhotoFilePath, data: restaurantData}
+	recipeKind     = reviewedKind{Tables: subjects.Recipes, itemType: "Recipe", photoFilePath: publicapi.RecipePhotoFilePath, data: recipeData}
+	reviewedKinds  = []reviewedKind{restaurantKind, recipeKind}
+)
 
 func (k reviewedKind) path(parent *core.Record) string {
 	return "/" + k.Table + "/" + parent.Id

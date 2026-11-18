@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import type { RestaurantRating, Review } from '@reviews/sdk'
+import type { RecipeRating, RestaurantRating } from '@reviews/sdk'
+import { computed } from 'vue'
 import { RatingDisplay } from '@/components/ui/rating-display'
-import { scoreFields } from '@/lib/reviews'
+import { type AnyReview, type ReviewKind, kinds, scoreOf } from '@/lib/reviewKinds'
 
-// The default slot adds text after the scale, such as the review count.
-defineProps<{ scores: Review | RestaurantRating }>()
+// The default slot adds text after the scale, such as the review count. A
+// rating does not tell its kind, so each caller gives it.
+const props = defineProps<{ scores: AnyReview | RestaurantRating | RecipeRating; kind: ReviewKind }>()
 
 const max = 10
+const fields = computed(() => kinds[props.kind].scoreFields)
 </script>
 
 <template>
@@ -16,8 +19,8 @@ const max = 10
       <span class="text-muted-foreground text-sm">out of {{ max }}<template v-if="$slots.default"> · <slot /></template></span>
     </p>
     <ul class="flex flex-wrap gap-x-4 gap-y-1">
-      <li v-for="f in scoreFields" :key="f.name">
-        <RatingDisplay :value="scores[f.name]" :max="f.max" :label="f.label" show-label />
+      <li v-for="f in fields" :key="f.name">
+        <RatingDisplay :value="scoreOf(scores, f)" :max="f.max" :label="f.label" show-label />
       </li>
     </ul>
   </div>

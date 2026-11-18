@@ -85,3 +85,20 @@ test('the sitemap lists the pages and robots.txt names it', async ({ page, api, 
   const restaurantPage = await (await page.request.get(`/restaurants/${restaurant.id}`)).text()
   expect(restaurantPage).toContain('"aggregateRating":{"@type":"AggregateRating","bestRating":10,"ratingValue":8,"reviewCount":1,"worstRating":1}')
 })
+
+test('a recipe page has its own link preview', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const recipe = await api.createRecipe(owner, { name: 'Preview dal', description: 'Red lentils.', servings: 4 })
+  const path = `/recipes/${recipe.id}`
+
+  const response = await page.goto(path)
+  expect(response?.status()).toBe(200)
+  const head = page.locator('head')
+  await expect(head.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Preview dal')
+  await expect(head.locator('meta[name="description"]')).toHaveAttribute('content', 'Red lentils.')
+  await expect(head.locator('link[rel="canonical"]')).toHaveAttribute('href', `${appURL}${path}`)
+  const data = JSON.parse((await head.locator('script[type="application/ld+json"]').textContent()) ?? '{}')
+  expect(data).toMatchObject({ '@type': 'Recipe', name: 'Preview dal', recipeIngredient: ['1 egg'], recipeYield: '4' })
+  await expect(page.getByRole('heading', { name: 'Preview dal', level: 1 })).toBeVisible()
+})
+

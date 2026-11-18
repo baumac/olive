@@ -74,3 +74,15 @@ export function initials(name: string | null | undefined): string {
   }
   return Array.from(name.trim()).slice(0, 2).join('').toUpperCase() || '?'
 }
+
+const hours = new Intl.NumberFormat(locale, { style: 'unit', unit: 'hour', unitDisplay: 'short' })
+const minutes = new Intl.NumberFormat(locale, { style: 'unit', unit: 'minute', unitDisplay: 'short' })
+
+// formatMinutes shows the total time of a recipe, such as "45 min" or
+// "1 hr 30 min".
+export function formatMinutes(total: number): string {
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  const parts = [h ? hours.format(h) : '', m || !h ? minutes.format(m) : ''].filter(Boolean)
+  return parts.join(' ')
+}

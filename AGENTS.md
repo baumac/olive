@@ -185,6 +185,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Keeps the preferred location of a person in the `localStorage` of the browser. The restaurant list and the maps use it. See decision 00035.
   - Written in TypeScript with Vue, Vue Router, and shadcn-vue on Tailwind CSS. See decision 00002.
   - Follows `specs/design-system`. Components live in `app/ui/src/components/ui`, route-aware components in `app/ui/src/components/app`, and screens in `app/ui/src/pages`.
+  - `app/ui/src/lib/reviewKinds.ts` has the score fields, the paths, and the API calls of restaurants and recipes. The review form, the review page, the review list, and the gallery work for both. See decision 00047.
+  - `?kind=recipes` selects the recipes on "My reviews", a reviewer page, and a list page. `KindSwitch` sets it.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name

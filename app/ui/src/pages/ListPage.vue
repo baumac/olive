@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { Restaurant, SavedList } from '@reviews/sdk'
+import type { Recipe, Restaurant, SavedList } from '@reviews/sdk'
 import { HeartIcon, ListIcon, MapIcon, PencilIcon, SlidersHorizontalIcon } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import KindSwitch from '@/components/app/KindSwitch.vue'
 import PagedList from '@/components/app/PagedList.vue'
+import RecipeCard from '@/components/app/RecipeCard.vue'
 import RestaurantCard from '@/components/app/RestaurantCard.vue'
 import ReviewerLink from '@/components/app/ReviewerLink.vue'
 import { Button } from '@/components/ui/button'
@@ -13,12 +15,12 @@ import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useKindQuery } from '@/composables/useKindQuery'
 import { useLoad } from '@/composables/useLoad'
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { listsApi } from '@/lib/api'
-import { formatCount } from '@/lib/format'
-import { forgetOwnLists, listFailureText } from '@/lib/lists'
+import { forgetOwnLists, listCountText, listFailureText } from '@/lib/lists'
 import { useMapConfig } from '@/lib/mapConfig'
 import { currentUser } from '@/lib/session'
 
@@ -32,22 +34,25 @@ const restaurants = usePagedList<Restaurant>(async (cursor) => {
   const page = await listsApi.listListRestaurants({ listId: props.listId, limit, cursor })
   return { items: page.items, nextCursor: page.nextCursor }
 })
+const recipes = usePagedList<Recipe>(async (cursor) => {
+  const page = await listsApi.listListRecipes({ listId: props.listId, limit, cursor })
+  return { items: page.items, nextCursor: page.nextCursor }
+})
 
-watch(
-  () => props.listId,
-  () => {
-    void list.load()
-    void restaurants.reload()
-  },
-  { immediate: true },
-)
+// kind selects the restaurants or the recipes of the list. See decision
+// 00047.
+const kind = useKindQuery()
+
+watch(() => props.listId, () => void list.load(), { immediate: true })
+watch([() => props.listId, kind], () => void (kind.value === 'recipe' ? recipes.reload() : restaurants.reload()), { immediate: true })
 
 usePageTitle(() => (list.data.value ? `${list.data.value.name} by ${list.data.value.creator.name}` : ''))
 
 const isOwner = computed(() => !!list.data.value && currentUser.value?.id === list.data.value.creator.id)
 const isFavorites = computed(() => list.data.value?.kind === 'favorites')
 const mapConfig = useMapConfig()
-const filtered = computed(() => `/restaurants?list=${encodeURIComponent(props.listId)}`)
+const filtered = computed(() => `${kind.value === 'recipe' ? '/recipes' : '/restaurants'}?list=${encodeURIComponent(props.listId)}`)
+const kindCount = computed(() => (kind.value === 'recipe' ? list.data.value?.recipeCount : list.data.value?.itemCount) ?? 0)
 
 // The API gives 400 for a malformed ID. The link then has a typo.
 const failedStatus = computed(() => {
@@ -112,6 +117,28 @@ function drop(restaurantId: string) {
   }
 }
 
+function dropRecipe(recipeId: string) {
+  recipes.items.value = recipes.items.value.filter((r) => r.id !== recipeId)
+  if (list.data.value) {
+    list.data.value = { ...list.data.value, recipeCount: Math.max(0, list.data.value.recipeCount - 1) }
+  }
+}
+
+async function removeRecipe(recipe: Recipe) {
+  try {
+    await listsApi.removeListRecipe({ listRef: props.listId, recipeId: recipe.id })
+    dropRecipe(recipe.id)
+  } catch (e) {
+    toast.error('Recipe not removed', { description: await listFailureText(e, 'Try again in a moment.') })
+  }
+}
+
+function recipeFavoriteChanged(recipe: Recipe, favorite: boolean) {
+  if (isOwner.value && isFavorites.value && !favorite) {
+    dropRecipe(recipe.id)
+  }
+}
+
 async function removeRestaurant(restaurant: Restaurant) {
   try {
     await listsApi.removeListRestaurant({ listRef: props.listId, restaurantId: restaurant.id })
@@ -150,7 +177,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
             <ConfirmDelete
               label="Delete list"
               title="Delete this list?"
-              :description="`${list.data.value.name} will be deleted permanently. Its restaurants stay.`"
+              :description="`${list.data.value.name} will be deleted permanently. Its restaurants and recipes stay.`"
               @confirm="remove"
             />
           </div>
@@ -164,19 +191,20 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
         </form>
         <p class="text-muted-foreground text-sm">
           A list by <ReviewerLink :creator="list.data.value.creator" class="text-foreground font-medium underline underline-offset-4" /> ·
-          {{ list.data.value.itemCount ? formatCount(list.data.value.itemCount, 'restaurant') : 'No restaurants yet' }}
+          {{ list.data.value.itemCount || list.data.value.recipeCount ? listCountText(list.data.value) : 'No restaurants or recipes yet' }}
         </p>
-        <div v-if="list.data.value.itemCount" class="flex flex-wrap gap-2">
+        <KindSwitch :kind="kind" label="Items of the list" />
+        <div v-if="kindCount" class="flex flex-wrap gap-2">
           <Button as-child variant="outline" size="sm">
             <RouterLink :to="filtered"><SlidersHorizontalIcon aria-hidden="true" />Sort and filter</RouterLink>
           </Button>
-          <Button v-if="mapConfig" as-child variant="outline" size="sm">
+          <Button v-if="mapConfig && kind === 'restaurant'" as-child variant="outline" size="sm">
             <RouterLink :to="`${filtered}&view=map`"><MapIcon aria-hidden="true" />Show on map</RouterLink>
           </Button>
         </div>
       </section>
 
-      <section aria-labelledby="list-restaurants-heading" class="flex flex-col gap-6">
+      <section v-if="kind === 'restaurant'" aria-labelledby="list-restaurants-heading" class="flex flex-col gap-6">
         <h2 id="list-restaurants-heading" class="sr-only">Restaurants</h2>
         <PagedList
           :list="restaurants"
@@ -215,6 +243,51 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
             >
               <template v-if="isOwner" #action>
                 <Button as-child><RouterLink to="/restaurants">Go to restaurants</RouterLink></Button>
+              </template>
+            </EmptyState>
+          </template>
+        </PagedList>
+      </section>
+
+      <section v-else aria-labelledby="list-recipes-heading" class="flex flex-col gap-6">
+        <h2 id="list-recipes-heading" class="sr-only">Recipes</h2>
+        <PagedList
+          :list="recipes"
+          noun="recipes"
+          list-class="lg:grid-cols-2 xl:grid-cols-3"
+          skeleton-class="h-36 rounded-xl"
+          :skeleton-count="3"
+          unfiltered
+        >
+          <template #item="{ item }">
+            <div class="flex h-full flex-col gap-2">
+              <RecipeCard :recipe="item" heading="h3" class="flex-1" @favorite="recipeFavoriteChanged(item, $event)" />
+              <Button
+                v-if="isOwner && !isFavorites"
+                type="button"
+                variant="outline"
+                size="sm"
+                :aria-label="`Remove ${item.name} from the list`"
+                @click="removeRecipe(item)"
+              >
+                Remove
+              </Button>
+            </div>
+          </template>
+          <template #empty>
+            <EmptyState
+              :icon="isFavorites ? HeartIcon : ListIcon"
+              title="No recipes yet"
+              :description="
+                isOwner
+                  ? isFavorites
+                    ? 'Select the heart of a recipe to add it here.'
+                    : 'Open a recipe and select Save to list to add it here.'
+                  : `${list.data.value.creator.name} has not added a recipe yet.`
+              "
+            >
+              <template v-if="isOwner" #action>
+                <Button as-child><RouterLink to="/recipes">Go to recipes</RouterLink></Button>
               </template>
             </EmptyState>
           </template>

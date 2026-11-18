@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import RestaurantCard from '@/components/app/RestaurantCard.vue'
-import RestaurantGallery from '@/components/app/RestaurantGallery.vue'
+import PhotoGallery from '@/components/app/PhotoGallery.vue'
 import { CoverPhoto } from '@/components/ui/cover-photo'
 import { restaurantsApi } from '@/lib/api'
 import { expectAccessible } from './axe'
@@ -82,7 +82,7 @@ describe('RestaurantCard', () => {
   })
 })
 
-describe('RestaurantGallery', () => {
+describe('PhotoGallery', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     document.body.innerHTML = ''
@@ -90,7 +90,7 @@ describe('RestaurantGallery', () => {
 
   it('shows nothing and loads nothing without a cover', async () => {
     const list = vi.spyOn(restaurantsApi, 'listRestaurantPhotos')
-    const w = mount(RestaurantGallery, { props: { restaurant: restaurantWith(null) }, global: { plugins: [await routerAt('/')] } })
+    const w = mount(PhotoGallery, { props: { parent: restaurantWith(null) }, global: { plugins: [await routerAt('/')] } })
     await flushPromises()
     expect(w.find('section').exists()).toBe(false)
     expect(list).not.toHaveBeenCalled()
@@ -98,7 +98,7 @@ describe('RestaurantGallery', () => {
 
   it('lists the photos and links each photo to its review', async () => {
     const list = vi.spyOn(restaurantsApi, 'listRestaurantPhotos').mockResolvedValue({ items: [cover, second], nextCursor: null })
-    const w = mount(RestaurantGallery, { props: { restaurant: restaurantWith(cover) }, global: { plugins: [await routerAt('/')] }, attachTo: attach() })
+    const w = mount(PhotoGallery, { props: { parent: restaurantWith(cover) }, global: { plugins: [await routerAt('/')] }, attachTo: attach() })
     await flushPromises()
     expect(list).toHaveBeenCalledWith({ restaurantId: 'k3x9m2p7q1w8z4a', limit: 15, cursor: undefined })
     expect(w.get('h2').text()).toBe('Photos')
@@ -117,7 +117,7 @@ describe('RestaurantGallery', () => {
 
   it('opens the cover before the gallery loads', async () => {
     vi.spyOn(restaurantsApi, 'listRestaurantPhotos').mockReturnValue(new Promise(() => {}))
-    const w = mount(RestaurantGallery, { props: { restaurant: restaurantWith(cover) }, global: { plugins: [await routerAt('/')] }, attachTo: attach() })
+    const w = mount(PhotoGallery, { props: { parent: restaurantWith(cover) }, global: { plugins: [await routerAt('/')] }, attachTo: attach() })
     ;(w.vm as unknown as { openCover: () => void }).openCover()
     await flushPromises()
     const dialog = document.querySelector('[role=dialog]') as HTMLElement
@@ -127,7 +127,7 @@ describe('RestaurantGallery', () => {
 
   it('opens the photo of the cover when the gallery order changed', async () => {
     vi.spyOn(restaurantsApi, 'listRestaurantPhotos').mockResolvedValue({ items: [second, cover], nextCursor: null })
-    const w = mount(RestaurantGallery, { props: { restaurant: restaurantWith(cover) }, global: { plugins: [await routerAt('/')] }, attachTo: attach() })
+    const w = mount(PhotoGallery, { props: { parent: restaurantWith(cover) }, global: { plugins: [await routerAt('/')] }, attachTo: attach() })
     await flushPromises()
     ;(w.vm as unknown as { openCover: () => void }).openCover()
     await flushPromises()

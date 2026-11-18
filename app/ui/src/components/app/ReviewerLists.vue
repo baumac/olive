@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { listsApi } from '@/lib/api'
-import { formatCount } from '@/lib/format'
-import { forgetOwnLists, listFailureText } from '@/lib/lists'
+import { forgetOwnLists, listCountText, listFailureText } from '@/lib/lists'
 import { pendingApproval } from '@/lib/session'
 
 // own is true on the page of the signed in user. It shows the create form.
@@ -59,7 +58,7 @@ async function create() {
         >
           <component :is="list.kind === 'favorites' ? HeartIcon : ListIcon" class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
           <span class="min-w-0 break-words">{{ list.name }}</span>
-          <span class="text-muted-foreground font-normal">{{ formatCount(list.itemCount, 'restaurant') }}</span>
+          <span class="text-muted-foreground font-normal">{{ listCountText(list) }}</span>
         </RouterLink>
       </li>
     </ul>

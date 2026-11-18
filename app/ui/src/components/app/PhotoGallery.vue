@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import type { Restaurant, RestaurantPhoto } from '@reviews/sdk'
 import { computed, ref } from 'vue'
 import { PhotoGrid } from '@/components/ui/photo-grid'
 import { PhotoViewer } from '@/components/ui/photo-viewer'
 import { usePagedList } from '@/composables/usePagedList'
-import { restaurantsApi } from '@/lib/api'
+import { type Parent, type ParentPhoto, type ReviewKind, kinds } from '@/lib/reviewKinds'
 import PagedList from './PagedList.vue'
 
-const props = defineProps<{ restaurant: Restaurant }>()
+// The gallery has the photos of all reviews of a restaurant or a recipe.
+const props = withDefaults(defineProps<{ parent: Parent; kind?: ReviewKind }>(), { kind: 'restaurant' })
 
 // closeCover tells the parent to focus the cover after the viewer closes.
 const emit = defineEmits<{ closeCover: [] }>()
@@ -15,26 +15,24 @@ const emit = defineEmits<{ closeCover: [] }>()
 // 15 photos fill whole rows of 3 and of 5 columns.
 const limit = 15
 
-const list = usePagedList<RestaurantPhoto>(async (cursor) => {
-  const page = await restaurantsApi.listRestaurantPhotos({ restaurantId: props.restaurant.id, limit, cursor })
+const list = usePagedList<ParentPhoto>(async (cursor) => {
+  const page = await kinds[props.kind].listPhotos(props.parent.id, { limit, cursor })
   return { items: page.items, nextCursor: page.nextCursor }
 })
 
-// RestaurantPage makes a new gallery for each restaurant that it loads.
-if (props.restaurant.cover) {
+// The page makes a new gallery for each restaurant or recipe that it loads.
+if (props.parent.cover) {
   void list.reload()
 }
 
 const open = ref<number | null>(null)
 const fromCover = ref(false)
 // coverOnly shows only the cover in the viewer. The gallery can start with a
-// different photo when a review changed after the restaurant loaded.
+// different photo when a review changed after the parent loaded.
 const coverOnly = ref(false)
 const grid = ref<InstanceType<typeof PhotoGrid> | null>(null)
 
-const photos = computed<RestaurantPhoto[]>(() =>
-  coverOnly.value && props.restaurant.cover ? [props.restaurant.cover] : list.items.value,
-)
+const photos = computed<ParentPhoto[]>(() => (coverOnly.value && props.parent.cover ? [props.parent.cover] : list.items.value))
 
 function openGrid(index: number) {
   fromCover.value = false
@@ -43,7 +41,7 @@ function openGrid(index: number) {
 }
 
 function openCover() {
-  const index = list.items.value.findIndex((p) => p.id === props.restaurant.cover?.id)
+  const index = list.items.value.findIndex((p) => p.id === props.parent.cover?.id)
   fromCover.value = true
   coverOnly.value = index < 0
   open.value = Math.max(index, 0)
@@ -61,7 +59,7 @@ defineExpose({ openCover })
 </script>
 
 <template>
-  <section v-if="restaurant.cover" class="flex flex-col gap-4" aria-labelledby="photos-heading">
+  <section v-if="parent.cover" class="flex flex-col gap-4" aria-labelledby="photos-heading">
     <h2 id="photos-heading" class="text-3xl font-semibold tracking-tight">Photos</h2>
     <PagedList
       :list="list"
@@ -72,7 +70,7 @@ defineExpose({ openCover })
       :focus-item="(i) => grid?.focus(i)"
     >
       <template #items="{ items }">
-        <PhotoGrid ref="grid" :photos="items" :label="`Photos of ${restaurant.name}`" @open="openGrid" />
+        <PhotoGrid ref="grid" :photos="items" :label="`Photos of ${parent.name}`" @open="openGrid" />
       </template>
     </PagedList>
     <PhotoViewer v-model:index="open" :photos="photos" @close="onClose">
@@ -80,7 +78,7 @@ defineExpose({ openCover })
         <p v-if="photos[index]" class="text-muted-foreground text-sm">
           From the
           <RouterLink
-            :to="`/restaurants/${restaurant.id}/reviews/${photos[index].review}`"
+            :to="`${kinds[kind].path}/${parent.id}/reviews/${photos[index].review}`"
             class="text-foreground rounded-sm font-medium underline underline-offset-4"
           >review by {{ photos[index].creator.name }}</RouterLink>
         </p>

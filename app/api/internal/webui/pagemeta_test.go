@@ -402,6 +402,7 @@ func TestCrawlerFiles(t *testing.T) {
 		`<?xml version="1.0" encoding="UTF-8"?>`,
 		`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
 		`<url><loc>https://reviews.example.com/restaurants</loc></url>`,
+		`<url><loc>https://reviews.example.com/recipes</loc></url>`,
 		`<url><loc>https://reviews.example.com/restaurants/` + restaurant.Id + `</loc><lastmod>` +
 			restaurant.GetDateTime("updated").Time().UTC().Format(time.RFC3339) + `</lastmod></url>`,
 		`<loc>https://reviews.example.com/restaurants/` + restaurant.Id + `/reviews/` + review.Id + `</loc>`,
@@ -411,7 +412,7 @@ func TestCrawlerFiles(t *testing.T) {
 			t.Errorf("sitemap.xml: no %s in\n%s", want, body)
 		}
 	}
-	if strings.Count(body, "<url>") != 4 || strings.Contains(body, user.Id) || strings.Contains(body, empty.Id) {
+	if strings.Count(body, "<url>") != 5 || strings.Contains(body, user.Id) || strings.Contains(body, empty.Id) {
 		t.Errorf("sitemap.xml has other URLs:\n%s", body)
 	}
 

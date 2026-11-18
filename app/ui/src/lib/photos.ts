@@ -1,5 +1,5 @@
 import type { Photo } from '@reviews/sdk'
-import { restaurantsApi } from './api'
+import { type ReviewKind, kinds } from './reviewKinds'
 
 export interface AddedPhoto {
   photo: Photo
@@ -7,19 +7,23 @@ export interface AddedPhoto {
   altSaved: boolean
 }
 
-// addPhoto sends the file with its own content type. The SDK sets image/*
-// for all images. The API needs the real type.
-export async function addPhoto(restaurantId: string, reviewId: string, file: File, alt: string): Promise<AddedPhoto> {
-  const photo = await restaurantsApi.addReviewPhoto({ restaurantId, reviewId, body: file }, async ({ init }) => ({
-    headers: { ...(init.headers as Record<string, string>), 'Content-Type': file.type },
-  }))
+// addPhoto adds a photo to the review of a restaurant or a recipe.
+export async function addPhoto(
+  parentId: string,
+  reviewId: string,
+  file: File,
+  alt: string,
+  kind: ReviewKind = 'restaurant',
+): Promise<AddedPhoto> {
+  const api = kinds[kind]
+  const photo = await api.addPhoto(parentId, reviewId, file)
   if (!alt) {
     return { photo, altSaved: true }
   }
   // A failed alt text must not look like a failed upload. A retry would
   // add the photo a second time.
   try {
-    return { photo: await restaurantsApi.updateReviewPhoto({ restaurantId, reviewId, photoId: photo.id, photoPatch: { alt } }), altSaved: true }
+    return { photo: await api.updatePhoto(parentId, reviewId, photo.id, alt), altSaved: true }
   } catch {
     return { photo, altSaved: false }
   }

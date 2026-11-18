@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SavedList } from '@reviews/sdk'
 import { ListPlusIcon } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,11 +10,29 @@ import { signInPath } from '@/composables/useAuth'
 import { listsApi } from '@/lib/api'
 import { tellPendingApproval } from '@/lib/approval'
 import { forgetOwnLists, listFailureText } from '@/lib/lists'
+import { kinds } from '@/lib/reviewKinds'
 import { currentUser } from '@/lib/session'
 
 // The favorites list is not in the menu. The heart of FavoriteButton
-// changes it.
-const props = defineProps<{ restaurantId: string }>()
+// changes it. Give a restaurantId or a recipeId.
+const props = defineProps<{ restaurantId?: string; recipeId?: string }>()
+
+const kind = computed(() => (props.recipeId !== undefined ? kinds.recipe : kinds.restaurant))
+const itemId = computed(() => (props.recipeId ?? props.restaurantId)!)
+
+// has tells if the list has the item. The flag of the kind comes with the
+// parameter of the kind.
+function has(list: SavedList): boolean {
+  return (props.recipeId !== undefined ? list.hasRecipe : list.hasRestaurant) ?? false
+}
+
+function setHas(list: SavedList, value: boolean) {
+  if (props.recipeId !== undefined) {
+    list.hasRecipe = value
+  } else {
+    list.hasRestaurant = value
+  }
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -33,7 +51,9 @@ async function load() {
   }
   state.value = 'loading'
   try {
-    const page = await listsApi.listReviewerLists({ reviewerId: user.id, restaurantEq: props.restaurantId })
+    const page = await listsApi.listReviewerLists(
+      props.recipeId !== undefined ? { reviewerId: user.id, recipeEq: props.recipeId } : { reviewerId: user.id, restaurantEq: props.restaurantId },
+    )
     lists.value = page.items.filter((l) => l.kind === 'custom')
     state.value = 'done'
   } catch {
@@ -58,12 +78,11 @@ function setOpen(value: boolean) {
 
 async function toggle(list: SavedList, checked: boolean) {
   error.value = ''
-  list.hasRestaurant = checked
-  const request = { listRef: list.id, restaurantId: props.restaurantId }
+  setHas(list, checked)
   try {
-    await (checked ? listsApi.addListRestaurant(request) : listsApi.removeListRestaurant(request))
+    await (checked ? kind.value.addToList(list.id, itemId.value) : kind.value.removeFromList(list.id, itemId.value))
   } catch (e) {
-    list.hasRestaurant = !checked
+    setHas(list, !checked)
     error.value = await listFailureText(e, `${list.name} did not change. Select it to try again.`)
   }
 }
@@ -78,7 +97,7 @@ async function create() {
     const list = await listsApi.createList({ savedListCreate: { name: name.value.trim() } })
     forgetOwnLists()
     name.value = ''
-    lists.value = [{ ...list, hasRestaurant: false }, ...lists.value]
+    lists.value = [{ ...list, hasRestaurant: false, hasRecipe: false }, ...lists.value]
     // The list exists also when the add fails. Its checkbox is the retry.
     await toggle(lists.value[0]!, true)
   } catch (e) {
@@ -108,7 +127,7 @@ async function create() {
               <input
                 type="checkbox"
                 class="accent-primary size-4"
-                :checked="list.hasRestaurant"
+                :checked="has(list)"
                 @change="toggle(list, ($event.target as HTMLInputElement).checked)"
               />
               <span class="min-w-0 break-words">{{ list.name }}</span>

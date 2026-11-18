@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { Restaurant, Review } from '@reviews/sdk'
 import { MessageSquareIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
@@ -7,49 +6,62 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { FilterBar } from '@/components/ui/filter-bar'
 import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
-import { restaurantsApi, reviewersApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { reviewFilterDefs, reviewFilterParams, oldReviewSortOptions, reviewSortOptions } from '@/lib/reviewFilters'
+import { oldReviewSortOptionsOf, reviewFilterDefsOf, reviewFilterParamsOf, reviewSortOptions } from '@/lib/reviewFilters'
+import { type AnyReview, type Parent, type ReviewKind, kinds } from '@/lib/reviewKinds'
 import PagedList from './PagedList.vue'
 import ReviewCard from './ReviewCard.vue'
 
-// Give a restaurant or a creator. Without a restaurant, the list has the
-// reviews of the creator at all restaurants.
+// Give a parent or a creator. A parent is a restaurant or a recipe of the
+// kind. Without a parent, the list has the reviews of the creator of the
+// kind.
 const props = withDefaults(
   defineProps<{
-    restaurant?: Restaurant
+    parent?: Parent
+    kind?: ReviewKind
     writePath?: string
     creator?: string
     // reviewerName is the name of a creator who is not the signed in user.
     reviewerName?: string
   }>(),
-  { restaurant: undefined, writePath: undefined, creator: undefined, reviewerName: undefined },
+  { parent: undefined, kind: 'restaurant', writePath: undefined, creator: undefined, reviewerName: undefined },
 )
+
+const info = computed(() => kinds[props.kind])
+const filterDefs = computed(() => reviewFilterDefsOf(props.kind))
 
 const limit = 20
 // A shorter list shows without the search, the filters, and the sort.
 const toolbarMinimum = 10
 const defaultSort = '-created'
 
-const { filters, sort, active, sortOptions } = useListQuery(reviewFilterDefs, reviewSortOptions, defaultSort, searchRelevance, [], oldReviewSortOptions)
+// The kind query key of the reviewer pages stays after a filter change.
+const { filters, sort, active, sortOptions } = useListQuery(
+  filterDefs,
+  reviewSortOptions,
+  defaultSort,
+  searchRelevance,
+  ['kind'],
+  oldReviewSortOptionsOf(props.kind),
+)
 
-const list = usePagedList<Review>(async (cursor) => {
-  const params = { limit, cursor, sort: sort.value, ...reviewFilterParams(filters.value) }
-  const page = props.restaurant
-    ? await restaurantsApi.listReviews({ restaurantId: props.restaurant.id, ...params })
-    : await reviewersApi.listReviewerReviews({ reviewerId: props.creator ?? '', ...params })
+const list = usePagedList<AnyReview>(async (cursor) => {
+  const params = { limit, cursor, sort: sort.value, ...reviewFilterParamsOf(props.kind, filters.value) }
+  const page = props.parent
+    ? await info.value.listReviews(props.parent.id, params)
+    : await info.value.listReviewerReviews(props.creator ?? '', params)
   return { items: page.items, nextCursor: page.nextCursor }
 })
 
-watch([filters, sort, () => props.restaurant?.id, () => props.creator], () => void list.reload(), { immediate: true })
+watch([filters, sort, () => props.parent?.id, () => props.creator, () => props.kind], () => void list.reload(), { immediate: true })
 
 defineExpose({ reload: list.reload })
 
 // A list of one creator has no count before it loads. Without a filter, the
 // loaded page has all reviews or it has a next page.
 const total = computed(() => {
-  if (props.restaurant) {
-    return props.restaurant.reviewCount
+  if (props.parent) {
+    return props.parent.reviewCount
   }
   return list.cursor.value ? toolbarMinimum : list.items.value.length
 })
@@ -71,7 +83,7 @@ const status = computed(() => {
       v-if="showToolbar"
       v-model:filters="filters"
       v-model:sort="sort"
-      :defs="reviewFilterDefs"
+      :defs="filterDefs"
       :sort-options="sortOptions"
       sort-label="Sort by"
       :status="status"
@@ -86,7 +98,7 @@ const status = computed(() => {
       skeleton-class="my-4 h-20 rounded-md"
       :skeleton-count="3"
     >
-      <template #item="{ item }"><ReviewCard :review="item" :show-restaurant="!restaurant" :show-creator="!!restaurant" /></template>
+      <template #item="{ item }"><ReviewCard :review="item" :show-restaurant="!parent" :show-creator="!!parent" /></template>
       <template #empty>
         <EmptyState
           v-if="active"
@@ -99,29 +111,29 @@ const status = computed(() => {
           </template>
         </EmptyState>
         <EmptyState
-          v-else-if="restaurant"
+          v-else-if="parent"
           :icon="MessageSquareIcon"
           title="No reviews yet"
-          :description="`Be the first to review ${restaurant.name}.`"
+          :description="`Be the first to review ${parent.name}.`"
         >
           <template #action>
-            <Button as-child><RouterLink :to="writePath ?? `/restaurants/${restaurant.id}/reviews/new`">Write a review</RouterLink></Button>
+            <Button as-child><RouterLink :to="writePath ?? `${info.path}/${parent.id}/reviews/new`">Write a review</RouterLink></Button>
           </template>
         </EmptyState>
         <EmptyState
           v-else-if="reviewerName"
           :icon="MessageSquareIcon"
           title="No reviews yet"
-          :description="`${reviewerName} has not reviewed a restaurant yet.`"
+          :description="`${reviewerName} has not reviewed a ${info.noun} yet.`"
         />
         <EmptyState
           v-else
           :icon="MessageSquareIcon"
           title="You have no reviews yet"
-          description="Find a restaurant and write the first one."
+          :description="`Find a ${info.noun} and write the first one.`"
         >
           <template #action>
-            <Button as-child><RouterLink to="/restaurants">Go to restaurants</RouterLink></Button>
+            <Button as-child><RouterLink :to="info.path">Go to {{ info.plural }}</RouterLink></Button>
           </template>
         </EmptyState>
       </template>

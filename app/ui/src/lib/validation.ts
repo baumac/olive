@@ -144,3 +144,48 @@ export function checkOpeningHours(v: string): string {
   }
   return hidden.test(v.replace(/[\t\n\r]/g, '')) ? hiddenText : ''
 }
+
+// The limits of the Ingredients and the Steps schemas of the API.
+export const maxIngredients = 100
+export const maxSteps = 50
+
+// ingredientLines gives the ingredients of a text with one ingredient on each
+// line. Empty lines do not count.
+export function ingredientLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+export function checkIngredients(lines: string[]): string {
+  if (lines.length === 0) {
+    return 'Enter at least one ingredient.'
+  }
+  if (lines.length > maxIngredients) {
+    return `Use at most ${maxIngredients} ingredients.`
+  }
+  if (lines.some((line) => length(line) > 200)) {
+    return 'Use at most 200 characters for each ingredient.'
+  }
+  return lines.some((line) => hidden.test(line)) ? hiddenText : ''
+}
+
+export function checkStep(v: string): string {
+  if (space.test(v)) {
+    return 'Enter the step, or remove it.'
+  }
+  if (length(v) > 2000) {
+    return 'Use at most 2,000 characters for a step.'
+  }
+  return hidden.test(v.replace(/[\t\n\r]/g, '')) ? hiddenText : ''
+}
+
+// checkWholeNumber allows an empty value. The field is then not set.
+export function checkWholeNumber(v: string, min: number, max: number): string {
+  if (v.trim() === '') {
+    return ''
+  }
+  const n = Number(v)
+  return Number.isInteger(n) && n >= min && n <= max ? '' : `Enter a whole number from ${min} to ${max}.`
+}

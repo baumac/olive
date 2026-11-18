@@ -49,12 +49,13 @@ type sitemapFile struct {
 	URLs    []sitemapURL `xml:"url"`
 }
 
-// sitemap lists the restaurants list, the restaurants, the reviews, and the
-// lists that have an item and an approved creator.
+// sitemap lists the restaurants list, the recipes list, the restaurants, the
+// recipes, their reviews, and the lists that have an item and an approved
+// creator.
 // The records with the newest change come first. It stops at
 // maxSitemapURLs.
 func sitemap(app core.App, baseURL string) ([]byte, error) {
-	file := sitemapFile{XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9", URLs: []sitemapURL{{Loc: baseURL + "/restaurants"}}}
+	file := sitemapFile{XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9", URLs: []sitemapURL{{Loc: baseURL + "/restaurants"}, {Loc: baseURL + "/recipes"}}}
 	var rows []struct {
 		Kind    string         `db:"kind"`
 		ID      string         `db:"id"`
@@ -64,6 +65,8 @@ func sitemap(app core.App, baseURL string) ([]byte, error) {
 	err := app.DB().
 		NewQuery("SELECT 'restaurant' AS [[kind]], [[id]], '' AS [[parent]], [[updated]] FROM {{restaurants}} " +
 			"UNION ALL SELECT 'review', [[id]], [[restaurant]], [[updated]] FROM {{reviews}} " +
+			"UNION ALL SELECT 'recipe', [[id]], '', [[updated]] FROM {{recipes}} " +
+			"UNION ALL SELECT 'recipe-review', [[id]], [[recipe]], [[updated]] FROM {{recipe_reviews}} " +
 			"UNION ALL SELECT 'list', [[id]], '', [[updated]] FROM {{lists}} " +
 			"WHERE (EXISTS (SELECT 1 FROM {{list_items}} WHERE [[list_items.list]] = [[lists.id]]) " +
 			"OR EXISTS (SELECT 1 FROM {{list_recipes}} WHERE [[list_recipes.list]] = [[lists.id]])) " +
@@ -79,6 +82,10 @@ func sitemap(app core.App, baseURL string) ([]byte, error) {
 		switch row.Kind {
 		case "review":
 			path = "/restaurants/" + row.Parent + "/reviews/" + row.ID
+		case "recipe":
+			path = "/recipes/" + row.ID
+		case "recipe-review":
+			path = "/recipes/" + row.Parent + "/reviews/" + row.ID
 		case "list":
 			path = "/lists/" + row.ID
 		}

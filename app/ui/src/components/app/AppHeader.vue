@@ -24,6 +24,15 @@ const signIn = computed(() => {
   }
   return router.resolve(signInPath(route.fullPath)).fullPath
 })
+
+// A section link is current on each page of its section. See decision 00047.
+const sections = [
+  { path: '/restaurants', label: 'Restaurants' },
+  { path: '/recipes', label: 'Recipes' },
+]
+function current(path: string): boolean {
+  return route.path === path || route.path.startsWith(`${path}/`)
+}
 </script>
 
 <template>
@@ -34,7 +43,8 @@ const signIn = computed(() => {
     Skip to content
   </a>
   <header class="bg-background sticky top-0 z-40 border-b">
-    <div class="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
+    <!-- Below sm, the gaps are small. The row then fits on a 320px screen. -->
+    <div class="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
       <RouterLink to="/" class="shrink-0 rounded-md">
         <span class="sr-only">Sponga47 Reviews, home</span>
         <img :src="lockupLight" alt="" class="hidden h-9 md:block dark:md:hidden" />
@@ -42,7 +52,20 @@ const signIn = computed(() => {
         <img :src="markLight" alt="" class="h-9 md:hidden dark:hidden" />
         <img :src="markDark" alt="" class="hidden h-9 dark:block dark:md:hidden" />
       </RouterLink>
-      <div class="flex-1" />
+      <nav aria-label="Sections" class="flex min-w-0 flex-1 items-center gap-1">
+        <RouterLink
+          v-for="s in sections"
+          :key="s.path"
+          :to="s.path"
+          :aria-current="current(s.path) ? 'page' : undefined"
+          :class="[
+            'rounded-md px-2 py-2 text-sm font-medium whitespace-nowrap sm:px-3',
+            current(s.path) ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:text-foreground',
+          ]"
+        >
+          {{ s.label }}
+        </RouterLink>
+      </nav>
       <UserMenu
         :user="currentUser"
         :sign-in-path="signIn"

@@ -2,12 +2,14 @@
 import type { Reviewer } from '@reviews/sdk'
 import { computed, watch } from 'vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import KindSwitch from '@/components/app/KindSwitch.vue'
+import ReviewerAdded from '@/components/app/ReviewerAdded.vue'
 import ReviewerLists from '@/components/app/ReviewerLists.vue'
-import ReviewerRestaurants from '@/components/app/ReviewerRestaurants.vue'
 import ReviewList from '@/components/app/ReviewList.vue'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useKindQuery } from '@/composables/useKindQuery'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { reviewersApi } from '@/lib/api'
@@ -22,16 +24,29 @@ watch(() => props.reviewerId, () => void reviewer.load(), { immediate: true })
 usePageTitle(() => reviewer.data.value?.name ?? '')
 
 const isSelf = computed(() => currentUser.value?.id === props.reviewerId)
+const kind = useKindQuery()
 
-// summary reads after the average, such as "average of 12 reviews".
+// summary reads after the average, such as "average of 12 restaurant
+// reviews". Each kind has its own average. See decision 00047.
 const summary = computed(() => {
   const r = reviewer.data.value
   if (!r) {
     return ''
   }
-  const parts = [r.reviewCount ? `average of ${formatCount(r.reviewCount, 'review')}` : 'No reviews yet']
+  const parts = [r.reviewCount ? `average of ${formatCount(r.reviewCount, 'restaurant review')}` : 'No restaurant reviews yet']
   if (r.restaurantCount) {
     parts.push(`${formatCount(r.restaurantCount, 'restaurant')} added`)
+  }
+  return parts.join(' · ')
+})
+const recipeSummary = computed(() => {
+  const r = reviewer.data.value
+  if (!r) {
+    return ''
+  }
+  const parts = [r.recipeReviewCount ? `average of ${formatCount(r.recipeReviewCount, 'recipe review')}` : 'No recipe reviews yet']
+  if (r.recipeCount) {
+    parts.push(`${formatCount(r.recipeCount, 'recipe')} added`)
   }
   return parts.join(' · ')
 })
@@ -60,10 +75,20 @@ const failedStatus = computed(() => {
               v-if="reviewer.data.value.averageOverall !== null"
               :value="reviewer.data.value.averageOverall"
               :max="10"
-              label="Average score"
+              label="Average restaurant score"
               size="md"
             />
             <span class="text-muted-foreground text-sm">{{ summary }}</span>
+          </p>
+          <p v-if="reviewer.data.value.recipeReviewCount || reviewer.data.value.recipeCount" class="flex flex-wrap items-baseline gap-x-2">
+            <RatingDisplay
+              v-if="reviewer.data.value.recipeAverageOverall !== null"
+              :value="reviewer.data.value.recipeAverageOverall"
+              :max="10"
+              label="Average recipe score"
+              size="md"
+            />
+            <span class="text-muted-foreground text-sm">{{ recipeSummary }}</span>
           </p>
         </div>
       </section>
@@ -73,11 +98,16 @@ const failedStatus = computed(() => {
       </section>
       <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">
         <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>
-        <ReviewList :creator="reviewerId" :reviewer-name="isSelf ? undefined : reviewer.data.value.name" />
+        <KindSwitch :kind="kind" label="Reviews of" />
+        <ReviewList :key="kind" :creator="reviewerId" :kind="kind" :reviewer-name="isSelf ? undefined : reviewer.data.value.name" />
       </section>
       <section v-if="reviewer.data.value.restaurantCount" class="flex flex-col gap-6" aria-labelledby="restaurants-heading">
         <h2 id="restaurants-heading" class="text-3xl font-semibold tracking-tight">Restaurants added</h2>
-        <ReviewerRestaurants :creator="reviewerId" />
+        <ReviewerAdded :creator="reviewerId" kind="restaurant" />
+      </section>
+      <section v-if="reviewer.data.value.recipeCount" class="flex flex-col gap-6" aria-labelledby="recipes-heading">
+        <h2 id="recipes-heading" class="text-3xl font-semibold tracking-tight">Recipes added</h2>
+        <ReviewerAdded :creator="reviewerId" kind="recipe" />
       </section>
     </template>
   </main>

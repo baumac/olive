@@ -10,10 +10,10 @@ import { currentUser } from '@/lib/session'
 const listId = /^[a-z0-9]{15}$/
 const retryDelays = [2000, 10000]
 
-// useListFilter gives the list filter of the restaurants page. Its options
-// are the lists of the signed in user and the list of the URL. The filter
-// is null without options.
-export function useListFilter() {
+// useListFilter gives the list filter of the restaurants page or the recipes
+// page. Its options are the lists of the signed in user and the list of the
+// URL. The filter is null without options. noun names the items in plural.
+export function useListFilter(noun = 'restaurants') {
   const route = useRoute()
   const own = ref<SavedList[]>([])
   const linked = ref<SavedList>()
@@ -110,7 +110,7 @@ export function useListFilter() {
       label: 'List',
       type: 'select',
       options: options.value,
-      help: 'Shows only the restaurants of the list.',
+      help: `Shows only the ${noun} of the list.`,
       chip: (v) => `List: ${label(v)}`,
     }
   })

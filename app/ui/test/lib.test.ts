@@ -6,7 +6,7 @@ import { listFailureText } from '@/lib/lists'
 import { restaurantFilterDefs, restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
-import { restaurantAccess } from '@/lib/restaurants'
+import { parentAccess } from '@/lib/parents'
 import { directionsLink } from '@/lib/places'
 import { overallOf, scoreFields } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
@@ -180,28 +180,28 @@ describe('scoreFields', () => {
   })
 })
 
-describe('restaurantAccess', () => {
+describe('parentAccess', () => {
   const creator = { id: 'u5n1c8r3t6y0b2e', name: 'Ana' }
 
   it('lets the creator change the restaurant', () => {
-    expect(restaurantAccess({ creator, reviewCount: 0 }, creator.id, false)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(restaurantAccess({ creator, reviewCount: 2 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(restaurantAccess({ creator, reviewCount: 0 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(restaurantAccess({ creator, reviewCount: 1 }, 'u2g6k0m4o8q1s5w', true).canChange).toBe(false)
-    expect(restaurantAccess({ creator, reviewCount: 0 }, undefined, false).canChange).toBe(false)
+    expect(parentAccess({ creator, reviewCount: 0 }, creator.id, false)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess({ creator, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess({ creator, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(parentAccess({ creator, reviewCount: 2 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(parentAccess({ creator, reviewCount: 0 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess({ creator, reviewCount: 1 }, 'u2g6k0m4o8q1s5w', true).canChange).toBe(false)
+    expect(parentAccess({ creator, reviewCount: 0 }, undefined, false).canChange).toBe(false)
   })
 
   it('lets a reviewer change a restaurant without a creator', () => {
-    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: false, hasOtherReviews: true })
+    expect(parentAccess({ creator: null, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess({ creator: null, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: false, hasOtherReviews: true })
   })
 
   it('leaves the decision to the API after a failed lookup', () => {
-    expect(restaurantAccess({ creator, reviewCount: 1 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(restaurantAccess({ creator, reviewCount: 2 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(restaurantAccess({ creator: null, reviewCount: 1 }, creator.id, null).canChange).toBe(false)
+    expect(parentAccess({ creator, reviewCount: 1 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess({ creator, reviewCount: 2 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(parentAccess({ creator: null, reviewCount: 1 }, creator.id, null).canChange).toBe(false)
   })
 })
 

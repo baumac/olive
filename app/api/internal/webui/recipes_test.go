@@ -94,14 +94,26 @@ func TestRecipeMeta(t *testing.T) {
 		return w.Body.String()
 	}
 
-	t.Run("the pages have no recipe meta before the recipe pages of the UI", func(t *testing.T) {
-		for _, path := range []string{recipePath, reviewPath} {
-			if body := get(path); !strings.Contains(body, `content="Default"`) {
-				t.Errorf("%s has page meta:\n%s", path, body)
+	t.Run("the recipe pages have their meta and are in the sitemap", func(t *testing.T) {
+		for path, want := range map[string][]string{
+			recipePath:             {`<title>Shakshuka · Sponga47 Reviews</title>`, `"@type":"Recipe"`, `"recipeYield":"3"`},
+			"/Recipes/" + plain.Id: {`<meta name="description" content="Reviews of Bread on Sponga47 Reviews." />`},
+			reviewPath:             {`<meta property="og:title" content="Quick · Shakshuka" />`, `"itemReviewed":{"@type":"Recipe"`},
+			"/recipes/" + plain.Id + "/reviews/" + review.Id: {`content="Default"`},
+			"/recipes/aaaaaaaaaaaaaaa":                       {`content="Default"`},
+			"/recipes/new":                                   {`content="Default"`},
+			"/sitemap.xml": {
+				"<loc>https://reviews.example.com/recipes</loc>",
+				"<loc>https://reviews.example.com" + recipePath + "</loc>",
+				"<loc>https://reviews.example.com" + reviewPath + "</loc>",
+			},
+		} {
+			body := get(path)
+			for _, w := range want {
+				if !strings.Contains(body, w) {
+					t.Errorf("%s: no %s in\n%s", path, w, body)
+				}
 			}
-		}
-		if body := get("/sitemap.xml"); strings.Contains(body, "/recipes/") {
-			t.Errorf("sitemap.xml has recipes:\n%s", body)
 		}
 	})
 

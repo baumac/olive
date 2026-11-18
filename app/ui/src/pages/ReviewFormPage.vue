@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { Restaurant, Review, ReviewCreate, ReviewPatch } from '@reviews/sdk'
 import { CircleAlertIcon, XIcon } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -15,18 +14,24 @@ import { RatingInput } from '@/components/ui/rating-input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, fieldErrors, notApprovedText, restaurantsApi, writeLimitText } from '@/lib/api'
+import { apiFailure, fieldErrors, notApprovedText, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
 import { formatScore } from '@/lib/format'
-import { type ScoreField, overallOf, scoreFields } from '@/lib/reviews'
+import { type AnyReview, type Parent, kinds, scoreOf } from '@/lib/reviewKinds'
+import { overallOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, maxPhotos } from '@/lib/validation'
 
-const props = defineProps<{ restaurantId: string; reviewId?: string }>()
+// The route gives a restaurantId or a recipeId.
+const props = defineProps<{ restaurantId?: string; recipeId?: string; reviewId?: string }>()
 // busyRetryAfter is the longest Retry-After in seconds of a busy server.
 const busyRetryAfter = 10
 const router = useRouter()
+
+const kind = props.recipeId !== undefined ? kinds.recipe : kinds.restaurant
+const parentId = (props.recipeId ?? props.restaurantId)!
+const scoreFields = kind.scoreFields
 
 const editing = computed(() => props.reviewId !== undefined)
 usePageTitle(() => (editing.value ? 'Edit review' : 'Write a review'))
@@ -37,9 +42,9 @@ interface Fields {
   feedback: string
 }
 
-const restaurant = ref<Restaurant | null>(null)
+const restaurant = ref<Parent | null>(null)
 const fields = ref<Fields>({
-  scores: { space: null, service: null, food: null, price: null, cleanliness: null },
+  scores: Object.fromEntries(scoreFields.map((f) => [f.name, null])),
   title: '',
   feedback: '',
 })
@@ -50,7 +55,7 @@ const loading = ref(true)
 const failed = ref<{ status: number | null } | null>(null)
 
 // saved is the review in the edit mode. Its photos change at once.
-const saved = ref<Review | null>(null)
+const saved = ref<AnyReview | null>(null)
 // queued has the photos of a new review. They upload after the create.
 const queued = ref<{ file: File; alt: string; url: string }[]>([])
 const uploading = ref(false)
@@ -58,34 +63,32 @@ const uploadError = ref('')
 const upload = ref<InstanceType<typeof PhotoUpload> | null>(null)
 const photoCount = computed(() => (saved.value?.photos.length ?? 0) + queued.value.length)
 
-const overall = computed(() => overallOf(fields.value.scores))
+const overall = computed(() => overallOf(fields.value.scores, scoreFields))
 
-const draftKey = computed(() => `review:${props.restaurantId}:${props.reviewId ?? 'new'}`)
-const restaurantPath = computed(() => `/restaurants/${props.restaurantId}`)
+// A restaurant draft keeps its old key. A recipe draft has the kind.
+const draftKey = computed(() => `${kind.kind === 'recipe' ? 'recipe-review' : 'review'}:${parentId}:${props.reviewId ?? 'new'}`)
+const restaurantPath = computed(() => `${kind.path}/${parentId}`)
 
 onMounted(async () => {
   try {
-    restaurant.value = await restaurantsApi.getRestaurant({ restaurantId: props.restaurantId })
+    restaurant.value = await kind.getParent(parentId)
     if (props.reviewId) {
-      const review: Review = await restaurantsApi.getReview({ restaurantId: props.restaurantId, reviewId: props.reviewId })
+      const review = await kind.getReview(parentId, props.reviewId)
       if (review.creator.id !== currentUser.value?.id) {
         failed.value = { status: 403 }
         return
       }
       saved.value = review
       for (const f of scoreFields) {
-        fields.value.scores[f.name] = review[f.name]
+        fields.value.scores[f.name] = scoreOf(review, f)
       }
       fields.value.title = review.title
       fields.value.feedback = review.feedback ?? ''
     } else if (currentUser.value) {
-      // A user has at most one review per restaurant. The API refuses a
-      // second one with 409. The page opens the existing review instead.
-      const own = await restaurantsApi.listReviews({
-        restaurantId: props.restaurantId,
-        creatorEq: currentUser.value.id,
-        limit: 1,
-      })
+      // A user has at most one review per restaurant or recipe. The API
+      // refuses a second one with 409. The page opens the existing review
+      // instead.
+      const own = await kind.listReviews(parentId, { creatorEq: currentUser.value.id, limit: 1 })
       if (own.items[0]) {
         void router.replace(`${restaurantPath.value}/reviews/${own.items[0].id}/edit`)
         return
@@ -98,8 +101,8 @@ onMounted(async () => {
     }
     const draft = takeDraft<Fields>(draftKey.value)
     if (draft) {
-      // A draft from before the four scores has null scores. The loaded
-      // scores then stay.
+      // A draft from before a score field has no value for it. The loaded
+      // score then stays.
       const scores = { ...fields.value.scores }
       for (const s of scoreFields) {
         scores[s.name] = draft.scores?.[s.name] ?? scores[s.name] ?? null
@@ -142,9 +145,8 @@ function focusField(id: string) {
 }
 
 // validate runs first. Each score then has a value.
-function scoreValues() {
-  const { space, service, food, price, cleanliness } = fields.value.scores as Record<ScoreField['name'], number>
-  return { space, service, food, price, cleanliness }
+function scoreValues(): Record<string, number> {
+  return Object.fromEntries(scoreFields.map((f) => [f.name, fields.value.scores[f.name] as number]))
 }
 
 async function addSelected(file: File, alt: string) {
@@ -156,7 +158,7 @@ async function addSelected(file: File, alt: string) {
   }
   uploading.value = true
   try {
-    const { photo, altSaved } = await addPhoto(props.restaurantId, saved.value.id, file, alt)
+    const { photo, altSaved } = await addPhoto(parentId, saved.value.id, file, alt, kind.kind)
     saved.value.photos = [...saved.value.photos, photo]
     upload.value?.reset()
     if (altSaved) {
@@ -212,7 +214,7 @@ async function uploadQueued(reviewId: string): Promise<boolean> {
   let altFailures = 0
   for (const photo of [...queued.value]) {
     try {
-      const { altSaved } = await addPhoto(props.restaurantId, reviewId, photo.file, photo.alt)
+      const { altSaved } = await addPhoto(parentId, reviewId, photo.file, photo.alt, kind.kind)
       altFailures += altSaved ? 0 : 1
     } catch (error) {
       failures.push(await uploadFailure(error))
@@ -238,22 +240,9 @@ async function submit() {
   saveDraft(draftKey.value, fields.value)
   const { title, feedback } = fields.value
   try {
-    let result: Review
-    if (props.reviewId) {
-      const reviewPatch: ReviewPatch = {
-        ...scoreValues(),
-        title,
-        feedback: feedback || null,
-      }
-      result = await restaurantsApi.updateReview({ restaurantId: props.restaurantId, reviewId: props.reviewId, reviewPatch })
-    } else {
-      const reviewCreate: ReviewCreate = {
-        ...scoreValues(),
-        title,
-        feedback: feedback || undefined,
-      }
-      result = await restaurantsApi.createReview({ restaurantId: props.restaurantId, reviewCreate })
-    }
+    const result = props.reviewId
+      ? await kind.updateReview(parentId, props.reviewId, { scores: scoreValues(), title, feedback: feedback || null })
+      : await kind.createReview(parentId, { scores: scoreValues(), title, feedback: feedback || undefined })
     clearDraft(draftKey.value)
     toast.success('Review saved', { description: result.title })
     if (!(await uploadQueued(result.id))) {
@@ -276,8 +265,8 @@ async function submit() {
       errors.value = fieldErrors(problem)
     } else if (code === 'review_exists') {
       alert.value = {
-        title: 'You already reviewed this restaurant',
-        description: 'Each person can write one review per restaurant. Edit your review instead.',
+        title: `You already reviewed this ${kind.noun}`,
+        description: `Each person can write one review per ${kind.noun}. Edit your review instead.`,
         link: restaurantPath.value,
       }
     } else if (code === 'not_approved') {
@@ -285,7 +274,7 @@ async function submit() {
     } else if (status === 403) {
       alert.value = { title: 'You cannot change this review', description: 'Only the person who wrote it can change it.' }
     } else if (status === 404) {
-      alert.value = { title: 'This review no longer exists', description: 'It or its restaurant was deleted.' }
+      alert.value = { title: 'This review no longer exists', description: `It or its ${kind.noun} was deleted.` }
     } else if (status === 429) {
       alert.value = { title: 'Review not saved', description: writeLimitText }
     } else if (status !== 401) {
@@ -316,7 +305,7 @@ async function submit() {
         <AlertDescription>
           {{ alert.description }}
           <RouterLink v-if="alert.link" :to="alert.link" class="font-medium underline underline-offset-4">
-            Go to the restaurant
+            Go to the {{ kind.noun }}
           </RouterLink>
         </AlertDescription>
       </Alert>
@@ -342,14 +331,20 @@ async function submit() {
         <p class="flex items-baseline gap-2 border-t pt-4" role="status">
           <span class="text-sm font-medium">Overall</span>
           <span v-if="overall !== null" class="text-2xl font-extrabold tabular-nums">{{ formatScore(overall) }}</span>
-          <span v-else class="text-muted-foreground text-sm">It shows after you select the five scores.</span>
+          <span v-else class="text-muted-foreground text-sm">It shows after you select the {{ scoreFields.length === 5 ? 'five' : 'four' }} scores.</span>
         </p>
       </div>
 
       <FormItem id="review-title" :error="errors.title">
         <FormLabel>Title</FormLabel>
         <FormControl>
-          <Input v-model="fields.title" name="title" maxlength="255" required placeholder="Best carbonara in town" />
+          <Input
+            v-model="fields.title"
+            name="title"
+            maxlength="255"
+            required
+            :placeholder="kind.kind === 'recipe' ? 'A quick weekend breakfast' : 'Best carbonara in town'"
+          />
         </FormControl>
         <FormMessage />
       </FormItem>

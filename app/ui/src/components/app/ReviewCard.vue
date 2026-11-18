@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import type { Review } from '@reviews/sdk'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { RatingDisplay } from '@/components/ui/rating-display'
-import { scoreFields } from '@/lib/reviews'
+import { type AnyReview, kindOf, kinds, parentNameOf, parentPathOf, reviewPathOf, scoreOf } from '@/lib/reviewKinds'
 import DateText from './DateText.vue'
 import ReviewerLink from './ReviewerLink.vue'
 import ReviewPhotos from './ReviewPhotos.vue'
 
-defineProps<{
-  review: Review
-  // showRestaurant names the restaurant. Lists of many restaurants need it.
+const props = defineProps<{
+  review: AnyReview
+  // showRestaurant names the restaurant or the recipe. Lists of many
+  // restaurants or recipes need it.
   showRestaurant?: boolean
   // showCreator names the creator with a link to the reviewer page. A list
   // of one reviewer does not need it.
@@ -17,6 +17,7 @@ defineProps<{
 }>()
 
 const scoresOpen = ref(false)
+const fields = computed(() => kinds[kindOf(props.review)].scoreFields)
 </script>
 
 <template>
@@ -24,14 +25,14 @@ const scoresOpen = ref(false)
     <div class="flex items-baseline gap-3">
       <RatingDisplay :value="review.overall" :max="10" label="Overall" size="md" class="w-8 shrink-0" />
       <h3 class="min-w-0 leading-snug font-semibold break-words">
-        <RouterLink :to="`/restaurants/${review.restaurant}/reviews/${review.id}`" class="rounded-sm hover:underline">
+        <RouterLink :to="reviewPathOf(review)" class="rounded-sm hover:underline">
           {{ review.title }}
         </RouterLink>
       </h3>
     </div>
     <div class="grid gap-2 pl-11">
       <p v-if="showRestaurant" class="text-muted-foreground text-sm">
-        <RouterLink :to="`/restaurants/${review.restaurant}`" class="hover:underline">{{ review.restaurantName }}</RouterLink>
+        <RouterLink :to="parentPathOf(review)" class="hover:underline">{{ parentNameOf(review) }}</RouterLink>
       </p>
       <p v-if="review.feedback" class="line-clamp-3 whitespace-pre-line">{{ review.feedback }}</p>
       <ReviewPhotos :review="review" />
@@ -48,8 +49,8 @@ const scoresOpen = ref(false)
         </button>
       </p>
       <ul v-if="scoresOpen" class="flex flex-wrap gap-x-4 gap-y-1" :aria-label="`Scores of ${review.title}`">
-        <li v-for="f in scoreFields" :key="f.name">
-          <RatingDisplay :value="review[f.name]" :max="f.max" :label="f.label" show-label />
+        <li v-for="f in fields" :key="f.name">
+          <RatingDisplay :value="scoreOf(review, f)" :max="f.max" :label="f.label" show-label />
         </li>
       </ul>
     </div>

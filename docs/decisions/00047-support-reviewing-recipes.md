@@ -273,18 +273,22 @@ The restaurant details stay restaurant code: the location, `place_id`, the place
 
 ## The UI
 
-- `AppHeader.vue` gets the links "Restaurants" and "Recipes". The design system of `AppHeader` gets the same change.
-- New routes and pages: `/recipes` with `RecipesPage.vue`, `/recipes/new` and `/recipes/:recipeId/edit` with `RecipeFormPage.vue`, and `/recipes/:recipeId` with `RecipePage.vue`.
+- `AppHeader.vue` has a `nav` "Sections" with the links "Restaurants" and "Recipes". This changes the rule of decision 00019 that the header has no navigation links. The design system of `AppHeader` has the same change.
+- Routes and pages: `/recipes` with `RecipesPage.vue`, `/recipes/new` and `/recipes/:recipeId/edit` with `RecipeFormPage.vue`, and `/recipes/:recipeId` with `RecipePage.vue`.
 - `RecipeFormPage.vue` has a text area for the ingredients with one ingredient on each line. The steps are a list of text areas that the user can add, remove, and move.
-- `RecipePage.vue` shows the ingredients as a list and the steps as a numbered list.
-- `/recipes/:recipeId/reviews/new`, `/recipes/:recipeId/reviews/:reviewId`, and its `/edit` use `ReviewFormPage.vue` and `ReviewPage.vue` with a `kind` prop.
-- `lib/reviews.ts` gets the score set, the labels, and the help texts of each kind. `ReviewCard.vue`, `ScoreSummary.vue`, `ReviewList.vue`, and `ReviewPhotos.vue` read the score set and do not name a score.
-- `lib/drafts.ts` gets a key for each kind. A draft of a restaurant review and a recipe review do not mix.
-- `RecipeCard.vue` is like `RestaurantCard.vue` with the `FavoriteButton`, and without the location and the price level.
-- `SaveToListMenu.vue`, `FavoriteButton.vue`, and `lib/lists.ts` take a kind.
-- `ListPage.vue` gets tabs for the restaurants and the recipes of the list. `ReviewerLists.vue` shows both counts.
-- `RestaurantGallery.vue` becomes a gallery for both kinds.
-- `MyReviewsPage.vue` and `ReviewerPage.vue` get tabs for restaurant reviews and recipe reviews. `ReviewerPage.vue` also lists the recipes of the user and shows the recipe average.
+  The reviews of other users make the name, the ingredients, and the steps read only, like the name of a restaurant.
+- `RecipePage.vue` shows the ingredients as a list and the steps as a numbered list in `RecipeDetails.vue`. It has no map.
+- `/recipes/:recipeId/reviews/new`, `/recipes/:recipeId/reviews/:reviewId`, and its `/edit` use `ReviewFormPage.vue` and `ReviewPage.vue`. The route gives a `recipeId` in the place of a `restaurantId`.
+- `lib/reviewKinds.ts` has the score fields, the paths, and the API calls of each kind. `ReviewCard.vue`, `ScoreSummary.vue`, `ReviewList.vue`, and `ReviewPhotos.vue` read them and do not name a score.
+- The draft key of a recipe review starts with `recipe-review:`. A draft of a restaurant review and a recipe review do not mix.
+- `ParentCard.vue` has the parts of a card that the kinds share: the cover, the heart, the name link, the description, the rating, and the tags.
+  `RestaurantCard.vue` adds the location. `RecipeCard.vue` adds the total time.
+- `ReviewerAdded.vue` lists the restaurants or the recipes that a reviewer added.
+- `lib/parents.ts` has `parentAccess`, the rules of decision 00016 for both kinds, and `findOwnReviewId`. It was `restaurantAccess` of `lib/restaurants.ts`.
+- `SaveToListMenu.vue` and `FavoriteButton.vue` take a `restaurantId` or a `recipeId`.
+- `RestaurantGallery.vue` is now `PhotoGallery.vue`. It takes the parent and the kind.
+- "My reviews", the reviews of `ReviewerPage.vue`, and `ListPage.vue` have a `KindSwitch` in the place of tabs. It is two links. `?kind=recipes` selects the recipes, so each part has its own URL.
+- `ReviewerPage.vue` lists the recipes of the user and shows the recipe average. `ReviewerLists.vue` and the list page show both counts, such as "1 restaurant, 3 recipes".
 - The total time shows in hours and minutes with the rules of `specs/design-system/formatting.md`.
 
 ## The tests
@@ -292,9 +296,8 @@ The restaurant details stay restaurant code: the location, `place_id`, the place
 - Go: the tests of the refactor are the tests of today. They must pass without a change.
 - Go: new tests for each recipe operation, the ingredient and step limits, the `source_taken` conflict, the owner rules, the recipe guard, the triggers of `recipe_overall` and `recipe_tags`, the search index, both cleanup jobs, the reviewer counts, the page meta, the JSON-LD, and the sitemap.
 - Go: new tests for the recipe list operations, `list_recipe_limit`, `has_recipe`, `favorite` of `Recipe`, and `listRecipes` with `list[eq]`.
-- End-to-end: `tests/e2e/recipes.spec.ts` adds, changes, searches, filters, and deletes a recipe. It also writes, changes, and deletes a recipe review with a photo.
+- End-to-end: `tests/e2e/recipes.spec.ts` adds, changes, searches, filters, sorts, and deletes a recipe. It writes a recipe review, shows its photo in the gallery, and saves a recipe to the favorites and to a list.
   The searches use `uniqueTag`.
-- End-to-end: `lists.spec.ts` adds a recipe to the favorites and to a custom list, and opens the recipes tab of the list page.
 - End-to-end: `accessibility.spec.ts` gets a test for the recipes page, the recipe page, and the recipe form. `link-previews.spec.ts` gets a recipe page.
 
 ## The steps

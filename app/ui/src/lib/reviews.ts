@@ -1,5 +1,5 @@
 export interface ScoreField {
-  name: 'space' | 'service' | 'food' | 'price' | 'cleanliness'
+  name: 'space' | 'service' | 'food' | 'price' | 'cleanliness' | 'taste' | 'ease' | 'instructions' | 'value'
   label: string
   max: number
   // description is a copy of the score description in the API spec.
@@ -52,18 +52,54 @@ export const scoreFields: ScoreField[] = [
   },
 ]
 
-// overallOf gives the overall score of a review, like the API. It returns
+// recipeScoreFields are the scores of a recipe review. See decision 00047.
+export const recipeScoreFields: ScoreField[] = [
+  {
+    name: 'taste',
+    label: 'Taste',
+    max: 10,
+    description: 'How good the result tastes.',
+    lowest: 'bland',
+    highest: 'delicious',
+  },
+  {
+    name: 'ease',
+    label: 'Ease',
+    max: 10,
+    description: 'How easy the recipe is to make. A high score is easy.',
+    lowest: 'hard',
+    highest: 'easy',
+  },
+  {
+    name: 'instructions',
+    label: 'Instructions',
+    max: 10,
+    description: 'How clear the steps are, and whether the times and the amounts work.',
+    lowest: 'unclear',
+    highest: 'clear',
+  },
+  {
+    name: 'value',
+    label: 'Value',
+    max: 10,
+    description: 'Whether the result is worth the cost of the ingredients and the time.',
+    lowest: 'poor value',
+    highest: 'great value',
+  },
+]
+
+// overallOf gives the overall score of a review with one decimal. It returns
 // null until each score has a value.
-export function overallOf(scores: Record<string, number | null | undefined>): number | null {
+export function overallOf(scores: Record<string, number | null | undefined>, fields: ScoreField[] = scoreFields): number | null {
   let sum = 0
-  for (const f of scoreFields) {
+  for (const f of fields) {
     const v = scores[f.name]
     if (v == null) {
       return null
     }
     sum += v
   }
-  return Math.round((sum / scoreFields.length) * 10) / 10
+  return Math.round((sum / fields.length) * 10) / 10
 }
 
 export function tagList(tags: Set<string> | undefined | null): string[] {

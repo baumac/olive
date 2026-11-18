@@ -1,5 +1,18 @@
-import type { AuthToken, Location, Photo, Restaurant, RestaurantCreate, Review, ReviewCreate, SavedList } from '@reviews/sdk'
-import { Configuration, ListsApi, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
+import type {
+  AuthToken,
+  Location,
+  Photo,
+  Recipe,
+  RecipeCreate,
+  RecipeReview,
+  RecipeReviewCreate,
+  Restaurant,
+  RestaurantCreate,
+  Review,
+  ReviewCreate,
+  SavedList,
+} from '@reviews/sdk'
+import { Configuration, ListsApi, RecipesApi, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -147,6 +160,31 @@ export class TestApi {
     return new RestaurantsApi(this.config(user.token)).createRestaurant({
       restaurantCreate: { ...rest, tags: tags ? new Set(tags) : undefined, location: location ?? randomLocation() },
     })
+  }
+
+  // createRecipe gives a recipe without ingredients or steps one of each.
+  createRecipe(user: TestUser, recipe: Partial<WithTagArray<RecipeCreate>> & { name: string }): Promise<Recipe> {
+    const { tags, ingredients, steps, ...rest } = recipe
+    return new RecipesApi(this.config(user.token)).createRecipe({
+      recipeCreate: { ...rest, tags: tags ? new Set(tags) : undefined, ingredients: ingredients ?? ['1 egg'], steps: steps ?? ['Cook it.'] },
+    })
+  }
+
+  createRecipeReview(user: TestUser, recipeId: string, recipeReviewCreate: RecipeReviewCreate): Promise<RecipeReview> {
+    return new RecipesApi(this.config(user.token)).createRecipeReview({ recipeId, recipeReviewCreate })
+  }
+
+  addRecipeToList(user: TestUser, listRef: string, recipeId: string): Promise<void> {
+    return new ListsApi(this.config(user.token)).addListRecipe({ listRef, recipeId })
+  }
+
+  // addRecipePhoto sends a file of tests/photos with its own content type.
+  async addRecipePhoto(user: TestUser, review: RecipeReview, name: string): Promise<Photo> {
+    const type = name.endsWith('.png') ? 'image/png' : 'image/jpeg'
+    return new RecipesApi(this.config(user.token)).addRecipeReviewPhoto(
+      { recipeId: review.recipe, reviewId: review.id, body: new Blob([new Uint8Array(photoFile(name))], { type }) },
+      async ({ init }) => ({ headers: { ...(init.headers as Record<string, string>), 'Content-Type': type } }),
+    )
   }
 
   createList(user: TestUser, name: string): Promise<SavedList> {

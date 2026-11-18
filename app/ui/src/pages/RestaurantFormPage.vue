@@ -19,7 +19,7 @@ import { apiFailure, fieldErrors, notApprovedText, restaurantsApi, writeLimitTex
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { nearbyRadius, sameLocation } from '@/lib/places'
 import { normalizeWebsite, priceLevels } from '@/lib/restaurantDetails'
-import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
+import { findOwnReviewId, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, checkOpeningHours, checkPhone, checkWebsite } from '@/lib/validation'
@@ -64,13 +64,13 @@ onMounted(async () => {
       const [r, hasOwnReview]: [Restaurant, boolean | null] = await Promise.all([
         restaurantsApi.getRestaurant({ restaurantId: props.restaurantId }),
         userId
-          ? findOwnReviewId(props.restaurantId, userId).then(
+          ? findOwnReviewId('restaurant', props.restaurantId, userId).then(
               (id) => !!id,
               () => null,
             )
           : false,
       ])
-      const access = restaurantAccess(r, userId, hasOwnReview)
+      const access = parentAccess(r, userId, hasOwnReview)
       if (!access.canChange) {
         // Without a creator, the access depends on the failed lookup.
         failed.value = { status: !r.creator && hasOwnReview === null ? null : 403 }
@@ -352,7 +352,7 @@ async function submit() {
       </FormItem>
       <fieldset class="grid gap-6">
         <legend class="mb-1 text-xl font-semibold tracking-tight">Details</legend>
-        <p class="text-muted-foreground -mt-4 text-sm">Optional. A selected place can fill some of them.</p>
+        <p class="text-muted-foreground text-sm">Optional. A selected place can fill some of them.</p>
         <FormItem id="restaurant-website" :error="errors.website">
           <FormLabel>Website</FormLabel>
           <FormControl>

@@ -10,7 +10,7 @@ import DateText from '@/components/app/DateText.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import FavoriteButton from '@/components/app/FavoriteButton.vue'
 import RestaurantDetails from '@/components/app/RestaurantDetails.vue'
-import RestaurantGallery from '@/components/app/RestaurantGallery.vue'
+import PhotoGallery from '@/components/app/PhotoGallery.vue'
 import ReviewList from '@/components/app/ReviewList.vue'
 import SaveToListMenu from '@/components/app/SaveToListMenu.vue'
 import ScoreSummary from '@/components/app/ScoreSummary.vue'
@@ -25,7 +25,7 @@ import { apiFailure, failureText, restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { useMapConfig } from '@/lib/mapConfig'
 import { directionsLink, osmLink } from '@/lib/places'
-import { findOwnReviewId, restaurantAccess } from '@/lib/restaurants'
+import { findOwnReviewId, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
@@ -51,7 +51,7 @@ watch(
     }
     ownReviewLookup.value = 'loading'
     try {
-      ownReviewId.value = await findOwnReviewId(restaurantId, user.id)
+      ownReviewId.value = await findOwnReviewId('restaurant', restaurantId, user.id)
       ownReviewLookup.value = 'done'
     } catch {
       ownReviewLookup.value = 'failed'
@@ -70,7 +70,7 @@ const marker = computed(() => {
   return r?.location ? { id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name } : null
 })
 
-const gallery = ref<InstanceType<typeof RestaurantGallery> | null>(null)
+const gallery = ref<InstanceType<typeof PhotoGallery> | null>(null)
 const coverButton = ref<HTMLButtonElement | null>(null)
 const coverLabel = computed(() => {
   const alt = restaurant.data.value?.cover?.alt
@@ -87,7 +87,7 @@ const access = computed(() => {
     return null
   }
   const hasOwnReview = ownReviewLookup.value === 'failed' ? null : !!ownReviewId.value
-  return restaurantAccess(restaurant.data.value, currentUser.value?.id, hasOwnReview)
+  return parentAccess(restaurant.data.value, currentUser.value?.id, hasOwnReview)
 })
 
 const deleteDescription = computed(() => {
@@ -225,7 +225,7 @@ async function remove() {
             <li v-for="tag in tagList(restaurant.data.value.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
           </ul>
           <section v-if="restaurant.data.value.rating" aria-label="Average scores">
-            <ScoreSummary :scores="restaurant.data.value.rating">
+            <ScoreSummary :scores="restaurant.data.value.rating" kind="restaurant">
               {{ formatCount(restaurant.data.value.reviewCount, 'review') }}
             </ScoreSummary>
           </section>
@@ -245,7 +245,7 @@ async function remove() {
         />
       </section>
 
-      <RestaurantGallery ref="gallery" :restaurant="restaurant.data.value" @close-cover="coverButton?.focus()" />
+      <PhotoGallery ref="gallery" :parent="restaurant.data.value" @close-cover="coverButton?.focus()" />
 
       <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">
         <div class="flex flex-wrap items-center justify-between gap-4">
@@ -254,7 +254,7 @@ async function remove() {
             <RouterLink :to="writePath">{{ ownReviewId ? 'Edit your review' : 'Write a review' }}</RouterLink>
           </Button>
         </div>
-        <ReviewList :restaurant="restaurant.data.value" :write-path="writePath" />
+        <ReviewList :parent="restaurant.data.value" :write-path="writePath" />
       </section>
     </template>
   </main>

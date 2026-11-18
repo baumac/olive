@@ -29,6 +29,19 @@ async function restaurantWithReview(api: TestApi, owner: TestUser) {
   return restaurant
 }
 
+async function recipeWithReview(api: TestApi, owner: TestUser) {
+  const recipe = await api.createRecipe(owner, {
+    name: uniqueTag('Shakshuka'),
+    description: 'Eggs in a spicy sauce.',
+    tags: ['breakfast'],
+    ingredients: ['6 eggs', '1 can of tomatoes'],
+    steps: ['Cook the sauce.', 'Add the eggs.'],
+    totalTime: 30,
+  })
+  await api.createRecipeReview(owner, recipe.id, { taste: 9, ease: 8, instructions: 8, value: 8, title: 'Quick and good' })
+  return recipe
+}
+
 async function restaurantWithTwoReviews(api: TestApi) {
   const restaurant = await restaurantWithReview(api, await api.signUp('Joe'))
   const reviewer = await api.signUp('Ana')
@@ -151,6 +164,29 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.goto('/my-reviews')
       await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
       await expect(page.getByRole('status')).not.toHaveText('Loading reviews')
+      await expectNoViolations(page)
+    })
+
+    test('the recipe list has no axe violations', async ({ page, api }) => {
+      await recipeWithReview(api, await api.signUp('Joe'))
+      await page.goto('/recipes')
+      await expect(page.getByRole('heading', { name: 'Recipes', level: 1 })).toBeAttached()
+      await expect(page.getByRole('status')).not.toHaveText('Loading recipes')
+      await expectNoViolations(page)
+    })
+
+    test('the recipe page has no axe violations', async ({ page, api }) => {
+      const recipe = await recipeWithReview(api, await api.signUp('Joe'))
+      await page.goto(`/recipes/${recipe.id}`)
+      await expect(page.getByRole('heading', { name: 'Quick and good' })).toBeVisible()
+      await expectNoViolations(page)
+    })
+
+    test('the recipe form has no axe violations', async ({ page, user: _ }) => {
+      await page.goto('/recipes/new')
+      await page.getByRole('button', { name: 'Add recipe' }).click()
+      await expect(page.getByText('Enter at least one ingredient.')).toBeVisible()
+      await page.getByRole('button', { name: 'Add step' }).click()
       await expectNoViolations(page)
     })
 

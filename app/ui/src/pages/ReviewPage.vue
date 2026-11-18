@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { Restaurant, Review } from '@reviews/sdk'
 import { ArrowLeftIcon, PencilIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -14,31 +13,36 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { apiFailure, failureText, restaurantsApi } from '@/lib/api'
+import { apiFailure, failureText } from '@/lib/api'
+import { type AnyReview, type Parent, kinds } from '@/lib/reviewKinds'
 import { currentUser } from '@/lib/session'
 
-const props = defineProps<{ restaurantId: string; reviewId: string }>()
+// The route gives a restaurantId or a recipeId.
+const props = defineProps<{ restaurantId?: string; recipeId?: string; reviewId: string }>()
 const router = useRouter()
 
-const page = useLoad<{ restaurant: Restaurant; review: Review }>(async () => {
+const kind = computed(() => (props.recipeId !== undefined ? kinds.recipe : kinds.restaurant))
+const parentId = computed(() => (props.recipeId ?? props.restaurantId)!)
+
+const page = useLoad<{ restaurant: Parent; review: AnyReview }>(async () => {
   const [restaurant, review] = await Promise.all([
-    restaurantsApi.getRestaurant({ restaurantId: props.restaurantId }),
-    restaurantsApi.getReview({ restaurantId: props.restaurantId, reviewId: props.reviewId }),
+    kind.value.getParent(parentId.value),
+    kind.value.getReview(parentId.value, props.reviewId),
   ])
   return { restaurant, review }
 })
-watch(() => [props.restaurantId, props.reviewId], () => void page.load(), { immediate: true })
+watch(() => [parentId.value, props.reviewId], () => void page.load(), { immediate: true })
 
 usePageTitle(() => page.data.value?.review.title ?? '')
 
 const review = computed(() => page.data.value?.review ?? null)
 const isCreator = computed(() => !!currentUser.value && review.value?.creator.id === currentUser.value.id)
-const restaurantPath = computed(() => `/restaurants/${props.restaurantId}`)
+const restaurantPath = computed(() => `${kind.value.path}/${parentId.value}`)
 
 async function remove() {
   const title = review.value?.title
   try {
-    await restaurantsApi.deleteReview({ restaurantId: props.restaurantId, reviewId: props.reviewId })
+    await kind.value.deleteReview(parentId.value, props.reviewId)
     toast.success('Review deleted', { description: title })
     void router.push(restaurantPath.value)
   } catch (error) {
@@ -63,7 +67,7 @@ async function remove() {
           <ReviewerLink :creator="review.creator" /> · <DateText :created="review.created" :updated="review.updated" />
         </p>
       </div>
-      <ScoreSummary :scores="review" />
+      <ScoreSummary :scores="review" :kind="kind.kind" />
       <p v-if="review.feedback" class="leading-7 whitespace-pre-line">{{ review.feedback }}</p>
       <ReviewPhotos :review="review" :editable="isCreator" @change="review.photos = $event" />
       <div v-if="isCreator" class="flex flex-wrap gap-2 border-t pt-6">

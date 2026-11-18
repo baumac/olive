@@ -1,5 +1,17 @@
 import type { SavedList } from '@reviews/sdk'
 import { apiFailure, failureText, fieldErrors, listsApi } from './api'
+import { formatCount } from './format'
+
+// listCountText names the restaurants and the recipes of a list. A list
+// without items has 0 restaurants.
+export function listCountText(list: Pick<SavedList, 'itemCount' | 'recipeCount'>): string {
+  const restaurants = formatCount(list.itemCount, 'restaurant')
+  const recipes = formatCount(list.recipeCount, 'recipe')
+  if (list.recipeCount === 0) {
+    return restaurants
+  }
+  return list.itemCount === 0 ? recipes : `${restaurants}, ${recipes}`
+}
 
 let cached: { userId: string; lists: Promise<SavedList[]> } | undefined
 
@@ -34,6 +46,8 @@ export async function listFailureText(error: unknown, fallback: string): Promise
       return 'You have the maximum number of lists. Delete a list first.'
     case 'list_restaurant_limit':
       return 'This list is full. Remove a restaurant first.'
+    case 'list_recipe_limit':
+      return 'This list is full. Remove a recipe first.'
     case 'favorites_list':
       return 'The favorites list cannot be renamed or deleted.'
     case 'not_creator':

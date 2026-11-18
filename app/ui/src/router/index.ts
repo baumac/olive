@@ -22,6 +22,7 @@ export const router = createRouter({
   routes: [
     { path: '/', redirect: '/restaurants' },
     { path: '/restaurants', component: () => import('@/pages/RestaurantsPage.vue') },
+    { path: '/recipes', component: () => import('@/pages/RecipesPage.vue') },
     { path: '/reviewers/:reviewerId', component: () => import('@/pages/ReviewerPage.vue'), props: true },
     { path: '/lists/:listId', component: () => import('@/pages/ListPage.vue'), props: true },
     { path: '/my-reviews', component: () => import('@/pages/MyReviewsPage.vue'), meta: { requiresAuth: true } },
@@ -50,6 +51,31 @@ export const router = createRouter({
     },
     {
       path: '/restaurants/:restaurantId/reviews/:reviewId/edit',
+      component: () => import('@/pages/ReviewFormPage.vue'),
+      props: true,
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    {
+      path: '/recipes/new',
+      component: () => import('@/pages/RecipeFormPage.vue'),
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    { path: '/recipes/:recipeId', component: () => import('@/pages/RecipePage.vue'), props: true },
+    {
+      path: '/recipes/:recipeId/edit',
+      component: () => import('@/pages/RecipeFormPage.vue'),
+      props: true,
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    {
+      path: '/recipes/:recipeId/reviews/new',
+      component: () => import('@/pages/ReviewFormPage.vue'),
+      props: true,
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    { path: '/recipes/:recipeId/reviews/:reviewId', component: () => import('@/pages/ReviewPage.vue'), props: true },
+    {
+      path: '/recipes/:recipeId/reviews/:reviewId/edit',
       component: () => import('@/pages/ReviewFormPage.vue'),
       props: true,
       meta: { requiresAuth: true, requiresApproval: true },
