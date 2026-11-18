@@ -215,11 +215,11 @@ test('a refused token ends the session and the draft comes back', async ({ page,
   await selectPlace(page, uniqueTag('draft'))
   await page.getByLabel('Name').fill('Draft Diner')
 
-  // The API refuses the cookie of the first create request.
+  // The API refuses the first create request. A route handler of WebKit
+  // gets no Cookie header, so the handler cannot check the cookie.
   let refused = false
   await page.route('**/v1/restaurants', async (route) => {
-    const cookie = (await route.request().allHeaders()).cookie ?? ''
-    if (!refused && route.request().method() === 'POST' && cookie.includes('reviews_session=')) {
+    if (!refused && route.request().method() === 'POST') {
       refused = true
       await route.fulfill({
         status: 401,
