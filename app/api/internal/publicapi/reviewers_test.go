@@ -98,7 +98,8 @@ func TestReviewers(t *testing.T) {
 	t.Run("the profile has only public fields", func(t *testing.T) {
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID}, http.StatusOK).object(t)
 		// The overall values of Ana are 4.8 and 7.6.
-		want := map[string]any{"id": ana.User.ID, "name": "Ana", "review_count": 2.0, "average_overall": 6.2, "restaurant_count": 1.0, "list_count": 1.0}
+		want := map[string]any{"id": ana.User.ID, "name": "Ana", "review_count": 2.0, "average_overall": 6.2, "restaurant_count": 1.0,
+			"recipe_review_count": 0.0, "recipe_average_overall": nil, "recipe_count": 0.0, "list_count": 1.0}
 		if len(got) != len(want) {
 			t.Errorf("profile %v, want only %v", got, want)
 		}

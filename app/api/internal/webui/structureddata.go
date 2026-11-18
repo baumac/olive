@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"html/template"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/baumac/reviews-app/app/api/internal/subjects"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -37,8 +39,6 @@ func setText(d jsonLD, key, value string) {
 	}
 }
 
-// restaurantData has no rating for a restaurant without reviews.
-// schema.org does not allow a rating with a count of 0.
 func restaurantData(app core.App, restaurant *core.Record, baseURL string) (jsonLD, error) {
 	d := jsonLD{"@type": "Restaurant", "name": restaurant.GetString("name")}
 	setText(d, "description", strings.Join(strings.Fields(restaurant.GetString("description")), " "))
@@ -55,17 +55,50 @@ func restaurantData(app core.App, restaurant *core.Record, baseURL string) (json
 			"longitude": restaurant.GetFloat("longitude"),
 		}
 	}
+	return d, setAggregateRating(app, d, subjects.Restaurants, restaurant)
+}
+
+// recipeData has the schema.org properties of a recipe. totalTime is an ISO
+// 8601 duration.
+func recipeData(app core.App, recipe *core.Record, baseURL string) (jsonLD, error) {
+	d := jsonLD{"@type": "Recipe", "name": recipe.GetString("name")}
+	setText(d, "description", strings.Join(strings.Fields(recipe.GetString("description")), " "))
+	setText(d, "url", pageURL(baseURL, "/recipes/"+recipe.Id))
+	setText(d, "isBasedOn", recipe.GetString("source"))
+	var ingredients, steps []string
+	if err := recipe.UnmarshalJSONField("ingredients", &ingredients); err == nil && len(ingredients) > 0 {
+		d["recipeIngredient"] = ingredients
+	}
+	if err := recipe.UnmarshalJSONField("steps", &steps); err == nil && len(steps) > 0 {
+		instructions := make([]jsonLD, len(steps))
+		for i, step := range steps {
+			instructions[i] = jsonLD{"@type": "HowToStep", "text": step}
+		}
+		d["recipeInstructions"] = instructions
+	}
+	if minutes := recipe.GetInt("total_time"); minutes > 0 {
+		d["totalTime"] = "PT" + strconv.Itoa(minutes) + "M"
+	}
+	if servings := recipe.GetInt("servings"); servings > 0 {
+		d["recipeYield"] = strconv.Itoa(servings)
+	}
+	return d, setAggregateRating(app, d, subjects.Recipes, recipe)
+}
+
+// setAggregateRating sets no rating for a parent without reviews.
+// schema.org does not allow a rating with a count of 0.
+func setAggregateRating(app core.App, d jsonLD, k subjects.Tables, parent *core.Record) error {
 	var rating struct {
 		Count   int      `db:"count"`
 		Overall *float64 `db:"overall"`
 	}
 	err := app.DB().
-		NewQuery("SELECT (SELECT COUNT(*) FROM {{reviews}} WHERE [[restaurant]] = {:id}) AS [[count]], " +
-			"(SELECT [[overall]] FROM {{restaurant_overall}} WHERE [[restaurant]] = {:id}) AS [[overall]]").
-		Bind(dbx.Params{"id": restaurant.Id}).
+		NewQuery("SELECT (SELECT COUNT(*) FROM {{" + k.Reviews + "}} WHERE [[" + k.Parent + "]] = {:id}) AS [[count]], " +
+			"(SELECT [[overall]] FROM {{" + k.Overall + "}} WHERE [[" + k.Parent + "]] = {:id}) AS [[overall]]").
+		Bind(dbx.Params{"id": parent.Id}).
 		One(&rating)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if rating.Count > 0 && rating.Overall != nil {
 		d["aggregateRating"] = jsonLD{
@@ -76,31 +109,32 @@ func restaurantData(app core.App, restaurant *core.Record, baseURL string) (json
 			"bestRating":  bestRating,
 		}
 	}
-	return d, nil
+	return nil
 }
 
-// reviewData has only the public fields of the author.
-func reviewData(app core.App, restaurant, review *core.Record, baseURL string) jsonLD {
+// reviewData has only the public fields of the author. A recipe has no
+// address.
+func reviewData(app core.App, kind reviewedKind, parent, review *core.Record, baseURL string) jsonLD {
 	sum := 0
-	for _, score := range []string{"space", "service", "food", "price", "cleanliness"} {
+	for _, score := range kind.Scores {
 		sum += review.GetInt(score)
 	}
-	item := jsonLD{"@type": "Restaurant", "name": restaurant.GetString("name")}
-	setText(item, "url", pageURL(baseURL, "/restaurants/"+restaurant.Id))
-	setText(item, "address", restaurant.GetString("address"))
+	item := jsonLD{"@type": kind.itemType, "name": parent.GetString("name")}
+	setText(item, "url", pageURL(baseURL, kind.path(parent)))
+	setText(item, "address", parent.GetString("address"))
 	d := jsonLD{
 		"@type":        "Review",
 		"name":         review.GetString("title"),
 		"itemReviewed": item,
 		"reviewRating": jsonLD{
 			"@type":       "Rating",
-			"ratingValue": math.Round(float64(sum)/5*10) / 10,
+			"ratingValue": math.Round(float64(sum)/float64(len(kind.Scores))*10) / 10,
 			"worstRating": worstRating,
 			"bestRating":  bestRating,
 		},
 	}
 	setText(d, "reviewBody", review.GetString("feedback"))
-	setText(d, "url", pageURL(baseURL, "/restaurants/"+restaurant.Id+"/reviews/"+review.Id))
+	setText(d, "url", pageURL(baseURL, kind.path(parent)+"/reviews/"+review.Id))
 	if created := review.GetDateTime("created"); !created.IsZero() {
 		d["datePublished"] = created.Time().UTC().Format(time.RFC3339)
 	}
@@ -118,13 +152,15 @@ func listData(list *core.Record, count int, baseURL string) jsonLD {
 	return d
 }
 
-// reviewerData has only the public fields of the user.
+// reviewerData has only the public fields of the user. The count has the
+// restaurant reviews and the recipe reviews.
 func reviewerData(app core.App, user *core.Record, baseURL string) (jsonLD, error) {
 	var reviews struct {
 		Count int `db:"count"`
 	}
 	err := app.DB().
-		NewQuery("SELECT COUNT(*) AS [[count]] FROM {{reviews}} WHERE [[creator]] = {:id}").
+		NewQuery("SELECT (SELECT COUNT(*) FROM {{reviews}} WHERE [[creator]] = {:id}) + " +
+			"(SELECT COUNT(*) FROM {{recipe_reviews}} WHERE [[creator]] = {:id}) AS [[count]]").
 		Bind(dbx.Params{"id": user.Id}).
 		One(&reviews)
 	if err != nil {

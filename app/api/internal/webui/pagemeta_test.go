@@ -153,7 +153,7 @@ func TestPageMeta(t *testing.T) {
 		"cleanliness": 9,
 	}))
 	other := save(t, app, "reviews", with(scores, map[string]any{"restaurant": plain.Id, "creator": user.Id, "title": "Fine"}))
-	photo := savePhoto(t, app, review.Id)
+	photo := savePhoto(t, app, "review_photos", review.Id)
 	list := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Date <i>night</i>", "kind": "custom"})
 	save(t, app, "list_items", map[string]any{"list": list.Id, "restaurant": plain.Id})
 
@@ -329,9 +329,9 @@ func save(t *testing.T, app core.App, collection string, fields map[string]any) 
 }
 
 // savePhoto skips the validation. The files are then not real JPEG files.
-func savePhoto(t *testing.T, app core.App, reviewID string) *core.Record {
+func savePhoto(t *testing.T, app core.App, collection, reviewID string) *core.Record {
 	t.Helper()
-	c, err := app.FindCollectionByNameOrId("review_photos")
+	c, err := app.FindCollectionByNameOrId(collection)
 	if err != nil {
 		t.Fatal(err)
 	}

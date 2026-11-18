@@ -6,6 +6,7 @@ import (
 	"errors"
 	"maps"
 	"math"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -258,36 +259,54 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 	return reviewsapi.UpdateRestaurant200JSONResponse(out), nil
 }
 
-// DeleteRestaurant runs the review check and the delete in one transaction.
-// It also deletes the review of the user.
+// DeleteRestaurant also deletes the review of the user.
 func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRestaurantRequestObject) (reviewsapi.DeleteRestaurantResponseObject, error) {
-	user := stateFrom(ctx).user
+	p, err := s.deleteParent(restaurantSubject, req.RestaurantId, stateFrom(ctx).user)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusForbidden:
+			return reviewsapi.DeleteRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.DeleteRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusConflict:
+			return reviewsapi.DeleteRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	return reviewsapi.DeleteRestaurant204Response{}, nil
+}
 
-	var response reviewsapi.DeleteRestaurantResponseObject = reviewsapi.DeleteRestaurant204Response{}
-	err := s.app.RunInTransaction(func(tx core.App) error {
-		r, err := s.findRestaurant(tx, req.RestaurantId)
+// deleteParent runs the review check and the delete in one transaction. It
+// also deletes the review of the user. The problem is a 403, a 404, or a
+// 409.
+func (s *Server) deleteParent(sub subject, id string, user *core.Record) (p *problem, err error) {
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		r, err := findParent(tx, sub, id)
 		if errors.Is(err, sql.ErrNoRows) {
-			response = reviewsapi.DeleteRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}
+			p = notFoundProblem(sub.notFound)
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		if detail, err := changeForbidden(tx, restaurantSubject, r, user.Id); err != nil {
+		if detail, err := changeForbidden(tx, sub, r, user.Id); err != nil {
 			return err
 		} else if detail != "" {
-			response = reviewsapi.DeleteRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator(detail)}
+			p = notCreatorProblem(detail)
 			return nil
 		}
-		n, err := countReviewsOfOtherUsers(tx, restaurantSubject, r.Id, user.Id)
+		n, err := countReviewsOfOtherUsers(tx, sub, r.Id, user.Id)
 		if err != nil {
 			return err
 		}
 		if n > 0 {
-			response = reviewsapi.DeleteRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(reviewsapi.ProblemCodeOtherReviews, "The restaurant has reviews of other users. It cannot be deleted.")}
+			p = conflictProblem(reviewsapi.ProblemCodeOtherReviews, "The "+sub.noun+" has reviews of other users. It cannot be deleted.")
 			return nil
 		}
-		own, err := tx.FindAllRecords("reviews", dbx.HashExp{"restaurant": r.Id})
+		own, err := tx.FindAllRecords(sub.Reviews, dbx.HashExp{sub.Parent: r.Id})
 		if err != nil {
 			return err
 		}
@@ -298,10 +317,7 @@ func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRest
 		}
 		return tx.Delete(r)
 	})
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return p, err
 }
 
 const restaurantNotFound = "The restaurant does not exist."
@@ -511,9 +527,15 @@ func (c *changes) patchText(field string, v nullable.Nullable[string]) {
 
 // patchPriceLevel stores 0 for null.
 func (c *changes) patchPriceLevel(v nullable.Nullable[reviewsapi.PriceLevel]) {
+	c.patchNumber("price_level", v)
+}
+
+// patchNumber stores 0 for null. PocketBase stores 0 for a number that is
+// not set.
+func (c *changes) patchNumber(field string, v nullable.Nullable[int]) {
 	if v.IsSpecified() {
-		level, _ := v.Get()
-		c.set("price_level", float64(level))
+		n, _ := v.Get()
+		c.set(field, float64(n))
 	}
 }
 

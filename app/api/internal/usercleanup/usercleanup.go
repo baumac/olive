@@ -33,7 +33,8 @@ func Register(app core.App) {
 }
 
 // Run deletes each user without approval that is at least MaxAge old at
-// now. A user with a review, a restaurant, or a restaurant in a list stays.
+// now. A user with a review, a restaurant, a recipe, or a restaurant in a
+// list stays.
 // A superuser took the approval of such a user back. It returns the number
 // of deleted users.
 func Run(app core.App, now time.Time) (int, error) {
@@ -45,6 +46,8 @@ func Run(app core.App, now time.Time) (int, error) {
 			WHERE [[approved]] = FALSE AND [[created]] < {:before}
 				AND NOT EXISTS (SELECT 1 FROM {{reviews}} WHERE [[reviews.creator]] = [[users.id]])
 				AND NOT EXISTS (SELECT 1 FROM {{restaurants}} WHERE [[restaurants.creator]] = [[users.id]])
+				AND NOT EXISTS (SELECT 1 FROM {{recipe_reviews}} WHERE [[recipe_reviews.creator]] = [[users.id]])
+				AND NOT EXISTS (SELECT 1 FROM {{recipes}} WHERE [[recipes.creator]] = [[users.id]])
 				AND NOT EXISTS (SELECT 1 FROM {{list_items}} INNER JOIN {{lists}} ON [[lists.id]] = [[list_items.list]]
 					WHERE [[lists.creator]] = [[users.id]])
 			LIMIT {:limit}`).

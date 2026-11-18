@@ -19,6 +19,11 @@ type Tables struct {
 	// IndexedFields are the text fields of Table in its FTS5 row. The row
 	// also has the tags.
 	IndexedFields []string
+	// ListFields are the JSON arrays of strings of Table in its FTS5 row.
+	ListFields []string
+	// Scores are the score fields of a review. The overall is their
+	// average.
+	Scores []string
 }
 
 var Restaurants = Tables{
@@ -32,7 +37,23 @@ var Restaurants = Tables{
 	FTS:           "restaurants_fts",
 	ReviewsFTS:    "reviews_fts",
 	IndexedFields: []string{"name", "description", "address"},
+	Scores:        []string{"space", "service", "food", "price", "cleanliness"},
+}
+
+// Recipes has no list items yet. A later step of decision 00047 adds them.
+var Recipes = Tables{
+	Table:         "recipes",
+	Parent:        "recipe",
+	Reviews:       "recipe_reviews",
+	Photos:        "recipe_review_photos",
+	Overall:       "recipe_overall",
+	Tags:          "recipe_tags",
+	FTS:           "recipes_fts",
+	ReviewsFTS:    "recipe_reviews_fts",
+	IndexedFields: []string{"name", "description"},
+	ListFields:    []string{"ingredients"},
+	Scores:        []string{"taste", "ease", "instructions", "value"},
 }
 
 // All has each kind. The search index adds its hooks for each one.
-var All = []Tables{Restaurants}
+var All = []Tables{Restaurants, Recipes}

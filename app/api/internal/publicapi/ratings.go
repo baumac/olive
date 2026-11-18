@@ -56,7 +56,7 @@ func ratingsOf[R any](s *Server, sub subject, parents []*core.Record, parentOf f
 	}
 	parent := column(sub.Reviews, sub.Parent)
 	columns := []string{parent + " AS [[" + sub.Parent + "]]", "COUNT(*) AS [[count]]", "MAX(" + sub.overallColumn() + ") AS [[overall]]"}
-	for _, name := range sub.scores {
+	for _, name := range sub.Scores {
 		columns = append(columns, fmt.Sprintf("ROUND(AVG([[%s]]), 1) AS [[%s]]", name, name))
 	}
 	var rows []R

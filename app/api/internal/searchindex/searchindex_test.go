@@ -504,3 +504,47 @@ func TestPut(t *testing.T) {
 		}
 	})
 }
+
+func TestRecipeRows(t *testing.T) {
+	e := newEnv(t)
+	dal := e.save(t, "recipes", map[string]any{
+		"name": "Dal", "description": "Red lentils", "tags": []string{"vegan"},
+		"ingredients": []string{"1 cup of lentils", "2 onions"}, "steps": []string{"Boil."},
+	})
+	rv := e.save(t, "recipe_reviews", map[string]any{
+		"recipe": dal.Id, "creator": e.user.Id, "title": "Warm", "feedback": "Good on rice",
+		"taste": 8, "ease": 8, "instructions": 8, "value": 8,
+	})
+	var recipe struct {
+		Name        string `db:"name"`
+		Tags        string `db:"tags"`
+		Ingredients string `db:"ingredients"`
+	}
+	e.mustRow(t, "recipes_fts", dal.Id, &recipe)
+	if recipe.Name != "Dal" || recipe.Tags != "vegan" || recipe.Ingredients != "1 cup of lentils 2 onions" {
+		t.Errorf("recipe row %+v", recipe)
+	}
+
+	var review struct {
+		Title      string `db:"title"`
+		RecipeName string `db:"recipe_name"`
+	}
+	e.mustRow(t, "recipe_reviews_fts", rv.Id, &review)
+	if review.Title != "Warm" || review.RecipeName != "Dal" {
+		t.Errorf("review row %+v", review)
+	}
+
+	e.update(t, dal, map[string]any{"name": "Tarka dal", "ingredients": []string{"lentils"}})
+	e.mustRow(t, "recipes_fts", dal.Id, &recipe)
+	e.mustRow(t, "recipe_reviews_fts", rv.Id, &review)
+	if recipe.Ingredients != "lentils" || review.RecipeName != "Tarka dal" {
+		t.Errorf("after the change: recipe %+v, review %+v", recipe, review)
+	}
+
+	if err := e.app.Delete(rv); err != nil {
+		t.Fatal(err)
+	}
+	if e.row(t, "recipe_reviews_fts", rv.Id, &review) {
+		t.Error("the row of the deleted review stays")
+	}
+}

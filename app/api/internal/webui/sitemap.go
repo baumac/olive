@@ -56,13 +56,13 @@ type sitemapFile struct {
 func sitemap(app core.App, baseURL string) ([]byte, error) {
 	file := sitemapFile{XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9", URLs: []sitemapURL{{Loc: baseURL + "/restaurants"}}}
 	var rows []struct {
-		Kind       string         `db:"kind"`
-		ID         string         `db:"id"`
-		Restaurant string         `db:"restaurant"`
-		Updated    types.DateTime `db:"updated"`
+		Kind    string         `db:"kind"`
+		ID      string         `db:"id"`
+		Parent  string         `db:"parent"`
+		Updated types.DateTime `db:"updated"`
 	}
 	err := app.DB().
-		NewQuery("SELECT 'restaurant' AS [[kind]], [[id]], '' AS [[restaurant]], [[updated]] FROM {{restaurants}} " +
+		NewQuery("SELECT 'restaurant' AS [[kind]], [[id]], '' AS [[parent]], [[updated]] FROM {{restaurants}} " +
 			"UNION ALL SELECT 'review', [[id]], [[restaurant]], [[updated]] FROM {{reviews}} " +
 			"UNION ALL SELECT 'list', [[id]], '', [[updated]] FROM {{lists}} " +
 			"WHERE EXISTS (SELECT 1 FROM {{list_items}} WHERE [[list_items.list]] = [[lists.id]]) " +
@@ -77,7 +77,7 @@ func sitemap(app core.App, baseURL string) ([]byte, error) {
 		path := "/restaurants/" + row.ID
 		switch row.Kind {
 		case "review":
-			path = "/restaurants/" + row.Restaurant + "/reviews/" + row.ID
+			path = "/restaurants/" + row.Parent + "/reviews/" + row.ID
 		case "list":
 			path = "/lists/" + row.ID
 		}

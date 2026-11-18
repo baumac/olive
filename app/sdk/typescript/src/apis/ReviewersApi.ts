@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. 
  *
- * The version of the OpenAPI document: 5.3.0
+ * The version of the OpenAPI document: 5.4.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -23,6 +23,11 @@ import {
     ProblemFromJSON,
     ProblemToJSON,
 } from '../models/Problem.js';
+import {
+    type RecipeReviewList,
+    RecipeReviewListFromJSON,
+    RecipeReviewListToJSON,
+} from '../models/RecipeReviewList.js';
 import {
     type ReviewList,
     ReviewListFromJSON,
@@ -49,6 +54,81 @@ export interface GetReviewerRequest {
      * The ID of the user.
      */
     reviewerId: string;
+}
+
+export interface ListReviewerRecipeReviewsRequest {
+    /**
+     * The ID of the user.
+     */
+    reviewerId: string;
+    /**
+     * The page size.
+     */
+    limit?: number;
+    /**
+     * The `next_cursor` value of the previous page.
+     * Clients must not parse or build cursor values.
+     * A cursor is valid only with the same filters and sort that made it.
+     * 
+     */
+    cursor?: string;
+    /**
+     * A comma-separated list of properties.
+     * A `-` prefix sorts a property in descending order.
+     * Each property can occur only one time. A repeated property causes `400 Bad Request`.
+     * The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+     * The `overall` sort uses the `overall` value of the review.
+     * The `relevance` sort puts the best matches of `search` first. It needs `search`.
+     * With `search`, the default sort is `relevance`.
+     * The API always adds `id` as the last sort key.
+     * 
+     */
+    sort?: string;
+    /**
+     * Full-text search in `title`, `feedback`, and `recipe_name`.
+     * A review matches when it has all words of the search. A word also matches longer words that start with it.
+     * The search ignores case and accents. `Cafe` matches `Café`.
+     * Matches in `title` count most for the `relevance` sort, then `recipe_name`, then `feedback`.
+     * A search without a letter or a digit causes `400 Bad Request`.
+     * 
+     */
+    search?: string;
+    /**
+     * The `recipe` of the review is equal to the value.
+     */
+    recipeEq?: string;
+    /**
+     * The `recipe` of the review is equal to any of the values.
+     */
+    recipeIn?: Array<string>;
+    /**
+     * Compares the `taste` score. Each key is an operator, for example `taste[gte]=`.
+     */
+    taste?: ScoreRange;
+    /**
+     * Compares the `ease` score. Each key is an operator, for example `ease[gte]=`.
+     */
+    ease?: ScoreRange;
+    /**
+     * Compares the `instructions` score. Each key is an operator, for example `instructions[gte]=`.
+     */
+    instructions?: ScoreRange;
+    /**
+     * Compares the `value` score. Each key is an operator, for example `value[gte]=`.
+     */
+    value?: ScoreRange;
+    /**
+     * Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
+     */
+    overall?: AverageRange;
+    /**
+     * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+     */
+    created?: TimestampRange;
+    /**
+     * Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+     */
+    updated?: TimestampRange;
 }
 
 export interface ListReviewerReviewsRequest {
@@ -162,6 +242,56 @@ export interface ReviewersApiInterface {
     getReviewer(requestParameters: GetReviewerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Reviewer>;
 
     /**
+     * Creates request options for listReviewerRecipeReviews without sending the request
+     * @param {string} reviewerId The ID of the user.
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses the &#x60;overall&#x60; value of the review. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;recipe_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;recipe_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {string} [recipeEq] The &#x60;recipe&#x60; of the review is equal to the value.
+     * @param {Array<string>} [recipeIn] The &#x60;recipe&#x60; of the review is equal to any of the values.
+     * @param {ScoreRange} [taste] Compares the &#x60;taste&#x60; score. Each key is an operator, for example &#x60;taste[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [ease] Compares the &#x60;ease&#x60; score. Each key is an operator, for example &#x60;ease[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [instructions] Compares the &#x60;instructions&#x60; score. Each key is an operator, for example &#x60;instructions[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [value] Compares the &#x60;value&#x60; score. Each key is an operator, for example &#x60;value[gte]&#x3D;&#x60;.
+     * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
+     * @throws {RequiredError}
+     * @memberof ReviewersApiInterface
+     */
+    listReviewerRecipeReviewsRequestOpts(requestParameters: ListReviewerRecipeReviewsRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * The same filters, sorts, and pages as `listAllRecipeReviews`, for the recipe reviews of one user.
+     * @summary List the recipe reviews of a user
+     * @param {string} reviewerId The ID of the user.
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses the &#x60;overall&#x60; value of the review. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;recipe_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;recipe_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {string} [recipeEq] The &#x60;recipe&#x60; of the review is equal to the value.
+     * @param {Array<string>} [recipeIn] The &#x60;recipe&#x60; of the review is equal to any of the values.
+     * @param {ScoreRange} [taste] Compares the &#x60;taste&#x60; score. Each key is an operator, for example &#x60;taste[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [ease] Compares the &#x60;ease&#x60; score. Each key is an operator, for example &#x60;ease[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [instructions] Compares the &#x60;instructions&#x60; score. Each key is an operator, for example &#x60;instructions[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [value] Compares the &#x60;value&#x60; score. Each key is an operator, for example &#x60;value[gte]&#x3D;&#x60;.
+     * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ReviewersApiInterface
+     */
+    listReviewerRecipeReviewsRaw(requestParameters: ListReviewerRecipeReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecipeReviewList>>;
+
+    /**
+     * The same filters, sorts, and pages as `listAllRecipeReviews`, for the recipe reviews of one user.
+     * List the recipe reviews of a user
+     */
+    listReviewerRecipeReviews(requestParameters: ListReviewerRecipeReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecipeReviewList>;
+
+    /**
      * Creates request options for listReviewerReviews without sending the request
      * @param {string} reviewerId The ID of the user.
      * @param {number} [limit] The page size.
@@ -272,6 +402,113 @@ export class ReviewersApi extends runtime.BaseAPI implements ReviewersApiInterfa
      */
     async getReviewer(requestParameters: GetReviewerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Reviewer> {
         const response = await this.getReviewerRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listReviewerRecipeReviews without sending the request
+     */
+    async listReviewerRecipeReviewsRequestOpts(requestParameters: ListReviewerRecipeReviewsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['reviewerId'] == null) {
+            throw new runtime.RequiredError(
+                'reviewerId',
+                'Required parameter "reviewerId" was null or undefined when calling listReviewerRecipeReviews().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        if (requestParameters['sort'] != null) {
+            queryParameters['sort'] = requestParameters['sort'];
+        }
+
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
+        }
+
+        if (requestParameters['recipeEq'] != null) {
+            queryParameters['recipe[eq]'] = requestParameters['recipeEq'];
+        }
+
+        if (requestParameters['recipeIn'] != null) {
+            queryParameters['recipe[in]'] = requestParameters['recipeIn'];
+        }
+
+        if (requestParameters['taste'] != null) {
+            queryParameters['taste'] = requestParameters['taste'];
+        }
+
+        if (requestParameters['ease'] != null) {
+            queryParameters['ease'] = requestParameters['ease'];
+        }
+
+        if (requestParameters['instructions'] != null) {
+            queryParameters['instructions'] = requestParameters['instructions'];
+        }
+
+        if (requestParameters['value'] != null) {
+            queryParameters['value'] = requestParameters['value'];
+        }
+
+        if (requestParameters['overall'] != null) {
+            queryParameters['overall'] = requestParameters['overall'];
+        }
+
+        if (requestParameters['created'] != null) {
+            queryParameters['created'] = requestParameters['created'];
+        }
+
+        if (requestParameters['updated'] != null) {
+            queryParameters['updated'] = requestParameters['updated'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/reviewers/{reviewerId}/recipe-reviews`;
+        urlPath = urlPath.replace('{reviewerId}', encodeURIComponent(String(requestParameters['reviewerId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * The same filters, sorts, and pages as `listAllRecipeReviews`, for the recipe reviews of one user.
+     * List the recipe reviews of a user
+     */
+    async listReviewerRecipeReviewsRaw(requestParameters: ListReviewerRecipeReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecipeReviewList>> {
+        const requestOptions = await this.listReviewerRecipeReviewsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RecipeReviewListFromJSON(jsonValue));
+    }
+
+    /**
+     * The same filters, sorts, and pages as `listAllRecipeReviews`, for the recipe reviews of one user.
+     * List the recipe reviews of a user
+     */
+    async listReviewerRecipeReviews(requestParameters: ListReviewerRecipeReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecipeReviewList> {
+        const response = await this.listReviewerRecipeReviewsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -256,3 +256,33 @@ func TestRegisteredJobWithoutPhotoCollection(t *testing.T) {
 		t.Error("the failed run removed the job")
 	}
 }
+
+func TestRunDeletesOldRecipePhotoFolders(t *testing.T) {
+	app, err := tests.NewTestApp(testapp.Dir(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+
+	photos, err := app.FindCollectionByNameOrId("recipe_review_photos")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fsys, err := app.NewFilesystem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fsys.Close()
+	if err := fsys.Upload(testJPEG(t), photos.Id+"/orphanold000001/full_a.jpg"); err != nil {
+		t.Fatal(err)
+	}
+	folder := filepath.Join(app.DataDir(), "storage", photos.Id, "orphanold000001")
+	age(t, folder, 2*time.Hour)
+
+	if n, err := photocleanup.Run(app, time.Now()); err != nil || n != 1 {
+		t.Fatalf("Run: %d folders, %v", n, err)
+	}
+	if _, err := os.Stat(folder); err == nil {
+		t.Error("the folder of the recipe photo without a record stays")
+	}
+}

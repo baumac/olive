@@ -16,47 +16,62 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// restaurantSchema is the RestaurantCreate schema. Its properties have no
-// null option. Each error then names the failed rule.
-var restaurantSchema = sync.OnceValues(func() (*openapi3.Schema, error) {
-	doc, err := embeddedSpec()
-	if err != nil {
-		return nil, err
-	}
-	ref := doc.Components.Schemas["RestaurantCreate"]
-	if ref == nil || ref.Value == nil {
-		return nil, errors.New("the spec has no RestaurantCreate schema")
-	}
-	return ref.Value, nil
-})
+// createSchema gets a create schema of the spec. Its properties have no null
+// option. Each error then names the failed rule.
+func createSchema(name string) func() (*openapi3.Schema, error) {
+	return sync.OnceValues(func() (*openapi3.Schema, error) {
+		doc, err := embeddedSpec()
+		if err != nil {
+			return nil, err
+		}
+		ref := doc.Components.Schemas[name]
+		if ref == nil || ref.Value == nil {
+			return nil, errors.New("the spec has no " + name + " schema")
+		}
+		return ref.Value, nil
+	})
+}
 
-// guardRestaurantFields gives a save through the PocketBase API the checks
-// of the Public API body. Only superusers can use this API for restaurants.
-// A value from the dashboard then cannot make the responses fail.
-func guardRestaurantFields(app core.App) {
-	app.OnRecordCreateRequest("restaurants").BindFunc(func(e *core.RecordRequestEvent) error {
-		if err := checkRestaurantFields(e.Record, nil); err != nil {
+// fieldGuard gives a save through the PocketBase API the checks of the
+// Public API body. Only superusers can use this API for the collection. A
+// value from the dashboard then cannot make the responses fail.
+type fieldGuard struct {
+	collection string
+	noun       string
+	schema     func() (*openapi3.Schema, error)
+	// properties gets the properties that a response would have.
+	properties func(r *core.Record, schema *openapi3.Schema) (map[string]json.RawMessage, error)
+	// required adds the errors of a create without a required property.
+	// The schema check sees only the properties that the record has.
+	required func(props map[string]json.RawMessage, errs validation.Errors)
+	// set stores a property that x-nfc or x-trim changed.
+	set func(r *core.Record, name string, value json.RawMessage) error
+}
+
+func (g fieldGuard) register(app core.App) {
+	app.OnRecordCreateRequest(g.collection).BindFunc(func(e *core.RecordRequestEvent) error {
+		if err := g.check(e.Record, nil); err != nil {
 			return err
 		}
 		return e.Next()
 	})
-	app.OnRecordUpdateRequest("restaurants").BindFunc(func(e *core.RecordRequestEvent) error {
-		if err := checkRestaurantFields(e.Record, e.Record.Original()); err != nil {
+	app.OnRecordUpdateRequest(g.collection).BindFunc(func(e *core.RecordRequestEvent) error {
+		if err := g.check(e.Record, e.Record.Original()); err != nil {
 			return err
 		}
 		return e.Next()
 	})
 }
 
-// checkRestaurantFields changes the record like the Public API changes a
-// body. It applies x-nfc before the checks and x-trim after them. With an
-// original record, it checks only the changed properties.
-func checkRestaurantFields(r, original *core.Record) error {
-	schema, err := restaurantSchema()
+// check changes the record like the Public API changes a body. It applies
+// x-nfc before the checks and x-trim after them. With an original record, it
+// checks only the changed properties.
+func (g fieldGuard) check(r, original *core.Record) error {
+	schema, err := g.schema()
 	if err != nil {
 		return err
 	}
-	props, err := restaurantProperties(r, schema)
+	props, err := g.properties(r, schema)
 	if err != nil {
 		return err
 	}
@@ -66,20 +81,20 @@ func checkRestaurantFields(r, original *core.Record) error {
 	}
 	var old map[string]json.RawMessage
 	if original != nil {
-		if old, err = restaurantProperties(original, schema); err != nil {
+		if old, err = g.properties(original, schema); err != nil {
 			return err
 		}
 	}
 
 	changeProperties(schema, props, "x-nfc", norm.NFC.String)
-	errs := restaurantFieldErrors(schema, props, func(name string) bool {
+	errs := schemaFieldErrors(schema, props, func(name string) bool {
 		return original == nil || !bytes.Equal(stored[name], old[name])
 	})
-	if _, ok := props["location"]; !ok && original == nil {
-		errs["address"] = validation.NewError("validation_public_api", "is required")
+	if original == nil && g.required != nil {
+		g.required(props, errs)
 	}
 	if len(errs) > 0 {
-		return apis.NewBadRequestError("The restaurant has values that the Public API refuses.", errs)
+		return apis.NewBadRequestError("The "+g.noun+" has values that the Public API refuses.", errs)
 	}
 	changeProperties(schema, props, "x-trim", trimSpaces)
 
@@ -87,6 +102,35 @@ func checkRestaurantFields(r, original *core.Record) error {
 		if bytes.Equal(value, stored[name]) {
 			continue
 		}
+		if err := g.set(r, name, value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// setText stores a property that is a JSON string.
+func setText(r *core.Record, name string, value json.RawMessage) error {
+	var text string
+	if err := json.Unmarshal(value, &text); err != nil {
+		return err
+	}
+	r.Set(name, text)
+	return nil
+}
+
+var restaurantGuard = fieldGuard{
+	collection: "restaurants",
+	noun:       "restaurant",
+	schema:     createSchema("RestaurantCreate"),
+	properties: restaurantProperties,
+	// The record has no location field. Its address field is required.
+	required: func(props map[string]json.RawMessage, errs validation.Errors) {
+		if _, ok := props["location"]; !ok {
+			errs["address"] = validation.NewError("validation_public_api", "is required")
+		}
+	},
+	set: func(r *core.Record, name string, value json.RawMessage) error {
 		switch name {
 		case "tags":
 			r.Set("tags", types.JSONRaw(value))
@@ -97,14 +141,10 @@ func checkRestaurantFields(r, original *core.Record) error {
 			}
 			setLocation(r, l)
 		default:
-			var text string
-			if err := json.Unmarshal(value, &text); err != nil {
-				return err
-			}
-			r.Set(name, text)
+			return setText(r, name, value)
 		}
-	}
-	return nil
+		return nil
+	},
 }
 
 // restaurantProperties gets the properties that a response would have. The
@@ -152,9 +192,9 @@ func partialLocation(r *core.Record) *reviewsapi.Location {
 	return &l
 }
 
-// restaurantFieldErrors keys each error with the record field. An error of
-// the location names its address, latitude, longitude, or place_id field.
-func restaurantFieldErrors(schema *openapi3.Schema, props map[string]json.RawMessage, check func(string) bool) validation.Errors {
+// schemaFieldErrors keys each error with the record field. An error of the
+// location names its address, latitude, longitude, or place_id field.
+func schemaFieldErrors(schema *openapi3.Schema, props map[string]json.RawMessage, check func(string) bool) validation.Errors {
 	opts := append([]openapi3.SchemaValidationOption{openapi3.MultiErrors()}, validationOptions.SchemaValidationOptions...)
 	errs := validation.Errors{}
 	for name, raw := range props {

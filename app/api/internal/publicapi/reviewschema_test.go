@@ -58,3 +58,16 @@ func TestReviewSchemaGuard(t *testing.T) {
 		t.Errorf("a new field: %v", err)
 	}
 }
+
+func TestRecipeReviewSchemaGuard(t *testing.T) {
+	e := newEnv(t, testOptions)
+	reviews, err := e.app.FindCollectionByNameOrId("recipe_reviews")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reviews.Fields.RemoveByName("value")
+	err = e.app.Save(reviews)
+	if err == nil || !strings.Contains(err.Error(), "recipe_reviews table uses the value field") {
+		t.Errorf("save error is %v, want the overall column message", err)
+	}
+}

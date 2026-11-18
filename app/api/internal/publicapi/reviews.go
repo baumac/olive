@@ -48,7 +48,7 @@ func makeReviewSorts(sub subject) map[string]sortField {
 		"created":   columnSort(sub.Reviews, "created"),
 		"updated":   columnSort(sub.Reviews, "updated"),
 	}
-	for _, name := range sub.scores {
+	for _, name := range sub.Scores {
 		sorts[name] = columnSort(sub.Reviews, name)
 	}
 	return sorts
@@ -205,7 +205,7 @@ func (s *Server) reviewsOf(
 	w := newWhere()
 	search.filter(w)
 	w.idFilters(sub.Reviews, sub.Parent, q.parentEq, q.parentIn)
-	for _, name := range sub.scores {
+	for _, name := range sub.Scores {
 		w.compare(column(sub.Reviews, name), scoreComparisons(q.scores[name]))
 	}
 	w.compare(sub.overallFilter(sort), averageComparisons(q.overall))

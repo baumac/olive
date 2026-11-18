@@ -93,7 +93,7 @@ func inTransaction(e *core.RecordEvent, before, index func(tx core.App) error) e
 // indexedFields are the record fields that the index row uses.
 func indexedFields(k subjects.Tables, isParent bool) []string {
 	if isParent {
-		return append(slices.Clone(k.IndexedFields), "tags")
+		return slices.Concat(k.IndexedFields, k.ListFields, []string{"tags"})
 	}
 	return []string{"title", "feedback", k.Parent}
 }
@@ -138,9 +138,12 @@ func Put(app core.App, r *core.Record) error {
 	}
 	row := dbx.Params{"id": r.Id}
 	if isParent {
-		row["tags"] = tagText(r)
+		row["tags"] = listText(r, "tags")
 		for _, f := range k.IndexedFields {
 			row[f] = r.GetString(f)
+		}
+		for _, f := range k.ListFields {
+			row[f] = listText(r, f)
 		}
 	} else {
 		parent, err := app.FindRecordById(k.Table, r.GetString(k.Parent))
@@ -171,12 +174,12 @@ func remove(app core.App, table, id string) error {
 	return err
 }
 
-// tagText joins the tags with spaces. The tokenizer splits a tag such as
-// date-night into two words.
-func tagText(r *core.Record) string {
-	var tags []string
-	if err := r.UnmarshalJSONField("tags", &tags); err != nil {
+// listText joins the strings of a JSON array field with spaces. The
+// tokenizer splits a tag such as date-night into two words.
+func listText(r *core.Record, field string) string {
+	var items []string
+	if err := r.UnmarshalJSONField(field, &items); err != nil {
 		return ""
 	}
-	return strings.Join(tags, " ")
+	return strings.Join(items, " ")
 }

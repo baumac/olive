@@ -16,9 +16,6 @@ type subject struct {
 	noun          string
 	notFound      string
 	listLimitCode reviewsapi.ProblemCode
-	// scores are the score fields of a review. The overall is their
-	// average.
-	scores []string
 	// The search scores depend only on the row. bm25 also depends on all
 	// other rows. A write then moves the bm25 ranks under an open cursor.
 	search       []scoreColumn
@@ -36,7 +33,6 @@ var restaurantSubject = newSubject(subject{
 	noun:          "restaurant",
 	notFound:      restaurantNotFound,
 	listLimitCode: reviewsapi.ProblemCodeListRestaurantLimit,
-	scores:        []string{"space", "service", "food", "price", "cleanliness"},
 	search:        []scoreColumn{{"name", 10}, {"tags", 4}, {"address", 2}, {"description", 1}},
 	reviewSearch:  []scoreColumn{{"title", 10}, {"restaurant_name", 2}, {"feedback", 1}},
 })

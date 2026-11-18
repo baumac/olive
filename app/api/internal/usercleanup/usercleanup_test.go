@@ -40,10 +40,17 @@ func TestRun(t *testing.T) {
 	reviewer := user("reviewer", false)
 	owner := user("owner", false)
 	lister := user("lister", false)
+	cook := user("cook", false)
+	taster := user("taster", false)
 	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": owner.Id})
 	save(t, app, "reviews", map[string]any{
 		"restaurant": restaurant.Id, "creator": reviewer.Id, "title": "Good",
 		"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7,
+	})
+	recipe := save(t, app, "recipes", map[string]any{"name": "Dal", "creator": cook.Id, "ingredients": []string{"lentils"}, "steps": []string{"Boil."}})
+	save(t, app, "recipe_reviews", map[string]any{
+		"recipe": recipe.Id, "creator": taster.Id, "title": "Good",
+		"taste": 7, "ease": 7, "instructions": 7, "value": 7,
 	})
 	list := save(t, app, "lists", map[string]any{"creator": lister.Id, "name": "Favorites", "kind": "favorites"})
 	save(t, app, "list_items", map[string]any{"list": list.Id, "restaurant": restaurant.Id})
@@ -65,7 +72,7 @@ func TestRun(t *testing.T) {
 	if exists(waiting) {
 		t.Error("the user without approval and without data stays")
 	}
-	for _, r := range []*core.Record{approved, reviewer, owner, lister} {
+	for _, r := range []*core.Record{approved, reviewer, owner, lister, cook, taster} {
 		if !exists(r) {
 			t.Errorf("%s was deleted", r.GetString("name"))
 		}

@@ -22,7 +22,7 @@ func guardReviewOverall(app core.App, sub subject) {
 		if e.Collection.Fields.GetByName("overall") != nil {
 			return reviewSchemaError("The " + sub.Reviews + " table already has a generated overall column. Use a different field name.")
 		}
-		for _, name := range sub.scores {
+		for _, name := range sub.Scores {
 			if e.Collection.Fields.GetByName(name) == nil {
 				return reviewSchemaError("The generated overall column of the " + sub.Reviews + " table uses the " + name +
 					" field. A migration must drop the column first. See decision 00031.")

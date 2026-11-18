@@ -103,10 +103,12 @@ Recipes get their own collections. They do not share the `restaurants`, `reviews
 
 - `ingredients` and `steps` are JSON fields with an array of strings.
 - `creator` of `recipes` has no cascade delete. It becomes empty when the user is deleted, like restaurants.
-- `creator` and `recipe` of `recipe_reviews` cascade delete, like `reviews`.
+- `creator` of `recipe_reviews` cascades delete, like `reviews`. `recipe` has no cascade delete, like `restaurant` of `reviews`.
+  The API deletes the review of the creator with the recipe.
 - `list` and `recipe` of `list_recipes` cascade delete, like `list_items`.
   `list_recipes` has the three indexes of `list_items` with `recipe` in the place of `restaurant`.
-- `source_key` is the normalized `source` URL. It has a unique index for the rows with a value. The API makes it.
+- `source_key` is the normalized `source` URL. It has a unique index for the rows with a value.
+  A record hook sets it on each save. A save in the dashboard then also gets the duplicate check.
   The normalization makes the scheme and the host lowercase and removes the fragment and a final `/`.
 - One review per user and recipe. A second review gets `409` with `review_exists`.
 
@@ -144,7 +146,8 @@ The restaurant queries of the lists would also need a new condition.
 
 ## The API
 
-The spec gets the `recipes` tag and version 5.4.0. All changes add operations or properties. No change breaks a client.
+The spec gets the `recipes` tag. Step 2 is version 5.4.0. Step 3 adds the list operations and `favorite` as version 5.5.0.
+All changes add operations or properties. No change breaks a client.
 
 | Path                                                               | Operations                                                             |
 | ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
@@ -161,7 +164,7 @@ The spec gets the `recipes` tag and version 5.4.0. All changes add operations or
 | `/lists/{listId}/recipes`                                          | `listListRecipes`                                                      |
 | `/lists/{listRef}/recipes/{recipeId}`                              | `addListRecipe`, `removeListRecipe`                                    |
 
-New schemas: `Recipe`, `RecipeCreate`, `RecipePatch`, `RecipeList`, `RecipeRating`, `RecipeReview`, `RecipeReviewCreate`, `RecipeReviewPatch`, `RecipeReviewList`, `RecipePhoto`, `RecipePhotoList`, `TasteScore`, `EaseScore`, `InstructionsScore`, `ValueScore`, `Ingredient`, `Ingredients`, `Step`, `Steps`, `TotalTime`, and `Servings`.
+New schemas: `Recipe`, `RecipeCreate`, `RecipePatch`, `RecipeList`, `RecipeRating`, `RecipeReview`, `RecipeReviewCreate`, `RecipeReviewPatch`, `RecipeReviewList`, `RecipePhoto`, `RecipePhotoList`, `TasteScore`, `EaseScore`, `InstructionsScore`, `ValueScore`, `Ingredient`, `Ingredients`, `Step`, `Steps`, `TotalTime`, `TotalTimeRange`, and `Servings`.
 `Photo`, `PhotoPatch`, `Score`, `Tags`, `Name`, `Title`, `LongText`, and `Website` stay shared.
 
 The recipe properties:
@@ -178,7 +181,7 @@ The recipe properties:
 | `servings`    | `Servings`: an integer from 1 to 100                                                           | optional |
 
 `RecipePatch` cannot clear `ingredients` and `steps` with `null`. A patch replaces the complete array.
-`Recipe` also has `creator`, `review_count`, `rating`, `cover`, `favorite`, `created`, and `updated`, like `Restaurant`.
+`Recipe` also has `creator`, `review_count`, `rating`, `cover`, `created`, and `updated`, like `Restaurant`. Step 3 adds `favorite`.
 
 Rules that the new operations follow:
 
@@ -186,11 +189,14 @@ Rules that the new operations follow:
 - Each operation with a token needs an approved user and has a `403` response. See decision 00034.
 - Only the creator changes or deletes a recipe. Reviews of other users block the delete with `other_reviews`.
   Reviewers can change a recipe without a creator. See decision 00016.
+- Reviews of other users also block a change of `name`, `ingredients`, and `steps` with `other_reviews`.
+  The reviews scored these values. The problem names the first changed property in `property`.
 - `name`, `title`, the ingredients, the steps, and the alt texts have `x-trim: true`. `Tag` keeps `x-nfc: true`. See decisions 00040 and 00041.
 - The `Problem` code enum gets `source_taken` and `list_recipe_limit`.
   The `source_taken` problem has the ID of the other recipe in `recipe`.
   `list_recipe_limit` is a recipe above the 500 recipes of a list.
-- `listRecipes` has the sorts, the search, and the filters of `listRestaurants` without the location and the price level. It has `list[eq]` like decision 00043. It adds a `total_time` filter.
+- `listRecipes` has the sorts, the search, and the filters of `listRestaurants` without the location and the price level.
+  It adds a `total_time` sort and filter. Step 3 adds `list[eq]` like decision 00043.
 - The review list operations have the review sorts and filters with the four recipe scores.
 
 `Reviewer` gets `recipe_count`, `recipe_review_count`, and `recipe_average_overall`.
@@ -259,7 +265,9 @@ The restaurant details stay restaurant code: the location, `place_id`, the place
   `/recipes/new` does not match a recipe. The code has the same rule for `/restaurants/new`.
 - `webui/structureddata.go` writes a schema.org `Recipe` with `recipeIngredient`, `recipeInstructions` as `HowToStep` items, `aggregateRating`, `recipeYield`, `totalTime` as an ISO 8601 duration, and `isBasedOn` for the source.
   A recipe review page writes a `Review` with an `itemReviewed` of type `Recipe`. See decision 00021.
-- `webui/sitemap.go` adds the recipes and the recipe reviews.
+- `webui/sitemap.go` adds `/recipes`, the recipes, and the recipe reviews.
+- Step 2 has the code and the tests of the recipe page meta and JSON-LD in `recipeKind`. Step 4 adds `recipeKind` to `reviewedKinds` and the recipe rows to the sitemap.
+  Before the recipe pages of the UI, these URLs show the not-found page. The sitemap and the link previews then must not name them.
 
 ## The UI
 
@@ -299,6 +307,7 @@ Each step is one pull request. Each step ends with `make lint test-app` and the 
 3. **Add the recipes to the lists API.** Add `list_recipes`, the list operations of recipes, `favorite`, `recipe_count`, `has_recipe`, and `list[eq]` of `listRecipes`, with their Go tests.
    Check with `make check-generate`, `make test-app`, and `make test-coverage`.
 4. **Add the recipe UI.** Add the pages, the components, the list changes, the design system changes, and the end-to-end tests.
+   Turn on the recipe page meta and the recipe rows of the sitemap.
    Check with `make lint-ui lint-eslint test-ui` and `make test-e2e PROJECT=chromium E2E_FILE=e2e/recipes.spec.ts`. Also run `E2E_FILE=e2e/lists.spec.ts`. CI runs all browsers.
 5. **Close the decision.** Set the status of this decision to `implemented`. Change the backlog item to "Support reviewing cheeses and wines".
 

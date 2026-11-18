@@ -23,7 +23,7 @@ func TestRestaurantGuardRefusesBrokenStoredValues(t *testing.T) {
 	r.Set("tags", types.JSONRaw("[1,"))
 
 	var apiErr *router.ApiError
-	if err := checkRestaurantFields(r, nil); !errors.As(err, &apiErr) {
+	if err := restaurantGuard.check(r, nil); !errors.As(err, &apiErr) {
 		t.Fatalf("error %v, want an API error", err)
 	}
 	for _, field := range []string{"address", "tags"} {

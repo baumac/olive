@@ -29,22 +29,27 @@ func (s *Server) GetReviewer(ctx context.Context, req reviewsapi.GetReviewerRequ
 	creator := toCreator(user)
 	return reviewsapi.GetReviewer200JSONResponse{
 		Id: creator.Id, Name: creator.Name,
-		ReviewCount: stats.Reviews, AverageOverall: stats.average(), RestaurantCount: stats.Restaurants, ListCount: stats.Lists,
+		ReviewCount: stats.Reviews, AverageOverall: average(stats.Overall), RestaurantCount: stats.Restaurants,
+		RecipeReviewCount: stats.RecipeReviews, RecipeAverageOverall: average(stats.RecipeOverall), RecipeCount: stats.Recipes,
+		ListCount: stats.Lists,
 	}, nil
 }
 
 type reviewerStats struct {
-	Reviews     int             `db:"reviews"`
-	Overall     sql.NullFloat64 `db:"overall"`
-	Restaurants int             `db:"restaurants"`
-	Lists       int             `db:"lists"`
+	Reviews       int             `db:"reviews"`
+	Overall       sql.NullFloat64 `db:"overall"`
+	Restaurants   int             `db:"restaurants"`
+	RecipeReviews int             `db:"recipe_reviews"`
+	RecipeOverall sql.NullFloat64 `db:"recipe_overall"`
+	Recipes       int             `db:"recipes"`
+	Lists         int             `db:"lists"`
 }
 
-func (r reviewerStats) average() nullable.Nullable[reviewsapi.AverageScore] {
-	if !r.Overall.Valid {
+func average(v sql.NullFloat64) nullable.Nullable[reviewsapi.AverageScore] {
+	if !v.Valid {
 		return nullable.NewNullNullable[reviewsapi.AverageScore]()
 	}
-	return nullable.NewNullableWithValue(r.Overall.Float64)
+	return nullable.NewNullableWithValue(v.Float64)
 }
 
 func (s *Server) findReviewerStats(userID string) (reviewerStats, error) {
@@ -53,13 +58,16 @@ func (s *Server) findReviewerStats(userID string) (reviewerStats, error) {
 	return stats, err
 }
 
-// reviewerStatsQuery is one statement. The count and the average come from
-// the same reviews.
+// reviewerStatsQuery is one statement. Each count and its average then come
+// from the same reviews.
 func (s *Server) reviewerStatsQuery(userID string) *dbx.Query {
 	return s.app.DB().NewQuery(`
 		SELECT COUNT(*) AS [[reviews]],
 			ROUND(AVG([[overall]]), 1) AS [[overall]],
 			(SELECT COUNT(*) FROM {{restaurants}} WHERE [[creator]] = {:user}) AS [[restaurants]],
+			(SELECT COUNT(*) FROM {{recipe_reviews}} WHERE [[creator]] = {:user}) AS [[recipe_reviews]],
+			(SELECT ROUND(AVG([[overall]]), 1) FROM {{recipe_reviews}} WHERE [[creator]] = {:user}) AS [[recipe_overall]],
+			(SELECT COUNT(*) FROM {{recipes}} WHERE [[creator]] = {:user}) AS [[recipes]],
 			(SELECT COUNT(*) FROM {{lists}} WHERE [[creator]] = {:user}) AS [[lists]]
 		FROM {{reviews}} WHERE [[creator]] = {:user}`).Bind(dbx.Params{"user": userID})
 }

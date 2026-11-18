@@ -1,6 +1,7 @@
 .openapi-generator-ignore
 apis/ListsApi.ts
 apis/PlacesApi.ts
+apis/RecipesApi.ts
 apis/RestaurantsApi.ts
 apis/ReviewersApi.ts
 apis/UsersApi.ts
@@ -24,6 +25,17 @@ models/Place.ts
 models/PlaceList.ts
 models/PriceLevelRange.ts
 models/Problem.ts
+models/Recipe.ts
+models/RecipeCreate.ts
+models/RecipeList.ts
+models/RecipePatch.ts
+models/RecipePhoto.ts
+models/RecipePhotoList.ts
+models/RecipeRating.ts
+models/RecipeReview.ts
+models/RecipeReviewCreate.ts
+models/RecipeReviewList.ts
+models/RecipeReviewPatch.ts
 models/Restaurant.ts
 models/RestaurantCreate.ts
 models/RestaurantList.ts
@@ -42,6 +54,7 @@ models/SavedListPage.ts
 models/SavedListPatch.ts
 models/ScoreRange.ts
 models/TimestampRange.ts
+models/TotalTimeRange.ts
 models/User.ts
 models/UserCreate.ts
 models/UserDelete.ts

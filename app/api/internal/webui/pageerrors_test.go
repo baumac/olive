@@ -52,7 +52,7 @@ func TestReviewPhotoWithoutAlt(t *testing.T) {
 		"restaurant": restaurant.Id, "creator": user.Id, "title": "Good",
 		"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7,
 	})
-	photo := savePhoto(t, app, review.Id)
+	photo := savePhoto(t, app, "review_photos", review.Id)
 	photo.Set("alt", "")
 	if err := app.SaveNoValidate(photo); err != nil {
 		t.Fatal(err)

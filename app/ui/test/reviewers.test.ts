@@ -111,6 +111,9 @@ describe('ReviewerPage', () => {
       reviewCount: 1,
       averageOverall: 7.6,
       restaurantCount: 0,
+      recipeReviewCount: 0,
+      recipeAverageOverall: null,
+      recipeCount: 0,
       listCount: 1,
     })
     const list = vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [review], nextCursor: null })
@@ -137,6 +140,9 @@ describe('ReviewerPage', () => {
       reviewCount: 0,
       averageOverall: null,
       restaurantCount: 0,
+      recipeReviewCount: 0,
+      recipeAverageOverall: null,
+      recipeCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })
@@ -153,6 +159,9 @@ describe('ReviewerPage', () => {
       reviewCount: 0,
       averageOverall: null,
       restaurantCount: 2,
+      recipeReviewCount: 0,
+      recipeAverageOverall: null,
+      recipeCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })
@@ -173,6 +182,9 @@ describe('ReviewerPage', () => {
       reviewCount: 0,
       averageOverall: null,
       restaurantCount: 1,
+      recipeReviewCount: 0,
+      recipeAverageOverall: null,
+      recipeCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })
@@ -188,6 +200,9 @@ describe('ReviewerPage', () => {
       reviewCount: 0,
       averageOverall: null,
       restaurantCount: 1,
+      recipeReviewCount: 0,
+      recipeAverageOverall: null,
+      recipeCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })

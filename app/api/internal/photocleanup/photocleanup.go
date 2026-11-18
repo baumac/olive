@@ -1,5 +1,5 @@
-// Package photocleanup deletes the photo folders of review_photos that have
-// no record. Decision 00009 has the details.
+// Package photocleanup deletes the photo folders of the review photo
+// collections that have no record. Decision 00009 has the details.
 package photocleanup
 
 import (
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/baumac/reviews-app/app/api/internal/subjects"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/list"
@@ -41,7 +42,18 @@ func Register(app core.App) {
 // least minAge old at now. It returns the number of deleted folders. A
 // failed folder stays. Run then continues with the others.
 func Run(app core.App, now time.Time) (int, error) {
-	photos, err := app.FindCachedCollectionByNameOrId("review_photos")
+	deleted := 0
+	var errs []error
+	for _, k := range subjects.All {
+		n, err := runCollection(app, k.Photos, now)
+		deleted += n
+		errs = append(errs, err)
+	}
+	return deleted, errors.Join(errs...)
+}
+
+func runCollection(app core.App, collection string, now time.Time) (int, error) {
+	photos, err := app.FindCachedCollectionByNameOrId(collection)
 	if err != nil {
 		return 0, err
 	}

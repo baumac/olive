@@ -124,6 +124,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and review operations
+    - the `recipes` tag has the recipe and recipe review operations. Recipes have ingredients, steps, and four scores. See decision 00047.
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
     - the operations of `/users/me` change the name and the password and delete the user. See decision 00037.
     - `getCurrentUser` returns the user of the token without a new token. The UI uses it at start. See decision 00042.
@@ -150,12 +151,12 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.
   - **`app/api/main.go`** - the PocketBase app
-  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, and `list_items` collections
-    - SQLite triggers keep the `restaurant_overall` and `restaurant_tags` tables equal to the records. See decision 00012.
+  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, and `recipe_review_photos` collections
+    - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decision 00012.
     - `restaurant_overall` has the plain average for the responses and a Bayesian average for the `overall` sort. See decision 00029.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.
-    - The `overall` column of `reviews` is a generated column with indexes. It is not a field of the collection. See decision 00031.
-    - Drop it and its indexes before a migration drops a score column of `reviews`. SQLite refuses the drop.
+    - The `overall` column of `reviews` and `recipe_reviews` is a generated column with indexes. It is not a field of the collection. See decision 00031.
+    - Drop it and its indexes before a migration drops a score column of `reviews` or `recipe_reviews`. SQLite refuses the drop.
     - A hook of `app/api/internal/publicapi` rejects this change from the dashboard with a message.
     - They also make the indexes, the FTS5 search tables, and the rate limit rules
   - **`app/api/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
@@ -164,7 +165,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - Its timestamps are RFC 3339. The database has the PocketBase format with a space. See decision 00023.
     - It gets the places of the place search from a Photon geocoder. See decision 00017.
     - A record hook gives each new user a favorites list. See decision 00033.
-    - A record hook gives a restaurant save in the dashboard the checks of the spec. See decision 00016.
+    - A record hook gives a restaurant or recipe save in the dashboard the checks of the spec. See decision 00016.
+    - A record hook sets the `source_key` of each recipe save. Its unique index stops two recipes with one source. See decision 00047.
     - `mail.go` sends the emails of the sign up, the password reset, and the approval. See decision 00037.
   - **`app/api/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
   - **`app/api/internal/subjects`** - the table names of each kind of thing that users review. The Public API and the search index use them. See decision 00047.
