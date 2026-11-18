@@ -204,36 +204,48 @@ The `info.description` of the spec says "restaurants and recipes".
 ## The refactor of the review code
 
 Most review code of `app/api/internal/publicapi` has the restaurant in its names and its SQL.
-A first change moves it onto a small descriptor of a kind:
+The first step moves it onto `subject` in `subject.go`.
 
-```go
-// subject is a kind of thing that users review.
-type subject struct {
-	collection   string   // restaurants
-	reviews      string   // reviews
-	photos       string   // review_photos
-	listItems    string   // list_items
-	parentField  string   // restaurant
-	scores       []string // space, service, food, price, cleanliness
-	overallTable string   // restaurant_overall
-	tagsTable    string   // restaurant_tags
-	searchTable  string   // restaurants_fts
-	pathPrefix   string   // /v1/restaurants
-}
-```
+`app/api/internal/subjects` has the table names of each kind in `subjects.Tables`. `subjects.All` lists the kinds.
+`subject` has these tables and the values that only the Public API uses. `restaurantSubject` has:
 
-These parts then take a `subject`:
+| Field                        | Value of `restaurantSubject`                         |
+| ---------------------------- | ---------------------------------------------------- |
+| `Table`, `Parent`            | `restaurants`, `restaurant`                          |
+| `Reviews`, `Photos`          | `reviews`, `review_photos`                           |
+| `ListItems`                  | `list_items`                                         |
+| `Overall`, `Tags`            | `restaurant_overall`, `restaurant_tags`              |
+| `FTS`, `ReviewsFTS`          | `restaurants_fts`, `reviews_fts`                     |
+| `IndexedFields`              | `name`, `description`, `address`                     |
+| `noun`, `notFound`           | The words of the problem details                     |
+| `listLimitCode`              | `list_restaurant_limit`                              |
+| `scores`                     | `space`, `service`, `food`, `price`, `cleanliness`   |
+| `search`, `reviewSearch`     | The column weights of the search                     |
 
-- `reviewPage`, `reviewInput`, `findReview`, `scoreComparisons`, and the names of `restaurantNames` in `reviews.go`.
-- `ratings`, `overallSort`, and `joinOverall` in `ratings.go`.
-- The photo upload, the photo files, `PhotoFilePath`, `reviewPhotos`, the gallery, and the covers in `photos.go` and `gallery.go`.
-- `searchPage` in `search.go` and the hooks of `app/api/internal/searchindex`.
+`newSubject` makes the review sorts, the gallery keys and columns, and the list item keys one time for each subject.
+
+These parts take a `subject`:
+
+- The review list, create, update, and delete code in `reviews.go`: `reviewsOf`, `createReview`, `updateReview`, `deleteReview`, `findReview`, and `parentNames`.
+- `ratingsOf`, `overallSort`, and `joinOverall` in `ratings.go`. `ratingsOf` is generic over the row type of each subject.
+- `addPhoto`, `updatePhoto`, `deletePhoto`, `photoFile`, `reviewPhotos`, and the photo paths in `photos.go`.
+- `galleryPage`, `galleryRows`, and `coverRows` in `gallery.go`.
+- `searchPage`, `reviewSearchPage`, and the tag filters.
 - `guardReviewOverall` in `reviewschema.go`.
-- `restaurantChangeForbidden` and `countReviewsOfOtherUsers` in `restaurants.go`.
-- `itemCounts`, `listsWith`, `favoriteIDs`, `inList`, `findItem`, and the add and remove code in `lists.go`.
+- `changeForbidden` and `countReviewsOfOtherUsers` in `restaurants.go`.
+- `itemCounts`, `listsWith`, `favoriteIDs`, `listItemPage`, `inList`, `addListItem`, and `removeListItem` in `lists.go`.
 
-The strict server methods stay thin. Each one changes its request object, calls the shared code with its subject, and changes the result to its response object.
-The restaurant behavior does not change. The Go tests of today prove this before the recipe code starts.
+The shared code returns a `problem` for a 4xx result.
+Each strict server method changes its request object, calls the shared code with its subject, and changes the `problem` or the records to its own response type.
+A method checks each status of the problem. A status without a response of the operation is an error and gives `500`.
+The request types, the response types, `toReview`, and the score fields of the bodies stay restaurant code.
+
+`app/api/internal/searchindex` adds its hooks for each kind of `subjects.All`.
+A new kind then needs only a new entry in `subjects.All` and its FTS5 tables.
+
+The restaurant behavior does not change. The SQL stays the same except for one column alias.
+The gallery and cover queries name the parent column `parent`, not `restaurant`. The query plans stay the same.
+Only `queryplan_internal_test.go` changes. It uses `restaurantSubject` for the helpers.
 
 The restaurant details stay restaurant code: the location, `place_id`, the places, the maps, and the price level.
 

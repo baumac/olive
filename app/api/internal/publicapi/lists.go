@@ -5,9 +5,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
 	"slices"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -91,8 +93,8 @@ func nameTaken() reviewsapi.ConflictApplicationProblemPlusJSONResponse {
 	return propertyConflict(reviewsapi.ProblemCodeListNameTaken, "name", "Another list of the user has this name.")
 }
 
-// itemCounts gives no entry for a list without restaurants.
-func (s *Server) itemCounts(lists ...*core.Record) (map[string]int, error) {
+// itemCounts gives no entry for a list without items.
+func (s *Server) itemCounts(sub subject, lists ...*core.Record) (map[string]int, error) {
 	out := map[string]int{}
 	if len(lists) == 0 {
 		return out, nil
@@ -105,7 +107,7 @@ func (s *Server) itemCounts(lists ...*core.Record) (map[string]int, error) {
 		List  string `db:"list"`
 		Count int    `db:"count"`
 	}
-	err := s.app.DB().Select("list", "COUNT(*) AS [[count]]").From("list_items").
+	err := s.app.DB().Select("list", "COUNT(*) AS [[count]]").From(sub.ListItems).
 		Where(dbx.In("list", ids...)).GroupBy("list").All(&rows)
 	for _, r := range rows {
 		out[r.List] = r.Count
@@ -113,8 +115,8 @@ func (s *Server) itemCounts(lists ...*core.Record) (map[string]int, error) {
 	return out, err
 }
 
-// listsWith returns the lists of ids that have the restaurant.
-func (s *Server) listsWith(restaurantID string, lists []*core.Record) (map[string]bool, error) {
+// listsWith returns the lists of ids that have the parent.
+func (s *Server) listsWith(sub subject, parentID string, lists []*core.Record) (map[string]bool, error) {
 	out := map[string]bool{}
 	if len(lists) == 0 {
 		return out, nil
@@ -124,38 +126,39 @@ func (s *Server) listsWith(restaurantID string, lists []*core.Record) (map[strin
 		ids[i] = l.Id
 	}
 	var found []string
-	err := s.app.DB().Select("list").From("list_items").
-		Where(dbx.HashExp{"restaurant": restaurantID}).AndWhere(dbx.In("list", ids...)).Column(&found)
+	err := s.app.DB().Select("list").From(sub.ListItems).
+		Where(dbx.HashExp{sub.Parent: parentID}).AndWhere(dbx.In("list", ids...)).Column(&found)
 	for _, id := range found {
 		out[id] = true
 	}
 	return out, err
 }
 
-// favoriteIDs returns the restaurants of records that the favorites list
-// of the user has. A nil user has none.
-func (s *Server) favoriteIDs(user *core.Record, records ...*core.Record) (map[string]bool, error) {
+// favoriteIDs returns the parents of records that the favorites list of the
+// user has. A nil user has none.
+func (s *Server) favoriteIDs(sub subject, user *core.Record, records ...*core.Record) (map[string]bool, error) {
 	out := map[string]bool{}
 	if user == nil || len(records) == 0 {
 		return out, nil
 	}
 	var found []string
-	err := s.favoritesQuery(user.Id, records...).Column(&found)
+	err := s.favoritesQuery(sub, user.Id, records...).Column(&found)
 	for _, id := range found {
 		out[id] = true
 	}
 	return out, err
 }
 
-func (s *Server) favoritesQuery(userID string, records ...*core.Record) *dbx.SelectQuery {
+func (s *Server) favoritesQuery(sub subject, userID string, records ...*core.Record) *dbx.SelectQuery {
 	ids := make([]any, len(records))
 	for i, r := range records {
 		ids[i] = r.Id
 	}
-	return s.app.DB().Select("list_items.restaurant").From("lists").
-		InnerJoin("list_items", dbx.NewExp("[[list_items.list]] = [[lists.id]]")).
+	parent := sub.ListItems + "." + sub.Parent
+	return s.app.DB().Select(parent).From("lists").
+		InnerJoin(sub.ListItems, dbx.NewExp(column(sub.ListItems, "list")+" = [[lists.id]]")).
 		Where(dbx.HashExp{"lists.creator": userID, "lists.kind": kindFavorites}).
-		AndWhere(dbx.In("list_items.restaurant", ids...))
+		AndWhere(dbx.In(parent, ids...))
 }
 
 func toSavedList(list, creator *core.Record, count int) reviewsapi.SavedList {
@@ -201,13 +204,13 @@ func (s *Server) ListReviewerLists(ctx context.Context, req reviewsapi.ListRevie
 			-cmp.Compare(a.Id, b.Id),
 		)
 	})
-	counts, err := s.itemCounts(lists...)
+	counts, err := s.itemCounts(restaurantSubject, lists...)
 	if err != nil {
 		return nil, err
 	}
 	var with map[string]bool
 	if req.Params.RestaurantEq != nil {
-		if with, err = s.listsWith(*req.Params.RestaurantEq, lists); err != nil {
+		if with, err = s.listsWith(restaurantSubject, *req.Params.RestaurantEq, lists); err != nil {
 			return nil, err
 		}
 	}
@@ -279,7 +282,7 @@ func (s *Server) GetList(ctx context.Context, req reviewsapi.GetListRequestObjec
 	if list == nil {
 		return reviewsapi.GetList404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(listNotFound)}, nil
 	}
-	counts, err := s.itemCounts(list)
+	counts, err := s.itemCounts(restaurantSubject, list)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +345,7 @@ func (s *Server) UpdateList(ctx context.Context, req reviewsapi.UpdateListReques
 	if response != nil {
 		return response, nil
 	}
-	counts, err := s.itemCounts(saved)
+	counts, err := s.itemCounts(restaurantSubject, saved)
 	if err != nil {
 		return nil, err
 	}
@@ -374,40 +377,28 @@ func (s *Server) DeleteList(ctx context.Context, req reviewsapi.DeleteListReques
 	return response, nil
 }
 
-// listItemKeys put the restaurant that was added last first. The restaurant
-// is unique in a list. Its ID is the last sort value.
-var listItemKeys = []sortKey{
-	{expr: column("list_items", "created"), desc: true},
-	{expr: column("list_items", "restaurant"), desc: true, unique: true},
+// makeListItemKeys puts the item that was added last first. The parent is
+// unique in a list. Its ID is the last sort value.
+func makeListItemKeys(sub subject) []sortKey {
+	return []sortKey{
+		{expr: column(sub.ListItems, "created"), desc: true},
+		{expr: column(sub.ListItems, sub.Parent), desc: true, unique: true},
+	}
 }
 
 func (s *Server) ListListRestaurants(ctx context.Context, req reviewsapi.ListListRestaurantsRequestObject) (reviewsapi.ListListRestaurantsResponseObject, error) {
-	query, err := fingerprint("list-restaurants", req.ListId)
+	records, next, p, err := s.listItemPage(ctx, restaurantSubject, req.ListId, req.Params.Cursor, req.Params.Limit)
 	if err != nil {
 		return nil, err
 	}
-	after, detail := decodeCursor(req.Params.Cursor, query, len(listItemKeys))
-	if detail != "" {
-		return reviewsapi.ListListRestaurants400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
-	}
-	list, _, err := s.publicList(stateFrom(ctx).user, req.ListId)
-	if err != nil {
-		return nil, err
-	}
-	if list == nil {
-		return reviewsapi.ListListRestaurants404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(listNotFound)}, nil
-	}
-	w := listItemsWhere(list.Id)
-	if after != nil {
-		w.keyset(listItemKeys, after)
-	}
-	ids, next, err := s.pageIDs("list_items", w, listItemKeys, limitOf(req.Params.Limit), query)
-	if err != nil {
-		return nil, err
-	}
-	records, err := s.recordsInOrder("restaurants", ids)
-	if err != nil {
-		return nil, err
+	if p != nil {
+		switch p.status() {
+		case http.StatusBadRequest:
+			return reviewsapi.ListListRestaurants400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: p.badRequest()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.ListListRestaurants404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		}
+		return nil, p.unexpected()
 	}
 	items, err := s.restaurantsOf(stateFrom(ctx).user, records...)
 	if err != nil {
@@ -416,135 +407,175 @@ func (s *Server) ListListRestaurants(ctx context.Context, req reviewsapi.ListLis
 	return reviewsapi.ListListRestaurants200JSONResponse{Items: items, NextCursor: next}, nil
 }
 
-// inList keeps the restaurants of the list. The join lets SQLite start from
-// idx_list_items_list_restaurant for a small list.
-func (w *where) inList(listID *string) {
+// listItemPage gets one page of the parents of a list. The problem is a 400
+// or a 404.
+func (s *Server) listItemPage(ctx context.Context, sub subject, listID string, cursor *string, limit *int) ([]*core.Record, nullable.Nullable[string], *problem, error) {
+	keys := sub.listItemKeys
+	query, err := fingerprint("list-"+sub.Table, listID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	after, detail := decodeCursor(cursor, query, len(keys))
+	if detail != "" {
+		return nil, nil, badRequestProblem(detail), nil
+	}
+	list, _, err := s.publicList(stateFrom(ctx).user, listID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if list == nil {
+		return nil, nil, notFoundProblem(listNotFound), nil
+	}
+	w := listItemsWhere(sub, list.Id)
+	if after != nil {
+		w.keyset(keys, after)
+	}
+	ids, next, err := s.pageIDs(sub.ListItems, w, keys, limitOf(limit), query)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	records, err := s.recordsInOrder(sub.Table, ids)
+	return records, next, nil, err
+}
+
+// inList keeps the parents of the list. The join lets SQLite start from the
+// unique index on the list and the parent for a small list.
+func (w *where) inList(sub subject, listID *string) {
 	if listID == nil {
 		return
 	}
 	w.joins = append(w.joins, join{
 		inner: true,
-		table: "{{list_items}}",
-		on: dbx.NewExp(column("list_items", "restaurant") + " = [[restaurants.id]] AND " +
-			column("list_items", "list") + " = " + w.param(*listID)),
+		table: "{{" + sub.ListItems + "}}",
+		on: dbx.NewExp(column(sub.ListItems, sub.Parent) + " = " + column(sub.Table, "id") + " AND " +
+			column(sub.ListItems, "list") + " = " + w.param(*listID)),
 	})
 }
 
-func listItemsWhere(listID string) *where {
+func listItemsWhere(sub subject, listID string) *where {
 	w := newWhere()
-	w.compare(column("list_items", "list"), []comparison{{"=", listID}})
+	w.compare(column(sub.ListItems, "list"), []comparison{{"=", listID}})
 	return w
 }
 
-// listAccess is the list of a listRef, or the problem of the response.
-type listAccess struct {
-	list      *core.Record
-	notFound  *reviewsapi.NotFoundApplicationProblemPlusJSONResponse
-	forbidden *reviewsapi.ForbiddenApplicationProblemPlusJSONResponse
-}
-
-// ownList gets the list of ref for a change of its restaurants. Only the
-// creator of the list can change them.
-func ownList(app core.App, ref string, user *core.Record) (listAccess, error) {
+// ownList gets the list of ref for a change of its items. Only the creator
+// of the list can change them. The problem is a 403 or a 404.
+func ownList(app core.App, sub subject, ref string, user *core.Record) (*core.Record, *problem, error) {
 	if ref == favoritesRef {
 		list, err := favoritesOf(app, user.Id)
-		return listAccess{list: list}, err
+		return list, nil, err
 	}
 	list, err := findList(app, ref)
 	if err != nil {
-		return listAccess{}, err
+		return nil, nil, err
 	}
 	if list == nil {
-		p := notFound(listNotFound)
-		return listAccess{notFound: &p}, nil
+		return nil, notFoundProblem(listNotFound), nil
 	}
 	if list.GetString("creator") != user.Id {
-		p := notCreator("Only the creator of the list can change its restaurants.")
-		return listAccess{forbidden: &p}, nil
+		return nil, notCreatorProblem("Only the creator of the list can change its " + sub.Table + "."), nil
 	}
-	return listAccess{list: list}, nil
+	return list, nil, nil
 }
 
-func findItem(app core.App, listID, restaurantID string) (*core.Record, error) {
-	item, err := app.FindFirstRecordByFilter("list_items", "list = {:list} && restaurant = {:restaurant}",
-		dbx.Params{"list": listID, "restaurant": restaurantID})
+func findItem(app core.App, sub subject, listID, parentID string) (*core.Record, error) {
+	item, err := app.FindFirstRecordByFilter(sub.ListItems, "list = {:list} && "+sub.Parent+" = {:parent}",
+		dbx.Params{"list": listID, "parent": parentID})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	return item, err
 }
 
-// AddListRestaurant runs the checks and the save in one transaction. The
-// save of the list sets its updated time.
+// AddListRestaurant gives 204 also for a restaurant that the list has.
 func (s *Server) AddListRestaurant(ctx context.Context, req reviewsapi.AddListRestaurantRequestObject) (reviewsapi.AddListRestaurantResponseObject, error) {
-	user := stateFrom(ctx).user
-	var response reviewsapi.AddListRestaurantResponseObject = reviewsapi.AddListRestaurant204Response{}
-	err := s.app.RunInTransaction(func(tx core.App) error {
-		access, err := ownList(tx, req.ListRef, user)
-		switch {
-		case err != nil:
-			return err
-		case access.forbidden != nil:
-			response = reviewsapi.AddListRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: *access.forbidden}
-			return nil
-		case access.notFound != nil:
-			response = reviewsapi.AddListRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: *access.notFound}
-			return nil
+	p, err := s.addListItem(restaurantSubject, req.ListRef, req.RestaurantId, stateFrom(ctx).user)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusForbidden:
+			return reviewsapi.AddListRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.AddListRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusConflict:
+			return reviewsapi.AddListRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
 		}
-		list := access.list
-		if _, err := s.findRestaurant(tx, req.RestaurantId); errors.Is(err, sql.ErrNoRows) {
-			response = reviewsapi.AddListRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}
+		return nil, p.unexpected()
+	}
+	return reviewsapi.AddListRestaurant204Response{}, nil
+}
+
+// addListItem runs the checks and the save in one transaction. The save of
+// the list sets its updated time. The problem is a 403, a 404, or a 409.
+func (s *Server) addListItem(sub subject, ref, parentID string, user *core.Record) (p *problem, err error) {
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		var list *core.Record
+		var err error
+		if list, p, err = ownList(tx, sub, ref, user); p != nil || err != nil {
+			return err
+		}
+		if _, err := findParent(tx, sub, parentID); errors.Is(err, sql.ErrNoRows) {
+			p = notFoundProblem(sub.notFound)
 			return nil
 		} else if err != nil {
 			return err
 		}
-		item, err := findItem(tx, list.Id, req.RestaurantId)
+		item, err := findItem(tx, sub, list.Id, parentID)
 		if err != nil || item != nil {
 			return err
 		}
-		n, err := tx.CountRecords("list_items", dbx.HashExp{"list": list.Id})
+		n, err := tx.CountRecords(sub.ListItems, dbx.HashExp{"list": list.Id})
 		if err != nil {
 			return err
 		}
 		if n >= maxListItems {
-			response = reviewsapi.AddListRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(reviewsapi.ProblemCodeListRestaurantLimit, "The list has the maximum number of restaurants.")}
+			p = conflictProblem(sub.listLimitCode, "The list has the maximum number of "+sub.Table+".")
 			return nil
 		}
-		items, err := tx.FindCachedCollectionByNameOrId("list_items")
+		items, err := tx.FindCachedCollectionByNameOrId(sub.ListItems)
 		if err != nil {
 			return err
 		}
 		item = core.NewRecord(items)
 		item.Set("list", list.Id)
-		item.Set("restaurant", req.RestaurantId)
+		item.Set(sub.Parent, parentID)
 		if err := tx.Save(item); err != nil {
 			return err
 		}
 		return tx.Save(list)
 	})
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return p, err
 }
 
 func (s *Server) RemoveListRestaurant(ctx context.Context, req reviewsapi.RemoveListRestaurantRequestObject) (reviewsapi.RemoveListRestaurantResponseObject, error) {
-	user := stateFrom(ctx).user
-	var response reviewsapi.RemoveListRestaurantResponseObject = reviewsapi.RemoveListRestaurant204Response{}
-	err := s.app.RunInTransaction(func(tx core.App) error {
-		access, err := ownList(tx, req.ListRef, user)
-		switch {
-		case err != nil:
-			return err
-		case access.forbidden != nil:
-			response = reviewsapi.RemoveListRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: *access.forbidden}
-			return nil
-		case access.notFound != nil:
-			response = reviewsapi.RemoveListRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: *access.notFound}
-			return nil
+	p, err := s.removeListItem(restaurantSubject, req.ListRef, req.RestaurantId, stateFrom(ctx).user)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusForbidden:
+			return reviewsapi.RemoveListRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.RemoveListRestaurant404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
 		}
-		list := access.list
-		item, err := findItem(tx, list.Id, req.RestaurantId)
+		return nil, p.unexpected()
+	}
+	return reviewsapi.RemoveListRestaurant204Response{}, nil
+}
+
+// removeListItem gives no problem for a parent that the list does not have.
+// The problem is a 403 or a 404.
+func (s *Server) removeListItem(sub subject, ref, parentID string, user *core.Record) (p *problem, err error) {
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		var list *core.Record
+		var err error
+		if list, p, err = ownList(tx, sub, ref, user); p != nil || err != nil {
+			return err
+		}
+		item, err := findItem(tx, sub, list.Id, parentID)
 		if err != nil || item == nil {
 			return err
 		}
@@ -553,8 +584,5 @@ func (s *Server) RemoveListRestaurant(ctx context.Context, req reviewsapi.Remove
 		}
 		return tx.Save(list)
 	})
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return p, err
 }

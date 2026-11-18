@@ -26,53 +26,87 @@ const (
 	photoNotFound        = "The photo does not exist."
 )
 
-// AddReviewPhoto checks the review before it reads the body. A client that
-// cannot add a photo then does not send the image for nothing. The
-// transaction checks the review and the count again.
+// AddReviewPhoto lets only the creator of the review add a photo. A review
+// has at most 5 photos.
 func (s *Server) AddReviewPhoto(ctx context.Context, req reviewsapi.AddReviewPhotoRequestObject) (reviewsapi.AddReviewPhotoResponseObject, error) {
+	saved, p, err := s.addPhoto(ctx, restaurantSubject, req.RestaurantId, req.ReviewId, req.ContentType, req.Body)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusBadRequest:
+			return reviewsapi.AddReviewPhoto400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: p.badRequest()}, nil
+		case http.StatusForbidden:
+			return reviewsapi.AddReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.AddReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusConflict:
+			return reviewsapi.AddReviewPhoto409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
+		case http.StatusRequestEntityTooLarge:
+			return reviewsapi.AddReviewPhoto413ApplicationProblemPlusJSONResponse{ContentTooLargeApplicationProblemPlusJSONResponse: p.contentTooLarge()}, nil
+		case http.StatusUnsupportedMediaType:
+			return reviewsapi.AddReviewPhoto415ApplicationProblemPlusJSONResponse{UnsupportedMediaTypeApplicationProblemPlusJSONResponse: p.unsupportedMediaType()}, nil
+		case http.StatusUnprocessableEntity:
+			return reviewsapi.AddReviewPhoto422ApplicationProblemPlusJSONResponse{InvalidImageApplicationProblemPlusJSONResponse: p.invalidImage()}, nil
+		case http.StatusTooManyRequests:
+			return reviewsapi.AddReviewPhoto429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: p.tooManyRequests()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	location := restaurantSubject.photoPath(req.RestaurantId, req.ReviewId, saved.Id)
+	return reviewsapi.AddReviewPhoto201JSONResponse{
+		Body:    toPhoto(restaurantSubject, saved, req.RestaurantId),
+		Headers: reviewsapi.AddReviewPhoto201ResponseHeaders{Location: &location},
+	}, nil
+}
+
+// addPhoto checks the review before it reads the body. A client that cannot
+// add a photo then does not send the image for nothing. The transaction
+// checks the review and the count again.
+func (s *Server) addPhoto(ctx context.Context, sub subject, parentID, reviewID, contentType string, body io.Reader) (*core.Record, *problem, error) {
 	user := stateFrom(ctx).user
-	mediaType, _, err := mime.ParseMediaType(req.ContentType)
+	mediaType, _, err := mime.ParseMediaType(contentType)
 	if _, ok := uploadTypes[mediaType]; err != nil || !ok {
-		return reviewsapi.AddReviewPhoto415ApplicationProblemPlusJSONResponse{UnsupportedMediaTypeApplicationProblemPlusJSONResponse: reviewsapi.UnsupportedMediaTypeApplicationProblemPlusJSONResponse(
-			newProblem(http.StatusUnsupportedMediaType, "The content type must be image/jpeg, image/png, or image/webp."))}, nil
+		return nil, statusProblem(http.StatusUnsupportedMediaType, "The content type must be image/jpeg, image/png, or image/webp."), nil
 	}
 
-	check := func(app core.App) (reviewsapi.AddReviewPhotoResponseObject, error) {
-		_, review, detail, err := s.findReview(app, req.RestaurantId, req.ReviewId)
+	check := func(app core.App) (*problem, error) {
+		_, review, detail, err := s.findReview(app, sub, parentID, reviewID)
 		if err != nil {
 			return nil, err
 		}
 		if detail != "" {
-			return reviewsapi.AddReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}, nil
+			return notFoundProblem(detail), nil
 		}
 		if review.GetString("creator") != user.Id {
-			return reviewsapi.AddReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can add photos.")}, nil
+			return notCreatorProblem("Only the creator of the review can add photos."), nil
 		}
-		n, err := app.CountRecords("review_photos", dbx.HashExp{"review": req.ReviewId})
+		n, err := app.CountRecords(sub.Photos, dbx.HashExp{"review": reviewID})
 		if err != nil {
 			return nil, err
 		}
 		if n >= maxPhotosPerReview {
-			return reviewsapi.AddReviewPhoto409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(reviewsapi.ProblemCodePhotoLimit, "A review can have at most 5 photos.")}, nil
+			return conflictProblem(reviewsapi.ProblemCodePhotoLimit, "A review can have at most 5 photos."), nil
 		}
 		return nil, nil
 	}
-	if response, err := check(s.app); response != nil || err != nil {
-		return response, err
+	if p, err := check(s.app); p != nil || err != nil {
+		return nil, p, err
 	}
 
-	photo, response, err := s.readPhoto(ctx, req.Body, mediaType)
-	if response != nil || err != nil {
-		return response, err
+	photo, p, err := s.readPhoto(ctx, body, mediaType)
+	if p != nil || err != nil {
+		return nil, p, err
 	}
 	defer s.photoMemory.give(photo.held)
 
 	var saved *core.Record
 	err = s.app.RunInTransaction(func(tx core.App) error {
-		if response, err = check(tx); response != nil || err != nil {
+		if p, err = check(tx); p != nil || err != nil {
 			return err
 		}
-		collection, err := tx.FindCachedCollectionByNameOrId("review_photos")
+		collection, err := tx.FindCachedCollectionByNameOrId(sub.Photos)
 		if err != nil {
 			return err
 		}
@@ -85,7 +119,7 @@ func (s *Server) AddReviewPhoto(ctx context.Context, req reviewsapi.AddReviewPho
 			return err
 		}
 		r := core.NewRecord(collection)
-		r.Set("review", req.ReviewId)
+		r.Set("review", reviewID)
 		r.Set("width", photo.width)
 		r.Set("height", photo.height)
 		r.Set("full", full)
@@ -93,34 +127,27 @@ func (s *Server) AddReviewPhoto(ctx context.Context, req reviewsapi.AddReviewPho
 		saved = r
 		return tx.Save(r)
 	})
-	if response != nil || err != nil {
-		return response, err
+	if p != nil || err != nil {
+		return nil, p, err
 	}
-	location := photoPath(req.RestaurantId, req.ReviewId, saved.Id)
-	return reviewsapi.AddReviewPhoto201JSONResponse{
-		Body:    toPhoto(saved, req.RestaurantId),
-		Headers: reviewsapi.AddReviewPhoto201ResponseHeaders{Location: &location},
-	}, nil
+	return saved, nil, nil
 }
 
 // readPhoto reads and processes the body. The decodes semaphore holds it
 // only after the read. A slow client then cannot block the other uploads.
 // The returned photo holds its memory until the caller gives it back.
-func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string) (processedPhoto, reviewsapi.AddReviewPhotoResponseObject, error) {
+func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string) (processedPhoto, *problem, error) {
 	data, held, err := s.photoMemory.read(body)
 	if errors.Is(err, errPhotoMemoryFull) {
 		stateFrom(ctx).giveBackLimit()
-		return processedPhoto{}, reviewsapi.AddReviewPhoto429ApplicationProblemPlusJSONResponse{
-			TooManyRequestsApplicationProblemPlusJSONResponse: tooManyRequests(memoryFullRetryAfter, "The server processes too many photos. Try again in a few seconds."),
-		}, nil
+		return processedPhoto{}, tooManyRequestsProblem(memoryFullRetryAfter, "The server processes too many photos. Try again in a few seconds."), nil
 	}
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
-		return processedPhoto{}, reviewsapi.AddReviewPhoto413ApplicationProblemPlusJSONResponse{ContentTooLargeApplicationProblemPlusJSONResponse: reviewsapi.ContentTooLargeApplicationProblemPlusJSONResponse(
-			newProblem(http.StatusRequestEntityTooLarge, "The image must be at most 10 MB."))}, nil
+		return processedPhoto{}, statusProblem(http.StatusRequestEntityTooLarge, "The image must be at most 10 MB."), nil
 	}
 	if err != nil {
-		return processedPhoto{}, reviewsapi.AddReviewPhoto400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest("The request body cannot be read.")}, nil
+		return processedPhoto{}, badRequestProblem("The request body cannot be read."), nil
 	}
 	select {
 	case s.decodes <- struct{}{}:
@@ -137,8 +164,7 @@ func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string
 		return processedPhoto{}, nil, err
 	}
 	if detail != "" {
-		return processedPhoto{}, reviewsapi.AddReviewPhoto422ApplicationProblemPlusJSONResponse{InvalidImageApplicationProblemPlusJSONResponse: reviewsapi.InvalidImageApplicationProblemPlusJSONResponse(
-			newProblem(http.StatusUnprocessableEntity, detail))}, nil
+		return processedPhoto{}, statusProblem(http.StatusUnprocessableEntity, detail), nil
 	}
 	photo.held = int64(len(photo.full) + len(photo.thumb))
 	s.photoMemory.resize(held, photo.held)
@@ -147,77 +173,111 @@ func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string
 
 // UpdateReviewPhoto changes only the alt text. The image never changes.
 func (s *Server) UpdateReviewPhoto(ctx context.Context, req reviewsapi.UpdateReviewPhotoRequestObject) (reviewsapi.UpdateReviewPhotoResponseObject, error) {
-	user := stateFrom(ctx).user
-	var response reviewsapi.UpdateReviewPhotoResponseObject
-	var saved *core.Record
-	err := s.app.RunInTransaction(func(tx core.App) error {
-		review, photo, detail, err := s.findPhoto(tx, req.RestaurantId, req.ReviewId, req.PhotoId)
+	saved, p, err := s.updatePhoto(restaurantSubject, req.RestaurantId, req.ReviewId, req.PhotoId, stateFrom(ctx).user, req.Body)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusNotFound:
+			return reviewsapi.UpdateReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusForbidden:
+			return reviewsapi.UpdateReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	return reviewsapi.UpdateReviewPhoto200JSONResponse(toPhoto(restaurantSubject, saved, req.RestaurantId)), nil
+}
+
+// updatePhoto changes the alt text. The problem is a 403 or a 404.
+func (s *Server) updatePhoto(sub subject, parentID, reviewID, photoID string, user *core.Record, body *reviewsapi.PhotoPatch) (saved *core.Record, p *problem, err error) {
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		review, photo, detail, err := s.findPhoto(tx, sub, parentID, reviewID, photoID)
 		if err != nil {
 			return err
 		}
 		if detail != "" {
-			response = reviewsapi.UpdateReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}
+			p = notFoundProblem(detail)
 			return nil
 		}
 		if review.GetString("creator") != user.Id {
-			response = reviewsapi.UpdateReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can change its photos.")}
+			p = notCreatorProblem("Only the creator of the review can change its photos.")
 			return nil
 		}
 		saved = photo
 		ch := &changes{r: photo}
-		ch.patchText("alt", nullable.Nullable[string](req.Body.Alt))
+		ch.patchText("alt", nullable.Nullable[string](body.Alt))
 		if !ch.changed {
 			return nil
 		}
 		return tx.Save(photo)
 	})
-	if response != nil || err != nil {
-		return response, err
-	}
-	return reviewsapi.UpdateReviewPhoto200JSONResponse(toPhoto(saved, req.RestaurantId)), nil
+	return saved, p, err
 }
 
-// DeleteReviewPhoto deletes the record. PocketBase deletes its files after
-// the transaction.
+// DeleteReviewPhoto lets only the creator of the review delete a photo.
 func (s *Server) DeleteReviewPhoto(ctx context.Context, req reviewsapi.DeleteReviewPhotoRequestObject) (reviewsapi.DeleteReviewPhotoResponseObject, error) {
-	user := stateFrom(ctx).user
-	var response reviewsapi.DeleteReviewPhotoResponseObject = reviewsapi.DeleteReviewPhoto204Response{}
-	err := s.app.RunInTransaction(func(tx core.App) error {
-		review, photo, detail, err := s.findPhoto(tx, req.RestaurantId, req.ReviewId, req.PhotoId)
+	p, err := s.deletePhoto(restaurantSubject, req.RestaurantId, req.ReviewId, req.PhotoId, stateFrom(ctx).user)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusNotFound:
+			return reviewsapi.DeleteReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusForbidden:
+			return reviewsapi.DeleteReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	return reviewsapi.DeleteReviewPhoto204Response{}, nil
+}
+
+// deletePhoto deletes the record. PocketBase deletes its files after the
+// transaction. The problem is a 403 or a 404.
+func (s *Server) deletePhoto(sub subject, parentID, reviewID, photoID string, user *core.Record) (p *problem, err error) {
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		review, photo, detail, err := s.findPhoto(tx, sub, parentID, reviewID, photoID)
 		if err != nil {
 			return err
 		}
 		if detail != "" {
-			response = reviewsapi.DeleteReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}
+			p = notFoundProblem(detail)
 			return nil
 		}
 		if review.GetString("creator") != user.Id {
-			response = reviewsapi.DeleteReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can delete its photos.")}
+			p = notCreatorProblem("Only the creator of the review can delete its photos.")
 			return nil
 		}
 		return tx.Delete(photo)
 	})
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return p, err
 }
 
-// GetReviewPhotoFile sends the stored JPEG. The files are protected.
-// /api/files does not send them to clients.
+// GetReviewPhotoFile sends the stored JPEG of the variant.
 func (s *Server) GetReviewPhotoFile(ctx context.Context, req reviewsapi.GetReviewPhotoFileRequestObject) (reviewsapi.GetReviewPhotoFileResponseObject, error) {
-	_, photo, detail, err := s.findPhoto(s.app, req.RestaurantId, req.ReviewId, req.PhotoId)
+	file, detail, err := s.photoFile(ctx, restaurantSubject, req.RestaurantId, req.ReviewId, req.PhotoId, req.Variant)
 	if err != nil {
 		return nil, err
 	}
 	if detail != "" {
 		return reviewsapi.GetReviewPhotoFile404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}, nil
 	}
-	name := photo.GetString(string(req.Variant))
-	if name == "" {
-		return nil, errors.New("photo " + photo.Id + " has no " + string(req.Variant) + " file")
+	return file, nil
+}
+
+// photoFile gets the stored JPEG. The files are protected. /api/files does
+// not send them to clients. The detail is for a 404.
+func (s *Server) photoFile(ctx context.Context, sub subject, parentID, reviewID, photoID string, variant reviewsapi.PhotoVariant) (photoFileResponse, string, error) {
+	_, photo, detail, err := s.findPhoto(s.app, sub, parentID, reviewID, photoID)
+	if err != nil || detail != "" {
+		return photoFileResponse{}, detail, err
 	}
-	return photoFileResponse{app: s.app, request: stateFrom(ctx).request, key: photo.BaseFilesPath() + "/" + name, name: name}, nil
+	name := photo.GetString(string(variant))
+	if name == "" {
+		return photoFileResponse{}, "", errors.New("photo " + photo.Id + " has no " + string(variant) + " file")
+	}
+	return photoFileResponse{app: s.app, request: stateFrom(ctx).request, key: photo.BaseFilesPath() + "/" + name, name: name}, "", nil
 }
 
 // photoFileResponse sends a file with http.ServeContent. It handles HEAD,
@@ -279,12 +339,12 @@ func (f *fileHeadersWriter) Write(p []byte) (int, error) {
 
 // findPhoto returns a detail for the 404 response. A photo of a different
 // review does not exist.
-func (s *Server) findPhoto(app core.App, restaurantID, reviewID, photoID string) (review, photo *core.Record, detail string, err error) {
-	_, review, detail, err = s.findReview(app, restaurantID, reviewID)
+func (s *Server) findPhoto(app core.App, sub subject, parentID, reviewID, photoID string) (review, photo *core.Record, detail string, err error) {
+	_, review, detail, err = s.findReview(app, sub, parentID, reviewID)
 	if err != nil || detail != "" {
 		return nil, nil, detail, err
 	}
-	photo, err = app.FindRecordById("review_photos", photoID)
+	photo, err = app.FindRecordById(sub.Photos, photoID)
 	if errors.Is(err, sql.ErrNoRows) || (err == nil && photo.GetString("review") != reviewID) {
 		return nil, nil, photoNotFound, nil
 	}
@@ -295,34 +355,34 @@ func (s *Server) findPhoto(app core.App, restaurantID, reviewID, photoID string)
 }
 
 // reviewPhotos gets the photos of all reviews in one query, like creators.
-func (s *Server) reviewPhotos(reviews ...*core.Record) (map[string][]reviewsapi.Photo, error) {
+func (s *Server) reviewPhotos(sub subject, reviews ...*core.Record) (map[string][]reviewsapi.Photo, error) {
 	out := map[string][]reviewsapi.Photo{}
 	if len(reviews) == 0 {
 		return out, nil
 	}
 	ids := make([]any, len(reviews))
-	restaurants := map[string]string{}
+	parents := map[string]string{}
 	for i, r := range reviews {
 		ids[i] = r.Id
-		restaurants[r.Id] = r.GetString("restaurant")
+		parents[r.Id] = r.GetString(sub.Parent)
 	}
 	var photos []*core.Record
-	err := s.app.RecordQuery("review_photos").AndWhere(dbx.In("review", ids...)).OrderBy("created ASC", "id ASC").All(&photos)
+	err := s.app.RecordQuery(sub.Photos).AndWhere(dbx.In("review", ids...)).OrderBy("created ASC", "id ASC").All(&photos)
 	if err != nil {
 		return nil, err
 	}
 	for _, p := range photos {
 		review := p.GetString("review")
-		out[review] = append(out[review], toPhoto(p, restaurants[review]))
+		out[review] = append(out[review], toPhoto(sub, p, parents[review]))
 	}
 	return out, nil
 }
 
-func toPhoto(r *core.Record, restaurantID string) reviewsapi.Photo {
-	return photoOf(photoRow{
+func toPhoto(sub subject, r *core.Record, parentID string) reviewsapi.Photo {
+	return photoOf(sub, photoRow{
 		ID: r.Id, Review: r.GetString("review"), Alt: r.GetString("alt"),
 		Width: r.GetInt("width"), Height: r.GetInt("height"), Created: r.GetDateTime("created"),
-	}, restaurantID)
+	}, parentID)
 }
 
 // photoRow has the stored fields of a photo that a response shows.
@@ -335,15 +395,15 @@ type photoRow struct {
 	Created types.DateTime `db:"created"`
 }
 
-func photoOf(p photoRow, restaurantID string) reviewsapi.Photo {
+func photoOf(sub subject, p photoRow, parentID string) reviewsapi.Photo {
 	return reviewsapi.Photo{
 		Id:     p.ID,
 		Alt:    nullableText(p.Alt),
 		Width:  p.Width,
 		Height: p.Height,
 		Urls: reviewsapi.PhotoUrls{
-			Full:  PhotoFilePath(restaurantID, p.Review, p.ID, reviewsapi.Full),
-			Thumb: PhotoFilePath(restaurantID, p.Review, p.ID, reviewsapi.Thumb),
+			Full:  sub.photoFilePath(parentID, p.Review, p.ID, reviewsapi.Full),
+			Thumb: sub.photoFilePath(parentID, p.Review, p.ID, reviewsapi.Thumb),
 		},
 		Created: apiTimestamp(p.Created),
 	}
@@ -358,9 +418,13 @@ func nullableText(v string) nullable.Nullable[string] {
 
 // PhotoFilePath returns the path of the GetReviewPhotoFile operation.
 func PhotoFilePath(restaurantID, reviewID, photoID string, variant reviewsapi.PhotoVariant) string {
-	return photoPath(restaurantID, reviewID, photoID) + "/" + string(variant)
+	return restaurantSubject.photoFilePath(restaurantID, reviewID, photoID, variant)
 }
 
-func photoPath(restaurantID, reviewID, photoID string) string {
-	return basePath + "/restaurants/" + restaurantID + "/reviews/" + reviewID + "/photos/" + photoID
+func (sub subject) photoFilePath(parentID, reviewID, photoID string, variant reviewsapi.PhotoVariant) string {
+	return sub.photoPath(parentID, reviewID, photoID) + "/" + string(variant)
+}
+
+func (sub subject) photoPath(parentID, reviewID, photoID string) string {
+	return sub.reviewPath(parentID, reviewID) + "/photos/" + photoID
 }

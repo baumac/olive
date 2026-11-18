@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"slices"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
@@ -25,29 +26,32 @@ type reviewInput struct {
 
 // reviewOverall is a generated column with indexes. It has the value that
 // toReview computes. See decision 00031.
-const reviewOverall = "[[reviews.overall]]"
+func (sub subject) reviewOverall() string {
+	return column(sub.Reviews, "overall")
+}
 
 // overallFilter uses an overall index only with the overall sort. With a
 // different sort, SQLite would read the index and then sort all matches. The
 // unary plus keeps the index of the sort.
-func overallFilter(sort string) string {
+func (sub subject) overallFilter(sort string) string {
 	if sortsBy(sort, "overall") {
-		return reviewOverall
+		return sub.reviewOverall()
 	}
-	return "+" + reviewOverall
+	return "+" + sub.reviewOverall()
 }
 
-var reviewSorts = map[string]sortField{
-	"overall":     func(desc bool) []sortKey { return []sortKey{{expr: reviewOverall, desc: desc}} },
-	"space":       columnSort("reviews", "space"),
-	"service":     columnSort("reviews", "service"),
-	"food":        columnSort("reviews", "food"),
-	"price":       columnSort("reviews", "price"),
-	"cleanliness": columnSort("reviews", "cleanliness"),
-	"title":       textSort("reviews", "title"),
-	"relevance":   relevanceSort,
-	"created":     columnSort("reviews", "created"),
-	"updated":     columnSort("reviews", "updated"),
+func makeReviewSorts(sub subject) map[string]sortField {
+	sorts := map[string]sortField{
+		"overall":   func(desc bool) []sortKey { return []sortKey{{expr: sub.reviewOverall(), desc: desc}} },
+		"title":     textSort(sub.Reviews, "title"),
+		"relevance": relevanceSort,
+		"created":   columnSort(sub.Reviews, "created"),
+		"updated":   columnSort(sub.Reviews, "updated"),
+	}
+	for _, name := range sub.scores {
+		sorts[name] = columnSort(sub.Reviews, name)
+	}
+	return sorts
 }
 
 // ListReviews returns 404 when the restaurant does not exist. It does not
@@ -103,183 +107,242 @@ type reviewPageResult struct {
 	notFound bool
 }
 
-// reviewPage checks the parameters, then calls restaurant, then gets the
-// page. A nil restaurant skips the check. This order gives 400 before 404.
-// A nil fingerprintOf uses the parameters of listAllReviews.
+// reviewPage gets a page of restaurant reviews. A nil fingerprintOf uses the
+// parameters of listAllReviews.
 func (s *Server) reviewPage(
 	p reviewsapi.ListAllReviewsParams,
 	fingerprintOf func(sort string) []any,
 	restaurant func() (*core.Record, error),
 ) (reviewPageResult, error) {
-	limit := limitOf(p.Limit)
-	search := newSearchPage("reviews")
-	if detail := search.parse(p.Search); detail != "" {
-		return reviewPageResult{bad: detail}, nil
+	if fingerprintOf == nil {
+		fingerprintOf = func(sort string) []any {
+			q := p
+			q.Limit, q.Cursor, q.Sort = nil, nil, &sort
+			return []any{"reviews", q}
+		}
 	}
-	sortSpec, detail := search.sortWithSearch(p.Sort)
+	page, err := s.reviewsOf(restaurantSubject, reviewQuery{
+		limit: p.Limit, cursor: p.Cursor, sort: p.Sort, search: p.Search,
+		parentEq: p.RestaurantEq, parentIn: p.RestaurantIn,
+		scores: map[string]*reviewsapi.ScoreRange{
+			"space": p.Space, "service": p.Service, "food": p.Food, "price": p.Price, "cleanliness": p.Cleanliness,
+		},
+		overall: p.Overall, created: p.Created, updated: p.Updated, creatorEq: p.CreatorEq, creatorIn: p.CreatorIn,
+	}, fingerprintOf, restaurant)
+	if err != nil || page.bad != "" || page.notFound {
+		return reviewPageResult{bad: page.bad, notFound: page.notFound}, err
+	}
+	items := make([]reviewsapi.Review, len(page.records))
+	for i, r := range page.records {
+		if items[i], err = toReview(r, page.users[r.GetString("creator")], page.names[r.GetString("restaurant")], page.photos[r.Id]); err != nil {
+			return reviewPageResult{}, err
+		}
+	}
+	return reviewPageResult{list: reviewsapi.ReviewList{Items: items, NextCursor: page.next}}, nil
+}
+
+// reviewQuery has the parameters of a review list. Each subject has its own
+// params types.
+type reviewQuery struct {
+	limit            *int
+	cursor, sort     *string
+	search           *string
+	parentEq         *string
+	parentIn         *[]string
+	scores           map[string]*reviewsapi.ScoreRange
+	overall          *reviewsapi.AverageRange
+	created, updated *reviewsapi.TimestampRange
+	creatorEq        *string
+	creatorIn        *[]string
+}
+
+// reviewRecords is a page of reviews with the data of their responses, or
+// the reason for a 400 or a 404.
+type reviewRecords struct {
+	records  []*core.Record
+	users    map[string]*core.Record
+	names    map[string]string
+	photos   map[string][]reviewsapi.Photo
+	next     nullable.Nullable[string]
+	bad      string
+	notFound bool
+}
+
+// reviewsOf checks the parameters, then calls parent, then gets the page. A
+// nil parent skips the check. This order gives 400 before 404. fingerprintOf
+// gets the sort value of the cursor.
+func (s *Server) reviewsOf(
+	sub subject,
+	q reviewQuery,
+	fingerprintOf func(sort string) []any,
+	parent func() (*core.Record, error),
+) (reviewRecords, error) {
+	limit := limitOf(q.limit)
+	search := sub.reviewSearchPage()
+	if detail := search.parse(q.search); detail != "" {
+		return reviewRecords{bad: detail}, nil
+	}
+	sortSpec, detail := search.sortWithSearch(q.sort)
 	if detail != "" {
-		return reviewPageResult{bad: detail}, nil
+		return reviewRecords{bad: detail}, nil
 	}
-	keys, sort, detail := parseSort(sortSpec, "reviews", reviewSorts)
+	keys, sort, detail := parseSort(sortSpec, sub.Reviews, sub.reviewSorts)
 	if detail != "" {
-		return reviewPageResult{bad: detail}, nil
+		return reviewRecords{bad: detail}, nil
 	}
-	if detail := overallDetail(p.Overall); detail != "" {
-		return reviewPageResult{bad: detail}, nil
+	if detail := overallDetail(q.overall); detail != "" {
+		return reviewRecords{bad: detail}, nil
 	}
-	cursor := p.Cursor
-	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
-	parts := []any{"reviews", p}
-	if fingerprintOf != nil {
-		parts = fingerprintOf(sort)
-	}
-	query, err := fingerprint(parts...)
+	query, err := fingerprint(fingerprintOf(sort)...)
 	if err != nil {
-		return reviewPageResult{}, err
+		return reviewRecords{}, err
 	}
-	after, detail := decodeCursor(cursor, query, len(keys))
+	after, detail := decodeCursor(q.cursor, query, len(keys))
 	if detail != "" {
-		return reviewPageResult{bad: detail}, nil
+		return reviewRecords{bad: detail}, nil
 	}
 
 	w := newWhere()
 	search.filter(w)
-	w.idFilters("reviews", "restaurant", p.RestaurantEq, p.RestaurantIn)
-	for name, r := range map[string]*reviewsapi.ScoreRange{
-		"space": p.Space, "service": p.Service, "food": p.Food, "price": p.Price, "cleanliness": p.Cleanliness,
-	} {
-		w.compare(column("reviews", name), scoreComparisons(r))
+	w.idFilters(sub.Reviews, sub.Parent, q.parentEq, q.parentIn)
+	for _, name := range sub.scores {
+		w.compare(column(sub.Reviews, name), scoreComparisons(q.scores[name]))
 	}
-	w.compare(overallFilter(sort), averageComparisons(p.Overall))
-	w.idFilters("reviews", "creator", p.CreatorEq, p.CreatorIn)
-	w.compare(column("reviews", "created"), timestampComparisons(p.Created))
-	w.compare(column("reviews", "updated"), timestampComparisons(p.Updated))
+	w.compare(sub.overallFilter(sort), averageComparisons(q.overall))
+	w.idFilters(sub.Reviews, "creator", q.creatorEq, q.creatorIn)
+	w.compare(column(sub.Reviews, "created"), timestampComparisons(q.created))
+	w.compare(column(sub.Reviews, "updated"), timestampComparisons(q.updated))
 	if after != nil {
 		w.keyset(keys, after)
 	}
 
 	known := map[string]string{}
-	if restaurant != nil {
-		r, err := restaurant()
+	if parent != nil {
+		r, err := parent()
 		if err != nil {
-			return reviewPageResult{}, err
+			return reviewRecords{}, err
 		}
 		if r == nil {
-			return reviewPageResult{notFound: true}, nil
+			return reviewRecords{notFound: true}, nil
 		}
 		known[r.Id] = r.GetString("name")
 	}
 
-	records, next, err := s.page("reviews", w, keys, limit, query)
-	if err != nil {
-		return reviewPageResult{}, err
+	out := reviewRecords{}
+	if out.records, out.next, err = s.page(sub.Reviews, w, keys, limit, query); err != nil {
+		return reviewRecords{}, err
 	}
-	users, err := s.creators(records...)
-	if err != nil {
-		return reviewPageResult{}, err
+	if out.users, err = s.creators(out.records...); err != nil {
+		return reviewRecords{}, err
 	}
-	names, err := s.restaurantNames(known, records...)
-	if err != nil {
-		return reviewPageResult{}, err
+	if out.names, err = s.parentNames(sub, known, out.records...); err != nil {
+		return reviewRecords{}, err
 	}
-	photos, err := s.reviewPhotos(records...)
-	if err != nil {
-		return reviewPageResult{}, err
+	if out.photos, err = s.reviewPhotos(sub, out.records...); err != nil {
+		return reviewRecords{}, err
 	}
-	items := make([]reviewsapi.Review, len(records))
-	for i, r := range records {
-		if items[i], err = toReview(r, users[r.GetString("creator")], names[r.GetString("restaurant")], photos[r.Id]); err != nil {
-			return reviewPageResult{}, err
-		}
-	}
-	return reviewPageResult{list: reviewsapi.ReviewList{Items: items, NextCursor: next}}, nil
+	return out, nil
 }
 
-// restaurantNames reads only the restaurants that are not in known. The
-// per-restaurant list then needs no extra query.
-func (s *Server) restaurantNames(known map[string]string, reviews ...*core.Record) (map[string]string, error) {
+// parentNames reads only the parents that are not in known. The list of the
+// reviews of one parent then needs no extra query.
+func (s *Server) parentNames(sub subject, known map[string]string, reviews ...*core.Record) (map[string]string, error) {
 	out := maps.Clone(known)
 	ids := map[string]bool{}
 	for _, r := range reviews {
-		if _, ok := out[r.GetString("restaurant")]; !ok {
-			ids[r.GetString("restaurant")] = true
+		if _, ok := out[r.GetString(sub.Parent)]; !ok {
+			ids[r.GetString(sub.Parent)] = true
 		}
 	}
 	if len(ids) == 0 {
 		return out, nil
 	}
-	restaurants, err := s.app.FindRecordsByIds("restaurants", slices.Collect(maps.Keys(ids)))
+	parents, err := s.app.FindRecordsByIds(sub.Table, slices.Collect(maps.Keys(ids)))
 	if err != nil {
 		return nil, err
 	}
-	for _, r := range restaurants {
+	for _, r := range parents {
 		out[r.Id] = r.GetString("name")
 	}
 	return out, nil
 }
 
-// CreateReview runs the duplicate check and the save in one transaction.
-// The unique index on restaurant and creator also blocks a second review.
+// CreateReview lets each user write one review of a restaurant.
 func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRequestObject) (reviewsapi.CreateReviewResponseObject, error) {
-	st := stateFrom(ctx)
-	duplicate := reviewsapi.CreateReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: conflict(reviewsapi.ProblemCodeReviewExists, "The user already has a review for this restaurant.")}
-
-	var response reviewsapi.CreateReviewResponseObject
-	var saved, restaurant *core.Record
-	err := s.app.RunInTransaction(func(tx core.App) error {
-		var err error
-		if restaurant, err = s.findRestaurant(tx, req.RestaurantId); errors.Is(err, sql.ErrNoRows) {
-			response = reviewsapi.CreateReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}
-			return nil
-		} else if err != nil {
-			return err
-		}
-
-		n, err := tx.CountRecords("reviews", dbx.HashExp{"restaurant": req.RestaurantId, "creator": st.user.Id})
-		if err != nil {
-			return err
-		}
-		if n > 0 {
-			response = duplicate
-			return nil
-		}
-
-		collection, err := tx.FindCachedCollectionByNameOrId("reviews")
-		if err != nil {
-			return err
-		}
-		r := core.NewRecord(collection)
-		r.Set("restaurant", req.RestaurantId)
-		r.Set("creator", st.user.Id)
-		createInput(req.Body).apply(r)
-		saved = r
-		return tx.Save(r)
-	})
-	var invalid validation.Errors
-	if errors.As(err, &invalid) && isNotUnique(invalid, "creator") {
-		return duplicate, nil
-	}
+	user := stateFrom(ctx).user
+	saved, restaurant, p, err := s.createReview(restaurantSubject, req.RestaurantId, user, createInput(req.Body))
 	if err != nil {
 		return nil, err
 	}
-	if response != nil {
-		return response, nil
+	if p != nil {
+		switch p.status() {
+		case http.StatusNotFound:
+			return reviewsapi.CreateReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusConflict:
+			return reviewsapi.CreateReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
+		}
+		return nil, p.unexpected()
 	}
-
-	out, err := toReview(saved, st.user, restaurant.GetString("name"), nil)
+	out, err := toReview(saved, user, restaurant.GetString("name"), nil)
 	if err != nil {
 		return nil, err
 	}
-	location := basePath + "/restaurants/" + req.RestaurantId + "/reviews/" + saved.Id
+	location := restaurantSubject.reviewPath(req.RestaurantId, saved.Id)
 	return reviewsapi.CreateReview201JSONResponse{
 		Body:    out,
 		Headers: reviewsapi.CreateReview201ResponseHeaders{Location: &location},
 	}, nil
 }
 
+// createReview runs the duplicate check and the save in one transaction.
+// The unique index on the parent and the creator also blocks a second
+// review. The problem is a 404 or a 409.
+func (s *Server) createReview(sub subject, parentID string, user *core.Record, in reviewInput) (review, parent *core.Record, p *problem, err error) {
+	duplicate := conflictProblem(reviewsapi.ProblemCodeReviewExists, "The user already has a review for this "+sub.noun+".")
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		var err error
+		if parent, err = findParent(tx, sub, parentID); errors.Is(err, sql.ErrNoRows) {
+			p = notFoundProblem(sub.notFound)
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		n, err := tx.CountRecords(sub.Reviews, dbx.HashExp{sub.Parent: parentID, "creator": user.Id})
+		if err != nil {
+			return err
+		}
+		if n > 0 {
+			p = duplicate
+			return nil
+		}
+
+		collection, err := tx.FindCachedCollectionByNameOrId(sub.Reviews)
+		if err != nil {
+			return err
+		}
+		r := core.NewRecord(collection)
+		r.Set(sub.Parent, parentID)
+		r.Set("creator", user.Id)
+		in.apply(r)
+		review = r
+		return tx.Save(r)
+	})
+	var invalid validation.Errors
+	switch {
+	case errors.As(err, &invalid) && isNotUnique(invalid, "creator"):
+		return nil, nil, duplicate, nil
+	case err != nil:
+		return nil, nil, nil, err
+	case p != nil:
+		return nil, nil, p, nil
+	}
+	return review, parent, nil, nil
+}
+
 // GetReview returns 404 for a review of a different restaurant.
 func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObject) (reviewsapi.GetReviewResponseObject, error) {
-	restaurant, r, detail, err := s.findReview(s.app, req.RestaurantId, req.ReviewId)
+	restaurant, r, detail, err := s.findReview(s.app, restaurantSubject, req.RestaurantId, req.ReviewId)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +353,7 @@ func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObj
 	if err != nil {
 		return nil, err
 	}
-	photos, err := s.reviewPhotos(r)
+	photos, err := s.reviewPhotos(restaurantSubject, r)
 	if err != nil {
 		return nil, err
 	}
@@ -303,94 +366,125 @@ func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObj
 
 // UpdateReview lets only the creator change a review.
 func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRequestObject) (reviewsapi.UpdateReviewResponseObject, error) {
-	st := stateFrom(ctx)
-
-	var response reviewsapi.UpdateReviewResponseObject
-	var saved, restaurant *core.Record
-	err := s.app.RunInTransaction(func(tx core.App) error {
-		var r *core.Record
-		var detail string
-		var err error
-		restaurant, r, detail, err = s.findReview(tx, req.RestaurantId, req.ReviewId)
-		if err != nil {
-			return err
-		}
-		if detail != "" {
-			response = reviewsapi.UpdateReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}
-			return nil
-		}
-		if r.GetString("creator") != st.user.Id {
-			response = reviewsapi.UpdateReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can change it.")}
-			return nil
-		}
-
-		saved = r
-		if !patchInput(req.Body).apply(r) {
-			return nil
-		}
-		return tx.Save(r)
-	})
+	user := stateFrom(ctx).user
+	saved, restaurant, p, err := s.updateReview(restaurantSubject, req.RestaurantId, req.ReviewId, user, patchInput(req.Body))
 	if err != nil {
 		return nil, err
 	}
-	if response != nil {
-		return response, nil
+	if p != nil {
+		switch p.status() {
+		case http.StatusNotFound:
+			return reviewsapi.UpdateReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusForbidden:
+			return reviewsapi.UpdateReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		}
+		return nil, p.unexpected()
 	}
-
-	photos, err := s.reviewPhotos(saved)
+	photos, err := s.reviewPhotos(restaurantSubject, saved)
 	if err != nil {
 		return nil, err
 	}
-	out, err := toReview(saved, st.user, restaurant.GetString("name"), photos[saved.Id])
+	out, err := toReview(saved, user, restaurant.GetString("name"), photos[saved.Id])
 	if err != nil {
 		return nil, err
 	}
 	return reviewsapi.UpdateReview200JSONResponse(out), nil
 }
 
-// DeleteReview lets only the creator delete a review.
-func (s *Server) DeleteReview(ctx context.Context, req reviewsapi.DeleteReviewRequestObject) (reviewsapi.DeleteReviewResponseObject, error) {
-	user := stateFrom(ctx).user
-
-	var response reviewsapi.DeleteReviewResponseObject = reviewsapi.DeleteReview204Response{}
-	err := s.app.RunInTransaction(func(tx core.App) error {
-		_, r, detail, err := s.findReview(tx, req.RestaurantId, req.ReviewId)
+// updateReview lets only the creator change a review. The problem is a 403
+// or a 404.
+func (s *Server) updateReview(sub subject, parentID, reviewID string, user *core.Record, in reviewInput) (review, parent *core.Record, p *problem, err error) {
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		var detail string
+		var err error
+		parent, review, detail, err = s.findReview(tx, sub, parentID, reviewID)
 		if err != nil {
 			return err
 		}
 		if detail != "" {
-			response = reviewsapi.DeleteReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}
+			p = notFoundProblem(detail)
+			return nil
+		}
+		if review.GetString("creator") != user.Id {
+			p = notCreatorProblem("Only the creator of the review can change it.")
+			return nil
+		}
+		if !in.apply(review) {
+			return nil
+		}
+		return tx.Save(review)
+	})
+	return review, parent, p, err
+}
+
+// DeleteReview lets only the creator delete a review.
+func (s *Server) DeleteReview(ctx context.Context, req reviewsapi.DeleteReviewRequestObject) (reviewsapi.DeleteReviewResponseObject, error) {
+	p, err := s.deleteReview(restaurantSubject, req.RestaurantId, req.ReviewId, stateFrom(ctx).user)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusNotFound:
+			return reviewsapi.DeleteReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusForbidden:
+			return reviewsapi.DeleteReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	return reviewsapi.DeleteReview204Response{}, nil
+}
+
+// deleteReview lets only the creator delete a review. The problem is a 403
+// or a 404.
+func (s *Server) deleteReview(sub subject, parentID, reviewID string, user *core.Record) (p *problem, err error) {
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		_, r, detail, err := s.findReview(tx, sub, parentID, reviewID)
+		if err != nil {
+			return err
+		}
+		if detail != "" {
+			p = notFoundProblem(detail)
 			return nil
 		}
 		if r.GetString("creator") != user.Id {
-			response = reviewsapi.DeleteReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator("Only the creator of the review can delete it.")}
+			p = notCreatorProblem("Only the creator of the review can delete it.")
 			return nil
 		}
 		return tx.Delete(r)
 	})
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return p, err
 }
 
-// findReview returns a detail for the 404 response if the restaurant or the
-// review does not exist. A review of a different restaurant does not exist.
-func (s *Server) findReview(app core.App, restaurantID, reviewID string) (restaurant, review *core.Record, detail string, err error) {
-	restaurant, err = s.findRestaurant(app, restaurantID)
+func findParent(app core.App, sub subject, id string) (*core.Record, error) {
+	return app.FindRecordById(sub.Table, id)
+}
+
+// findReview returns a detail for the 404 response if the parent or the
+// review does not exist. A review of a different parent does not exist.
+func (s *Server) findReview(app core.App, sub subject, parentID, reviewID string) (parent, review *core.Record, detail string, err error) {
+	parent, err = findParent(app, sub, parentID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, restaurantNotFound, nil
+		return nil, nil, sub.notFound, nil
 	} else if err != nil {
 		return nil, nil, "", err
 	}
-	review, err = app.FindRecordById("reviews", reviewID)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && review.GetString("restaurant") != restaurantID) {
+	review, err = app.FindRecordById(sub.Reviews, reviewID)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && review.GetString(sub.Parent) != parentID) {
 		return nil, nil, "The review does not exist.", nil
 	}
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return restaurant, review, "", nil
+	return parent, review, "", nil
+}
+
+func (sub subject) path(parentID string) string {
+	return basePath + "/" + sub.Table + "/" + parentID
+}
+
+func (sub subject) reviewPath(parentID, reviewID string) string {
+	return sub.path(parentID) + "/reviews/" + reviewID
 }
 
 func createInput(body *reviewsapi.ReviewCreate) reviewInput {

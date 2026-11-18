@@ -18,7 +18,7 @@ import (
 
 var restaurantSorts = map[string]sortField{
 	"name":      textSort("restaurants", "name"),
-	"overall":   overallSort,
+	"overall":   restaurantSubject.overallSort,
 	"relevance": relevanceSort,
 	"created":   columnSort("restaurants", "created"),
 	"updated":   columnSort("restaurants", "updated"),
@@ -33,7 +33,7 @@ func (s *Server) ListRestaurants(ctx context.Context, req reviewsapi.ListRestaur
 	}
 
 	limit := limitOf(p.Limit)
-	search := newSearchPage("restaurants")
+	search := restaurantSubject.searchPage()
 	if detail := search.parse(p.Search); detail != "" {
 		return bad(detail)
 	}
@@ -82,15 +82,15 @@ func (s *Server) ListRestaurants(ctx context.Context, req reviewsapi.ListRestaur
 	w := newWhere()
 	search.filter(w)
 	if p.Overall != nil || sortsBy(sort, "overall") {
-		w.joinOverall()
+		w.joinOverall(restaurantSubject)
 	}
-	w.compare(overallColumn, averageComparisons(p.Overall))
+	w.compare(restaurantSubject.overallColumn(), averageComparisons(p.Overall))
 	w.compare(priceLevelColumn, priceLevelComparisons(p.PriceLevel))
 	w.near(p.Near)
 	w.within(p.Within)
-	w.tagFilters(p.TagsHas, p.TagsHasAny, p.TagsHasAll)
+	w.tagFilters(restaurantSubject, p.TagsHas, p.TagsHasAny, p.TagsHasAll)
 	w.idFilters("restaurants", "creator", p.CreatorEq, p.CreatorIn)
-	w.inList(p.ListEq)
+	w.inList(restaurantSubject, p.ListEq)
 	w.compare(column("restaurants", "created"), timestampComparisons(p.Created))
 	w.compare(column("restaurants", "updated"), timestampComparisons(p.Updated))
 	if after != nil {
@@ -190,7 +190,7 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 		if err != nil {
 			return err
 		}
-		if detail, err := restaurantChangeForbidden(tx, r, user.Id); err != nil {
+		if detail, err := changeForbidden(tx, restaurantSubject, r, user.Id); err != nil {
 			return err
 		} else if detail != "" {
 			response = reviewsapi.UpdateRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator(detail)}
@@ -215,7 +215,7 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 			ch.changed = true
 		}
 		if renames || (moves && hadLocation) {
-			n, err := countReviewsOfOtherUsers(tx, r.Id, user.Id)
+			n, err := countReviewsOfOtherUsers(tx, restaurantSubject, r.Id, user.Id)
 			if err != nil {
 				return err
 			}
@@ -273,13 +273,13 @@ func (s *Server) DeleteRestaurant(ctx context.Context, req reviewsapi.DeleteRest
 		if err != nil {
 			return err
 		}
-		if detail, err := restaurantChangeForbidden(tx, r, user.Id); err != nil {
+		if detail, err := changeForbidden(tx, restaurantSubject, r, user.Id); err != nil {
 			return err
 		} else if detail != "" {
 			response = reviewsapi.DeleteRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator(detail)}
 			return nil
 		}
-		n, err := countReviewsOfOtherUsers(tx, r.Id, user.Id)
+		n, err := countReviewsOfOtherUsers(tx, restaurantSubject, r.Id, user.Id)
 		if err != nil {
 			return err
 		}
@@ -358,32 +358,32 @@ func locationOf(r *core.Record) nullable.Nullable[reviewsapi.Location] {
 	return nullable.NewNullableWithValue(l)
 }
 
-// restaurantChangeForbidden returns a detail for the 403 response if the user
-// cannot change or delete the restaurant. A restaurant without a creator
-// belongs to each user who has a review of it.
-func restaurantChangeForbidden(app core.App, r *core.Record, userID string) (string, error) {
+// changeForbidden returns a detail for the 403 response if the user cannot
+// change or delete the parent. A parent without a creator belongs to each
+// user who has a review of it.
+func changeForbidden(app core.App, sub subject, r *core.Record, userID string) (string, error) {
 	if creator := r.GetString("creator"); creator != "" {
 		if creator != userID {
-			return "Only the creator of the restaurant can change or delete it.", nil
+			return "Only the creator of the " + sub.noun + " can change or delete it.", nil
 		}
 		return "", nil
 	}
-	n, err := app.CountRecords("reviews", dbx.HashExp{"restaurant": r.Id, "creator": userID})
+	n, err := app.CountRecords(sub.Reviews, dbx.HashExp{sub.Parent: r.Id, "creator": userID})
 	if err != nil {
 		return "", err
 	}
 	if n == 0 {
-		return "The restaurant has no creator. Only a user with a review of it can change or delete it.", nil
+		return "The " + sub.noun + " has no creator. Only a user with a review of it can change or delete it.", nil
 	}
 	return "", nil
 }
 
-func countReviewsOfOtherUsers(app core.App, restaurantID, userID string) (int64, error) {
-	return app.CountRecords("reviews", dbx.HashExp{"restaurant": restaurantID}, dbx.Not(dbx.HashExp{"creator": userID}))
+func countReviewsOfOtherUsers(app core.App, sub subject, parentID, userID string) (int64, error) {
+	return app.CountRecords(sub.Reviews, dbx.HashExp{sub.Parent: parentID}, dbx.Not(dbx.HashExp{"creator": userID}))
 }
 
 func (s *Server) findRestaurant(app core.App, id string) (*core.Record, error) {
-	return app.FindRecordById("restaurants", id)
+	return findParent(app, restaurantSubject, id)
 }
 
 func (s *Server) restaurantResponse(user, r *core.Record) (reviewsapi.Restaurant, error) {
@@ -409,7 +409,7 @@ func (s *Server) restaurantsOf(user *core.Record, records ...*core.Record) ([]re
 	if err != nil {
 		return nil, err
 	}
-	favorites, err := s.favoriteIDs(user, records...)
+	favorites, err := s.favoriteIDs(restaurantSubject, user, records...)
 	if err != nil {
 		return nil, err
 	}

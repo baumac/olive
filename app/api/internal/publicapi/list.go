@@ -158,17 +158,17 @@ func (w *where) in(expr string, values []string) {
 	w.add(expr + " IN (" + strings.Join(ps, ", ") + ")")
 }
 
-// hasTags adds a condition that the restaurant has at least one of tags.
-func (w *where) hasTags(tags []string) {
+// hasTags adds a condition that the parent has at least one of tags.
+func (w *where) hasTags(sub subject, tags []string) {
 	ps := make([]string, len(tags))
 	for i, t := range tags {
 		ps[i] = w.param(t)
 	}
-	w.add(fmt.Sprintf("[[restaurants.id]] IN (SELECT [[restaurant]] FROM {{%s}} WHERE [[tag]] IN (%s))",
-		tagsTable, strings.Join(ps, ", ")))
+	w.add(fmt.Sprintf("%s IN (SELECT [[%s]] FROM {{%s}} WHERE [[tag]] IN (%s))",
+		column(sub.Table, "id"), sub.Parent, sub.Tags, strings.Join(ps, ", ")))
 }
 
-func (w *where) tagFilters(has *string, hasAny, hasAll *[]string) {
+func (w *where) tagFilters(sub subject, has *string, hasAny, hasAll *[]string) {
 	all := []string{}
 	if has != nil {
 		all = append(all, *has)
@@ -177,10 +177,10 @@ func (w *where) tagFilters(has *string, hasAny, hasAll *[]string) {
 		all = append(all, *hasAll...)
 	}
 	for _, tag := range all {
-		w.hasTags([]string{tag})
+		w.hasTags(sub, []string{tag})
 	}
 	if hasAny != nil {
-		w.hasTags(*hasAny)
+		w.hasTags(sub, *hasAny)
 	}
 }
 

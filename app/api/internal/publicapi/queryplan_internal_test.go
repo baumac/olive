@@ -27,18 +27,18 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 		{name: "sort -overall after cursor", sort: "-overall", cursor: true, want: "SEARCH restaurant_overall USING INDEX idx_restaurant_overall_desc"},
 		{name: "sort overall,name after cursor", sort: "overall,name", cursor: true, want: "SEARCH restaurant_overall USING INDEX idx_restaurant_overall_asc"},
 		{name: "overall filter", sort: "name", filter: func(w *where) {
-			w.joinOverall()
-			w.compare(overallColumn, []comparison{{">=", 4.0}})
+			w.joinOverall(restaurantSubject)
+			w.compare(restaurantSubject.overallColumn(), []comparison{{">=", 4.0}})
 		}, want: "SEARCH restaurant_overall USING COVERING INDEX idx_restaurant_overall_value"},
 		{name: "tags has", sort: "name", filter: func(w *where) {
-			w.tagFilters(new("italian"), nil, nil)
+			w.tagFilters(restaurantSubject, new("italian"), nil, nil)
 		}, want: "SEARCH restaurant_tags USING PRIMARY KEY (tag=?)"},
 		{name: "tags has any and all", sort: "-created", filter: func(w *where) {
-			w.tagFilters(nil, &[]string{"italian", "pizza"}, &[]string{"cheap", "late"})
+			w.tagFilters(restaurantSubject, nil, &[]string{"italian", "pizza"}, &[]string{"cheap", "late"})
 		}, want: "SEARCH restaurant_tags USING PRIMARY KEY (tag=?)"},
-		{name: "list -created", sort: "-created", filter: func(w *where) { w.inList(new("k3x9m2p7q1w8z4a")) }, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
-		{name: "list -overall", sort: "-overall", filter: func(w *where) { w.inList(new("k3x9m2p7q1w8z4a")) }, sorts: true, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
-		{name: "list name", sort: "name", filter: func(w *where) { w.inList(new("k3x9m2p7q1w8z4a")) }, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
+		{name: "list -created", sort: "-created", filter: func(w *where) { w.inList(restaurantSubject, new("k3x9m2p7q1w8z4a")) }, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
+		{name: "list -overall", sort: "-overall", filter: func(w *where) { w.inList(restaurantSubject, new("k3x9m2p7q1w8z4a")) }, sorts: true, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
+		{name: "list name", sort: "name", filter: func(w *where) { w.inList(restaurantSubject, new("k3x9m2p7q1w8z4a")) }, want: "SEARCH list_items USING COVERING INDEX idx_list_items_list_restaurant (list=?)"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			keys, sort, detail := parseSort(&c.sort, "restaurants", restaurantSorts)
@@ -47,7 +47,7 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 			}
 			w := newWhere()
 			if sortsBy(sort, "overall") {
-				w.joinOverall()
+				w.joinOverall(restaurantSubject)
 			}
 			if c.filter != nil {
 				c.filter(w)
@@ -120,11 +120,11 @@ func queryPlan(t *testing.T, s *Server, q *dbx.Query) string {
 
 func TestGalleryUsesIndexes(t *testing.T) {
 	s := newTestServer(t)
-	w := galleryWhere(false, "k3x9m2p7q1w8z4a")
-	w.keyset(galleryKeys, []any{7.6, "2024-11-04 01:26:55.002Z", "r1b8c5e2g9i6k3m", "2024-11-04 01:26:55.002Z", "p4h7j1l5n9q2s6v"})
+	w := galleryWhere(restaurantSubject, false, "k3x9m2p7q1w8z4a")
+	w.keyset(restaurantSubject.galleryKeys, []any{7.6, "2024-11-04 01:26:55.002Z", "r1b8c5e2g9i6k3m", "2024-11-04 01:26:55.002Z", "p4h7j1l5n9q2s6v"})
 	for name, p := range map[string]string{
-		"page":  queryPlan(t, s, s.sortQuery("review_photos", w, galleryKeys, defaultLimit+1).Build()),
-		"cover": queryPlan(t, s, s.coverQuery([]string{"k3x9m2p7q1w8z4a", "u5n1c8r3t6y0b2e"})),
+		"page":  queryPlan(t, s, s.sortQuery("review_photos", w, restaurantSubject.galleryKeys, defaultLimit+1).Build()),
+		"cover": queryPlan(t, s, s.coverQuery(restaurantSubject, []string{"k3x9m2p7q1w8z4a", "u5n1c8r3t6y0b2e"})),
 	} {
 		for _, want := range []string{"SEARCH reviews USING INDEX idx_reviews_restaurant", "idx_review_photos_review_created (review=?)"} {
 			if !strings.Contains(p, want) {
@@ -164,7 +164,7 @@ func TestReviewOverallUsesIndexes(t *testing.T) {
 		{name: "all by title with overall filter", sort: "title", overall: true, want: []string{"idx_reviews_title"}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			keys, sort, detail := parseSort(&c.sort, "reviews", reviewSorts)
+			keys, sort, detail := parseSort(&c.sort, "reviews", restaurantSubject.reviewSorts)
 			if detail != "" {
 				t.Fatal(detail)
 			}
@@ -173,7 +173,7 @@ func TestReviewOverallUsesIndexes(t *testing.T) {
 				c.filter(w)
 			}
 			if c.overall {
-				w.compare(overallFilter(sort), []comparison{{">=", 8.0}})
+				w.compare(restaurantSubject.overallFilter(sort), []comparison{{">=", 8.0}})
 			}
 			if c.cursor {
 				w.keyset(keys, []any{7.6, "r1b8c5e2g9i6k3m"})
@@ -233,14 +233,14 @@ func TestListsUseIndexes(t *testing.T) {
 	for i := range page {
 		page[i] = core.NewRecord(restaurants)
 	}
-	w := listItemsWhere("l7d2f9h4j1k8m3p")
-	w.keyset(listItemKeys, []any{"2024-11-04 01:26:55.002Z", "k3x9m2p7q1w8z4a"})
+	w := listItemsWhere(restaurantSubject, "l7d2f9h4j1k8m3p")
+	w.keyset(restaurantSubject.listItemKeys, []any{"2024-11-04 01:26:55.002Z", "k3x9m2p7q1w8z4a"})
 	for name, c := range map[string]struct {
 		plan string
 		want []string
 	}{
-		"favorites of a page":   {queryPlan(t, s, s.favoritesQuery("u5n1c8r3t6y0b2e", page...).Build()), []string{"idx_lists_favorites", "idx_list_items_list_restaurant"}},
-		"restaurants of a list": {queryPlan(t, s, s.sortQuery("list_items", w, listItemKeys, defaultLimit+1).Build()), []string{"idx_list_items_list_created"}},
+		"favorites of a page":   {queryPlan(t, s, s.favoritesQuery(restaurantSubject, "u5n1c8r3t6y0b2e", page...).Build()), []string{"idx_lists_favorites", "idx_list_items_list_restaurant"}},
+		"restaurants of a list": {queryPlan(t, s, s.sortQuery("list_items", w, restaurantSubject.listItemKeys, defaultLimit+1).Build()), []string{"idx_list_items_list_created"}},
 	} {
 		for _, want := range c.want {
 			if !strings.Contains(c.plan, want) {

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/baumac/reviews-app/app/api/internal/searchindex"
 	"github.com/pocketbase/dbx"
 )
 
@@ -17,13 +16,6 @@ type scoreColumn struct {
 	name   string
 	weight int
 }
-
-// The scores depend only on the row. bm25 also depends on all other rows.
-// A write then moves the bm25 ranks under an open cursor.
-var (
-	restaurantScores = []scoreColumn{{"name", 10}, {"tags", 4}, {"address", 2}, {"description", 1}}
-	reviewScores     = []scoreColumn{{"title", 10}, {"restaurant_name", 2}, {"feedback", 1}}
-)
 
 // ftsQuery changes a search into an FTS5 query. Each word becomes a quoted
 // term. FTS5 operators in the search are then plain text. A word of two or
@@ -73,12 +65,12 @@ type searchPage struct {
 	query   string
 }
 
-func newSearchPage(table string) *searchPage {
-	p := &searchPage{table: table, fts: searchindex.Restaurants, columns: restaurantScores}
-	if table == "reviews" {
-		p.fts, p.columns = searchindex.Reviews, reviewScores
-	}
-	return p
+func (sub subject) searchPage() *searchPage {
+	return &searchPage{table: sub.Table, fts: sub.FTS, columns: sub.search}
+}
+
+func (sub subject) reviewSearchPage() *searchPage {
+	return &searchPage{table: sub.Reviews, fts: sub.ReviewsFTS, columns: sub.reviewSearch}
 }
 
 // parse returns a detail for the 400 response. A nil search is no search.

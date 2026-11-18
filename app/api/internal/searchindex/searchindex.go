@@ -1,30 +1,38 @@
-// Package searchindex keeps the FTS5 tables of restaurants and reviews equal
-// to the records.
+// Package searchindex keeps the FTS5 tables of the reviewed things and their
+// reviews equal to the records.
 package searchindex
 
 import (
+	"errors"
+	"slices"
 	"strings"
 
+	"github.com/baumac/reviews-app/app/api/internal/subjects"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// The FTS5 tables. Their id column has the record ID.
-const (
-	Restaurants = "restaurants_fts"
-	Reviews     = "reviews_fts"
+// The FTS5 tables of restaurants and their reviews. Their id column has the
+// record ID.
+var (
+	Restaurants = subjects.Restaurants.FTS
+	Reviews     = subjects.Restaurants.ReviewsFTS
 )
 
 // Register adds record hooks to app. Each hook runs the save or delete and
 // the index change in one transaction. Saves in the PocketBase dashboard and
 // cascade deletes also run them.
 func Register(app core.App) {
-	app.OnRecordCreateExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
+	var collections []string
+	for _, k := range subjects.All {
+		collections = append(collections, k.Table, k.Reviews)
+	}
+	app.OnRecordCreateExecute(collections...).BindFunc(func(e *core.RecordEvent) error {
 		return inTransaction(e, nil, func(tx core.App) error {
 			return Put(tx, e.Record)
 		})
 	})
-	app.OnRecordUpdateExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
+	app.OnRecordUpdateExecute(collections...).BindFunc(func(e *core.RecordEvent) error {
 		// Original keeps the loaded values after a save of the same record.
 		// The stored record has the values of the index row.
 		var stored *core.Record
@@ -33,23 +41,31 @@ func Register(app core.App) {
 			return err
 		}
 		return inTransaction(e, readStored, func(tx core.App) error {
-			if !changed(stored, e.Record, indexedFields(e.Record)...) {
+			k, isParent, err := kindOf(e.Record)
+			if err != nil {
+				return err
+			}
+			if !changed(stored, e.Record, indexedFields(k, isParent)...) {
 				return nil
 			}
 			if err := Put(tx, e.Record); err != nil {
 				return err
 			}
-			// The API and the dashboard can change the name of a restaurant
+			// The API and the dashboard can change the name of a parent
 			// that has reviews.
-			if tableOf(e.Record) == Restaurants && changed(stored, e.Record, "name") {
-				return renameInReviews(tx, e.Record)
+			if isParent && changed(stored, e.Record, "name") {
+				return renameInReviews(tx, k, e.Record)
 			}
 			return nil
 		})
 	})
-	app.OnRecordDeleteExecute("restaurants", "reviews").BindFunc(func(e *core.RecordEvent) error {
+	app.OnRecordDeleteExecute(collections...).BindFunc(func(e *core.RecordEvent) error {
 		return inTransaction(e, nil, func(tx core.App) error {
-			return remove(tx, tableOf(e.Record), e.Record.Id)
+			k, isParent, err := kindOf(e.Record)
+			if err != nil {
+				return err
+			}
+			return remove(tx, tableOf(k, isParent), e.Record.Id)
 		})
 	})
 }
@@ -75,11 +91,11 @@ func inTransaction(e *core.RecordEvent, before, index func(tx core.App) error) e
 }
 
 // indexedFields are the record fields that the index row uses.
-func indexedFields(r *core.Record) []string {
-	if tableOf(r) == Restaurants {
-		return []string{"name", "description", "tags", "address"}
+func indexedFields(k subjects.Tables, isParent bool) []string {
+	if isParent {
+		return append(slices.Clone(k.IndexedFields), "tags")
 	}
-	return []string{"title", "feedback", "restaurant"}
+	return []string{"title", "feedback", k.Parent}
 }
 
 func changed(original, r *core.Record, fields ...string) bool {
@@ -91,43 +107,62 @@ func changed(original, r *core.Record, fields ...string) bool {
 	return false
 }
 
-func tableOf(r *core.Record) string {
-	if r.Collection().Name == "restaurants" {
-		return Restaurants
+// kindOf returns the kind of a parent or a review record. The bool is false
+// for a review.
+func kindOf(r *core.Record) (subjects.Tables, bool, error) {
+	name := r.Collection().Name
+	for _, k := range subjects.All {
+		if name == k.Table {
+			return k, true, nil
+		}
+		if name == k.Reviews {
+			return k, false, nil
+		}
 	}
-	return Reviews
+	return subjects.Tables{}, false, errors.New("searchindex: the " + name + " collection has no index")
 }
 
-// Put replaces the index row of a restaurant or a review. A failed restaurant
-// lookup keeps the old row.
+func tableOf(k subjects.Tables, isParent bool) string {
+	if isParent {
+		return k.FTS
+	}
+	return k.ReviewsFTS
+}
+
+// Put replaces the index row of a parent or a review. A failed parent lookup
+// keeps the old row.
 func Put(app core.App, r *core.Record) error {
-	table := tableOf(r)
+	k, isParent, err := kindOf(r)
+	if err != nil {
+		return err
+	}
 	row := dbx.Params{"id": r.Id}
-	if table == Restaurants {
+	if isParent {
 		row["tags"] = tagText(r)
-		row["name"] = r.GetString("name")
-		row["description"] = r.GetString("description")
-		row["address"] = r.GetString("address")
+		for _, f := range k.IndexedFields {
+			row[f] = r.GetString(f)
+		}
 	} else {
-		restaurant, err := app.FindRecordById("restaurants", r.GetString("restaurant"))
+		parent, err := app.FindRecordById(k.Table, r.GetString(k.Parent))
 		if err != nil {
 			return err
 		}
 		row["title"] = r.GetString("title")
 		row["feedback"] = r.GetString("feedback")
-		row["restaurant_name"] = restaurant.GetString("name")
+		row[k.Parent+"_name"] = parent.GetString("name")
 	}
+	table := tableOf(k, isParent)
 	if err := remove(app, table, r.Id); err != nil {
 		return err
 	}
-	_, err := app.DB().Insert(table, row).Execute()
+	_, err = app.DB().Insert(table, row).Execute()
 	return err
 }
 
-func renameInReviews(app core.App, restaurant *core.Record) error {
+func renameInReviews(app core.App, k subjects.Tables, parent *core.Record) error {
 	_, err := app.DB().NewQuery(
-		"UPDATE {{" + Reviews + "}} SET [[restaurant_name]] = {:name} WHERE [[id]] IN (SELECT [[id]] FROM {{reviews}} WHERE [[restaurant]] = {:id})",
-	).Bind(dbx.Params{"name": restaurant.GetString("name"), "id": restaurant.Id}).Execute()
+		"UPDATE {{" + k.ReviewsFTS + "}} SET [[" + k.Parent + "_name]] = {:name} WHERE [[id]] IN (SELECT [[id]] FROM {{" + k.Reviews + "}} WHERE [[" + k.Parent + "]] = {:id})",
+	).Bind(dbx.Params{"name": parent.GetString("name"), "id": parent.Id}).Execute()
 	return err
 }
 

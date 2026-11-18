@@ -494,4 +494,13 @@ func TestPut(t *testing.T) {
 			t.Errorf("title %q, want Nice tea", row.Title)
 		}
 	})
+	t.Run("record of a collection without an index", func(t *testing.T) {
+		users, err := e.app.FindCachedCollectionByNameOrId("users")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := searchindex.Put(e.app, core.NewRecord(users)); err == nil {
+			t.Error("no error")
+		}
+	})
 }

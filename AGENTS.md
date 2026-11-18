@@ -167,6 +167,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - A record hook gives a restaurant save in the dashboard the checks of the spec. See decision 00016.
     - `mail.go` sends the emails of the sign up, the password reset, and the approval. See decision 00037.
   - **`app/api/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
+  - **`app/api/internal/subjects`** - the table names of each kind of thing that users review. The Public API and the search index use them. See decision 00047.
   - **`app/api/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/api/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00034.
   - **`app/api/internal/testapp`** - the migrated database of the Go tests. See decision 00045.
