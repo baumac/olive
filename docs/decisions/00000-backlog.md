@@ -20,6 +20,7 @@ Each sub-bullet point contains notes about the incomplete decision.
 - deploy to prod
 
 ## Won't do
+- Allow directly uploading photos to restaurants or recipes: all photos must be uploaded via a review to force photos being associated to a review
 - Support reviewing individual foods: for now reviewing individual foods is out of scope for this project
   - support reviewing cheeses
   - support reviewing wines
