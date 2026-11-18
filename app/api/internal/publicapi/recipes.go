@@ -19,11 +19,12 @@ import (
 const recipeNotFound = "The recipe does not exist."
 
 var recipeSubject = newSubject(subject{
-	Tables:       subjects.Recipes,
-	noun:         "recipe",
-	notFound:     recipeNotFound,
-	search:       []scoreColumn{{"name", 10}, {"tags", 4}, {"ingredients", 2}, {"description", 1}},
-	reviewSearch: []scoreColumn{{"title", 10}, {"recipe_name", 2}, {"feedback", 1}},
+	Tables:        subjects.Recipes,
+	noun:          "recipe",
+	notFound:      recipeNotFound,
+	listLimitCode: reviewsapi.ProblemCodeListRecipeLimit,
+	search:        []scoreColumn{{"name", 10}, {"tags", 4}, {"ingredients", 2}, {"description", 1}},
+	reviewSearch:  []scoreColumn{{"title", 10}, {"recipe_name", 2}, {"feedback", 1}},
 })
 
 var recipeSorts = map[string]sortField{
@@ -49,7 +50,7 @@ func totalTimeSort(desc bool) []sortKey {
 }
 
 // ListRecipes uses keyset pagination like ListRestaurants.
-func (s *Server) ListRecipes(_ context.Context, req reviewsapi.ListRecipesRequestObject) (reviewsapi.ListRecipesResponseObject, error) {
+func (s *Server) ListRecipes(ctx context.Context, req reviewsapi.ListRecipesRequestObject) (reviewsapi.ListRecipesResponseObject, error) {
 	p := req.Params
 	bad := func(detail string) (reviewsapi.ListRecipesResponseObject, error) {
 		return reviewsapi.ListRecipes400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(detail)}, nil
@@ -90,6 +91,7 @@ func (s *Server) ListRecipes(_ context.Context, req reviewsapi.ListRecipesReques
 	w.compare(totalTimeColumn, totalTimeComparisons(p.TotalTime))
 	w.tagFilters(recipeSubject, p.TagsHas, p.TagsHasAny, p.TagsHasAll)
 	w.idFilters("recipes", "creator", p.CreatorEq, p.CreatorIn)
+	w.inList(recipeSubject, p.ListEq)
 	w.compare(column("recipes", "created"), timestampComparisons(p.Created))
 	w.compare(column("recipes", "updated"), timestampComparisons(p.Updated))
 	if after != nil {
@@ -100,7 +102,7 @@ func (s *Server) ListRecipes(_ context.Context, req reviewsapi.ListRecipesReques
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.recipesOf(records...)
+	items, err := s.recipesOf(stateFrom(ctx).user, records...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +147,7 @@ func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRe
 	}
 	location := recipeSubject.path(r.Id)
 	return reviewsapi.CreateRecipe201JSONResponse{
-		Body:    toRecipe(r, map[string]*core.Record{user.Id: user}, nil, nil),
+		Body:    toRecipe(r, map[string]*core.Record{user.Id: user}, nil, nil, nil),
 		Headers: reviewsapi.CreateRecipe201ResponseHeaders{Location: &location},
 	}, nil
 }
@@ -257,7 +259,7 @@ func recipeWithSource(app core.App, r *core.Record) (string, error) {
 	return id, err
 }
 
-func (s *Server) GetRecipe(_ context.Context, req reviewsapi.GetRecipeRequestObject) (reviewsapi.GetRecipeResponseObject, error) {
+func (s *Server) GetRecipe(ctx context.Context, req reviewsapi.GetRecipeRequestObject) (reviewsapi.GetRecipeResponseObject, error) {
 	r, err := findParent(s.app, recipeSubject, req.RecipeId)
 	if errors.Is(err, sql.ErrNoRows) {
 		return reviewsapi.GetRecipe404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(recipeNotFound)}, nil
@@ -265,7 +267,7 @@ func (s *Server) GetRecipe(_ context.Context, req reviewsapi.GetRecipeRequestObj
 	if err != nil {
 		return nil, err
 	}
-	out, err := s.recipesOf(r)
+	out, err := s.recipesOf(stateFrom(ctx).user, r)
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +360,7 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 	if response != nil {
 		return response, nil
 	}
-	out, err := s.recipesOf(saved)
+	out, err := s.recipesOf(user, saved)
 	if err != nil {
 		return nil, err
 	}
@@ -399,8 +401,9 @@ func (r recipeRating) toAPI() reviewsapi.RecipeRating {
 	return reviewsapi.RecipeRating{Overall: r.Overall, Taste: r.Taste, Ease: r.Ease, Instructions: r.Instructions, Value: r.Value}
 }
 
-// recipesOf gets the creators, the ratings, and the covers of records.
-func (s *Server) recipesOf(records ...*core.Record) ([]reviewsapi.Recipe, error) {
+// recipesOf gets the creators, the ratings, the covers, and the favorites of
+// records. A nil user has no favorite.
+func (s *Server) recipesOf(user *core.Record, records ...*core.Record) ([]reviewsapi.Recipe, error) {
 	users, err := s.creators(records...)
 	if err != nil {
 		return nil, err
@@ -417,15 +420,19 @@ func (s *Server) recipesOf(records ...*core.Record) ([]reviewsapi.Recipe, error)
 	for id, r := range rows {
 		covers[id] = r.recipePhoto()
 	}
+	favorites, err := s.favoriteIDs(recipeSubject, user, records...)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]reviewsapi.Recipe, len(records))
 	for i, r := range records {
-		items[i] = toRecipe(r, users, ratings, covers)
+		items[i] = toRecipe(r, users, ratings, covers, favorites)
 	}
 	return items, nil
 }
 
 // toRecipe gives a recipe that ratings does not list no reviews.
-func toRecipe(r *core.Record, users map[string]*core.Record, ratings map[string]recipeRating, covers map[string]reviewsapi.RecipePhoto) reviewsapi.Recipe {
+func toRecipe(r *core.Record, users map[string]*core.Record, ratings map[string]recipeRating, covers map[string]reviewsapi.RecipePhoto, favorites map[string]bool) reviewsapi.Recipe {
 	out := reviewsapi.Recipe{
 		Id:          r.Id,
 		Name:        r.GetString("name"),
@@ -439,6 +446,7 @@ func toRecipe(r *core.Record, users map[string]*core.Record, ratings map[string]
 		Creator:     nullable.NewNullNullable[reviewsapi.Creator](),
 		Rating:      nullable.NewNullNullable[reviewsapi.RecipeRating](),
 		Cover:       nullable.NewNullNullable[reviewsapi.RecipePhoto](),
+		Favorite:    favorites[r.Id],
 		Created:     apiTimestamp(r.GetDateTime("created")),
 		Updated:     apiTimestamp(r.GetDateTime("updated")),
 	}

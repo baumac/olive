@@ -207,13 +207,16 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		if !creator.GetBool("approved") {
 			return pageMeta{}, true, errNoRecord
 		}
-		count, err := app.CountRecords("list_items", dbx.HashExp{"list": list.Id})
+		var counts listItemCounts
+		err = app.DB().NewQuery("SELECT (SELECT COUNT(*) FROM {{list_items}} WHERE [[list]] = {:id}) AS [[restaurants]], " +
+			"(SELECT COUNT(*) FROM {{list_recipes}} WHERE [[list]] = {:id}) AS [[recipes]]").
+			Bind(dbx.Params{"id": list.Id}).One(&counts)
 		if err != nil {
 			return pageMeta{}, true, err
 		}
 		baseURL := publicBaseURL(appURL)
-		meta := p.listMeta(list, creator, int(count), baseURL)
-		meta.StructuredData = listData(list, int(count), baseURL).script()
+		meta := p.listMeta(list, creator, counts, baseURL)
+		meta.StructuredData = listData(list, counts.Restaurants+counts.Recipes, baseURL).script()
 		return meta, true, nil
 	}
 	if len(parts) < 2 || !recordID.MatchString(parts[1]) {
@@ -313,17 +316,38 @@ func (p indexPage) parentMeta(kind reviewedKind, parent *core.Record, baseURL st
 	return meta
 }
 
-// listMeta has only the public fields of the creator.
-func (p indexPage) listMeta(list, creator *core.Record, count int, baseURL string) pageMeta {
-	title := list.GetString("name") + " by " + creator.GetString("name")
-	restaurants := strconv.Itoa(count) + " restaurants"
-	if count == 1 {
-		restaurants = "1 restaurant"
+type listItemCounts struct {
+	Restaurants int `db:"restaurants"`
+	Recipes     int `db:"recipes"`
+}
+
+// items names the restaurants and the recipes. A list without items has 0
+// restaurants.
+func (c listItemCounts) items() string {
+	restaurants, recipes := countOf(c.Restaurants, "restaurant"), countOf(c.Recipes, "recipe")
+	switch {
+	case c.Recipes == 0:
+		return restaurants
+	case c.Restaurants == 0:
+		return recipes
 	}
+	return restaurants + " and " + recipes
+}
+
+func countOf(n int, noun string) string {
+	if n == 1 {
+		return "1 " + noun
+	}
+	return strconv.Itoa(n) + " " + noun + "s"
+}
+
+// listMeta has only the public fields of the creator.
+func (p indexPage) listMeta(list, creator *core.Record, counts listItemCounts, baseURL string) pageMeta {
+	title := list.GetString("name") + " by " + creator.GetString("name")
 	meta := p.siteImage
 	meta.Title = p.pageTitle(title)
 	meta.OGTitle = title
-	meta.Description = "A list of " + restaurants + " by " + creator.GetString("name") + " on " + p.siteName + "."
+	meta.Description = "A list of " + counts.items() + " by " + creator.GetString("name") + " on " + p.siteName + "."
 	meta.Type = "website"
 	meta.URL = pageURL(baseURL, "/lists/"+list.Id)
 	return meta

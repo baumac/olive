@@ -239,7 +239,8 @@ These parts take a `subject`:
 - `searchPage`, `reviewSearchPage`, and the tag filters.
 - `guardReviewOverall` in `reviewschema.go`.
 - `changeForbidden` and `countReviewsOfOtherUsers` in `restaurants.go`.
-- `itemCounts`, `listsWith`, `favoriteIDs`, `listItemPage`, `inList`, `addListItem`, and `removeListItem` in `lists.go`.
+- `listsWith`, `favoriteIDs`, `listItemPage`, `inList`, `addListItem`, and `removeListItem` in `lists.go`.
+  `listCounts` counts the restaurants and the recipes of the lists in one statement.
 
 The shared code returns a `problem` for a 4xx result.
 Each strict server method changes its request object, calls the shared code with its subject, and changes the `problem` or the records to its own response type.
@@ -266,6 +267,7 @@ The restaurant details stay restaurant code: the location, `place_id`, the place
 - `webui/structureddata.go` writes a schema.org `Recipe` with `recipeIngredient`, `recipeInstructions` as `HowToStep` items, `aggregateRating`, `recipeYield`, `totalTime` as an ISO 8601 duration, and `isBasedOn` for the source.
   A recipe review page writes a `Review` with an `itemReviewed` of type `Recipe`. See decision 00021.
 - `webui/sitemap.go` adds `/recipes`, the recipes, and the recipe reviews.
+- Step 3 counts the recipes in the description and the `numberOfItems` of a list page. The sitemap then also has the lists with only recipes.
 - Step 2 has the code and the tests of the recipe page meta and JSON-LD in `recipeKind`. Step 4 adds `recipeKind` to `reviewedKinds` and the recipe rows to the sitemap.
   Before the recipe pages of the UI, these URLs show the not-found page. The sitemap and the link previews then must not name them.
 
@@ -308,6 +310,7 @@ Each step is one pull request. Each step ends with `make lint test-app` and the 
    Check with `make check-generate`, `make test-app`, and `make test-coverage`.
 4. **Add the recipe UI.** Add the pages, the components, the list changes, the design system changes, and the end-to-end tests.
    Turn on the recipe page meta and the recipe rows of the sitemap.
+   The list page, `ReviewerLists.vue`, and the save menu show `recipe_count` next to `item_count`. `item_count` counts only restaurants.
    Check with `make lint-ui lint-eslint test-ui` and `make test-e2e PROJECT=chromium E2E_FILE=e2e/recipes.spec.ts`. Also run `E2E_FILE=e2e/lists.spec.ts`. CI runs all browsers.
 5. **Close the decision.** Set the status of this decision to `implemented`. Change the backlog item to "Support reviewing cheeses and wines".
 

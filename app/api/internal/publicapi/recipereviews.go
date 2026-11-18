@@ -385,3 +385,61 @@ func (r galleryRow) recipePhoto() reviewsapi.RecipePhoto {
 func RecipePhotoFilePath(recipeID, reviewID, photoID string, variant reviewsapi.PhotoVariant) string {
 	return recipeSubject.photoFilePath(recipeID, reviewID, photoID, variant)
 }
+
+func (s *Server) ListListRecipes(ctx context.Context, req reviewsapi.ListListRecipesRequestObject) (reviewsapi.ListListRecipesResponseObject, error) {
+	records, next, p, err := s.listItemPage(ctx, recipeSubject, req.ListId, req.Params.Cursor, req.Params.Limit)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusBadRequest:
+			return reviewsapi.ListListRecipes400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: p.badRequest()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.ListListRecipes404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	items, err := s.recipesOf(stateFrom(ctx).user, records...)
+	if err != nil {
+		return nil, err
+	}
+	return reviewsapi.ListListRecipes200JSONResponse{Items: items, NextCursor: next}, nil
+}
+
+// AddListRecipe gives 204 also for a recipe that the list has.
+func (s *Server) AddListRecipe(ctx context.Context, req reviewsapi.AddListRecipeRequestObject) (reviewsapi.AddListRecipeResponseObject, error) {
+	p, err := s.addListItem(recipeSubject, req.ListRef, req.RecipeId, stateFrom(ctx).user)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusForbidden:
+			return reviewsapi.AddListRecipe403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.AddListRecipe404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		case http.StatusConflict:
+			return reviewsapi.AddListRecipe409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	return reviewsapi.AddListRecipe204Response{}, nil
+}
+
+func (s *Server) RemoveListRecipe(ctx context.Context, req reviewsapi.RemoveListRecipeRequestObject) (reviewsapi.RemoveListRecipeResponseObject, error) {
+	p, err := s.removeListItem(recipeSubject, req.ListRef, req.RecipeId, stateFrom(ctx).user)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusForbidden:
+			return reviewsapi.RemoveListRecipe403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.RemoveListRecipe404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	return reviewsapi.RemoveListRecipe204Response{}, nil
+}

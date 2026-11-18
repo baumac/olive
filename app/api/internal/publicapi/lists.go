@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net/http"
 	"slices"
+	"strconv"
+	"strings"
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
@@ -14,8 +16,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// The spec has the limits in the descriptions of createList and
-// addListRestaurant.
+// The spec has the limits in the descriptions of createList,
+// addListRestaurant, and addListRecipe. maxListItems is for each kind.
 const (
 	maxLists     = 50
 	maxListItems = 500
@@ -93,28 +95,6 @@ func nameTaken() reviewsapi.ConflictApplicationProblemPlusJSONResponse {
 	return propertyConflict(reviewsapi.ProblemCodeListNameTaken, "name", "Another list of the user has this name.")
 }
 
-// itemCounts gives no entry for a list without items.
-func (s *Server) itemCounts(sub subject, lists ...*core.Record) (map[string]int, error) {
-	out := map[string]int{}
-	if len(lists) == 0 {
-		return out, nil
-	}
-	ids := make([]any, len(lists))
-	for i, l := range lists {
-		ids[i] = l.Id
-	}
-	var rows []struct {
-		List  string `db:"list"`
-		Count int    `db:"count"`
-	}
-	err := s.app.DB().Select("list", "COUNT(*) AS [[count]]").From(sub.ListItems).
-		Where(dbx.In("list", ids...)).GroupBy("list").All(&rows)
-	for _, r := range rows {
-		out[r.List] = r.Count
-	}
-	return out, err
-}
-
 // listsWith returns the lists of ids that have the parent.
 func (s *Server) listsWith(sub subject, parentID string, lists []*core.Record) (map[string]bool, error) {
 	out := map[string]bool{}
@@ -161,12 +141,48 @@ func (s *Server) favoritesQuery(sub subject, userID string, records ...*core.Rec
 		AndWhere(dbx.In(parent, ids...))
 }
 
-func toSavedList(list, creator *core.Record, count int) reviewsapi.SavedList {
+func toSavedList(list, creator *core.Record, counts listCounts) reviewsapi.SavedList {
 	return reviewsapi.SavedList{
 		Id: list.Id, Name: list.GetString("name"), Kind: reviewsapi.SavedListKind(list.GetString("kind")),
-		Creator: toCreator(creator), ItemCount: count,
+		Creator: toCreator(creator), ItemCount: counts.restaurants[list.Id], RecipeCount: counts.recipes[list.Id],
 		Created: apiTimestamp(list.GetDateTime("created")), Updated: apiTimestamp(list.GetDateTime("updated")),
 	}
+}
+
+// listCounts has the number of restaurants and the number of recipes of each
+// list. A list without items has no entry.
+type listCounts struct {
+	restaurants, recipes map[string]int
+}
+
+// listCounts counts the items of both kinds in one statement.
+func (s *Server) listCounts(lists ...*core.Record) (listCounts, error) {
+	counts := listCounts{restaurants: map[string]int{}, recipes: map[string]int{}}
+	if len(lists) == 0 {
+		return counts, nil
+	}
+	params := dbx.Params{}
+	names := make([]string, len(lists))
+	for i, l := range lists {
+		name := "list" + strconv.Itoa(i)
+		params[name] = l.Id
+		names[i] = "{:" + name + "}"
+	}
+	in := "[[list]] IN (" + strings.Join(names, ", ") + ")"
+	var rows []struct {
+		List        string `db:"list"`
+		Restaurants int    `db:"restaurants"`
+		Recipes     int    `db:"recipes"`
+	}
+	err := s.app.DB().NewQuery("SELECT [[list]], SUM([[restaurant]]) AS [[restaurants]], SUM([[recipe]]) AS [[recipes]] FROM (" +
+		"SELECT [[list]], 1 AS [[restaurant]], 0 AS [[recipe]] FROM {{" + restaurantSubject.ListItems + "}} WHERE " + in +
+		" UNION ALL SELECT [[list]], 0, 1 FROM {{" + recipeSubject.ListItems + "}} WHERE " + in +
+		") GROUP BY [[list]]").Bind(params).All(&rows)
+	for _, r := range rows {
+		counts.restaurants[r.List] = r.Restaurants
+		counts.recipes[r.List] = r.Recipes
+	}
+	return counts, err
 }
 
 // publicList returns the list and its creator. It returns a nil list when
@@ -204,22 +220,31 @@ func (s *Server) ListReviewerLists(ctx context.Context, req reviewsapi.ListRevie
 			-cmp.Compare(a.Id, b.Id),
 		)
 	})
-	counts, err := s.itemCounts(restaurantSubject, lists...)
+	counts, err := s.listCounts(lists...)
 	if err != nil {
 		return nil, err
 	}
-	var with map[string]bool
+	var withRestaurant, withRecipe map[string]bool
 	if req.Params.RestaurantEq != nil {
-		if with, err = s.listsWith(restaurantSubject, *req.Params.RestaurantEq, lists); err != nil {
+		if withRestaurant, err = s.listsWith(restaurantSubject, *req.Params.RestaurantEq, lists); err != nil {
+			return nil, err
+		}
+	}
+	if req.Params.RecipeEq != nil {
+		if withRecipe, err = s.listsWith(recipeSubject, *req.Params.RecipeEq, lists); err != nil {
 			return nil, err
 		}
 	}
 	items := make([]reviewsapi.SavedList, len(lists))
 	for i, l := range lists {
-		items[i] = toSavedList(l, user, counts[l.Id])
-		if with != nil {
-			has := with[l.Id]
+		items[i] = toSavedList(l, user, counts)
+		if withRestaurant != nil {
+			has := withRestaurant[l.Id]
 			items[i].HasRestaurant = &has
+		}
+		if withRecipe != nil {
+			has := withRecipe[l.Id]
+			items[i].HasRecipe = &has
 		}
 	}
 	return reviewsapi.ListReviewerLists200JSONResponse{Items: items}, nil
@@ -269,7 +294,7 @@ func (s *Server) CreateList(ctx context.Context, req reviewsapi.CreateListReques
 	}
 	location := basePath + "/lists/" + list.Id
 	return reviewsapi.CreateList201JSONResponse{
-		Body:    toSavedList(list, user, 0),
+		Body:    toSavedList(list, user, listCounts{}),
 		Headers: reviewsapi.CreateList201ResponseHeaders{Location: &location},
 	}, nil
 }
@@ -282,11 +307,11 @@ func (s *Server) GetList(ctx context.Context, req reviewsapi.GetListRequestObjec
 	if list == nil {
 		return reviewsapi.GetList404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(listNotFound)}, nil
 	}
-	counts, err := s.itemCounts(restaurantSubject, list)
+	counts, err := s.listCounts(list)
 	if err != nil {
 		return nil, err
 	}
-	return reviewsapi.GetList200JSONResponse(toSavedList(list, creator, counts[list.Id])), nil
+	return reviewsapi.GetList200JSONResponse(toSavedList(list, creator, counts)), nil
 }
 
 // listChangeForbidden returns the 403 problem if the user cannot rename or
@@ -345,14 +370,15 @@ func (s *Server) UpdateList(ctx context.Context, req reviewsapi.UpdateListReques
 	if response != nil {
 		return response, nil
 	}
-	counts, err := s.itemCounts(restaurantSubject, saved)
+	counts, err := s.listCounts(saved)
 	if err != nil {
 		return nil, err
 	}
-	return reviewsapi.UpdateList200JSONResponse(toSavedList(saved, user, counts[saved.Id])), nil
+	return reviewsapi.UpdateList200JSONResponse(toSavedList(saved, user, counts)), nil
 }
 
-// DeleteList also deletes the items of the list. The restaurants stay.
+// DeleteList also deletes the items of the list. The restaurants and the
+// recipes stay.
 func (s *Server) DeleteList(ctx context.Context, req reviewsapi.DeleteListRequestObject) (reviewsapi.DeleteListResponseObject, error) {
 	user := stateFrom(ctx).user
 	var response reviewsapi.DeleteListResponseObject = reviewsapi.DeleteList204Response{}

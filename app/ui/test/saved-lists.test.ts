@@ -30,6 +30,7 @@ function list(kind: 'favorites' | 'custom', name: string, itemCount = 1): SavedL
     kind,
     creator: { id: ana.id, name: 'Ana' },
     itemCount,
+    recipeCount: 0,
     created: '2024-11-04T01:26:55.002Z',
     updated: '2024-11-04T01:26:55.002Z',
   }

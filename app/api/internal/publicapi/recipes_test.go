@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
@@ -34,6 +35,11 @@ func (e *env) createRecipeReview(token, recipeID, body string) map[string]any {
 // reviews, joined with commas.
 func (e *env) names(path string) (string, *string) {
 	e.t.Helper()
+	return e.namesAs(path, "")
+}
+
+func (e *env) namesAs(path, token string) (string, *string) {
+	e.t.Helper()
 	var p struct {
 		Items []struct {
 			Name  string `json:"name"`
@@ -41,7 +47,7 @@ func (e *env) names(path string) (string, *string) {
 		} `json:"items"`
 		NextCursor *string `json:"next_cursor"`
 	}
-	e.expect(request{method: "GET", path: path}, http.StatusOK).decode(e.t, &p)
+	e.expect(request{method: "GET", path: path, token: token}, http.StatusOK).decode(e.t, &p)
 	var out []string
 	for _, it := range p.Items {
 		out = append(out, it.Name+it.Title)
@@ -165,7 +171,6 @@ func TestListRecipes(t *testing.T) {
 	for sort, want := range map[string]string{
 		"total_time":  "Hummus,Shakshuka,Bread",
 		"-total_time": "Shakshuka,Hummus,Bread",
-		"-overall":    "Hummus,Bread,Shakshuka",
 	} {
 		t.Run("the pages of "+sort+" follow the cursor", func(t *testing.T) {
 			var got []string
@@ -185,6 +190,24 @@ func TestListRecipes(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("the pages of -overall follow the cursor", func(t *testing.T) {
+		var got []string
+		path := "/v1/recipes?limit=1&sort=-overall"
+		for range 4 {
+			names, next := e.names(path)
+			got = append(got, names)
+			if next == nil {
+				break
+			}
+			path = "/v1/recipes?limit=1&sort=-overall&cursor=" + url.QueryEscape(*next)
+		}
+		// The recipes without reviews come in the order of their IDs.
+		slices.Sort(got[1:])
+		if strings.Join(got, ",") != "Hummus,Bread,Shakshuka" {
+			t.Errorf("pages %v, want Hummus first", got)
+		}
+	})
 
 	t.Run("a bad sort gets 400", func(t *testing.T) {
 		e.expect(request{method: "GET", path: "/v1/recipes?sort=relevance"}, http.StatusBadRequest)

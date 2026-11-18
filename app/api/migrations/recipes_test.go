@@ -94,6 +94,13 @@ func TestRecipeTriggers(t *testing.T) {
 
 func TestRecipesMigrationDown(t *testing.T) {
 	app := newIndexApp(t)
+	items, err := app.FindCollectionByNameOrId("list_recipes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := app.Delete(items); err != nil {
+		t.Fatal(err)
+	}
 	if err := dropRecipes(app); err != nil {
 		t.Fatal(err)
 	}

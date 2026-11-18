@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 5.4.0
+  version: 5.5.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants and recipes.
 
@@ -38,6 +38,7 @@ info:
     - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`.
     - Version 5.3.0 adds the `price_level` filter of `listRestaurants`.
     - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews.
+    - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists.
 
 servers:
   - url: /v1
@@ -56,7 +57,7 @@ tags:
   - name: places
     description: The search for the place of a restaurant.
   - name: lists
-    description: The lists of restaurants of users. Each user has a favorites list.
+    description: The lists of restaurants and recipes of users. Each user has a favorites list.
 
 paths:
   /users:
@@ -1372,6 +1373,7 @@ paths:
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
         - $ref: '#/components/parameters/CreatorIn'
+        - $ref: '#/components/parameters/ListEq'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -1965,6 +1967,7 @@ paths:
         The favorites list is first. The other lists follow, the newest first.
         A user has at most 50 lists. The response has all of them.
         With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant.
+        With `recipe[eq]`, each list tells in `has_recipe` if it has the recipe.
       tags: [lists]
       security:
         - {}
@@ -1972,6 +1975,7 @@ paths:
         - cookieAuth: []
       parameters:
         - $ref: '#/components/parameters/ListHasRestaurant'
+        - $ref: '#/components/parameters/ListHasRecipe'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -2116,7 +2120,7 @@ paths:
       summary: Delete a list of restaurants
       description: |
         Only the creator of the list can delete it. The favorites list cannot be deleted.
-        The restaurants of the list stay.
+        The restaurants and the recipes of the list stay.
       tags: [lists]
       security:
         - bearerAuth: []
@@ -2236,6 +2240,105 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /lists/{listId}/recipes:
+    parameters:
+      - $ref: '#/components/parameters/ListId'
+    get:
+      operationId: listListRecipes
+      summary: List the recipes of a list
+      description: |
+        The recipe that was added last is first.
+        `listRecipes` with `list[eq]` can search, sort, and filter the recipes of a list.
+      tags: [lists]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of recipes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lists/{listRef}/recipes/{recipeId}:
+    parameters:
+      - $ref: '#/components/parameters/ListRef'
+      - $ref: '#/components/parameters/RecipeId'
+    put:
+      operationId: addListRecipe
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Add a recipe to a list
+      description: |
+        Only the creator of the list can add a recipe.
+        A recipe that the list already has changes nothing.
+        A list with 500 recipes gets `409 Conflict`. The restaurants of the list do not count.
+        A new recipe changes `updated` of the list.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The list has the recipe.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      operationId: removeListRecipe
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Remove a recipe from a list
+      description: |
+        Only the creator of the list can remove a recipe.
+        A recipe that the list does not have changes nothing.
+        A removed recipe changes `updated` of the list.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The list does not have the recipe.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2344,7 +2447,8 @@ components:
       in: path
       description: |
         The ID of the list, or `favorites` for the favorites list of the user of the token.
-        Only `addListRestaurant` and `removeListRestaurant` take `favorites`. A client then changes the favorites without a request for the ID of the list.
+        Only `addListRestaurant`, `removeListRestaurant`, `addListRecipe`, and `removeListRecipe` take `favorites`.
+        A client then changes the favorites without a request for the ID of the list.
         The other operations of `/lists` need the ID. `listReviewerLists` gives it.
       required: true
       schema:
@@ -2356,6 +2460,14 @@ components:
       in: query
       description: |
         The ID of a restaurant. Each list of the response then has `has_restaurant`.
+        The parameter does not filter the lists.
+      schema:
+        $ref: '#/components/schemas/RecordId'
+    ListHasRecipe:
+      name: recipe[eq]
+      in: query
+      description: |
+        The ID of a recipe. Each list of the response then has `has_recipe`.
         The parameter does not filter the lists.
       schema:
         $ref: '#/components/schemas/RecordId'
@@ -2802,8 +2914,8 @@ components:
       name: list[eq]
       in: query
       description: |
-        Selects the restaurants of the list with this ID.
-        A list ID that does not exist selects no restaurant.
+        Selects the restaurants or the recipes of the list with this ID.
+        A list ID that does not exist selects none.
       schema:
         $ref: '#/components/schemas/RecordId'
     RestaurantEq:
@@ -2904,6 +3016,7 @@ components:
         - `list_name_taken` is a list name that another list of the user has.
         - `list_limit` is a list above the 50 lists of a user.
         - `list_restaurant_limit` is a restaurant above the 500 restaurants of a list.
+        - `list_recipe_limit` is a recipe above the 500 recipes of a list.
       content:
         application/problem+json:
           schema:
@@ -3298,7 +3411,7 @@ components:
     Recipe:
       description: A recipe that can be reviewed.
       type: object
-      required: [id, name, ingredients, steps, creator, review_count, rating, cover, created, updated]
+      required: [id, name, ingredients, steps, creator, review_count, rating, cover, favorite, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -3341,6 +3454,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/RecipePhoto'
             - type: 'null'
+        favorite:
+          description: |
+            `true` if the favorites list of the user of the token has the recipe.
+            It is `false` for a request without a token.
+          type: boolean
         created:
           $ref: '#/components/schemas/Timestamp'
         updated:
@@ -3366,6 +3484,7 @@ components:
             instructions: 8
             value: 8
           cover: null
+          favorite: true
           created: '2024-11-04T01:26:55.002Z'
           updated: '2024-11-04T01:26:55.002Z'
     RecipeRating:
@@ -3473,6 +3592,7 @@ components:
               review_count: 0
               rating: null
               cover: null
+              favorite: false
               created: '2024-11-04T01:26:55.002Z'
               updated: '2024-11-04T01:26:55.002Z'
           next_cursor: null
@@ -3823,9 +3943,9 @@ components:
           next_cursor: c2Fk9xQe7LmT2vBn
 
     SavedList:
-      description: A public list of restaurants of a user. The `favorites` list of a user always exists.
+      description: A public list of restaurants and recipes of a user. The `favorites` list of a user always exists.
       type: object
-      required: [id, name, kind, creator, item_count, created, updated]
+      required: [id, name, kind, creator, item_count, recipe_count, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -3843,10 +3963,21 @@ components:
             `listListRestaurants` and `listRestaurants` with `list[eq]` list them.
           type: integer
           minimum: 0
+        recipe_count:
+          description: |
+            The number of recipes of the list.
+            `listListRecipes` and `listRecipes` with `list[eq]` list them.
+          type: integer
+          minimum: 0
         has_restaurant:
           description: |
             `true` if the list has the restaurant of `restaurant[eq]`.
             Only `listReviewerLists` with `restaurant[eq]` gives this property.
+          type: boolean
+        has_recipe:
+          description: |
+            `true` if the list has the recipe of `recipe[eq]`.
+            Only `listReviewerLists` with `recipe[eq]` gives this property.
           type: boolean
         created:
           $ref: '#/components/schemas/Timestamp'
@@ -3860,6 +3991,7 @@ components:
             id: u5n1c8r3t6y0b2e
             name: Ana
           item_count: 4
+          recipe_count: 0
           created: '2024-11-04T01:26:55.002Z'
           updated: '2024-11-04T01:26:55.002Z'
     SavedListCreate:
@@ -3900,6 +4032,7 @@ components:
                 id: u5n1c8r3t6y0b2e
                 name: Ana
               item_count: 12
+              recipe_count: 0
               created: '2024-11-04T01:26:55.002Z'
               updated: '2024-11-04T01:26:55.002Z'
 
@@ -4472,6 +4605,7 @@ components:
             - list_limit
             - list_restaurant_limit
             - source_taken
+            - list_recipe_limit
         property:
           description: |
             The request property that causes a conflict, such as `name` or `location`.

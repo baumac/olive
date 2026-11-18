@@ -137,8 +137,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
     - the `places` tag has the place search for the location of a restaurant
-    - the `lists` tag has the public lists of restaurants of users. Each user has a favorites list. See decision 00033.
-    - `listRestaurants` with `list[eq]` searches, sorts, and filters the restaurants of a list. See decision 00043.
+    - the `lists` tag has the public lists of restaurants and recipes of users. Each user has a favorites list. See decisions 00033 and 00047.
+    - `listRestaurants` and `listRecipes` with `list[eq]` search, sort, and filter the restaurants or the recipes of a list. See decisions 00043 and 00047.
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`
@@ -151,7 +151,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.
   - **`app/api/main.go`** - the PocketBase app
-  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, and `recipe_review_photos` collections
+  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, and `list_recipes` collections
     - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decision 00012.
     - `restaurant_overall` has the plain average for the responses and a Bayesian average for the `overall` sort. See decision 00029.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.

@@ -44,6 +44,7 @@ const favorites: SavedList = {
   kind: 'favorites',
   creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
   itemCount: 2,
+  recipeCount: 0,
   created: '2024-11-04T01:26:55.002Z',
   updated: '2024-11-04T01:26:55.002Z',
 }

@@ -50,7 +50,7 @@ type sitemapFile struct {
 }
 
 // sitemap lists the restaurants list, the restaurants, the reviews, and the
-// lists that have a restaurant and an approved creator.
+// lists that have an item and an approved creator.
 // The records with the newest change come first. It stops at
 // maxSitemapURLs.
 func sitemap(app core.App, baseURL string) ([]byte, error) {
@@ -65,7 +65,8 @@ func sitemap(app core.App, baseURL string) ([]byte, error) {
 		NewQuery("SELECT 'restaurant' AS [[kind]], [[id]], '' AS [[parent]], [[updated]] FROM {{restaurants}} " +
 			"UNION ALL SELECT 'review', [[id]], [[restaurant]], [[updated]] FROM {{reviews}} " +
 			"UNION ALL SELECT 'list', [[id]], '', [[updated]] FROM {{lists}} " +
-			"WHERE EXISTS (SELECT 1 FROM {{list_items}} WHERE [[list_items.list]] = [[lists.id]]) " +
+			"WHERE (EXISTS (SELECT 1 FROM {{list_items}} WHERE [[list_items.list]] = [[lists.id]]) " +
+			"OR EXISTS (SELECT 1 FROM {{list_recipes}} WHERE [[list_recipes.list]] = [[lists.id]])) " +
 			"AND [[creator]] IN (SELECT [[id]] FROM {{users}} WHERE [[approved]] = TRUE) " +
 			"ORDER BY [[updated]] DESC, [[id]] LIMIT {:limit}").
 		Bind(map[string]any{"limit": maxSitemapURLs - len(file.URLs)}).

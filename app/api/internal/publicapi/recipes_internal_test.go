@@ -35,6 +35,7 @@ func TestRecipeQueriesUseIndexes(t *testing.T) {
 		{"recipes by name", "recipes", "name", recipeSorts, nil, "idx_recipes_name"},
 		{"recipes of a creator", "recipes", "-created", recipeSorts, func(w *where) { w.idFilters("recipes", "creator", new("u5n1c8r3t6y0b2e"), nil) }, "idx_recipes_creator_created"},
 		{"recipes with a tag", "recipes", "-created", recipeSorts, func(w *where) { w.tagFilters(recipeSubject, new("dal"), nil, nil) }, "SEARCH recipe_tags USING PRIMARY KEY (tag=?)"},
+		{"recipes of a list", "recipes", "-created", recipeSorts, func(w *where) { w.inList(recipeSubject, new("l7d2f9h4j1k8m3p")) }, "idx_list_recipes_list_recipe (list=?)"},
 		{"reviews of a recipe", "recipe_reviews", "-overall", recipeSubject.reviewSorts, recipe, "idx_recipe_reviews_recipe_overall"},
 		{"reviews of a recipe by created", "recipe_reviews", "-created", recipeSubject.reviewSorts, recipe, "idx_recipe_reviews_recipe_created"},
 		{"reviews of a reviewer", "recipe_reviews", "-overall", recipeSubject.reviewSorts, creator, "idx_recipe_reviews_creator_overall"},
@@ -67,6 +68,20 @@ func TestRecipeQueriesUseIndexes(t *testing.T) {
 				if !strings.Contains(p, want) {
 					t.Errorf("%s plan has no %q:\n%s", name, want, p)
 				}
+			}
+		}
+	})
+
+	t.Run("favorites and list pages", func(t *testing.T) {
+		w := listItemsWhere(recipeSubject, "l7d2f9h4j1k8m3p")
+		for name, c := range map[string]struct {
+			plan, want string
+		}{
+			"favorites": {queryPlan(t, s, s.favoritesQuery(recipeSubject, "u5n1c8r3t6y0b2e").Build()), "idx_lists_favorites"},
+			"page":      {queryPlan(t, s, s.sortQuery("list_recipes", w, recipeSubject.listItemKeys, defaultLimit+1).Build()), "idx_list_recipes_list_created"},
+		} {
+			if !strings.Contains(c.plan, c.want) {
+				t.Errorf("%s plan has no %q:\n%s", name, c.want, c.plan)
 			}
 		}
 	})

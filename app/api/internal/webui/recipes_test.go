@@ -105,6 +105,35 @@ func TestRecipeMeta(t *testing.T) {
 		}
 	})
 
+	t.Run("a list counts its recipes", func(t *testing.T) {
+		recipes := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Weeknights", "kind": "custom"})
+		save(t, app, "list_recipes", map[string]any{"list": recipes.Id, "recipe": recipe.Id})
+		save(t, app, "list_recipes", map[string]any{"list": recipes.Id, "recipe": plain.Id})
+		mixed := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Mixed", "kind": "custom"})
+		save(t, app, "list_recipes", map[string]any{"list": mixed.Id, "recipe": recipe.Id})
+		restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": user.Id})
+		save(t, app, "list_items", map[string]any{"list": mixed.Id, "restaurant": restaurant.Id})
+
+		for path, want := range map[string][]string{
+			"/lists/" + recipes.Id: {
+				`<meta name="description" content="A list of 2 recipes by Ana on Sponga47 Reviews." />`,
+				`"numberOfItems":2`,
+			},
+			"/lists/" + mixed.Id: {
+				`<meta name="description" content="A list of 1 restaurant and 1 recipe by Ana on Sponga47 Reviews." />`,
+				`"numberOfItems":2`,
+			},
+			"/sitemap.xml": {"/lists/" + recipes.Id, "/lists/" + mixed.Id},
+		} {
+			body := get(path)
+			for _, w := range want {
+				if !strings.Contains(body, w) {
+					t.Errorf("%s: no %s in\n%s", path, w, body)
+				}
+			}
+		}
+	})
+
 	t.Run("the reviewer counts the recipe reviews", func(t *testing.T) {
 		if body := get("/reviewers/" + user.Id); !strings.Contains(body, `"userInteractionCount":1`) {
 			t.Errorf("profile page:\n%s", body)

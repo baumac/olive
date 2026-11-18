@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. 
  *
- * The version of the OpenAPI document: 5.4.0
+ * The version of the OpenAPI document: 5.5.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -18,6 +18,11 @@ import {
     ProblemFromJSON,
     ProblemToJSON,
 } from '../models/Problem.js';
+import {
+    type RecipeList,
+    RecipeListFromJSON,
+    RecipeListToJSON,
+} from '../models/RecipeList.js';
 import {
     type RestaurantList,
     RestaurantListFromJSON,
@@ -44,10 +49,26 @@ import {
     SavedListPatchToJSON,
 } from '../models/SavedListPatch.js';
 
+export interface AddListRecipeRequest {
+    /**
+     * The ID of the list, or `favorites` for the favorites list of the user of the token.
+     * Only `addListRestaurant`, `removeListRestaurant`, `addListRecipe`, and `removeListRecipe` take `favorites`.
+     * A client then changes the favorites without a request for the ID of the list.
+     * The other operations of `/lists` need the ID. `listReviewerLists` gives it.
+     * 
+     */
+    listRef: string;
+    /**
+     * The ID of the recipe.
+     */
+    recipeId: string;
+}
+
 export interface AddListRestaurantRequest {
     /**
      * The ID of the list, or `favorites` for the favorites list of the user of the token.
-     * Only `addListRestaurant` and `removeListRestaurant` take `favorites`. A client then changes the favorites without a request for the ID of the list.
+     * Only `addListRestaurant`, `removeListRestaurant`, `addListRecipe`, and `removeListRecipe` take `favorites`.
+     * A client then changes the favorites without a request for the ID of the list.
      * The other operations of `/lists` need the ID. `listReviewerLists` gives it.
      * 
      */
@@ -79,6 +100,24 @@ export interface GetListRequest {
     listId: string;
 }
 
+export interface ListListRecipesRequest {
+    /**
+     * The ID of the list.
+     */
+    listId: string;
+    /**
+     * The page size.
+     */
+    limit?: number;
+    /**
+     * The `next_cursor` value of the previous page.
+     * Clients must not parse or build cursor values.
+     * A cursor is valid only with the same filters and sort that made it.
+     * 
+     */
+    cursor?: string;
+}
+
 export interface ListListRestaurantsRequest {
     /**
      * The ID of the list.
@@ -108,12 +147,34 @@ export interface ListReviewerListsRequest {
      * 
      */
     restaurantEq?: string;
+    /**
+     * The ID of a recipe. Each list of the response then has `has_recipe`.
+     * The parameter does not filter the lists.
+     * 
+     */
+    recipeEq?: string;
+}
+
+export interface RemoveListRecipeRequest {
+    /**
+     * The ID of the list, or `favorites` for the favorites list of the user of the token.
+     * Only `addListRestaurant`, `removeListRestaurant`, `addListRecipe`, and `removeListRecipe` take `favorites`.
+     * A client then changes the favorites without a request for the ID of the list.
+     * The other operations of `/lists` need the ID. `listReviewerLists` gives it.
+     * 
+     */
+    listRef: string;
+    /**
+     * The ID of the recipe.
+     */
+    recipeId: string;
 }
 
 export interface RemoveListRestaurantRequest {
     /**
      * The ID of the list, or `favorites` for the favorites list of the user of the token.
-     * Only `addListRestaurant` and `removeListRestaurant` take `favorites`. A client then changes the favorites without a request for the ID of the list.
+     * Only `addListRestaurant`, `removeListRestaurant`, `addListRecipe`, and `removeListRecipe` take `favorites`.
+     * A client then changes the favorites without a request for the ID of the list.
      * The other operations of `/lists` need the ID. `listReviewerLists` gives it.
      * 
      */
@@ -143,8 +204,34 @@ export interface UpdateListRequest {
  */
 export interface ListsApiInterface {
     /**
+     * Creates request options for addListRecipe without sending the request
+     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
+     * @param {string} recipeId The ID of the recipe.
+     * @throws {RequiredError}
+     * @memberof ListsApiInterface
+     */
+    addListRecipeRequestOpts(requestParameters: AddListRecipeRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * Only the creator of the list can add a recipe. A recipe that the list already has changes nothing. A list with 500 recipes gets `409 Conflict`. The restaurants of the list do not count. A new recipe changes `updated` of the list. 
+     * @summary Add a recipe to a list
+     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
+     * @param {string} recipeId The ID of the recipe.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ListsApiInterface
+     */
+    addListRecipeRaw(requestParameters: AddListRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+
+    /**
+     * Only the creator of the list can add a recipe. A recipe that the list already has changes nothing. A list with 500 recipes gets `409 Conflict`. The restaurants of the list do not count. A new recipe changes `updated` of the list. 
+     * Add a recipe to a list
+     */
+    addListRecipe(requestParameters: AddListRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+
+    /**
      * Creates request options for addListRestaurant without sending the request
-     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60; and &#x60;removeListRestaurant&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
+     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
      * @param {string} restaurantId The ID of the restaurant.
      * @throws {RequiredError}
      * @memberof ListsApiInterface
@@ -154,7 +241,7 @@ export interface ListsApiInterface {
     /**
      * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. A new restaurant changes `updated` of the list. 
      * @summary Add a restaurant to a list
-     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60; and &#x60;removeListRestaurant&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
+     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
      * @param {string} restaurantId The ID of the restaurant.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -201,7 +288,7 @@ export interface ListsApiInterface {
     deleteListRequestOpts(requestParameters: DeleteListRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants of the list stay. 
+     * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants and the recipes of the list stay. 
      * @summary Delete a list of restaurants
      * @param {string} listId The ID of the list.
      * @param {*} [options] Override http request option.
@@ -211,7 +298,7 @@ export interface ListsApiInterface {
     deleteListRaw(requestParameters: DeleteListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
 
     /**
-     * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants of the list stay. 
+     * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants and the recipes of the list stay. 
      * Delete a list of restaurants
      */
     deleteList(requestParameters: DeleteListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
@@ -238,6 +325,34 @@ export interface ListsApiInterface {
      * Get a list of restaurants
      */
     getList(requestParameters: GetListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedList>;
+
+    /**
+     * Creates request options for listListRecipes without sending the request
+     * @param {string} listId The ID of the list.
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @throws {RequiredError}
+     * @memberof ListsApiInterface
+     */
+    listListRecipesRequestOpts(requestParameters: ListListRecipesRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * The recipe that was added last is first. `listRecipes` with `list[eq]` can search, sort, and filter the recipes of a list. 
+     * @summary List the recipes of a list
+     * @param {string} listId The ID of the list.
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ListsApiInterface
+     */
+    listListRecipesRaw(requestParameters: ListListRecipesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecipeList>>;
+
+    /**
+     * The recipe that was added last is first. `listRecipes` with `list[eq]` can search, sort, and filter the recipes of a list. 
+     * List the recipes of a list
+     */
+    listListRecipes(requestParameters: ListListRecipesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecipeList>;
 
     /**
      * Creates request options for listListRestaurants without sending the request
@@ -271,16 +386,18 @@ export interface ListsApiInterface {
      * Creates request options for listReviewerLists without sending the request
      * @param {string} reviewerId The ID of the user.
      * @param {string} [restaurantEq] The ID of a restaurant. Each list of the response then has &#x60;has_restaurant&#x60;. The parameter does not filter the lists. 
+     * @param {string} [recipeEq] The ID of a recipe. Each list of the response then has &#x60;has_recipe&#x60;. The parameter does not filter the lists. 
      * @throws {RequiredError}
      * @memberof ListsApiInterface
      */
     listReviewerListsRequestOpts(requestParameters: ListReviewerListsRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * The favorites list is first. The other lists follow, the newest first. A user has at most 50 lists. The response has all of them. With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant. 
+     * The favorites list is first. The other lists follow, the newest first. A user has at most 50 lists. The response has all of them. With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant. With `recipe[eq]`, each list tells in `has_recipe` if it has the recipe. 
      * @summary List the lists of a user
      * @param {string} reviewerId The ID of the user.
      * @param {string} [restaurantEq] The ID of a restaurant. Each list of the response then has &#x60;has_restaurant&#x60;. The parameter does not filter the lists. 
+     * @param {string} [recipeEq] The ID of a recipe. Each list of the response then has &#x60;has_recipe&#x60;. The parameter does not filter the lists. 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ListsApiInterface
@@ -288,14 +405,40 @@ export interface ListsApiInterface {
     listReviewerListsRaw(requestParameters: ListReviewerListsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SavedListPage>>;
 
     /**
-     * The favorites list is first. The other lists follow, the newest first. A user has at most 50 lists. The response has all of them. With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant. 
+     * The favorites list is first. The other lists follow, the newest first. A user has at most 50 lists. The response has all of them. With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant. With `recipe[eq]`, each list tells in `has_recipe` if it has the recipe. 
      * List the lists of a user
      */
     listReviewerLists(requestParameters: ListReviewerListsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedListPage>;
 
     /**
+     * Creates request options for removeListRecipe without sending the request
+     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
+     * @param {string} recipeId The ID of the recipe.
+     * @throws {RequiredError}
+     * @memberof ListsApiInterface
+     */
+    removeListRecipeRequestOpts(requestParameters: RemoveListRecipeRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * Only the creator of the list can remove a recipe. A recipe that the list does not have changes nothing. A removed recipe changes `updated` of the list. 
+     * @summary Remove a recipe from a list
+     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
+     * @param {string} recipeId The ID of the recipe.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ListsApiInterface
+     */
+    removeListRecipeRaw(requestParameters: RemoveListRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+
+    /**
+     * Only the creator of the list can remove a recipe. A recipe that the list does not have changes nothing. A removed recipe changes `updated` of the list. 
+     * Remove a recipe from a list
+     */
+    removeListRecipe(requestParameters: RemoveListRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+
+    /**
      * Creates request options for removeListRestaurant without sending the request
-     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60; and &#x60;removeListRestaurant&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
+     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
      * @param {string} restaurantId The ID of the restaurant.
      * @throws {RequiredError}
      * @memberof ListsApiInterface
@@ -305,7 +448,7 @@ export interface ListsApiInterface {
     /**
      * Only the creator of the list can remove a restaurant. A restaurant that the list does not have changes nothing. A removed restaurant changes `updated` of the list. 
      * @summary Remove a restaurant from a list
-     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60; and &#x60;removeListRestaurant&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
+     * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
      * @param {string} restaurantId The ID of the restaurant.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -351,6 +494,68 @@ export interface ListsApiInterface {
  * 
  */
 export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
+
+    /**
+     * Creates request options for addListRecipe without sending the request
+     */
+    async addListRecipeRequestOpts(requestParameters: AddListRecipeRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['listRef'] == null) {
+            throw new runtime.RequiredError(
+                'listRef',
+                'Required parameter "listRef" was null or undefined when calling addListRecipe().'
+            );
+        }
+
+        if (requestParameters['recipeId'] == null) {
+            throw new runtime.RequiredError(
+                'recipeId',
+                'Required parameter "recipeId" was null or undefined when calling addListRecipe().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/lists/{listRef}/recipes/{recipeId}`;
+        urlPath = urlPath.replace('{listRef}', encodeURIComponent(String(requestParameters['listRef'])));
+        urlPath = urlPath.replace('{recipeId}', encodeURIComponent(String(requestParameters['recipeId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Only the creator of the list can add a recipe. A recipe that the list already has changes nothing. A list with 500 recipes gets `409 Conflict`. The restaurants of the list do not count. A new recipe changes `updated` of the list. 
+     * Add a recipe to a list
+     */
+    async addListRecipeRaw(requestParameters: AddListRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.addListRecipeRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Only the creator of the list can add a recipe. A recipe that the list already has changes nothing. A list with 500 recipes gets `409 Conflict`. The restaurants of the list do not count. A new recipe changes `updated` of the list. 
+     * Add a recipe to a list
+     */
+    async addListRecipe(requestParameters: AddListRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.addListRecipeRaw(requestParameters, initOverrides);
+    }
 
     /**
      * Creates request options for addListRestaurant without sending the request
@@ -507,7 +712,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
     }
 
     /**
-     * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants of the list stay. 
+     * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants and the recipes of the list stay. 
      * Delete a list of restaurants
      */
     async deleteListRaw(requestParameters: DeleteListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -518,7 +723,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
     }
 
     /**
-     * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants of the list stay. 
+     * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants and the recipes of the list stay. 
      * Delete a list of restaurants
      */
     async deleteList(requestParameters: DeleteListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -575,6 +780,69 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
      */
     async getList(requestParameters: GetListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedList> {
         const response = await this.getListRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listListRecipes without sending the request
+     */
+    async listListRecipesRequestOpts(requestParameters: ListListRecipesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['listId'] == null) {
+            throw new runtime.RequiredError(
+                'listId',
+                'Required parameter "listId" was null or undefined when calling listListRecipes().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/lists/{listId}/recipes`;
+        urlPath = urlPath.replace('{listId}', encodeURIComponent(String(requestParameters['listId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * The recipe that was added last is first. `listRecipes` with `list[eq]` can search, sort, and filter the recipes of a list. 
+     * List the recipes of a list
+     */
+    async listListRecipesRaw(requestParameters: ListListRecipesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecipeList>> {
+        const requestOptions = await this.listListRecipesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RecipeListFromJSON(jsonValue));
+    }
+
+    /**
+     * The recipe that was added last is first. `listRecipes` with `list[eq]` can search, sort, and filter the recipes of a list. 
+     * List the recipes of a list
+     */
+    async listListRecipes(requestParameters: ListListRecipesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecipeList> {
+        const response = await this.listListRecipesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -658,6 +926,10 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
             queryParameters['restaurant[eq]'] = requestParameters['restaurantEq'];
         }
 
+        if (requestParameters['recipeEq'] != null) {
+            queryParameters['recipe[eq]'] = requestParameters['recipeEq'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.accessToken) {
@@ -681,7 +953,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
     }
 
     /**
-     * The favorites list is first. The other lists follow, the newest first. A user has at most 50 lists. The response has all of them. With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant. 
+     * The favorites list is first. The other lists follow, the newest first. A user has at most 50 lists. The response has all of them. With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant. With `recipe[eq]`, each list tells in `has_recipe` if it has the recipe. 
      * List the lists of a user
      */
     async listReviewerListsRaw(requestParameters: ListReviewerListsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SavedListPage>> {
@@ -692,12 +964,74 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
     }
 
     /**
-     * The favorites list is first. The other lists follow, the newest first. A user has at most 50 lists. The response has all of them. With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant. 
+     * The favorites list is first. The other lists follow, the newest first. A user has at most 50 lists. The response has all of them. With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant. With `recipe[eq]`, each list tells in `has_recipe` if it has the recipe. 
      * List the lists of a user
      */
     async listReviewerLists(requestParameters: ListReviewerListsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedListPage> {
         const response = await this.listReviewerListsRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Creates request options for removeListRecipe without sending the request
+     */
+    async removeListRecipeRequestOpts(requestParameters: RemoveListRecipeRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['listRef'] == null) {
+            throw new runtime.RequiredError(
+                'listRef',
+                'Required parameter "listRef" was null or undefined when calling removeListRecipe().'
+            );
+        }
+
+        if (requestParameters['recipeId'] == null) {
+            throw new runtime.RequiredError(
+                'recipeId',
+                'Required parameter "recipeId" was null or undefined when calling removeListRecipe().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/lists/{listRef}/recipes/{recipeId}`;
+        urlPath = urlPath.replace('{listRef}', encodeURIComponent(String(requestParameters['listRef'])));
+        urlPath = urlPath.replace('{recipeId}', encodeURIComponent(String(requestParameters['recipeId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Only the creator of the list can remove a recipe. A recipe that the list does not have changes nothing. A removed recipe changes `updated` of the list. 
+     * Remove a recipe from a list
+     */
+    async removeListRecipeRaw(requestParameters: RemoveListRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.removeListRecipeRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Only the creator of the list can remove a recipe. A recipe that the list does not have changes nothing. A removed recipe changes `updated` of the list. 
+     * Remove a recipe from a list
+     */
+    async removeListRecipe(requestParameters: RemoveListRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.removeListRecipeRaw(requestParameters, initOverrides);
     }
 
     /**

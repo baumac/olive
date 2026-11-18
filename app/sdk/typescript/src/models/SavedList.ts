@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. 
  *
- * The version of the OpenAPI document: 5.4.0
+ * The version of the OpenAPI document: 5.5.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -22,7 +22,7 @@ import {
 } from './Creator.js';
 
 /**
- * A public list of restaurants of a user. The `favorites` list of a user always exists.
+ * A public list of restaurants and recipes of a user. The `favorites` list of a user always exists.
  * @export
  * @interface SavedList
  */
@@ -53,11 +53,23 @@ export interface SavedList {
      */
     itemCount: number;
     /**
+     * The number of recipes of the list.
+     * `listListRecipes` and `listRecipes` with `list[eq]` list them.
+     * 
+     */
+    recipeCount: number;
+    /**
      * `true` if the list has the restaurant of `restaurant[eq]`.
      * Only `listReviewerLists` with `restaurant[eq]` gives this property.
      * 
      */
     hasRestaurant?: boolean;
+    /**
+     * `true` if the list has the recipe of `recipe[eq]`.
+     * Only `listReviewerLists` with `recipe[eq]` gives this property.
+     * 
+     */
+    hasRecipe?: boolean;
     /**
      * An RFC 3339 timestamp in UTC with millisecond precision.
      */
@@ -88,6 +100,7 @@ export function instanceOfSavedList(value: object): value is SavedList {
     if (!('kind' in value) || value['kind'] === undefined) return false;
     if (!('creator' in value) || value['creator'] === undefined) return false;
     if ((!('itemCount' in (value as Record<string, any>)) && !('item_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['itemCount'] === undefined && (value as Record<string, any>)['item_count'] === undefined)) return false;
+    if ((!('recipeCount' in (value as Record<string, any>)) && !('recipe_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['recipeCount'] === undefined && (value as Record<string, any>)['recipe_count'] === undefined)) return false;
     if (!('created' in value) || value['created'] === undefined) return false;
     if (!('updated' in value) || value['updated'] === undefined) return false;
     return true;
@@ -108,7 +121,9 @@ export function SavedListFromJSONTyped(json: any, ignoreDiscriminator: boolean):
         'kind': json['kind'],
         'creator': CreatorFromJSON(json['creator']),
         'itemCount': json['item_count'],
+        'recipeCount': json['recipe_count'],
         'hasRestaurant': json['has_restaurant'] == null ? undefined : json['has_restaurant'],
+        'hasRecipe': json['has_recipe'] == null ? undefined : json['has_recipe'],
         'created': json['created'],
         'updated': json['updated'],
     };
@@ -130,7 +145,9 @@ export function SavedListToJSONTyped(value?: SavedList | null, ignoreDiscriminat
         'kind': value['kind'],
         'creator': CreatorToJSON(value['creator']),
         'item_count': value['itemCount'],
+        'recipe_count': value['recipeCount'],
         'has_restaurant': value['hasRestaurant'],
+        'has_recipe': value['hasRecipe'],
         'created': value['created'],
         'updated': value['updated'],
     };

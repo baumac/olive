@@ -40,12 +40,12 @@ var Restaurants = Tables{
 	Scores:        []string{"space", "service", "food", "price", "cleanliness"},
 }
 
-// Recipes has no list items yet. A later step of decision 00047 adds them.
 var Recipes = Tables{
 	Table:         "recipes",
 	Parent:        "recipe",
 	Reviews:       "recipe_reviews",
 	Photos:        "recipe_review_photos",
+	ListItems:     "list_recipes",
 	Overall:       "recipe_overall",
 	Tags:          "recipe_tags",
 	FTS:           "recipes_fts",
