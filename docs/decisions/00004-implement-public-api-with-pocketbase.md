@@ -214,4 +214,4 @@ The unique index on `restaurant` and `creator` of `reviews` also changes a dupli
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- The rate limit is in memory. More than one server needs a shared store or a limit at the proxy.
+None.
