@@ -149,6 +149,7 @@ A user from SQL has no favorites list. `favoritesOf` makes it at the first `PUT`
 - `/lists/{id}` gets the title "<name> by <creator>" and a description with the number of restaurants.
 - Its structured data is a schema.org `ItemList` with `name`, `numberOfItems`, and `url`.
 - `/sitemap.xml` has the lists that have at least one restaurant. An empty list is not in it.
+- Decision 00049 removes the structured data and the sitemap.
 
 ## UI
 

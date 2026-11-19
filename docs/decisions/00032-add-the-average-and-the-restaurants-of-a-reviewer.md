@@ -28,7 +28,7 @@ Out of scope:
 - the average of each of the five scores of a reviewer
 - a sort or a filter of reviewers. The API has no list of reviewers.
 - the my reviews page. It shows only the review list.
-- the link preview and the structured data of the reviewer page. See decisions 00013 and 00021.
+- the link preview and the structured data of the reviewer page. See decisions 00013 and 00021. Decision 00049 removes the structured data.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation

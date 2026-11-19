@@ -136,7 +136,7 @@ The UI route does not add content to the page body.
 - the end-to-end tests find elements by role and name. Two versions of the same heading can make them unstable.
 
 A later decision can add JSON-LD in the page-meta block. JSON-LD is a data block, so the CSP does not block it.
-Decision 00021 adds it, and a sitemap.
+Decision 00021 adds it, and a sitemap. Decision 00049 removes them.
 
 ## Photos
 

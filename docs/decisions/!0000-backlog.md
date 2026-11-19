@@ -7,7 +7,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## For claude
-- Undo decision 00021-add-structured-data-and-a-sitemap.md to add structured data and a sitemap for search engines
 - Update decision 00018 with improved map UX
   - encode the position of the map in the url. Currently it is not in the URL, so a reload opens Barcelona again
   - allow users to set a prefered location that will be the default location the map opens for them

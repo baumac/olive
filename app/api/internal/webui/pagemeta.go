@@ -82,9 +82,6 @@ type pageMeta struct {
 	ImageWidth  int
 	ImageHeight int
 	ImageAlt    string
-	// StructuredData is the JSON-LD of the page. It is empty for a page
-	// without it.
-	StructuredData template.JS
 }
 
 var metaTemplate = template.Must(template.New("meta").Parse(`<title>{{.Title}}</title>
@@ -106,10 +103,7 @@ var metaTemplate = template.Must(template.New("meta").Parse(`<title>{{.Title}}</
     <meta property="og:image:alt" content="{{.ImageAlt}}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{{.OGTitle}}" />
-    <meta name="twitter:description" content="{{.Description}}" />
-    {{- if .StructuredData}}
-    <script type="application/ld+json">{{.StructuredData}}</script>
-    {{- end}}`))
+    <meta name="twitter:description" content="{{.Description}}" />`))
 
 // indexPage is index.html cut around the page-meta block. siteName and
 // siteImage come from the default tags of the block.
@@ -186,14 +180,7 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		if !user.GetBool("approved") {
 			return pageMeta{}, true, errNoRecord
 		}
-		baseURL := publicBaseURL(appURL)
-		data, err := reviewerData(app, user, baseURL)
-		if err != nil {
-			return pageMeta{}, true, err
-		}
-		meta := p.reviewerMeta(user, baseURL)
-		meta.StructuredData = data.script()
-		return meta, true, nil
+		return p.reviewerMeta(user, publicBaseURL(appURL)), true, nil
 	}
 	if len(parts) == 2 && strings.EqualFold(parts[0], "lists") && recordID.MatchString(parts[1]) {
 		list, err := app.FindRecordById("lists", parts[1])
@@ -214,10 +201,7 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		if err != nil {
 			return pageMeta{}, true, err
 		}
-		baseURL := publicBaseURL(appURL)
-		meta := p.listMeta(list, creator, counts, baseURL)
-		meta.StructuredData = listData(list, counts.Restaurants+counts.Recipes, baseURL).script()
-		return meta, true, nil
+		return p.listMeta(list, creator, counts, publicBaseURL(appURL)), true, nil
 	}
 	if len(parts) < 2 || !recordID.MatchString(parts[1]) {
 		return pageMeta{}, false, nil
@@ -234,13 +218,7 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		return pageMeta{}, true, notFound(err)
 	}
 	if !isReview {
-		data, err := kind.data(app, parent, baseURL)
-		if err != nil {
-			return pageMeta{}, true, err
-		}
-		meta := p.parentMeta(kind, parent, baseURL)
-		meta.StructuredData = data.script()
-		return meta, true, nil
+		return p.parentMeta(kind, parent, baseURL), true, nil
 	}
 	review, err := app.FindRecordById(kind.Reviews, parts[3])
 	if err != nil {
@@ -260,23 +238,18 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 	} else if err != nil {
 		return pageMeta{}, true, err
 	}
-	meta := p.reviewMeta(kind, parent, review, photo, baseURL)
-	meta.StructuredData = reviewData(app, kind, parent, review, baseURL).script()
-	return meta, true, nil
+	return p.reviewMeta(kind, parent, review, photo, baseURL), true, nil
 }
 
 // reviewedKind has the parts of the pages of one kind of reviewed thing.
 type reviewedKind struct {
 	subjects.Tables
-	// itemType is the schema.org type.
-	itemType      string
 	photoFilePath func(parentID, reviewID, photoID string, variant reviewsapi.PhotoVariant) string
-	data          func(app core.App, parent *core.Record, baseURL string) (jsonLD, error)
 }
 
 var (
-	restaurantKind = reviewedKind{Tables: subjects.Restaurants, itemType: "Restaurant", photoFilePath: publicapi.PhotoFilePath, data: restaurantData}
-	recipeKind     = reviewedKind{Tables: subjects.Recipes, itemType: "Recipe", photoFilePath: publicapi.RecipePhotoFilePath, data: recipeData}
+	restaurantKind = reviewedKind{Tables: subjects.Restaurants, photoFilePath: publicapi.PhotoFilePath}
+	recipeKind     = reviewedKind{Tables: subjects.Recipes, photoFilePath: publicapi.RecipePhotoFilePath}
 	reviewedKinds  = []reviewedKind{restaurantKind, recipeKind}
 )
 

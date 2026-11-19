@@ -43,18 +43,6 @@ test('a review page shows its first photo in the link preview', async ({ page, a
   await expect(page).toHaveTitle('Great grill · Sponga47 Reviews')
   expect(served).toContain('<title>Great grill · Sponga47 Reviews</title>')
 
-  // The browser does not run the data block. The noCspViolations fixture
-  // checks that the policy allows it.
-  const data = JSON.parse(await head.locator('script[type="application/ld+json"]').textContent() ?? '')
-  expect(data).toMatchObject({
-    '@type': 'Review',
-    name: 'Great grill',
-    url: `${appURL}${path}`,
-    author: { '@type': 'Person', name: user.name },
-    itemReviewed: { '@type': 'Restaurant', name: 'Preview Grill' },
-    reviewRating: { ratingValue: 8, worstRating: 1, bestRating: 10 },
-  })
-
   const file = await page.request.get(photo.urls.full)
   expect(file.status()).toBe(200)
   expect(file.headers()['content-type']).toBe('image/jpeg')
@@ -65,25 +53,6 @@ test('a missing restaurant gets 404 and the not found screen', async ({ page }) 
   expect(response?.status()).toBe(404)
   await expect(page.locator('head meta[property="og:title"]')).toHaveAttribute('content', 'Sponga47 Reviews')
   await expect(page.getByRole('heading', { name: 'We cannot find this page' })).toBeVisible()
-})
-
-test('the sitemap lists the pages and robots.txt names it', async ({ page, api, user }) => {
-  const restaurant = await api.createRestaurant(user, { name: 'Mapped' })
-  const review = await api.createReview(user, restaurant.id, { space: 8, service: 8, food: 8, price: 8, cleanliness: 8, title: 'Listed' })
-
-  const robots = await page.request.get('/robots.txt')
-  expect(robots.status()).toBe(200)
-  expect(await robots.text()).toContain(`Sitemap: ${appURL}/sitemap.xml`)
-
-  const sitemap = await page.request.get('/sitemap.xml')
-  expect(sitemap.status()).toBe(200)
-  expect(sitemap.headers()['content-type']).toBe('application/xml; charset=utf-8')
-  const xml = await sitemap.text()
-  expect(xml).toContain(`<loc>${appURL}/restaurants/${restaurant.id}</loc>`)
-  expect(xml).toContain(`<loc>${appURL}/restaurants/${restaurant.id}/reviews/${review.id}</loc>`)
-
-  const restaurantPage = await (await page.request.get(`/restaurants/${restaurant.id}`)).text()
-  expect(restaurantPage).toContain('"aggregateRating":{"@type":"AggregateRating","bestRating":10,"ratingValue":8,"reviewCount":1,"worstRating":1}')
 })
 
 test('a recipe page has its own link preview', async ({ page, api }) => {
@@ -97,8 +66,6 @@ test('a recipe page has its own link preview', async ({ page, api }) => {
   await expect(head.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Preview dal')
   await expect(head.locator('meta[name="description"]')).toHaveAttribute('content', 'Red lentils.')
   await expect(head.locator('link[rel="canonical"]')).toHaveAttribute('href', `${appURL}${path}`)
-  const data = JSON.parse((await head.locator('script[type="application/ld+json"]').textContent()) ?? '{}')
-  expect(data).toMatchObject({ '@type': 'Recipe', name: 'Preview dal', recipeIngredient: ['1 egg'], recipeYield: '4' })
   await expect(page.getByRole('heading', { name: 'Preview dal', level: 1 })).toBeVisible()
 })
 

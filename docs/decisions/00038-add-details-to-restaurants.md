@@ -15,7 +15,7 @@ Expected outcome:
 - a restaurant page shows the website, the phone number, the opening hours, and the price level when they are known
 - the user who adds a restaurant can type them
 - the place search fills them when the geocoder has them
-- search engines get the website and the phone number in the structured data of decision 00021
+- search engines get the website and the phone number in the structured data of decision 00021. Decision 00049 removes it.
 
 # Scope
 [scope]: #scope

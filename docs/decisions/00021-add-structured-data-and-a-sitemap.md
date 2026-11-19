@@ -1,7 +1,9 @@
 ---
 description: The app server writes schema.org JSON-LD into restaurant, review, and reviewer pages, and serves robots.txt and sitemap.xml.
-status: implemented
+status: replaced by decision 00049
 ---
+
+Decision 00049 removes the structured data and the sitemap. robots.txt stays without its Sitemap line.
 
 # Motivation
 [motivation]: #motivation

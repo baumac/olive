@@ -92,7 +92,6 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - Behind a reverse proxy, set the trusted proxy header in the PocketBase settings, such as `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign up and sign in rate limit counts all of them together. See decision 00004.
 - Set the Application URL in the PocketBase settings to the public URL of the site. The canonical links and link previews of restaurant and review pages start with it. See decision 00013.
   The session cookie gets `Secure` from the `X-Forwarded-Proto` header of the reverse proxy. Without this header, it gets `Secure` when the Application URL is `https` and has the host of the request. See decision 00027.
-  `/sitemap.xml` also needs it. Without a public URL, the sitemap gets 404. See decision 00021.
 - The place search sends the search text of users to the public Photon server. This server has no guarantee and blocks heavy use. The app sends the Application URL in its `User-Agent`. See decision 00017.
 - The browsers of users load the map tiles from `tile.openstreetmap.org`. This server gets their IP address and the origin of the site. It has no guarantee and blocks heavy use. Do not set a `Referrer-Policy` of `no-referrer` on the UI. The tile server needs the `Referer` header. See decision 00018.
 - The "Use my current location" button needs HTTPS. Do not turn off `geolocation` in a `Permissions-Policy` header of the reverse proxy. See decision 00035.
@@ -180,7 +179,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - `make test-coverage` does not count `testapp`.
   - **`app/api/internal/webui`** - embeds the UI build and serves it. See decision 00005.
     - It writes the title and link preview tags of restaurant, review, reviewer, and list pages into `index.html`. See decision 00013.
-    - It writes the schema.org JSON-LD of these pages and of reviewer pages, and serves `/robots.txt` and `/sitemap.xml`. See decision 00021.
+    - It serves `/robots.txt`. The app has no structured data and no sitemap. See decision 00049.
     - It serves `/map-config.json` with the tile server of the maps and allows its origin in the Content Security Policy. See decision 00018.
 - **`app/ui`** - the Public UI, the npm workspace `@reviews/ui`
   - Calls the Public API only through `@reviews/sdk`

@@ -143,10 +143,3 @@ func TestBrokenReportGetsBadRequest(t *testing.T) {
 		t.Errorf("status %d, want 400", w.Code)
 	}
 }
-
-func TestScriptOfInvalidValue(t *testing.T) {
-	t.Parallel()
-	if got := (jsonLD{"bad": make(chan int)}).script(); got != "" {
-		t.Errorf("script %q, want empty", got)
-	}
-}

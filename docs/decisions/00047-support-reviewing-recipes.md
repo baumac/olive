@@ -270,6 +270,7 @@ The restaurant details stay restaurant code: the location, `place_id`, the place
 - Step 3 counts the recipes in the description and the `numberOfItems` of a list page. The sitemap then also has the lists with only recipes.
 - Step 2 has the code and the tests of the recipe page meta and JSON-LD in `recipeKind`. Step 4 adds `recipeKind` to `reviewedKinds` and the recipe rows to the sitemap.
   Before the recipe pages of the UI, these URLs show the not-found page. The sitemap and the link previews then must not name them.
+- Decision 00049 removes `webui/structureddata.go`, `webui/sitemap.go`, and the `numberOfItems` of a list page.
 
 ## The UI
 
