@@ -27,18 +27,15 @@ Expected outcome:
 
 In scope:
 - Defining the goal of the app
-- Defining the users of the app
-- Defining the things that can be reviewed
+- Defining users of the app
+- Defining potential things that can be reviewed
 - Defining the parts of the app: an API, a UI, and an admin dashboard
 - Defining how and where the app will be hosted
 
 Out of scope:
 - The choice of technology. Later decisions cover it. See [Implementation Details](#implementation-details).
-- Reviews of individual foods, such as wines and cheeses. The backlog has this item under "Won't do".
+- Specifying the exact things that can be reviewed
 - Social features, such as comments, likes, follows, and messages. The users are few and talk to each other in other ways.
-- A mobile app
-- A large number of users
-- More than one instance of the app
 - Ads or other income
 
 # Guide-level explanation
@@ -49,12 +46,12 @@ The agents follow `AGENTS.md`.
 Each design choice is recorded as a decision in `docs/decisions`.
 
 The app has an API and a UI that users use.
-It also has an admin dashboard for us.
-The app runs on our home server.
-It is on the internet at reviews.spong47.com.
+It also has an admin dashboard for admins.
+The app runs on our home serve.
+It is reachable via the public internet at reviews.spong47.com.
 
 New concepts:
-- **Subject**: a thing that users review. The app has restaurants and recipes.
+- **Subjects**: a thing that users review. The app has restaurants and recipes.
 - **Review**: the scores, the text, and the photos of one user for one subject.
 - **Reviewer**: a user who writes reviews. Each reviewer has a public profile page.
 - **List**: a named group of subjects. Each user has a favorites list.
@@ -92,8 +89,4 @@ The decisions below make the base of the app:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- Do the public features fit the small group of users?
-  Anyone can read the reviews, the reviewer profiles, and the lists without an account.
-  Shared links get a preview (decision 00013).
-  Search engines get structured data and a sitemap (decision 00021).
-  The backlog has an item to review these features against this decision.
+None.
