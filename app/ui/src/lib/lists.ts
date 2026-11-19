@@ -4,13 +4,13 @@ import { formatCount } from './format'
 
 // listCountText names the restaurants and the recipes of a list. A list
 // without items has 0 restaurants.
-export function listCountText(list: Pick<SavedList, 'itemCount' | 'recipeCount'>): string {
-  const restaurants = formatCount(list.itemCount, 'restaurant')
+export function listCountText(list: Pick<SavedList, 'restaurantCount' | 'recipeCount'>): string {
+  const restaurants = formatCount(list.restaurantCount, 'restaurant')
   const recipes = formatCount(list.recipeCount, 'recipe')
   if (list.recipeCount === 0) {
     return restaurants
   }
-  return list.itemCount === 0 ? recipes : `${restaurants}, ${recipes}`
+  return list.restaurantCount === 0 ? recipes : `${restaurants}, ${recipes}`
 }
 
 let cached: { userId: string; lists: Promise<SavedList[]> } | undefined

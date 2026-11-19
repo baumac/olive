@@ -123,19 +123,20 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - **`deploy`** - the Dockerfile and the Docker Compose file with Caddy. Start from `deploy/README.md`. See decision 00022.
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
-    - the `restaurants` tag has the restaurant and review operations
+    - the `restaurants` tag has the restaurant and restaurant review operations. The names of restaurant review operations, schemas, and paths have `restaurant`, like the recipe ones. See decision 00048.
     - the `recipes` tag has the recipe and recipe review operations. Recipes have ingredients, steps, and four scores. See decision 00047.
+    - a list of recipes has `RecipeSummary` items without the ingredients and the steps. `getRecipe` has them. See decision 00048.
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
     - the operations of `/users/me` change the name and the password and delete the user. See decision 00037.
     - `getCurrentUser` returns the user of the token without a new token. The UI uses it at start. See decision 00042.
     - `confirmEmail` needs the token of the link and the password. The wrong password limit counts each email address, with or without a user. Its limiter has a cap of 100,000 addresses. See decision 00039.
     - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. Sign out and the token refresh are the exceptions. See decision 00036.
     - each `403` and `409` problem has a `code`. A new reason needs a value in the `code` enum of `Problem`. See decision 00040.
-    - a schema with `x-trim: true` loses the ASCII spaces around its value. Names, titles, addresses, and alt texts have it. See decision 00040.
+    - a schema with `x-trim: true` loses the ASCII spaces, tabs, and line breaks around its value. Names, titles, addresses, alt texts, ingredients, and steps have it. See decisions 00040 and 00048.
     - a `Tag` has the lowercase letters and digits of all scripts. A schema with `x-nfc: true` gets Unicode normalization form C before the validation, in the body and in the query. See decision 00041.
     - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out, token refresh, and the operations of `/users/me`. See decision 00034.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
-    - the `reviewers` tag has the public profile of a user and the list of the reviews of a user
+    - the `reviewers` tag has the public profile of a user and the lists of the restaurant reviews and the recipe reviews of a user
     - the `places` tag has the place search for the location of a restaurant
     - the `lists` tag has the public lists of restaurants and recipes of users. Each user has a favorites list. See decisions 00033 and 00047.
     - `listRestaurants` and `listRecipes` with `list[eq]` search, sort, and filter the restaurants or the recipes of a list. See decisions 00043 and 00047.

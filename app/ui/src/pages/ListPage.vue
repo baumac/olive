@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Recipe, Restaurant, SavedList } from '@reviews/sdk'
+import type { RecipeSummary, Restaurant, SavedList } from '@reviews/sdk'
 import { HeartIcon, ListIcon, MapIcon, PencilIcon, SlidersHorizontalIcon } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -34,7 +34,7 @@ const restaurants = usePagedList<Restaurant>(async (cursor) => {
   const page = await listsApi.listListRestaurants({ listId: props.listId, limit, cursor })
   return { items: page.items, nextCursor: page.nextCursor }
 })
-const recipes = usePagedList<Recipe>(async (cursor) => {
+const recipes = usePagedList<RecipeSummary>(async (cursor) => {
   const page = await listsApi.listListRecipes({ listId: props.listId, limit, cursor })
   return { items: page.items, nextCursor: page.nextCursor }
 })
@@ -52,7 +52,7 @@ const isOwner = computed(() => !!list.data.value && currentUser.value?.id === li
 const isFavorites = computed(() => list.data.value?.kind === 'favorites')
 const mapConfig = useMapConfig()
 const filtered = computed(() => `${kind.value === 'recipe' ? '/recipes' : '/restaurants'}?list=${encodeURIComponent(props.listId)}`)
-const kindCount = computed(() => (kind.value === 'recipe' ? list.data.value?.recipeCount : list.data.value?.itemCount) ?? 0)
+const kindCount = computed(() => (kind.value === 'recipe' ? list.data.value?.recipeCount : list.data.value?.restaurantCount) ?? 0)
 
 // The API gives 400 for a malformed ID. The link then has a typo.
 const failedStatus = computed(() => {
@@ -113,7 +113,7 @@ async function remove() {
 function drop(restaurantId: string) {
   restaurants.items.value = restaurants.items.value.filter((r) => r.id !== restaurantId)
   if (list.data.value) {
-    list.data.value = { ...list.data.value, itemCount: Math.max(0, list.data.value.itemCount - 1) }
+    list.data.value = { ...list.data.value, restaurantCount: Math.max(0, list.data.value.restaurantCount - 1) }
   }
 }
 
@@ -124,7 +124,7 @@ function dropRecipe(recipeId: string) {
   }
 }
 
-async function removeRecipe(recipe: Recipe) {
+async function removeRecipe(recipe: RecipeSummary) {
   try {
     await listsApi.removeListRecipe({ listRef: props.listId, recipeId: recipe.id })
     dropRecipe(recipe.id)
@@ -133,7 +133,7 @@ async function removeRecipe(recipe: Recipe) {
   }
 }
 
-function recipeFavoriteChanged(recipe: Recipe, favorite: boolean) {
+function recipeFavoriteChanged(recipe: RecipeSummary, favorite: boolean) {
   if (isOwner.value && isFavorites.value && !favorite) {
     dropRecipe(recipe.id)
   }
@@ -191,7 +191,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
         </form>
         <p class="text-muted-foreground text-sm">
           A list by <ReviewerLink :creator="list.data.value.creator" class="text-foreground font-medium underline underline-offset-4" /> ·
-          {{ list.data.value.itemCount || list.data.value.recipeCount ? listCountText(list.data.value) : 'No restaurants or recipes yet' }}
+          {{ list.data.value.restaurantCount || list.data.value.recipeCount ? listCountText(list.data.value) : 'No restaurants or recipes yet' }}
         </p>
         <KindSwitch :kind="kind" label="Items of the list" />
         <div v-if="kindCount" class="flex flex-wrap gap-2">

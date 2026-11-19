@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.   `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.   The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.   `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.   A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.   The `source` of a recipe with reviews of other users cannot change. 
  *
- * The version of the OpenAPI document: 5.5.0
+ * The version of the OpenAPI document: 6.0.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -31,9 +31,9 @@ import {
 /**
  * A review of a restaurant. It scores the space, service, food, price, and cleanliness.
  * @export
- * @interface Review
+ * @interface RestaurantReview
  */
-export interface Review {
+export interface RestaurantReview {
     /**
      * A record ID of 15 characters.
      */
@@ -107,9 +107,9 @@ export interface Review {
 }
 
 /**
- * Check if a given object implements the Review interface.
+ * Check if a given object implements the RestaurantReview interface.
  */
-export function instanceOfReview(value: object): value is Review {
+export function instanceOfRestaurantReview(value: object): value is RestaurantReview {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('restaurant' in value) || value['restaurant'] === undefined) return false;
     if ((!('restaurantName' in (value as Record<string, any>)) && !('restaurant_name' in (value as Record<string, any>))) || ((value as Record<string, any>)['restaurantName'] === undefined && (value as Record<string, any>)['restaurant_name'] === undefined)) return false;
@@ -127,11 +127,11 @@ export function instanceOfReview(value: object): value is Review {
     return true;
 }
 
-export function ReviewFromJSON(json: any): Review {
-    return ReviewFromJSONTyped(json, false);
+export function RestaurantReviewFromJSON(json: any): RestaurantReview {
+    return RestaurantReviewFromJSONTyped(json, false);
 }
 
-export function ReviewFromJSONTyped(json: any, ignoreDiscriminator: boolean): Review {
+export function RestaurantReviewFromJSONTyped(json: any, ignoreDiscriminator: boolean): RestaurantReview {
     if (json == null) {
         return json;
     }
@@ -155,11 +155,11 @@ export function ReviewFromJSONTyped(json: any, ignoreDiscriminator: boolean): Re
     };
 }
 
-export function ReviewToJSON(json: any): Review {
-    return ReviewToJSONTyped(json, false);
+export function RestaurantReviewToJSON(json: any): RestaurantReview {
+    return RestaurantReviewToJSONTyped(json, false);
 }
 
-export function ReviewToJSONTyped(value?: Review | null, ignoreDiscriminator: boolean = false): any {
+export function RestaurantReviewToJSONTyped(value?: RestaurantReview | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

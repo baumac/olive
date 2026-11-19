@@ -1,9 +1,42 @@
 package publicapi
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+
+	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	"github.com/pocketbase/pocketbase/core"
 )
+
+func TestWithDetailsKeepsTheSummary(t *testing.T) {
+	var sum reviewsapi.RecipeSummary
+	if err := json.Unmarshal([]byte(`{"id":"c4r8e2p6i0s3t7a","name":"Dal","description":"Red","tags":["lentils"],
+		"source":"https://dal.example","total_time":30,"servings":2,"creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},
+		"review_count":1,"rating":{"overall":8,"taste":8,"ease":8,"instructions":8,"value":8},"cover":null,"favorite":true,
+		"created":"2024-11-04T01:26:55.002Z","updated":"2024-11-04T01:26:55.002Z"}`), &sum); err != nil {
+		t.Fatal(err)
+	}
+	c := core.NewBaseCollection("recipes")
+	c.Fields.Add(&core.JSONField{Name: "ingredients"}, &core.JSONField{Name: "steps"})
+	r := core.NewRecord(c)
+	r.Set("ingredients", []string{"1 cup of lentils"})
+	r.Set("steps", []string{"Boil."})
+	want, _ := json.Marshal(sum)
+	got, _ := json.Marshal(withDetails(sum, r))
+	var all map[string]json.RawMessage
+	if err := json.Unmarshal(got, &all); err != nil {
+		t.Fatal(err)
+	}
+	if string(all["ingredients"]) != `["1 cup of lentils"]` || string(all["steps"]) != `["Boil."]` {
+		t.Errorf("recipe %s, want the ingredients and the steps", got)
+	}
+	delete(all, "ingredients")
+	delete(all, "steps")
+	if rest, _ := json.Marshal(all); string(rest) != string(want) {
+		t.Errorf("recipe %s, want the summary %s", rest, want)
+	}
+}
 
 func TestSourceKey(t *testing.T) {
 	for source, want := range map[string]string{

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 5.5.0
+  version: 6.0.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants and recipes.
 
@@ -39,6 +39,12 @@ info:
     - Version 5.3.0 adds the `price_level` filter of `listRestaurants`.
     - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews.
     - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists.
+    - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.
+      `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.
+      The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.
+      `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.
+      A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.
+      The `source` of a recipe with reviews of other users cannot change.
 
 servers:
   - url: /v1
@@ -688,7 +694,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/RestaurantId'
     post:
-      operationId: createReview
+      operationId: createRestaurantReview
       x-rate-limit:
         key: user
         name: create
@@ -704,7 +710,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReviewCreate'
+              $ref: '#/components/schemas/RestaurantReviewCreate'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -716,7 +722,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Review'
+                $ref: '#/components/schemas/RestaurantReview'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -734,7 +740,7 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
     get:
-      operationId: listReviews
+      operationId: listRestaurantReviews
       summary: List the reviews of a restaurant
       tags: [restaurants]
       security:
@@ -744,8 +750,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/ReviewSort'
-        - $ref: '#/components/parameters/ReviewSearch'
+        - $ref: '#/components/parameters/RestaurantReviewSort'
+        - $ref: '#/components/parameters/RestaurantReviewSearch'
         - $ref: '#/components/parameters/SpaceFilter'
         - $ref: '#/components/parameters/ServiceFilter'
         - $ref: '#/components/parameters/FoodFilter'
@@ -764,7 +770,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewList'
+                $ref: '#/components/schemas/RestaurantReviewList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -807,14 +813,14 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /reviews:
+  /restaurant-reviews:
     get:
-      operationId: listAllReviews
+      operationId: listAllRestaurantReviews
       summary: List the reviews of all restaurants
       description: |
-        The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants.
+        The same filters, sorts, and pages as `listRestaurantReviews`, for the reviews of all restaurants.
         `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user.
-        `listReviewerReviews` also gives the reviews of one user. It returns `404` for an unknown user.
+        `listReviewerRestaurantReviews` also gives the reviews of one user. It returns `404` for an unknown user.
       tags: [restaurants]
       security:
         - {}
@@ -823,8 +829,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/ReviewSort'
-        - $ref: '#/components/parameters/ReviewSearch'
+        - $ref: '#/components/parameters/RestaurantReviewSort'
+        - $ref: '#/components/parameters/RestaurantReviewSearch'
         - $ref: '#/components/parameters/RestaurantEq'
         - $ref: '#/components/parameters/RestaurantIn'
         - $ref: '#/components/parameters/SpaceFilter'
@@ -845,7 +851,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewList'
+                $ref: '#/components/schemas/RestaurantReviewList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -919,13 +925,13 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /reviewers/{reviewerId}/reviews:
+  /reviewers/{reviewerId}/restaurant-reviews:
     parameters:
       - $ref: '#/components/parameters/ReviewerId'
     get:
-      operationId: listReviewerReviews
+      operationId: listReviewerRestaurantReviews
       summary: List the reviews of a user
-      description: The same filters, sorts, and pages as `listAllReviews`, for the reviews of one user.
+      description: The same filters, sorts, and pages as `listAllRestaurantReviews`, for the reviews of one user.
       tags: [reviewers]
       security:
         - {}
@@ -934,8 +940,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/ReviewSort'
-        - $ref: '#/components/parameters/ReviewSearch'
+        - $ref: '#/components/parameters/RestaurantReviewSort'
+        - $ref: '#/components/parameters/RestaurantReviewSearch'
         - $ref: '#/components/parameters/RestaurantEq'
         - $ref: '#/components/parameters/RestaurantIn'
         - $ref: '#/components/parameters/SpaceFilter'
@@ -954,7 +960,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewList'
+                $ref: '#/components/schemas/RestaurantReviewList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1009,7 +1015,7 @@ paths:
       - $ref: '#/components/parameters/RestaurantId'
       - $ref: '#/components/parameters/ReviewId'
     get:
-      operationId: getReview
+      operationId: getRestaurantReview
       summary: Get a review
       tags: [restaurants]
       security:
@@ -1024,7 +1030,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Review'
+                $ref: '#/components/schemas/RestaurantReview'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1032,7 +1038,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      operationId: updateReview
+      operationId: updateRestaurantReview
       x-rate-limit:
         key: user
         name: edit
@@ -1049,7 +1055,7 @@ paths:
         content:
           application/merge-patch+json:
             schema:
-              $ref: '#/components/schemas/ReviewPatch'
+              $ref: '#/components/schemas/RestaurantReviewPatch'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -1058,7 +1064,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Review'
+                $ref: '#/components/schemas/RestaurantReview'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1074,7 +1080,7 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
     delete:
-      operationId: deleteReview
+      operationId: deleteRestaurantReview
       x-rate-limit:
         key: user
         name: edit
@@ -1105,7 +1111,7 @@ paths:
       - $ref: '#/components/parameters/RestaurantId'
       - $ref: '#/components/parameters/ReviewId'
     post:
-      operationId: addReviewPhoto
+      operationId: addRestaurantReviewPhoto
       x-rate-limit:
         key: user
         name: photo-upload
@@ -1114,7 +1120,7 @@ paths:
         Only the creator of the review can add a photo. A review has at most 5 photos.
         The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels.
         The API turns the image upright, makes it smaller, and stores it as JPEG without metadata.
-        Set the alt text with `updateReviewPhoto`.
+        Set the alt text with `updateRestaurantReviewPhoto`.
       tags: [restaurants]
       security:
         - bearerAuth: []
@@ -1165,7 +1171,7 @@ paths:
       - $ref: '#/components/parameters/ReviewId'
       - $ref: '#/components/parameters/PhotoId'
     patch:
-      operationId: updateReviewPhoto
+      operationId: updateRestaurantReviewPhoto
       x-rate-limit:
         key: user
         name: edit
@@ -1206,7 +1212,7 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
     delete:
-      operationId: deleteReviewPhoto
+      operationId: deleteRestaurantReviewPhoto
       x-rate-limit:
         key: user
         name: edit
@@ -1239,7 +1245,7 @@ paths:
       - $ref: '#/components/parameters/PhotoId'
       - $ref: '#/components/parameters/PhotoVariant'
     get:
-      operationId: getReviewPhotoFile
+      operationId: getRestaurantReviewPhotoFile
       summary: Get the image file of a photo
       description: |
         Clients use the `urls` of the photo and do not build this path.
@@ -1424,7 +1430,9 @@ paths:
         Only the creator of the recipe can update it.
         A recipe without a creator can be updated by each user who has a review of it.
         `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe.
+        A stored `source` has the same rule. A recipe without a source can always get one.
         A value that is equal to the stored value is not a change.
+        The API compares the sources without the case of the scheme and the host, the fragment, and a final `/`.
         A `source` that another recipe has causes `409 Conflict`.
         The problem then has the ID of that recipe in `recipe`.
       tags: [recipes]
@@ -1767,7 +1775,7 @@ paths:
         name: photo-upload
       summary: Add a photo to a review of a recipe
       description: |
-        The same rules as `addReviewPhoto`.
+        The same rules as `addRestaurantReviewPhoto`.
         Only the creator of the review can add a photo. A review has at most 5 photos.
         Set the alt text with `updateRecipeReviewPhoto`.
       tags: [recipes]
@@ -1998,7 +2006,7 @@ paths:
       x-rate-limit:
         key: user
         name: create
-      summary: Create a list of restaurants
+      summary: Create a list
       description: |
         The list is public. The user of the token is its creator.
         A name that another list of the user has causes `409 Conflict`. The comparison ignores the case of ASCII letters.
@@ -2046,7 +2054,7 @@ paths:
       - $ref: '#/components/parameters/ListId'
     get:
       operationId: getList
-      summary: Get a list of restaurants
+      summary: Get a list
       tags: [lists]
       security:
         - {}
@@ -2072,7 +2080,7 @@ paths:
       x-rate-limit:
         key: user
         name: edit
-      summary: Rename a list of restaurants
+      summary: Rename a list
       description: |
         Only the creator of the list can rename it. The favorites list cannot be renamed.
         A name that another list of the user has causes `409 Conflict`.
@@ -2117,7 +2125,7 @@ paths:
       x-rate-limit:
         key: user
         name: edit
-      summary: Delete a list of restaurants
+      summary: Delete a list
       description: |
         Only the creator of the list can delete it. The favorites list cannot be deleted.
         The restaurants and the recipes of the list stay.
@@ -2187,7 +2195,7 @@ paths:
       description: |
         Only the creator of the list can add a restaurant.
         A restaurant that the list already has changes nothing.
-        A list with 500 restaurants gets `409 Conflict`.
+        A list with 500 restaurants gets `409 Conflict`. The recipes of the list do not count.
         A new restaurant changes `updated` of the list.
       tags: [lists]
       security:
@@ -2532,7 +2540,7 @@ components:
         pattern: '^-?(name|overall|relevance|distance|created|updated)(,-?(name|overall|relevance|distance|created|updated))*$'
         default: '-created'
       example: 'name,-created'
-    ReviewSort:
+    RestaurantReviewSort:
       name: sort
       in: query
       description: |
@@ -2603,7 +2611,7 @@ components:
         minLength: 1
         maxLength: 255
       example: italian pasta
-    ReviewSearch:
+    RestaurantReviewSearch:
       name: search
       in: query
       description: |
@@ -3009,7 +3017,7 @@ components:
 
         - `review_exists` is a second review of one user for a restaurant or a recipe.
         - `other_reviews` is a delete of a restaurant that has a review of another user, or a change of its `name` or `location`.
-          For a recipe, it is a delete or a change of its `name`, `ingredients`, or `steps`.
+          For a recipe, it is a delete or a change of its `name`, `ingredients`, `steps`, or stored `source`.
         - `place_taken` is a `location.place_id` that another restaurant has.
         - `source_taken` is a `source` that another recipe has.
         - `photo_limit` is a sixth photo of a review.
@@ -3350,7 +3358,7 @@ components:
       type: string
       minLength: 1
       maxLength: 200
-      pattern: '^ *[^ \x00-\x1F\x7F-\x9F­؜ᅟᅠ᠎​‎‏‪-‮⁠-⁯ㅤ﻿ﾠ￹-￻][^\x00-\x1F\x7F-\x9F­؜ᅟᅠ᠎​‎‏‪-‮⁠-⁯ㅤ﻿ﾠ￹-￻]*$'
+      pattern: '^ *[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
       x-pattern-message: must have a character that is not whitespace, and no line breaks, control, direction, or invisible characters
       x-trim: true
     Ingredients:
@@ -3364,12 +3372,12 @@ components:
     Step:
       description: |
         One step of a recipe. It has at least one character that is not whitespace.
-        The API removes the ASCII spaces at the start and the end.
+        The API removes the ASCII spaces, tabs, and line breaks at the start and the end.
         Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters cause `422`.
       type: string
       minLength: 1
       maxLength: 2000
-      pattern: '^[ \t\n\r]*[^ \x00-\x1F\x7F-\x9F­؜ᅟᅠ᠎​‎‏‪-‮⁠-⁯ㅤ﻿ﾠ￹-￻][^\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F­؜ᅟᅠ᠎​‎‏‪-‮⁠-⁯ㅤ﻿ﾠ￹-￻]*$'
+      pattern: '^[ \t\n\r]*[^ \x00-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB][^\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u00AD\u061C\u115F\u1160\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]*$'
       x-pattern-message: must have a character that is not whitespace, and no control, direction, or invisible characters other than line breaks and tabs
       x-trim: true
     Steps:
@@ -3408,10 +3416,12 @@ components:
         gt:
           $ref: '#/components/schemas/TotalTime'
 
-    Recipe:
-      description: A recipe that can be reviewed.
+    RecipeSummary:
+      description: |
+        A recipe in a list of recipes. It has the properties of `Recipe` without `ingredients` and `steps`.
+        `getRecipe` gives these two properties.
       type: object
-      required: [id, name, ingredients, steps, creator, review_count, rating, cover, favorite, created, updated]
+      required: [id, name, creator, review_count, rating, cover, favorite, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -3421,10 +3431,6 @@ components:
           $ref: '#/components/schemas/LongText'
         tags:
           $ref: '#/components/schemas/Tags'
-        ingredients:
-          $ref: '#/components/schemas/Ingredients'
-        steps:
-          $ref: '#/components/schemas/Steps'
         source:
           description: The web page of the original recipe.
           type: string
@@ -3463,6 +3469,17 @@ components:
           $ref: '#/components/schemas/Timestamp'
         updated:
           $ref: '#/components/schemas/Timestamp'
+    Recipe:
+      description: A recipe that can be reviewed. It has the properties of `RecipeSummary`, the ingredients, and the steps.
+      allOf:
+        - $ref: '#/components/schemas/RecipeSummary'
+        - type: object
+          required: [ingredients, steps]
+          properties:
+            ingredients:
+              $ref: '#/components/schemas/Ingredients'
+            steps:
+              $ref: '#/components/schemas/Steps'
       examples:
         - id: c4r8e2p6i0s3t7a
           name: Shakshuka
@@ -3577,15 +3594,13 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Recipe'
+            $ref: '#/components/schemas/RecipeSummary'
         next_cursor:
           $ref: '#/components/schemas/NextCursor'
       examples:
         - items:
             - id: c4r8e2p6i0s3t7a
               name: Shakshuka
-              ingredients: [6 eggs, 1 can of tomatoes, 1 onion]
-              steps: [Cook the onion until it is soft., Add the tomatoes and cook for 10 minutes., Break the eggs into the sauce and cover the pan.]
               creator:
                 id: u5n1c8r3t6y0b2e
                 name: Ana
@@ -3609,17 +3624,17 @@ components:
     Reviewer:
       description: The public profile of a user. It has the fields of `Creator` and no private data.
       type: object
-      required: [id, name, review_count, average_overall, restaurant_count, recipe_review_count, recipe_average_overall, recipe_count, list_count]
+      required: [id, name, restaurant_review_count, restaurant_average_overall, restaurant_count, recipe_review_count, recipe_average_overall, recipe_count, list_count]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
         name:
           $ref: '#/components/schemas/Name'
-        review_count:
+        restaurant_review_count:
           description: The number of restaurant reviews of the user.
           type: integer
           minimum: 0
-        average_overall:
+        restaurant_average_overall:
           description: |
             The average of the `overall` values of the restaurant reviews of the user.
             The API rounds it to one decimal. It is `null` for a user without restaurant reviews.
@@ -3656,8 +3671,8 @@ components:
       examples:
         - id: u5n1c8r3t6y0b2e
           name: Ana
-          review_count: 12
-          average_overall: 7.4
+          restaurant_review_count: 12
+          restaurant_average_overall: 7.4
           restaurant_count: 3
           recipe_review_count: 4
           recipe_average_overall: 8.1
@@ -3840,7 +3855,7 @@ components:
         cleanliness:
           $ref: '#/components/schemas/AverageScore'
     AverageScore:
-      description: An average score from 1 to 10 with one decimal.
+      description: An average score from 1 to 10. The property tells its number of decimals.
       type: number
       format: double
       minimum: 1
@@ -3945,7 +3960,7 @@ components:
     SavedList:
       description: A public list of restaurants and recipes of a user. The `favorites` list of a user always exists.
       type: object
-      required: [id, name, kind, creator, item_count, recipe_count, created, updated]
+      required: [id, name, kind, creator, restaurant_count, recipe_count, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -3957,7 +3972,7 @@ components:
           enum: [favorites, custom]
         creator:
           $ref: '#/components/schemas/Creator'
-        item_count:
+        restaurant_count:
           description: |
             The number of restaurants of the list.
             `listListRestaurants` and `listRestaurants` with `list[eq]` list them.
@@ -3990,7 +4005,7 @@ components:
           creator:
             id: u5n1c8r3t6y0b2e
             name: Ana
-          item_count: 4
+          restaurant_count: 4
           recipe_count: 0
           created: '2024-11-04T01:26:55.002Z'
           updated: '2024-11-04T01:26:55.002Z'
@@ -4031,12 +4046,12 @@ components:
               creator:
                 id: u5n1c8r3t6y0b2e
                 name: Ana
-              item_count: 12
+              restaurant_count: 12
               recipe_count: 0
               created: '2024-11-04T01:26:55.002Z'
               updated: '2024-11-04T01:26:55.002Z'
 
-    Review:
+    RestaurantReview:
       description: A review of a restaurant. It scores the space, service, food, price, and cleanliness.
       type: object
       required: [id, restaurant, restaurant_name, overall, space, service, food, price, cleanliness, title, creator, photos, created, updated]
@@ -4126,7 +4141,7 @@ components:
       description: Cleanliness of the dining room, the tableware, and the restrooms.
       $ref: '#/components/schemas/Score'
 
-    ReviewCreate:
+    RestaurantReviewCreate:
       description: The properties of a new review.
       type: object
       additionalProperties: false
@@ -4154,7 +4169,7 @@ components:
           cleanliness: 8
           title: Great food, a bit expensive
 
-    ReviewPatch:
+    RestaurantReviewPatch:
       description: A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
       type: object
       additionalProperties: false
@@ -4179,7 +4194,7 @@ components:
         - price: 7
           feedback: null
 
-    ReviewList:
+    RestaurantReviewList:
       description: A page of reviews.
       type: object
       required: [items, next_cursor]
@@ -4187,7 +4202,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Review'
+            $ref: '#/components/schemas/RestaurantReview'
         next_cursor:
           $ref: '#/components/schemas/NextCursor'
       examples:
@@ -4608,7 +4623,7 @@ components:
             - list_recipe_limit
         property:
           description: |
-            The request property that causes a conflict, such as `name` or `location`.
+            The request property that causes a conflict, such as `name`, `location`, or `source`.
             Only a conflict of one property has it.
           type: string
         restaurant:

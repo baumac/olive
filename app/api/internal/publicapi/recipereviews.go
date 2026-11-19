@@ -347,7 +347,7 @@ func (s *Server) GetRecipeReviewPhotoFile(ctx context.Context, req reviewsapi.Ge
 }
 
 func (f photoFileResponse) VisitGetRecipeReviewPhotoFileResponse(w http.ResponseWriter) error {
-	return f.VisitGetReviewPhotoFileResponse(w)
+	return f.VisitGetRestaurantReviewPhotoFileResponse(w)
 }
 
 func (s *Server) ListRecipePhotos(_ context.Context, req reviewsapi.ListRecipePhotosRequestObject) (reviewsapi.ListRecipePhotosResponseObject, error) {
@@ -400,7 +400,7 @@ func (s *Server) ListListRecipes(ctx context.Context, req reviewsapi.ListListRec
 		}
 		return nil, p.unexpected()
 	}
-	items, err := s.recipesOf(stateFrom(ctx).user, records...)
+	items, err := s.recipeSummaries(stateFrom(ctx).user, records...)
 	if err != nil {
 		return nil, err
 	}

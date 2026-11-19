@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -102,7 +103,7 @@ func (s *Server) ListRecipes(ctx context.Context, req reviewsapi.ListRecipesRequ
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.recipesOf(stateFrom(ctx).user, records...)
+	items, err := s.recipeSummaries(stateFrom(ctx).user, records...)
 	if err != nil {
 		return nil, err
 	}
@@ -267,16 +268,17 @@ func (s *Server) GetRecipe(ctx context.Context, req reviewsapi.GetRecipeRequestO
 	if err != nil {
 		return nil, err
 	}
-	out, err := s.recipesOf(stateFrom(ctx).user, r)
+	out, err := s.recipeOf(stateFrom(ctx).user, r)
 	if err != nil {
 		return nil, err
 	}
-	return reviewsapi.GetRecipe200JSONResponse(out[0]), nil
+	return reviewsapi.GetRecipe200JSONResponse(out), nil
 }
 
 // UpdateRecipe runs the review check and the save in one transaction. The
 // name, the ingredients, and the steps are what the reviews of other users
-// scored. They then cannot change.
+// scored. They then cannot change. A stored source cannot change either. It
+// tells which recipe the reviews scored.
 func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRequestObject) (reviewsapi.UpdateRecipeResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
@@ -320,6 +322,9 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 		ch.patchTags(b.Tags)
 		oldSource := r.GetString("source")
 		ch.patchText("source", b.Source)
+		if oldSource != "" && sourceKey(r.GetString("source")) != sourceKey(oldSource) {
+			frozen = append(frozen, "source")
+		}
 		ch.patchNumber("total_time", b.TotalTime)
 		ch.patchNumber("servings", b.Servings)
 
@@ -360,11 +365,11 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 	if response != nil {
 		return response, nil
 	}
-	out, err := s.recipesOf(user, saved)
+	out, err := s.recipeOf(user, saved)
 	if err != nil {
 		return nil, err
 	}
-	return reviewsapi.UpdateRecipe200JSONResponse(out[0]), nil
+	return reviewsapi.UpdateRecipe200JSONResponse(out), nil
 }
 
 // DeleteRecipe also deletes the review of the user.
@@ -401,9 +406,18 @@ func (r recipeRating) toAPI() reviewsapi.RecipeRating {
 	return reviewsapi.RecipeRating{Overall: r.Overall, Taste: r.Taste, Ease: r.Ease, Instructions: r.Instructions, Value: r.Value}
 }
 
-// recipesOf gets the creators, the ratings, the covers, and the favorites of
-// records. A nil user has no favorite.
-func (s *Server) recipesOf(user *core.Record, records ...*core.Record) ([]reviewsapi.Recipe, error) {
+// recipeOf gives one recipe with its ingredients and its steps.
+func (s *Server) recipeOf(user *core.Record, r *core.Record) (reviewsapi.Recipe, error) {
+	items, err := s.recipeSummaries(user, r)
+	if err != nil {
+		return reviewsapi.Recipe{}, err
+	}
+	return withDetails(items[0], r), nil
+}
+
+// recipeSummaries gets the creators, the ratings, the covers, and the
+// favorites of records. A nil user has no favorite.
+func (s *Server) recipeSummaries(user *core.Record, records ...*core.Record) ([]reviewsapi.RecipeSummary, error) {
 	users, err := s.creators(records...)
 	if err != nil {
 		return nil, err
@@ -424,22 +438,37 @@ func (s *Server) recipesOf(user *core.Record, records ...*core.Record) ([]review
 	if err != nil {
 		return nil, err
 	}
-	items := make([]reviewsapi.Recipe, len(records))
+	items := make([]reviewsapi.RecipeSummary, len(records))
 	for i, r := range records {
-		items[i] = toRecipe(r, users, ratings, covers, favorites)
+		items[i] = toRecipeSummary(r, users, ratings, covers, favorites)
 	}
 	return items, nil
 }
 
-// toRecipe gives a recipe that ratings does not list no reviews.
 func toRecipe(r *core.Record, users map[string]*core.Record, ratings map[string]recipeRating, covers map[string]reviewsapi.RecipePhoto, favorites map[string]bool) reviewsapi.Recipe {
-	out := reviewsapi.Recipe{
+	return withDetails(toRecipeSummary(r, users, ratings, covers, favorites), r)
+}
+
+// withDetails copies each field of sum by its name. A new field of
+// RecipeSummary then also gets into Recipe. The spec makes Recipe with allOf,
+// so Recipe has each field of RecipeSummary.
+func withDetails(sum reviewsapi.RecipeSummary, r *core.Record) reviewsapi.Recipe {
+	out := reviewsapi.Recipe{Ingredients: listOf(r, "ingredients"), Steps: listOf(r, "steps")}
+	from := reflect.ValueOf(sum)
+	to := reflect.ValueOf(&out).Elem()
+	for i := range from.NumField() {
+		to.FieldByName(from.Type().Field(i).Name).Set(from.Field(i))
+	}
+	return out
+}
+
+// toRecipeSummary gives a recipe that ratings does not list no reviews.
+func toRecipeSummary(r *core.Record, users map[string]*core.Record, ratings map[string]recipeRating, covers map[string]reviewsapi.RecipePhoto, favorites map[string]bool) reviewsapi.RecipeSummary {
+	out := reviewsapi.RecipeSummary{
 		Id:          r.Id,
 		Name:        r.GetString("name"),
 		Description: optionalText(r, "description"),
 		Tags:        tagsOf(r),
-		Ingredients: listOf(r, "ingredients"),
-		Steps:       listOf(r, "steps"),
 		Source:      optionalText(r, "source"),
 		TotalTime:   optionalNumber(r, "total_time"),
 		Servings:    optionalNumber(r, "servings"),

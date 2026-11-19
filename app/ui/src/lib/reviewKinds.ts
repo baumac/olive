@@ -4,18 +4,20 @@ import type {
   RecipePhoto,
   RecipeReview,
   RecipeReviewCreate,
+  RecipeSummary,
   Restaurant,
   RestaurantPhoto,
-  Review,
-  ReviewCreate,
+  RestaurantReview,
+  RestaurantReviewCreate,
 } from '@reviews/sdk'
 import { listsApi, recipesApi, restaurantsApi, reviewersApi } from './api'
 import { type ScoreField, recipeScoreFields, scoreFields } from './reviews'
 
 // A review kind is a kind of thing that users review. See decision 00047.
 export type ReviewKind = 'restaurant' | 'recipe'
-export type AnyReview = Review | RecipeReview
+export type AnyReview = RestaurantReview | RecipeReview
 export type Parent = Restaurant | Recipe
+export type ParentSummary = Restaurant | RecipeSummary
 export type ParentPhoto = RestaurantPhoto | RecipePhoto
 
 export interface ReviewFields {
@@ -45,7 +47,7 @@ export interface KindInfo {
   listReviews(parentId: string, params: ListParams): Promise<Page<AnyReview>>
   listReviewerReviews(reviewerId: string, params: ListParams): Promise<Page<AnyReview>>
   // listAdded lists the restaurants or the recipes that a user created.
-  listAdded(creatorId: string, params: { limit?: number; cursor?: string; sort?: string }): Promise<Page<Parent>>
+  listAdded(creatorId: string, params: { limit?: number; cursor?: string; sort?: string }): Promise<Page<ParentSummary>>
   createReview(parentId: string, review: ReviewFields): Promise<AnyReview>
   updateReview(parentId: string, reviewId: string, review: ReviewFields): Promise<AnyReview>
   deleteReview(parentId: string, reviewId: string): Promise<void>
@@ -61,7 +63,7 @@ export interface KindInfo {
 
 // The score fields of the SDK have the type any. These builders name each
 // field. A missing or a wrong score is then a type error.
-function restaurantScores(s: Record<string, number>): Omit<ReviewCreate, 'title'> {
+function restaurantScores(s: Record<string, number>): Omit<RestaurantReviewCreate, 'title'> {
   return { space: s.space, service: s.service, food: s.food, price: s.price, cleanliness: s.cleanliness }
 }
 
@@ -80,19 +82,19 @@ const restaurant: KindInfo = {
   path: '/restaurants',
   scoreFields,
   getParent: (restaurantId) => restaurantsApi.getRestaurant({ restaurantId }),
-  getReview: (restaurantId, reviewId) => restaurantsApi.getReview({ restaurantId, reviewId }),
-  listReviews: (restaurantId, params) => restaurantsApi.listReviews({ restaurantId, ...params }),
-  listReviewerReviews: (reviewerId, params) => reviewersApi.listReviewerReviews({ reviewerId, ...params }),
+  getReview: (restaurantId, reviewId) => restaurantsApi.getRestaurantReview({ restaurantId, reviewId }),
+  listReviews: (restaurantId, params) => restaurantsApi.listRestaurantReviews({ restaurantId, ...params }),
+  listReviewerReviews: (reviewerId, params) => reviewersApi.listReviewerRestaurantReviews({ reviewerId, ...params }),
   listAdded: (creatorEq, params) => restaurantsApi.listRestaurants({ creatorEq, ...params }),
   createReview: (restaurantId, { scores, title, feedback }) =>
-    restaurantsApi.createReview({ restaurantId, reviewCreate: { ...restaurantScores(scores), title, feedback: feedback ?? undefined } }),
+    restaurantsApi.createRestaurantReview({ restaurantId, restaurantReviewCreate: { ...restaurantScores(scores), title, feedback: feedback ?? undefined } }),
   updateReview: (restaurantId, reviewId, { scores, title, feedback }) =>
-    restaurantsApi.updateReview({ restaurantId, reviewId, reviewPatch: { ...restaurantScores(scores), title, feedback } }),
-  deleteReview: (restaurantId, reviewId) => restaurantsApi.deleteReview({ restaurantId, reviewId }),
-  addPhoto: (restaurantId, reviewId, file) => restaurantsApi.addReviewPhoto({ restaurantId, reviewId, body: file }, contentType(file)),
+    restaurantsApi.updateRestaurantReview({ restaurantId, reviewId, restaurantReviewPatch: { ...restaurantScores(scores), title, feedback } }),
+  deleteReview: (restaurantId, reviewId) => restaurantsApi.deleteRestaurantReview({ restaurantId, reviewId }),
+  addPhoto: (restaurantId, reviewId, file) => restaurantsApi.addRestaurantReviewPhoto({ restaurantId, reviewId, body: file }, contentType(file)),
   updatePhoto: (restaurantId, reviewId, photoId, alt) =>
-    restaurantsApi.updateReviewPhoto({ restaurantId, reviewId, photoId, photoPatch: { alt } }),
-  deletePhoto: (restaurantId, reviewId, photoId) => restaurantsApi.deleteReviewPhoto({ restaurantId, reviewId, photoId }),
+    restaurantsApi.updateRestaurantReviewPhoto({ restaurantId, reviewId, photoId, photoPatch: { alt } }),
+  deletePhoto: (restaurantId, reviewId, photoId) => restaurantsApi.deleteRestaurantReviewPhoto({ restaurantId, reviewId, photoId }),
   listPhotos: (restaurantId, params) => restaurantsApi.listRestaurantPhotos({ restaurantId, ...params }),
   addToList: (listRef, restaurantId) => listsApi.addListRestaurant({ listRef, restaurantId }),
   removeFromList: (listRef, restaurantId) => listsApi.removeListRestaurant({ listRef, restaurantId }),

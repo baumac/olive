@@ -122,8 +122,8 @@ func TestCreateRecipe(t *testing.T) {
 		})
 	}
 
-	t.Run("a step keeps its line breaks", func(t *testing.T) {
-		got := e.createRecipe(ana.Token, `{"name":"Lines","steps":["Mix.\nBake."]}`)
+	t.Run("a step keeps its inner line breaks and loses the whitespace around it", func(t *testing.T) {
+		got := e.createRecipe(ana.Token, `{"name":"Lines","steps":["\n\t Mix.\nBake. \r\n"]}`)
 		if got["steps"].([]any)[0] != "Mix.\nBake." {
 			t.Errorf("steps %v", got["steps"])
 		}
@@ -209,6 +209,15 @@ func TestListRecipes(t *testing.T) {
 		}
 	})
 
+	t.Run("a list item has no ingredients and no steps", func(t *testing.T) {
+		item := e.expect(request{method: "GET", path: "/v1/recipes?search=chickpea"}, http.StatusOK).object(t)["items"].([]any)[0].(map[string]any)
+		_, ingredients := item["ingredients"]
+		_, steps := item["steps"]
+		if item["name"] != "Hummus" || ingredients || steps {
+			t.Errorf("item %v, want a summary of Hummus", item)
+		}
+	})
+
 	t.Run("a bad sort gets 400", func(t *testing.T) {
 		e.expect(request{method: "GET", path: "/v1/recipes?sort=relevance"}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/recipes?sort=distance"}, http.StatusBadRequest)
@@ -288,6 +297,22 @@ func TestUpdateRecipe(t *testing.T) {
 			http.StatusConflict, "source_taken").object(t)
 		if p["recipe"] != other {
 			t.Errorf("problem %v, want the other recipe", p)
+		}
+	})
+
+	t.Run("a review of another user freezes a stored source", func(t *testing.T) {
+		e.expect(request{method: "PATCH", path: path, token: ana.Token, body: `{"source":"https://dal.example/tarka"}`}, http.StatusOK)
+		for _, body := range []string{`{"source":"https://dal.example/other"}`, `{"source":null}`} {
+			p := e.expectCode(request{method: "PATCH", path: path, token: ana.Token, body: body}, http.StatusConflict, "other_reviews").object(t)
+			if p["property"] != "source" {
+				t.Errorf("%s: property %v", body, p["property"])
+			}
+		}
+		// The API compares the source keys. The case of the host is not a
+		// change of the recipe.
+		got := e.expect(request{method: "PATCH", path: path, token: ana.Token, body: `{"source":"https://DAL.example/tarka/"}`}, http.StatusOK).object(t)
+		if got["source"] != "https://DAL.example/tarka/" {
+			t.Errorf("source %v", got["source"])
 		}
 	})
 
@@ -395,7 +420,7 @@ func TestRecipeReviews(t *testing.T) {
 
 	t.Run("the reviewer profile counts the recipes and their reviews", func(t *testing.T) {
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID}, http.StatusOK).object(t)
-		if got["recipe_review_count"] != 1.0 || got["recipe_average_overall"] != 8.3 || got["recipe_count"] != 2.0 || got["review_count"] != 0.0 {
+		if got["recipe_review_count"] != 1.0 || got["recipe_average_overall"] != 8.3 || got["recipe_count"] != 2.0 || got["restaurant_review_count"] != 0.0 {
 			t.Errorf("profile %v", got)
 		}
 	})

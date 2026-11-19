@@ -97,7 +97,7 @@ describe('RestaurantFormPage details', () => {
   async function mountForm(restaurantId?: string) {
     saveSession({ token: 't', expires: '2099-01-01T00:00:00.000Z', user })
     vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
-    vi.spyOn(restaurantsApi, 'listReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(restaurantsApi, 'listRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
     const w = mount(RestaurantFormPage, { props: { restaurantId }, global: { plugins: [router] }, attachTo: document.body })
     await flushPromises()

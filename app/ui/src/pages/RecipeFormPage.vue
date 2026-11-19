@@ -66,12 +66,36 @@ const errors = ref<Record<string, string>>({})
 const alert = ref<{ title: string; description: string; recipe?: string } | null>(null)
 const saving = ref(false)
 // locked is true when other people reviewed the recipe. The API then
-// refuses a change of the name, the ingredients, and the steps.
+// refuses a change of the name, the ingredients, the steps, and a stored
+// source.
 const locked = ref(false)
+const storedSource = ref('')
+// sourceConflict keeps the lock of a source conflict when the stored source
+// did not load.
+const sourceConflict = ref(false)
+const sourceLocked = computed(() => locked.value && (storedSource.value !== '' || sourceConflict.value))
+const lockedText = computed(
+  () =>
+    `Other people have reviewed this recipe. The name, the ingredients, ${sourceLocked.value ? 'the steps, and the source' : 'and the steps'} cannot change, and you cannot delete it.`,
+)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `recipe:${props.recipeId ?? 'new'}`)
 const cancelPath = computed(() => (props.recipeId ? `/recipes/${props.recipeId}` : '/recipes'))
+
+// showStoredSource gets the source after a conflict. The page can have an old
+// source. A locked field then shows the value that the API keeps.
+async function showStoredSource(property: string) {
+  try {
+    const r = await recipesApi.getRecipe({ recipeId: props.recipeId! })
+    storedSource.value = r.source ?? ''
+  } catch {
+    sourceConflict.value ||= property === 'source'
+  }
+  if (sourceLocked.value && storedSource.value !== '') {
+    fields.value.source = storedSource.value
+  }
+}
 
 function setSteps(steps: string[]) {
   fields.value.steps = steps.length ? steps : ['']
@@ -98,6 +122,7 @@ onMounted(async () => {
         return
       }
       locked.value = access.hasOtherReviews
+      storedSource.value = r.source ?? ''
       fields.value = {
         name: r.name,
         description: r.description ?? '',
@@ -124,6 +149,7 @@ onMounted(async () => {
       ...draft,
       name: locked.value ? current.name : draft.name,
       ingredients: locked.value ? current.ingredients : draft.ingredients,
+      source: sourceLocked.value ? current.source : draft.source,
     }
     setSteps(locked.value ? current.steps : draft.steps)
   }
@@ -212,7 +238,7 @@ async function submit() {
             tags: f.tags.length ? new Set(f.tags) : null,
             ingredients: locked.value ? undefined : ingredients,
             steps: locked.value ? undefined : f.steps,
-            source: f.source || null,
+            source: sourceLocked.value ? undefined : f.source || null,
             totalTime,
             servings,
           },
@@ -252,6 +278,7 @@ async function submit() {
     } else if (code === 'other_reviews' && problem?.property) {
       errors.value = { [problem.property]: `The ${problem.property} cannot change because other people have reviewed this recipe.` }
       locked.value = true
+      await showStoredSource(problem.property)
       await nextTick()
       document.getElementById(`recipe-${problem.property}`)?.focus()
     } else if (status === 409) {
@@ -294,9 +321,7 @@ async function submit() {
           </RouterLink>
         </AlertDescription>
       </Alert>
-      <p v-if="locked" class="text-muted-foreground text-sm">
-        Other people have reviewed this recipe. The name, the ingredients, and the steps cannot change, and you cannot delete it.
-      </p>
+      <p v-if="locked" class="text-muted-foreground text-sm">{{ lockedText }}</p>
       <FormItem id="recipe-name" :error="errors.name">
         <FormLabel>Name</FormLabel>
         <FormControl>
@@ -409,6 +434,7 @@ async function submit() {
               inputmode="url"
               maxlength="2048"
               placeholder="https://recipes.example/shakshuka"
+              :readonly="sourceLocked"
             />
           </FormControl>
           <FormDescription>The web page of the original recipe.</FormDescription>

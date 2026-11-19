@@ -567,9 +567,9 @@ func TestSkipRequestValidation(t *testing.T) {
 	restaurantID := e.createRestaurant(ana.Token, `{"name":"Cafe"}`)["id"].(string)
 	for _, path := range []string{
 		"/v1/restaurants?near[latitude]=NaN&near[longitude]=2",
-		"/v1/reviews?search=***",
-		"/v1/reviews?sort=nothing",
-		"/v1/reviews?overall[gte]=NaN",
+		"/v1/restaurant-reviews?search=***",
+		"/v1/restaurant-reviews?sort=nothing",
+		"/v1/restaurant-reviews?overall[gte]=NaN",
 		"/v1/restaurants/" + restaurantID + "/reviews?sort=nothing",
 	} {
 		e.expect(request{method: "GET", path: path}, http.StatusBadRequest)
@@ -912,7 +912,7 @@ func TestReviews(t *testing.T) {
 		e.expect(request{method: "POST", path: otherReviews, body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X","tags":["pasta"]}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "PATCH", path: goodPath, body: `{"tags":null}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: reviews + "?tags[has]=pasta"}, http.StatusBadRequest)
-		e.expect(request{method: "GET", path: "/v1/reviews?tags[has_any]=pasta"}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/restaurant-reviews?tags[has_any]=pasta"}, http.StatusBadRequest)
 
 		for body, want := range map[string]string{
 			`{"space":7,"service":9,"food":8,"price":6,"cleanliness":0,"title":"X"}`:          "cleanliness",
@@ -1085,7 +1085,7 @@ func TestRestaurantOwnership(t *testing.T) {
 		var found struct {
 			Items []map[string]any `json:"items"`
 		}
-		e.expect(request{method: "GET", path: "/v1/reviews?search=trattoria"}, http.StatusOK).decode(t, &found)
+		e.expect(request{method: "GET", path: "/v1/restaurant-reviews?search=trattoria"}, http.StatusOK).decode(t, &found)
 		if len(found.Items) != 1 || found.Items[0]["id"] != own || found.Items[0]["restaurant_name"] != "Trattoria Roma" {
 			t.Errorf("search by the new name: %v", found.Items)
 		}
@@ -1322,7 +1322,7 @@ func TestListAllReviews(t *testing.T) {
 	list := func(query string) page {
 		t.Helper()
 		var p page
-		e.expect(request{method: "GET", path: "/v1/reviews?" + query}, http.StatusOK).decode(t, &p)
+		e.expect(request{method: "GET", path: "/v1/restaurant-reviews?" + query}, http.StatusOK).decode(t, &p)
 		return p
 	}
 	titles := func(p page) string {
@@ -1353,7 +1353,7 @@ func TestListAllReviews(t *testing.T) {
 	}
 
 	for _, query := range []string{"restaurant[eq]=BAD", "restaurant[in]=x", "restaurantId=" + luigi} {
-		e.expect(request{method: "GET", path: "/v1/reviews?" + query}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/restaurant-reviews?" + query}, http.StatusBadRequest)
 	}
 
 	got := e.expect(request{method: "GET", path: "/v1/restaurants/" + luigi + "/reviews"}, http.StatusOK).object(t)
@@ -1486,7 +1486,7 @@ func TestListRestaurantsByOverall(t *testing.T) {
 	for _, query := range []string{"overall[gte]=0", "overall[gte]=11", "overall[gte]=x", "overall[gte]=NaN", "overall[lt]=Inf", "overall[gt]=-Inf", "sort=rating"} {
 		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
 	}
-	e.expect(request{method: "GET", path: "/v1/reviews?overall[gte]=0"}, http.StatusBadRequest)
+	e.expect(request{method: "GET", path: "/v1/restaurant-reviews?overall[gte]=0"}, http.StatusBadRequest)
 }
 
 func TestSearch(t *testing.T) {
@@ -1593,17 +1593,17 @@ func TestSearch(t *testing.T) {
 		e.createReview(joe.Token, pasta, `{"space":5,"service":5,"food":9,"price":5,"cleanliness":5,"title":"Great carbonara","feedback":"Creamy sauce"}`)
 		e.createReview(ana.Token, cafe, `{"space":5,"service":5,"food":5,"price":5,"cleanliness":5,"title":"Nice tea","feedback":"Carbonara was a special"}`)
 		for path, want := range map[string]string{
-			"/v1/reviews?search=carbonara":                          "Great carbonara,Nice tea",
-			"/v1/reviews?search=carbonara&limit=1":                  "Great carbonara,Nice tea",
-			"/v1/reviews?search=ole":                                "Nice tea",
-			"/v1/reviews?search=creamy":                             "Great carbonara",
+			"/v1/restaurant-reviews?search=carbonara":               "Great carbonara,Nice tea",
+			"/v1/restaurant-reviews?search=carbonara&limit=1":       "Great carbonara,Nice tea",
+			"/v1/restaurant-reviews?search=ole":                     "Nice tea",
+			"/v1/restaurant-reviews?search=creamy":                  "Great carbonara",
 			"/v1/restaurants/" + cafe + "/reviews?search=carbonara": "Nice tea",
 		} {
 			if got := names(path); got != want {
 				t.Errorf("%s: %q, want %q", path, got, want)
 			}
 		}
-		e.expect(request{method: "GET", path: "/v1/reviews?sort=relevance"}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/restaurant-reviews?sort=relevance"}, http.StatusBadRequest)
 
 		user, err := e.app.FindRecordById("users", joe.User.ID)
 		if err != nil {
@@ -1634,10 +1634,10 @@ func TestSearch(t *testing.T) {
 		if err := e.app.Save(r); err != nil {
 			t.Fatal(err)
 		}
-		if got := names("/v1/reviews?search=teahouse"); got != "Nice tea" {
+		if got := names("/v1/restaurant-reviews?search=teahouse"); got != "Nice tea" {
 			t.Errorf("new name: %q", got)
 		}
-		if got := names("/v1/reviews?search=ole"); got != "" {
+		if got := names("/v1/restaurant-reviews?search=ole"); got != "" {
 			t.Errorf("old name: %q", got)
 		}
 	})

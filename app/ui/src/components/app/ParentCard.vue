@@ -4,14 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CoverPhoto } from '@/components/ui/cover-photo'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { formatCount } from '@/lib/format'
-import { type Parent, type ReviewKind, kinds } from '@/lib/reviewKinds'
+import { type ParentSummary, type ReviewKind, kinds } from '@/lib/reviewKinds'
 import { tagList } from '@/lib/reviews'
 import FavoriteButton from './FavoriteButton.vue'
 
 // ParentCard is the card of a restaurant or a recipe. The default slot has
 // the details of the kind, below the rating.
 // heading is the element of the name. A list below an h2 uses h3.
-withDefaults(defineProps<{ parent: Parent; kind: ReviewKind; heading?: 'h2' | 'h3' }>(), { heading: 'h2' })
+withDefaults(defineProps<{ parent: ParentSummary; kind: ReviewKind; heading?: 'h2' | 'h3' }>(), { heading: 'h2' })
 
 defineEmits<{ favorite: [favorite: boolean] }>()
 </script>

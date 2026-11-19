@@ -67,7 +67,7 @@ const location = { latitude: 41.3766, longitude: 2.1893, address: 'Carrer de San
 describe('query parameters', () => {
   it('sends deepObject and exploded array filters', async () => {
     const { sent, config } = fakeFetch(200, { items: [], next_cursor: null })
-    await new RestaurantsApi(config).listReviews({
+    await new RestaurantsApi(config).listRestaurantReviews({
       restaurantId: 'k3x9m2p7q1w8z4a',
       food: { gte: 4, lt: 5 },
       creatorIn: ['u5n1c8r3t6y0b2e', 'u2g6k0m4o8q1s5w'],
@@ -105,10 +105,10 @@ describe('merge patch bodies', () => {
 
   it('sends only the given scores of a review patch', async () => {
     const { sent, config } = fakeFetch(200, review)
-    await new RestaurantsApi(config).updateReview({
+    await new RestaurantsApi(config).updateRestaurantReview({
       restaurantId: 'k3x9m2p7q1w8z4a',
       reviewId: 'r7d4f0h2j9l5s3v',
-      reviewPatch: { price: 4, feedback: null },
+      restaurantReviewPatch: { price: 4, feedback: null },
     })
     expect(sent[0].body).toEqual({ price: 4, feedback: null })
   })
@@ -117,7 +117,7 @@ describe('merge patch bodies', () => {
 describe('reviews', () => {
   it('reads the scores and the restaurant name', async () => {
     const { config } = fakeFetch(200, { items: [review], next_cursor: null })
-    const page = await new RestaurantsApi(config).listReviews({ restaurantId: 'k3x9m2p7q1w8z4a' })
+    const page = await new RestaurantsApi(config).listRestaurantReviews({ restaurantId: 'k3x9m2p7q1w8z4a' })
 
     expect(page.items[0]).toMatchObject({ space: 7, service: 9, food: 8, price: 6, cleanliness: 5, restaurantName: "Luigi's Trattoria" })
     expect(page.nextCursor).toBeNull()
@@ -125,7 +125,7 @@ describe('reviews', () => {
 
   it('keeps timestamps as strings', async () => {
     const { config } = fakeFetch(200, review)
-    const got = await new RestaurantsApi(config).getReview({
+    const got = await new RestaurantsApi(config).getRestaurantReview({
       restaurantId: 'k3x9m2p7q1w8z4a',
       reviewId: 'r7d4f0h2j9l5s3v',
     })
@@ -198,7 +198,7 @@ describe('review photos', () => {
     const { sent, config } = fakeFetch(201, photo)
     const api = new RestaurantsApi(config)
     const body = new Blob(['png bytes'], { type: 'image/png' })
-    const got = await api.addReviewPhoto(
+    const got = await api.addRestaurantReviewPhoto(
       { restaurantId: 'k3x9m2p7q1w8z4a', reviewId: 'r7d4f0h2j9l5s3v', body },
       async ({ init }) => ({ headers: { ...(init.headers as Record<string, string>), 'Content-Type': 'image/png' } }),
     )
@@ -210,7 +210,7 @@ describe('review photos', () => {
 
   it('reads the photos of a review', async () => {
     const { config } = fakeFetch(200, { ...review, photos: [photo] })
-    const got = await new RestaurantsApi(config).getReview({ restaurantId: review.restaurant, reviewId: review.id })
+    const got = await new RestaurantsApi(config).getRestaurantReview({ restaurantId: review.restaurant, reviewId: review.id })
     expect(got.photos[0]!.urls.thumb).toBe('/v1/x/thumb')
   })
 })

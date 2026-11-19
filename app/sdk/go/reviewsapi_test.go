@@ -23,14 +23,14 @@ const reviewJSON = `{
 // that it calls.
 type fakeServer struct {
 	reviewsapi.StrictServerInterface
-	listReviews      func(reviewsapi.ListReviewsRequestObject) reviewsapi.ListReviewsResponseObject
+	listReviews      func(reviewsapi.ListRestaurantReviewsRequestObject) reviewsapi.ListRestaurantReviewsResponseObject
 	getRestaurant    func(reviewsapi.GetRestaurantRequestObject) reviewsapi.GetRestaurantResponseObject
 	createRestaurant func(reviewsapi.CreateRestaurantRequestObject) reviewsapi.CreateRestaurantResponseObject
 	updateRestaurant func(reviewsapi.UpdateRestaurantRequestObject) reviewsapi.UpdateRestaurantResponseObject
 	signIn           func(reviewsapi.SignInRequestObject) reviewsapi.SignInResponseObject
 }
 
-func (f *fakeServer) ListReviews(_ context.Context, r reviewsapi.ListReviewsRequestObject) (reviewsapi.ListReviewsResponseObject, error) {
+func (f *fakeServer) ListRestaurantReviews(_ context.Context, r reviewsapi.ListRestaurantReviewsRequestObject) (reviewsapi.ListRestaurantReviewsResponseObject, error) {
 	return f.listReviews(r), nil
 }
 
@@ -66,7 +66,7 @@ func serve(t *testing.T, f *fakeServer, method, target, contentType, body string
 }
 
 func TestReviewReadsScores(t *testing.T) {
-	var r reviewsapi.Review
+	var r reviewsapi.RestaurantReview
 	if err := json.Unmarshal([]byte(reviewJSON), &r); err != nil {
 		t.Fatal(err)
 	}
@@ -100,10 +100,10 @@ func TestMergePatchSeparatesMissingAndNull(t *testing.T) {
 
 func TestDeepObjectAndExplodedFilters(t *testing.T) {
 	f := &fakeServer{}
-	var got reviewsapi.ListReviewsParams
-	f.listReviews = func(r reviewsapi.ListReviewsRequestObject) reviewsapi.ListReviewsResponseObject {
+	var got reviewsapi.ListRestaurantReviewsParams
+	f.listReviews = func(r reviewsapi.ListRestaurantReviewsRequestObject) reviewsapi.ListRestaurantReviewsResponseObject {
 		got = r.Params
-		return reviewsapi.ListReviews200JSONResponse{Items: []reviewsapi.Review{}}
+		return reviewsapi.ListRestaurantReviews200JSONResponse{Items: []reviewsapi.RestaurantReview{}}
 	}
 	rec := serve(t, f, http.MethodGet,
 		"/v1/restaurants/k3x9m2p7q1w8z4a/reviews?food[gte]=4&food[lt]=5"+
@@ -125,9 +125,9 @@ func TestDeepObjectAndExplodedFilters(t *testing.T) {
 
 func TestNextCursorNullOnLastPage(t *testing.T) {
 	f := &fakeServer{}
-	f.listReviews = func(reviewsapi.ListReviewsRequestObject) reviewsapi.ListReviewsResponseObject {
-		return reviewsapi.ListReviews200JSONResponse{
-			Items:      []reviewsapi.Review{},
+	f.listReviews = func(reviewsapi.ListRestaurantReviewsRequestObject) reviewsapi.ListRestaurantReviewsResponseObject {
+		return reviewsapi.ListRestaurantReviews200JSONResponse{
+			Items:      []reviewsapi.RestaurantReview{},
 			NextCursor: nullable.NewNullNullable[reviewsapi.NextCursor](),
 		}
 	}

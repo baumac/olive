@@ -29,7 +29,7 @@ func (s *Server) GetReviewer(ctx context.Context, req reviewsapi.GetReviewerRequ
 	creator := toCreator(user)
 	return reviewsapi.GetReviewer200JSONResponse{
 		Id: creator.Id, Name: creator.Name,
-		ReviewCount: stats.Reviews, AverageOverall: average(stats.Overall), RestaurantCount: stats.Restaurants,
+		RestaurantReviewCount: stats.Reviews, RestaurantAverageOverall: average(stats.Overall), RestaurantCount: stats.Restaurants,
 		RecipeReviewCount: stats.RecipeReviews, RecipeAverageOverall: average(stats.RecipeOverall), RecipeCount: stats.Recipes,
 		ListCount: stats.Lists,
 	}, nil
@@ -72,11 +72,11 @@ func (s *Server) reviewerStatsQuery(userID string) *dbx.Query {
 		FROM {{reviews}} WHERE [[creator]] = {:user}`).Bind(dbx.Params{"user": userID})
 }
 
-// ListReviewerReviews returns 404 when the user does not exist. It does not
+// ListReviewerRestaurantReviews returns 404 when the user does not exist. It does not
 // return an empty list.
-func (s *Server) ListReviewerReviews(ctx context.Context, req reviewsapi.ListReviewerReviewsRequestObject) (reviewsapi.ListReviewerReviewsResponseObject, error) {
+func (s *Server) ListReviewerRestaurantReviews(ctx context.Context, req reviewsapi.ListReviewerRestaurantReviewsRequestObject) (reviewsapi.ListReviewerRestaurantReviewsResponseObject, error) {
 	p := req.Params
-	all := reviewsapi.ListAllReviewsParams{
+	all := reviewsapi.ListAllRestaurantReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, CreatorEq: &req.ReviewerId,
 		RestaurantEq: p.RestaurantEq, RestaurantIn: p.RestaurantIn,
 		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price, Cleanliness: p.Cleanliness,
@@ -99,11 +99,11 @@ func (s *Server) ListReviewerReviews(ctx context.Context, req reviewsapi.ListRev
 	case err != nil:
 		return nil, err
 	case page.bad != "":
-		return reviewsapi.ListReviewerReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(page.bad)}, nil
+		return reviewsapi.ListReviewerRestaurantReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(page.bad)}, nil
 	case page.notFound:
-		return reviewsapi.ListReviewerReviews404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(reviewerNotFound)}, nil
+		return reviewsapi.ListReviewerRestaurantReviews404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(reviewerNotFound)}, nil
 	}
-	return reviewsapi.ListReviewerReviews200JSONResponse(page.list), nil
+	return reviewsapi.ListReviewerRestaurantReviews200JSONResponse(page.list), nil
 }
 
 // findReviewer returns a nil record and no error when the user does not

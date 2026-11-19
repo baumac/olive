@@ -36,6 +36,7 @@ models/RecipeReview.ts
 models/RecipeReviewCreate.ts
 models/RecipeReviewList.ts
 models/RecipeReviewPatch.ts
+models/RecipeSummary.ts
 models/Restaurant.ts
 models/RestaurantCreate.ts
 models/RestaurantList.ts
@@ -43,10 +44,10 @@ models/RestaurantPatch.ts
 models/RestaurantPhoto.ts
 models/RestaurantPhotoList.ts
 models/RestaurantRating.ts
-models/Review.ts
-models/ReviewCreate.ts
-models/ReviewList.ts
-models/ReviewPatch.ts
+models/RestaurantReview.ts
+models/RestaurantReviewCreate.ts
+models/RestaurantReviewList.ts
+models/RestaurantReviewPatch.ts
 models/Reviewer.ts
 models/SavedList.ts
 models/SavedListCreate.ts

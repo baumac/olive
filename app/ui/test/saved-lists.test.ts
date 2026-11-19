@@ -23,13 +23,13 @@ function signIn() {
   saveSession({ expires: '2099-01-01T00:00:00.000Z', user: ana })
 }
 
-function list(kind: 'favorites' | 'custom', name: string, itemCount = 1): SavedList {
+function list(kind: 'favorites' | 'custom', name: string, restaurantCount = 1): SavedList {
   return {
     id: kind === 'favorites' ? 'f1a6c3e8g5i2k9m' : 'l7d2f9h4j1k8m3p',
     name,
     kind,
     creator: { id: ana.id, name: 'Ana' },
-    itemCount,
+    restaurantCount,
     recipeCount: 0,
     created: '2024-11-04T01:26:55.002Z',
     updated: '2024-11-04T01:26:55.002Z',

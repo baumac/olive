@@ -33,7 +33,7 @@ const summary = computed(() => {
   if (!r) {
     return ''
   }
-  const parts = [r.reviewCount ? `average of ${formatCount(r.reviewCount, 'restaurant review')}` : 'No restaurant reviews yet']
+  const parts = [r.restaurantReviewCount ? `average of ${formatCount(r.restaurantReviewCount, 'restaurant review')}` : 'No restaurant reviews yet']
   if (r.restaurantCount) {
     parts.push(`${formatCount(r.restaurantCount, 'restaurant')} added`)
   }
@@ -72,8 +72,8 @@ const failedStatus = computed(() => {
           <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ reviewer.data.value.name }}</h1>
           <p class="flex flex-wrap items-baseline gap-x-2">
             <RatingDisplay
-              v-if="reviewer.data.value.averageOverall !== null"
-              :value="reviewer.data.value.averageOverall"
+              v-if="reviewer.data.value.restaurantAverageOverall !== null"
+              :value="reviewer.data.value.restaurantAverageOverall"
               :max="10"
               label="Average restaurant score"
               size="md"

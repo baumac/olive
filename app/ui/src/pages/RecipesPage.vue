@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Recipe } from '@reviews/sdk'
+import type { RecipeSummary } from '@reviews/sdk'
 import { ChefHatIcon, PlusIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import PagedList from '@/components/app/PagedList.vue'
@@ -29,7 +29,7 @@ const { filters, sort, active, sortOptions } = useListQuery(filterDefs, recipeSo
 const filterKey = computed(() => JSON.stringify(filters.value))
 const listId = computed(() => (typeof filters.value.list === 'string' ? filters.value.list : undefined))
 
-const list = usePagedList<Recipe>(async (cursor) => {
+const list = usePagedList<RecipeSummary>(async (cursor) => {
   const page = await recipesApi.listRecipes({ limit, cursor, sort: sort.value, ...recipeFilterParams(filters.value) })
   return { items: page.items, nextCursor: page.nextCursor }
 })
@@ -37,7 +37,7 @@ const list = usePagedList<Recipe>(async (cursor) => {
 watch([filterKey, sort], () => void list.reload(), { immediate: true })
 
 // A card that leaves the favorites leaves a view of the favorites list.
-function favoriteChanged(recipe: Recipe, favorite: boolean) {
+function favoriteChanged(recipe: RecipeSummary, favorite: boolean) {
   if (!favorite && listId.value && listId.value === favoritesId.value) {
     list.items.value = list.items.value.filter((r) => r.id !== recipe.id)
   }

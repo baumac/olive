@@ -153,33 +153,33 @@ type AuthToken struct {
 
 // AverageRange Comparisons for an average score. All comparisons must match.
 type AverageRange struct {
-	// Eq An average score from 1 to 10 with one decimal.
+	// Eq An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Eq *AverageScore `json:"eq,omitempty"`
 
-	// Gt An average score from 1 to 10 with one decimal.
+	// Gt An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Gt *AverageScore `json:"gt,omitempty"`
 
-	// Gte An average score from 1 to 10 with one decimal.
+	// Gte An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Gte *AverageScore `json:"gte,omitempty"`
 
-	// Lt An average score from 1 to 10 with one decimal.
+	// Lt An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Lt *AverageScore `json:"lt,omitempty"`
 
-	// Lte An average score from 1 to 10 with one decimal.
+	// Lte An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Lte *AverageScore `json:"lte,omitempty"`
 }
 
-// AverageScore An average score from 1 to 10 with one decimal.
+// AverageScore An average score from 1 to 10. The property tells its number of decimals.
 //
 // Examples: 7.6
 type AverageScore = float64
@@ -548,7 +548,7 @@ type Problem struct {
 	Errors   *[]ValidationError `json:"errors,omitempty"`
 	Instance *string            `json:"instance,omitempty"`
 
-	// Property The request property that causes a conflict, such as `name` or `location`.
+	// Property The request property that causes a conflict, such as `name`, `location`, or `source`.
 	// Only a conflict of one property has it.
 	Property *string `json:"property,omitempty"`
 
@@ -573,9 +573,7 @@ type Problem struct {
 // `wrong_password_limit` is the `429` of an email address or a confirmation with too many wrong passwords.
 type ProblemCode string
 
-// Recipe A recipe that can be reviewed.
-//
-// Examples: {"cover":null,"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"description":"Eggs in a spicy tomato sauce","favorite":true,"id":"c4r8e2p6i0s3t7a","ingredients":["6 eggs","1 can of tomatoes","1 onion"],"name":"Shakshuka","rating":{"ease":8,"instructions":8,"overall":8.3,"taste":9,"value":8},"review_count":1,"servings":3,"source":"https://recipes.example/shakshuka","steps":["Cook the onion until it is soft.","Add the tomatoes and cook for 10 minutes.","Break the eggs into the sauce and cover the pan."],"tags":["breakfast","eggs"],"total_time":30,"updated":"2024-11-04T01:26:55.002Z"}
+// Recipe A recipe that can be reviewed. It has the properties of `RecipeSummary`, the ingredients, and the steps.
 type Recipe struct {
 	// Cover The first photo of `listRecipePhotos`. It is `null` for a recipe without photos.
 	// It changes when a review gets photos or new scores.
@@ -697,9 +695,9 @@ type RecipeCreate struct {
 
 // RecipeList A page of recipes.
 //
-// Examples: {"items":[{"cover":null,"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"favorite":false,"id":"c4r8e2p6i0s3t7a","ingredients":["6 eggs","1 can of tomatoes","1 onion"],"name":"Shakshuka","rating":null,"review_count":0,"steps":["Cook the onion until it is soft.","Add the tomatoes and cook for 10 minutes.","Break the eggs into the sauce and cover the pan."],"updated":"2024-11-04T01:26:55.002Z"}],"next_cursor":null}
+// Examples: {"items":[{"cover":null,"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"favorite":false,"id":"c4r8e2p6i0s3t7a","name":"Shakshuka","rating":null,"review_count":0,"updated":"2024-11-04T01:26:55.002Z"}],"next_cursor":null}
 type RecipeList struct {
-	Items []Recipe `json:"items"`
+	Items []RecipeSummary `json:"items"`
 
 	// NextCursor The cursor for the next page. It is `null` on the last page.
 	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
@@ -779,27 +777,27 @@ type RecipePhotoList struct {
 // `overall` is the average of the four averages.
 // The API rounds each value to one decimal.
 type RecipeRating struct {
-	// Ease An average score from 1 to 10 with one decimal.
+	// Ease An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Ease AverageScore `json:"ease"`
 
-	// Instructions An average score from 1 to 10 with one decimal.
+	// Instructions An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Instructions AverageScore `json:"instructions"`
 
-	// Overall An average score from 1 to 10 with one decimal.
+	// Overall An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Overall AverageScore `json:"overall"`
 
-	// Taste An average score from 1 to 10 with one decimal.
+	// Taste An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Taste AverageScore `json:"taste"`
 
-	// Value An average score from 1 to 10 with one decimal.
+	// Value An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Value AverageScore `json:"value"`
@@ -926,6 +924,71 @@ type RecipeReviewPatch struct {
 
 	// Value Whether the result is worth the cost of the ingredients and the time.
 	Value *ValueScore `json:"value,omitempty"`
+}
+
+// RecipeSummary A recipe in a list of recipes. It has the properties of `Recipe` without `ingredients` and `steps`.
+// `getRecipe` gives these two properties.
+type RecipeSummary struct {
+	// Cover The first photo of `listRecipePhotos`. It is `null` for a recipe without photos.
+	// It changes when a review gets photos or new scores.
+	Cover nullable.Nullable[RecipePhoto] `json:"cover"`
+
+	// Created An RFC 3339 timestamp in UTC with millisecond precision.
+	//
+	// Examples: 2024-11-04T01:26:55.002Z
+	Created Timestamp `json:"created"`
+
+	// Creator The user who created the recipe. It is `null` after that user is deleted.
+	Creator nullable.Nullable[Creator] `json:"creator"`
+
+	// Description A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Description *LongText `json:"description,omitempty"`
+
+	// Favorite `true` if the favorites list of the user of the token has the recipe.
+	// It is `false` for a request without a token.
+	Favorite bool `json:"favorite"`
+
+	// Id A record ID of 15 characters.
+	//
+	// Examples: k3x9m2p7q1w8z4a
+	Id RecordId `json:"id"`
+
+	// Name A name with at least one character that is not ASCII whitespace.
+	// The API removes the ASCII spaces at the start and the end.
+	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Name Name `json:"name"`
+
+	// Rating The average scores of the reviews. It is `null` for a recipe without reviews.
+	Rating nullable.Nullable[RecipeRating] `json:"rating"`
+
+	// ReviewCount The number of reviews of the recipe.
+	ReviewCount int `json:"review_count"`
+
+	// Servings The number of portions that the recipe makes.
+	//
+	// Examples: 4
+	Servings *Servings `json:"servings,omitempty"`
+
+	// Source The web page of the original recipe.
+	//
+	// Examples: https://cansole.example
+	Source *Website `json:"source,omitempty"`
+
+	// Tags Unique tags.
+	//
+	// Examples: ["italian","pasta"]
+	Tags *Tags `json:"tags,omitempty"`
+
+	// TotalTime The time from the start of the first step to the end of the last step, in minutes.
+	//
+	// Examples: 45
+	TotalTime *TotalTime `json:"total_time,omitempty"`
+
+	// Updated An RFC 3339 timestamp in UTC with millisecond precision.
+	//
+	// Examples: 2024-11-04T01:26:55.002Z
+	Updated Timestamp `json:"updated"`
 }
 
 // RecordId A record ID of 15 characters.
@@ -1149,41 +1212,41 @@ type RestaurantPhotoList struct {
 // `overall` is the average of the five averages.
 // The API rounds each value to one decimal.
 type RestaurantRating struct {
-	// Cleanliness An average score from 1 to 10 with one decimal.
+	// Cleanliness An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Cleanliness AverageScore `json:"cleanliness"`
 
-	// Food An average score from 1 to 10 with one decimal.
+	// Food An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Food AverageScore `json:"food"`
 
-	// Overall An average score from 1 to 10 with one decimal.
+	// Overall An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Overall AverageScore `json:"overall"`
 
-	// Price An average score from 1 to 10 with one decimal.
+	// Price An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Price AverageScore `json:"price"`
 
-	// Service An average score from 1 to 10 with one decimal.
+	// Service An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Service AverageScore `json:"service"`
 
-	// Space An average score from 1 to 10 with one decimal.
+	// Space An average score from 1 to 10. The property tells its number of decimals.
 	//
 	// Examples: 7.6
 	Space AverageScore `json:"space"`
 }
 
-// Review A review of a restaurant. It scores the space, service, food, price, and cleanliness.
+// RestaurantReview A review of a restaurant. It scores the space, service, food, price, and cleanliness.
 //
 // Examples: {"cleanliness":8,"created":"2024-11-06T19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"feedback":"Friendly staff and great pasta","food":8,"id":"r1b8c5e2g9i6k3m","overall":7.6,"photos":[{"alt":"A plate of carbonara on a wooden table","created":"2024-11-06T19:04:30.811Z","height":2048,"id":"p4h7j1l5n9q2s6v","urls":{"full":"/v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/full","thumb":"/v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos/p4h7j1l5n9q2s6v/thumb"},"width":1536}],"price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"title":"Great food, a bit expensive","updated":"2024-11-07T09:12:00.000Z"}
-type Review struct {
+type RestaurantReview struct {
 	// Cleanliness Cleanliness of the dining room, the tableware, and the restrooms.
 	Cleanliness CleanlinessScore `json:"cleanliness"`
 
@@ -1247,10 +1310,10 @@ type Review struct {
 	Updated Timestamp `json:"updated"`
 }
 
-// ReviewCreate The properties of a new review.
+// RestaurantReviewCreate The properties of a new review.
 //
 // Examples: {"cleanliness":8,"food":8,"price":6,"service":9,"space":7,"title":"Great food, a bit expensive"}
-type ReviewCreate struct {
+type RestaurantReviewCreate struct {
 	// Cleanliness Cleanliness of the dining room, the tableware, and the restrooms.
 	Cleanliness CleanlinessScore `json:"cleanliness"`
 
@@ -1276,20 +1339,20 @@ type ReviewCreate struct {
 	Title Title `json:"title"`
 }
 
-// ReviewList A page of reviews.
+// RestaurantReviewList A page of reviews.
 //
 // Examples: {"items":[{"cleanliness":8,"created":"2024-11-04T01:38:00.431Z","creator":{"id":"u2g6k0m4o8q1s5w","name":"Joe"},"food":10,"id":"r7d4f0h2j9l5s3v","overall":9,"photos":[],"price":9,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":10,"space":8,"title":"Best carbonara in town","updated":"2024-11-05T09:12:00.000Z"},{"cleanliness":8,"created":"2024-11-06T19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"food":8,"id":"r1b8c5e2g9i6k3m","overall":7.6,"photos":[],"price":6,"restaurant":"k3x9m2p7q1w8z4a","restaurant_name":"Luigi's Trattoria","service":9,"space":7,"title":"Great food, a bit expensive","updated":"2024-11-06T19:02:11.120Z"}],"next_cursor":null}
-type ReviewList struct {
-	Items []Review `json:"items"`
+type RestaurantReviewList struct {
+	Items []RestaurantReview `json:"items"`
 
 	// NextCursor The cursor for the next page. It is `null` on the last page.
 	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
 }
 
-// ReviewPatch A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+// RestaurantReviewPatch A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
 //
 // Examples: {"feedback":null,"price":7}
-type ReviewPatch struct {
+type RestaurantReviewPatch struct {
 	// Cleanliness Cleanliness of the dining room, the tableware, and the restrooms.
 	Cleanliness *CleanlinessScore           `json:"cleanliness,omitempty"`
 	Feedback    nullable.Nullable[LongText] `json:"feedback,omitempty"`
@@ -1314,12 +1377,8 @@ type ReviewPatch struct {
 
 // Reviewer The public profile of a user. It has the fields of `Creator` and no private data.
 //
-// Examples: {"average_overall":7.4,"id":"u5n1c8r3t6y0b2e","list_count":2,"name":"Ana","recipe_average_overall":8.1,"recipe_count":1,"recipe_review_count":4,"restaurant_count":3,"review_count":12}
+// Examples: {"id":"u5n1c8r3t6y0b2e","list_count":2,"name":"Ana","recipe_average_overall":8.1,"recipe_count":1,"recipe_review_count":4,"restaurant_average_overall":7.4,"restaurant_count":3,"restaurant_review_count":12}
 type Reviewer struct {
-	// AverageOverall The average of the `overall` values of the restaurant reviews of the user.
-	// The API rounds it to one decimal. It is `null` for a user without restaurant reviews.
-	AverageOverall nullable.Nullable[AverageScore] `json:"average_overall"`
-
 	// Id A record ID of 15 characters.
 	//
 	// Examples: k3x9m2p7q1w8z4a
@@ -1344,17 +1403,21 @@ type Reviewer struct {
 	// RecipeReviewCount The number of recipe reviews of the user.
 	RecipeReviewCount int `json:"recipe_review_count"`
 
+	// RestaurantAverageOverall The average of the `overall` values of the restaurant reviews of the user.
+	// The API rounds it to one decimal. It is `null` for a user without restaurant reviews.
+	RestaurantAverageOverall nullable.Nullable[AverageScore] `json:"restaurant_average_overall"`
+
 	// RestaurantCount The number of restaurants that the user created.
 	// `listRestaurants` with `creator[eq]` lists them.
 	RestaurantCount int `json:"restaurant_count"`
 
-	// ReviewCount The number of restaurant reviews of the user.
-	ReviewCount int `json:"review_count"`
+	// RestaurantReviewCount The number of restaurant reviews of the user.
+	RestaurantReviewCount int `json:"restaurant_review_count"`
 }
 
 // SavedList A public list of restaurants and recipes of a user. The `favorites` list of a user always exists.
 //
-// Examples: {"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"l7d2f9h4j1k8m3p","item_count":4,"kind":"custom","name":"Date night","recipe_count":0,"updated":"2024-11-04T01:26:55.002Z"}
+// Examples: {"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"l7d2f9h4j1k8m3p","kind":"custom","name":"Date night","recipe_count":0,"restaurant_count":4,"updated":"2024-11-04T01:26:55.002Z"}
 type SavedList struct {
 	// Created An RFC 3339 timestamp in UTC with millisecond precision.
 	//
@@ -1377,10 +1440,6 @@ type SavedList struct {
 	// Examples: k3x9m2p7q1w8z4a
 	Id RecordId `json:"id"`
 
-	// ItemCount The number of restaurants of the list.
-	// `listListRestaurants` and `listRestaurants` with `list[eq]` list them.
-	ItemCount int `json:"item_count"`
-
 	// Kind A user has one `favorites` list. It cannot be renamed or deleted.
 	Kind SavedListKind `json:"kind"`
 
@@ -1392,6 +1451,10 @@ type SavedList struct {
 	// RecipeCount The number of recipes of the list.
 	// `listListRecipes` and `listRecipes` with `list[eq]` list them.
 	RecipeCount int `json:"recipe_count"`
+
+	// RestaurantCount The number of restaurants of the list.
+	// `listListRestaurants` and `listRestaurants` with `list[eq]` list them.
+	RestaurantCount int `json:"restaurant_count"`
 
 	// Updated An RFC 3339 timestamp in UTC with millisecond precision.
 	//
@@ -1414,7 +1477,7 @@ type SavedListCreate struct {
 
 // SavedListPage All lists of a user.
 //
-// Examples: {"items":[{"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"f1a6c3e8g5i2k9m","item_count":12,"kind":"favorites","name":"Favorites","recipe_count":0,"updated":"2024-11-04T01:26:55.002Z"}]}
+// Examples: {"items":[{"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"f1a6c3e8g5i2k9m","kind":"favorites","name":"Favorites","recipe_count":0,"restaurant_count":12,"updated":"2024-11-04T01:26:55.002Z"}]}
 type SavedListPage struct {
 	Items []SavedList `json:"items"`
 }
@@ -1462,7 +1525,7 @@ type Servings = int
 type SpaceScore = Score
 
 // Step One step of a recipe. It has at least one character that is not whitespace.
-// The API removes the ASCII spaces at the start and the end.
+// The API removes the ASCII spaces, tabs, and line breaks at the start and the end.
 // Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters cause `422`.
 type Step = string
 
@@ -1772,6 +1835,12 @@ type RestaurantId = RecordId
 // RestaurantIn Examples: ["k3x9m2p7q1w8z4a","x7b2n9m4q1w8z3c"]
 type RestaurantIn = []RecordId
 
+// RestaurantReviewSearch defines model for RestaurantReviewSearch.
+type RestaurantReviewSearch = string
+
+// RestaurantReviewSort defines model for RestaurantReviewSort.
+type RestaurantReviewSort = string
+
 // RestaurantSearch defines model for RestaurantSearch.
 type RestaurantSearch = string
 
@@ -1785,12 +1854,6 @@ type ReviewId = RecordId
 
 // ReviewOverallFilter Comparisons for an average score. All comparisons must match.
 type ReviewOverallFilter = AverageRange
-
-// ReviewSearch defines model for ReviewSearch.
-type ReviewSearch = string
-
-// ReviewSort defines model for ReviewSort.
-type ReviewSort = string
 
 // ReviewerId A record ID of 15 characters.
 //
@@ -2131,6 +2194,70 @@ type ListRecipeReviewsParams struct {
 	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
 }
 
+// ListAllRestaurantReviewsParams defines parameters for ListAllRestaurantReviews.
+type ListAllRestaurantReviewsParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Sort A comma-separated list of properties.
+	// A `-` prefix sorts a property in descending order.
+	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
+	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+	// The `overall` sort uses the `overall` value of the review.
+	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
+	// With `search`, the default sort is `relevance`.
+	// The API always adds `id` as the last sort key.
+	Sort *RestaurantReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Search Full-text search in `title`, `feedback`, and `restaurant_name`.
+	// A review matches when it has all words of the search. A word also matches longer words that start with it.
+	// The search ignores case and accents. `Cafe` matches `Café`.
+	// Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
+	// A search without a letter or a digit causes `400 Bad Request`.
+	Search *RestaurantReviewSearch `form:"search,omitempty" json:"search,omitempty"`
+
+	// RestaurantEq The `restaurant` of the review is equal to the value.
+	RestaurantEq *RestaurantEq `form:"restaurant[eq],omitempty" json:"restaurant[eq],omitempty"`
+
+	// RestaurantIn The `restaurant` of the review is equal to any of the values.
+	RestaurantIn *RestaurantIn `form:"restaurant[in],omitempty" json:"restaurant[in],omitempty"`
+
+	// Space Compares the `space` score. Each key is an operator, for example `space[gte]=`.
+	Space *SpaceFilter `json:"space,omitempty"`
+
+	// Service Compares the `service` score. Each key is an operator, for example `service[gte]=`.
+	Service *ServiceFilter `json:"service,omitempty"`
+
+	// Food Compares the `food` score. Each key is an operator, for example `food[gte]=`.
+	Food *FoodFilter `json:"food,omitempty"`
+
+	// Price Compares the `price` score. Each key is an operator, for example `price[gte]=`.
+	Price *PriceFilter `json:"price,omitempty"`
+
+	// Cleanliness Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
+	Cleanliness *CleanlinessFilter `json:"cleanliness,omitempty"`
+
+	// Overall Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
+	Overall *ReviewOverallFilter `json:"overall,omitempty"`
+
+	// Created Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+	Created *CreatedFilter `json:"created,omitempty"`
+
+	// Updated Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+	Updated *UpdatedFilter `json:"updated,omitempty"`
+
+	// CreatorEq The `creator.id` is equal to the value.
+	CreatorEq *CreatorEq `form:"creator[eq],omitempty" json:"creator[eq],omitempty"`
+
+	// CreatorIn The `creator.id` is equal to any of the values.
+	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
+}
+
 // ListRestaurantsParams defines parameters for ListRestaurants.
 type ListRestaurantsParams struct {
 	// Limit The page size.
@@ -2225,8 +2352,8 @@ type ListRestaurantPhotosParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
-// ListReviewsParams defines parameters for ListReviews.
-type ListReviewsParams struct {
+// ListRestaurantReviewsParams defines parameters for ListRestaurantReviews.
+type ListRestaurantReviewsParams struct {
 	// Limit The page size.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -2243,14 +2370,14 @@ type ListReviewsParams struct {
 	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
 	// With `search`, the default sort is `relevance`.
 	// The API always adds `id` as the last sort key.
-	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+	Sort *RestaurantReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// Search Full-text search in `title`, `feedback`, and `restaurant_name`.
 	// A review matches when it has all words of the search. A word also matches longer words that start with it.
 	// The search ignores case and accents. `Cafe` matches `Café`.
 	// Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
 	// A search without a letter or a digit causes `400 Bad Request`.
-	Search *ReviewSearch `form:"search,omitempty" json:"search,omitempty"`
+	Search *RestaurantReviewSearch `form:"search,omitempty" json:"search,omitempty"`
 
 	// Space Compares the `space` score. Each key is an operator, for example `space[gte]=`.
 	Space *SpaceFilter `json:"space,omitempty"`
@@ -2349,8 +2476,8 @@ type ListReviewerRecipeReviewsParams struct {
 	Updated *UpdatedFilter `json:"updated,omitempty"`
 }
 
-// ListReviewerReviewsParams defines parameters for ListReviewerReviews.
-type ListReviewerReviewsParams struct {
+// ListReviewerRestaurantReviewsParams defines parameters for ListReviewerRestaurantReviews.
+type ListReviewerRestaurantReviewsParams struct {
 	// Limit The page size.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -2367,14 +2494,14 @@ type ListReviewerReviewsParams struct {
 	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
 	// With `search`, the default sort is `relevance`.
 	// The API always adds `id` as the last sort key.
-	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+	Sort *RestaurantReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// Search Full-text search in `title`, `feedback`, and `restaurant_name`.
 	// A review matches when it has all words of the search. A word also matches longer words that start with it.
 	// The search ignores case and accents. `Cafe` matches `Café`.
 	// Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
 	// A search without a letter or a digit causes `400 Bad Request`.
-	Search *ReviewSearch `form:"search,omitempty" json:"search,omitempty"`
+	Search *RestaurantReviewSearch `form:"search,omitempty" json:"search,omitempty"`
 
 	// RestaurantEq The `restaurant` of the review is equal to the value.
 	RestaurantEq *RestaurantEq `form:"restaurant[eq],omitempty" json:"restaurant[eq],omitempty"`
@@ -2405,70 +2532,6 @@ type ListReviewerReviewsParams struct {
 
 	// Updated Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
 	Updated *UpdatedFilter `json:"updated,omitempty"`
-}
-
-// ListAllReviewsParams defines parameters for ListAllReviews.
-type ListAllReviewsParams struct {
-	// Limit The page size.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor The `next_cursor` value of the previous page.
-	// Clients must not parse or build cursor values.
-	// A cursor is valid only with the same filters and sort that made it.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Sort A comma-separated list of properties.
-	// A `-` prefix sorts a property in descending order.
-	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
-	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
-	// The `overall` sort uses the `overall` value of the review.
-	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
-	// With `search`, the default sort is `relevance`.
-	// The API always adds `id` as the last sort key.
-	Sort *ReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
-
-	// Search Full-text search in `title`, `feedback`, and `restaurant_name`.
-	// A review matches when it has all words of the search. A word also matches longer words that start with it.
-	// The search ignores case and accents. `Cafe` matches `Café`.
-	// Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
-	// A search without a letter or a digit causes `400 Bad Request`.
-	Search *ReviewSearch `form:"search,omitempty" json:"search,omitempty"`
-
-	// RestaurantEq The `restaurant` of the review is equal to the value.
-	RestaurantEq *RestaurantEq `form:"restaurant[eq],omitempty" json:"restaurant[eq],omitempty"`
-
-	// RestaurantIn The `restaurant` of the review is equal to any of the values.
-	RestaurantIn *RestaurantIn `form:"restaurant[in],omitempty" json:"restaurant[in],omitempty"`
-
-	// Space Compares the `space` score. Each key is an operator, for example `space[gte]=`.
-	Space *SpaceFilter `json:"space,omitempty"`
-
-	// Service Compares the `service` score. Each key is an operator, for example `service[gte]=`.
-	Service *ServiceFilter `json:"service,omitempty"`
-
-	// Food Compares the `food` score. Each key is an operator, for example `food[gte]=`.
-	Food *FoodFilter `json:"food,omitempty"`
-
-	// Price Compares the `price` score. Each key is an operator, for example `price[gte]=`.
-	Price *PriceFilter `json:"price,omitempty"`
-
-	// Cleanliness Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
-	Cleanliness *CleanlinessFilter `json:"cleanliness,omitempty"`
-
-	// Overall Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
-	Overall *ReviewOverallFilter `json:"overall,omitempty"`
-
-	// Created Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
-	Created *CreatedFilter `json:"created,omitempty"`
-
-	// Updated Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
-	Updated *UpdatedFilter `json:"updated,omitempty"`
-
-	// CreatorEq The `creator.id` is equal to the value.
-	CreatorEq *CreatorEq `form:"creator[eq],omitempty" json:"creator[eq],omitempty"`
-
-	// CreatorIn The `creator.id` is equal to any of the values.
-	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
 }
 
 // ConfirmEmailParams defines parameters for ConfirmEmail.
@@ -2526,14 +2589,14 @@ type CreateRestaurantJSONRequestBody = RestaurantCreate
 // UpdateRestaurantApplicationMergePatchPlusJSONRequestBody defines body for UpdateRestaurant for application/merge-patch+json ContentType.
 type UpdateRestaurantApplicationMergePatchPlusJSONRequestBody = RestaurantPatch
 
-// CreateReviewJSONRequestBody defines body for CreateReview for application/json ContentType.
-type CreateReviewJSONRequestBody = ReviewCreate
+// CreateRestaurantReviewJSONRequestBody defines body for CreateRestaurantReview for application/json ContentType.
+type CreateRestaurantReviewJSONRequestBody = RestaurantReviewCreate
 
-// UpdateReviewApplicationMergePatchPlusJSONRequestBody defines body for UpdateReview for application/merge-patch+json ContentType.
-type UpdateReviewApplicationMergePatchPlusJSONRequestBody = ReviewPatch
+// UpdateRestaurantReviewApplicationMergePatchPlusJSONRequestBody defines body for UpdateRestaurantReview for application/merge-patch+json ContentType.
+type UpdateRestaurantReviewApplicationMergePatchPlusJSONRequestBody = RestaurantReviewPatch
 
-// UpdateReviewPhotoApplicationMergePatchPlusJSONRequestBody defines body for UpdateReviewPhoto for application/merge-patch+json ContentType.
-type UpdateReviewPhotoApplicationMergePatchPlusJSONRequestBody = PhotoPatch
+// UpdateRestaurantReviewPhotoApplicationMergePatchPlusJSONRequestBody defines body for UpdateRestaurantReviewPhoto for application/merge-patch+json ContentType.
+type UpdateRestaurantReviewPhotoApplicationMergePatchPlusJSONRequestBody = PhotoPatch
 
 // SignUpJSONRequestBody defines body for SignUp for application/json ContentType.
 type SignUpJSONRequestBody = UserCreate
@@ -2561,16 +2624,16 @@ type SignInJSONRequestBody = Credentials
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// CreateList Create a list of restaurants
+	// CreateList Create a list
 	// (POST /lists)
 	CreateList(w http.ResponseWriter, r *http.Request)
-	// DeleteList Delete a list of restaurants
+	// DeleteList Delete a list
 	// (DELETE /lists/{listId})
 	DeleteList(w http.ResponseWriter, r *http.Request, listId ListId)
-	// GetList Get a list of restaurants
+	// GetList Get a list
 	// (GET /lists/{listId})
 	GetList(w http.ResponseWriter, r *http.Request, listId ListId)
-	// UpdateList Rename a list of restaurants
+	// UpdateList Rename a list
 	// (PATCH /lists/{listId})
 	UpdateList(w http.ResponseWriter, r *http.Request, listId ListId)
 	// ListListRecipes List the recipes of a list
@@ -2642,6 +2705,9 @@ type ServerInterface interface {
 	// GetRecipeReviewPhotoFile Get the image file of a photo of a recipe review
 	// (GET /recipes/{recipeId}/reviews/{reviewId}/photos/{photoId}/{variant})
 	GetRecipeReviewPhotoFile(w http.ResponseWriter, r *http.Request, recipeId RecipeId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant)
+	// ListAllRestaurantReviews List the reviews of all restaurants
+	// (GET /restaurant-reviews)
+	ListAllRestaurantReviews(w http.ResponseWriter, r *http.Request, params ListAllRestaurantReviewsParams)
 	// ListRestaurants List restaurants
 	// (GET /restaurants)
 	ListRestaurants(w http.ResponseWriter, r *http.Request, params ListRestaurantsParams)
@@ -2660,33 +2726,33 @@ type ServerInterface interface {
 	// ListRestaurantPhotos List the photos of all reviews of a restaurant
 	// (GET /restaurants/{restaurantId}/photos)
 	ListRestaurantPhotos(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, params ListRestaurantPhotosParams)
-	// ListReviews List the reviews of a restaurant
+	// ListRestaurantReviews List the reviews of a restaurant
 	// (GET /restaurants/{restaurantId}/reviews)
-	ListReviews(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, params ListReviewsParams)
-	// CreateReview Create a review for a restaurant
+	ListRestaurantReviews(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, params ListRestaurantReviewsParams)
+	// CreateRestaurantReview Create a review for a restaurant
 	// (POST /restaurants/{restaurantId}/reviews)
-	CreateReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId)
-	// DeleteReview Delete a review
+	CreateRestaurantReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId)
+	// DeleteRestaurantReview Delete a review
 	// (DELETE /restaurants/{restaurantId}/reviews/{reviewId})
-	DeleteReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
-	// GetReview Get a review
+	DeleteRestaurantReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
+	// GetRestaurantReview Get a review
 	// (GET /restaurants/{restaurantId}/reviews/{reviewId})
-	GetReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
-	// UpdateReview Update a review
+	GetRestaurantReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
+	// UpdateRestaurantReview Update a review
 	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId})
-	UpdateReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
-	// AddReviewPhoto Add a photo to a review
+	UpdateRestaurantReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
+	// AddRestaurantReviewPhoto Add a photo to a review
 	// (POST /restaurants/{restaurantId}/reviews/{reviewId}/photos)
-	AddReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
-	// DeleteReviewPhoto Delete a photo
+	AddRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId)
+	// DeleteRestaurantReviewPhoto Delete a photo
 	// (DELETE /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId})
-	DeleteReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId)
-	// UpdateReviewPhoto Change the alt text of a photo
+	DeleteRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId)
+	// UpdateRestaurantReviewPhoto Change the alt text of a photo
 	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId})
-	UpdateReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId)
-	// GetReviewPhotoFile Get the image file of a photo
+	UpdateRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId)
+	// GetRestaurantReviewPhotoFile Get the image file of a photo
 	// (GET /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant})
-	GetReviewPhotoFile(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant)
+	GetRestaurantReviewPhotoFile(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant)
 	// GetReviewer Get the public profile of a user
 	// (GET /reviewers/{reviewerId})
 	GetReviewer(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId)
@@ -2696,12 +2762,9 @@ type ServerInterface interface {
 	// ListReviewerRecipeReviews List the recipe reviews of a user
 	// (GET /reviewers/{reviewerId}/recipe-reviews)
 	ListReviewerRecipeReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerRecipeReviewsParams)
-	// ListReviewerReviews List the reviews of a user
-	// (GET /reviewers/{reviewerId}/reviews)
-	ListReviewerReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerReviewsParams)
-	// ListAllReviews List the reviews of all restaurants
-	// (GET /reviews)
-	ListAllReviews(w http.ResponseWriter, r *http.Request, params ListAllReviewsParams)
+	// ListReviewerRestaurantReviews List the reviews of a user
+	// (GET /reviewers/{reviewerId}/restaurant-reviews)
+	ListReviewerRestaurantReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerRestaurantReviewsParams)
 	// SignUp Sign up a user
 	// (POST /users)
 	SignUp(w http.ResponseWriter, r *http.Request)
@@ -4216,6 +4279,234 @@ func (siw *ServerInterfaceWrapper) GetRecipeReviewPhotoFile(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// ListAllRestaurantReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListAllRestaurantReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAllRestaurantReviewsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "restaurant[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "restaurant[eq]", r.URL.Query(), &params.RestaurantEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "restaurant[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurant[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "restaurant[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "restaurant[in]", r.URL.Query(), &params.RestaurantIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "restaurant[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurant[in]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "space" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "space", r.URL.Query(), &params.Space, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "space"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "space", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "service" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "service", r.URL.Query(), &params.Service, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "service"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "service", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "food" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "food", r.URL.Query(), &params.Food, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "food"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "food", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "price" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "price", r.URL.Query(), &params.Price, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "price"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "price", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cleanliness" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "cleanliness", r.URL.Query(), &params.Cleanliness, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cleanliness"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cleanliness", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "overall" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "overall", r.URL.Query(), &params.Overall, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overall"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overall", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "created" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "created", r.URL.Query(), &params.Created, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "updated" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "updated", r.URL.Query(), &params.Updated, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "updated"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "updated", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[eq]", r.URL.Query(), &params.CreatorEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[in]", r.URL.Query(), &params.CreatorIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[in]", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAllRestaurantReviews(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRestaurants operation middleware
 func (siw *ServerInterfaceWrapper) ListRestaurants(w http.ResponseWriter, r *http.Request) {
 
@@ -4591,8 +4882,8 @@ func (siw *ServerInterfaceWrapper) ListRestaurantPhotos(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
-// ListReviews operation middleware
-func (siw *ServerInterfaceWrapper) ListReviews(w http.ResponseWriter, r *http.Request) {
+// ListRestaurantReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListRestaurantReviews(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -4607,7 +4898,7 @@ func (siw *ServerInterfaceWrapper) ListReviews(w http.ResponseWriter, r *http.Re
 	}
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListReviewsParams
+	var params ListRestaurantReviewsParams
 
 	// ------------- Optional query parameter "limit" -------------
 
@@ -4792,7 +5083,7 @@ func (siw *ServerInterfaceWrapper) ListReviews(w http.ResponseWriter, r *http.Re
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListReviews(w, r, restaurantId, params)
+		siw.Handler.ListRestaurantReviews(w, r, restaurantId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4802,8 +5093,8 @@ func (siw *ServerInterfaceWrapper) ListReviews(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
-// CreateReview operation middleware
-func (siw *ServerInterfaceWrapper) CreateReview(w http.ResponseWriter, r *http.Request) {
+// CreateRestaurantReview operation middleware
+func (siw *ServerInterfaceWrapper) CreateRestaurantReview(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -4818,7 +5109,7 @@ func (siw *ServerInterfaceWrapper) CreateReview(w http.ResponseWriter, r *http.R
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateReview(w, r, restaurantId)
+		siw.Handler.CreateRestaurantReview(w, r, restaurantId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4828,43 +5119,8 @@ func (siw *ServerInterfaceWrapper) CreateReview(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
-// DeleteReview operation middleware
-func (siw *ServerInterfaceWrapper) DeleteReview(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "restaurantId" -------------
-	var restaurantId RestaurantId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "restaurantId", r.PathValue("restaurantId"), &restaurantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurantId", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "reviewId" -------------
-	var reviewId ReviewId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteReview(w, r, restaurantId, reviewId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetReview operation middleware
-func (siw *ServerInterfaceWrapper) GetReview(w http.ResponseWriter, r *http.Request) {
+// DeleteRestaurantReview operation middleware
+func (siw *ServerInterfaceWrapper) DeleteRestaurantReview(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -4888,7 +5144,7 @@ func (siw *ServerInterfaceWrapper) GetReview(w http.ResponseWriter, r *http.Requ
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetReview(w, r, restaurantId, reviewId)
+		siw.Handler.DeleteRestaurantReview(w, r, restaurantId, reviewId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4898,8 +5154,8 @@ func (siw *ServerInterfaceWrapper) GetReview(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
-// UpdateReview operation middleware
-func (siw *ServerInterfaceWrapper) UpdateReview(w http.ResponseWriter, r *http.Request) {
+// GetRestaurantReview operation middleware
+func (siw *ServerInterfaceWrapper) GetRestaurantReview(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -4923,7 +5179,7 @@ func (siw *ServerInterfaceWrapper) UpdateReview(w http.ResponseWriter, r *http.R
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateReview(w, r, restaurantId, reviewId)
+		siw.Handler.GetRestaurantReview(w, r, restaurantId, reviewId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4933,8 +5189,8 @@ func (siw *ServerInterfaceWrapper) UpdateReview(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
-// AddReviewPhoto operation middleware
-func (siw *ServerInterfaceWrapper) AddReviewPhoto(w http.ResponseWriter, r *http.Request) {
+// UpdateRestaurantReview operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRestaurantReview(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -4958,7 +5214,7 @@ func (siw *ServerInterfaceWrapper) AddReviewPhoto(w http.ResponseWriter, r *http
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.AddReviewPhoto(w, r, restaurantId, reviewId)
+		siw.Handler.UpdateRestaurantReview(w, r, restaurantId, reviewId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4968,8 +5224,8 @@ func (siw *ServerInterfaceWrapper) AddReviewPhoto(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// DeleteReviewPhoto operation middleware
-func (siw *ServerInterfaceWrapper) DeleteReviewPhoto(w http.ResponseWriter, r *http.Request) {
+// AddRestaurantReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) AddRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -4992,17 +5248,8 @@ func (siw *ServerInterfaceWrapper) DeleteReviewPhoto(w http.ResponseWriter, r *h
 		return
 	}
 
-	// ------------- Path parameter "photoId" -------------
-	var photoId PhotoId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "photoId", r.PathValue("photoId"), &photoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "photoId", Err: err})
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteReviewPhoto(w, r, restaurantId, reviewId, photoId)
+		siw.Handler.AddRestaurantReviewPhoto(w, r, restaurantId, reviewId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5012,8 +5259,8 @@ func (siw *ServerInterfaceWrapper) DeleteReviewPhoto(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
-// UpdateReviewPhoto operation middleware
-func (siw *ServerInterfaceWrapper) UpdateReviewPhoto(w http.ResponseWriter, r *http.Request) {
+// DeleteRestaurantReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) DeleteRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -5046,7 +5293,7 @@ func (siw *ServerInterfaceWrapper) UpdateReviewPhoto(w http.ResponseWriter, r *h
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateReviewPhoto(w, r, restaurantId, reviewId, photoId)
+		siw.Handler.DeleteRestaurantReviewPhoto(w, r, restaurantId, reviewId, photoId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5056,8 +5303,52 @@ func (siw *ServerInterfaceWrapper) UpdateReviewPhoto(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
-// GetReviewPhotoFile operation middleware
-func (siw *ServerInterfaceWrapper) GetReviewPhotoFile(w http.ResponseWriter, r *http.Request) {
+// UpdateRestaurantReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "restaurantId" -------------
+	var restaurantId RestaurantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "restaurantId", r.PathValue("restaurantId"), &restaurantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurantId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "photoId" -------------
+	var photoId PhotoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "photoId", r.PathValue("photoId"), &photoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "photoId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRestaurantReviewPhoto(w, r, restaurantId, reviewId, photoId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRestaurantReviewPhotoFile operation middleware
+func (siw *ServerInterfaceWrapper) GetRestaurantReviewPhotoFile(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -5099,7 +5390,7 @@ func (siw *ServerInterfaceWrapper) GetReviewPhotoFile(w http.ResponseWriter, r *
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetReviewPhotoFile(w, r, restaurantId, reviewId, photoId, variant)
+		siw.Handler.GetRestaurantReviewPhotoFile(w, r, restaurantId, reviewId, photoId, variant)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5388,8 +5679,8 @@ func (siw *ServerInterfaceWrapper) ListReviewerRecipeReviews(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
-// ListReviewerReviews operation middleware
-func (siw *ServerInterfaceWrapper) ListReviewerReviews(w http.ResponseWriter, r *http.Request) {
+// ListReviewerRestaurantReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListReviewerRestaurantReviews(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -5404,7 +5695,7 @@ func (siw *ServerInterfaceWrapper) ListReviewerReviews(w http.ResponseWriter, r 
 	}
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListReviewerReviewsParams
+	var params ListReviewerRestaurantReviewsParams
 
 	// ------------- Optional query parameter "limit" -------------
 
@@ -5589,235 +5880,7 @@ func (siw *ServerInterfaceWrapper) ListReviewerReviews(w http.ResponseWriter, r 
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListReviewerReviews(w, r, reviewerId, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListAllReviews operation middleware
-func (siw *ServerInterfaceWrapper) ListAllReviews(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListAllReviewsParams
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "sort" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "search" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "restaurant[eq]" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "restaurant[eq]", r.URL.Query(), &params.RestaurantEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "restaurant[eq]"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurant[eq]", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "restaurant[in]" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "restaurant[in]", r.URL.Query(), &params.RestaurantIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "restaurant[in]"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "restaurant[in]", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "space" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "space", r.URL.Query(), &params.Space, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "space"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "space", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "service" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "service", r.URL.Query(), &params.Service, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "service"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "service", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "food" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "food", r.URL.Query(), &params.Food, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "food"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "food", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "price" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "price", r.URL.Query(), &params.Price, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "price"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "price", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "cleanliness" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "cleanliness", r.URL.Query(), &params.Cleanliness, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cleanliness"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cleanliness", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "overall" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "overall", r.URL.Query(), &params.Overall, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overall"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overall", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "created" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "created", r.URL.Query(), &params.Created, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "updated" -------------
-
-	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "updated", r.URL.Query(), &params.Updated, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "updated"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "updated", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "creator[eq]" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[eq]", r.URL.Query(), &params.CreatorEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[eq]"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[eq]", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "creator[in]" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[in]", r.URL.Query(), &params.CreatorIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[in]"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[in]", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAllReviews(w, r, params)
+		siw.Handler.ListReviewerRestaurantReviews(w, r, reviewerId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6193,21 +6256,21 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}", wrapper.DeleteRestaurant)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}", wrapper.GetRestaurant)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}", wrapper.UpdateRestaurant)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews", wrapper.ListReviews)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews", wrapper.CreateReview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews", wrapper.ListRestaurantReviews)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews", wrapper.CreateRestaurantReview)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/photos", wrapper.ListRestaurantPhotos)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviews", wrapper.ListAllReviews)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurant-reviews", wrapper.ListAllRestaurantReviews)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/places", wrapper.SearchPlaces)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}", wrapper.GetReviewer)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}/reviews", wrapper.ListReviewerReviews)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}/restaurant-reviews", wrapper.ListReviewerRestaurantReviews)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}/recipe-reviews", wrapper.ListReviewerRecipeReviews)
-	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.DeleteReview)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.GetReview)
-	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.UpdateReview)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos", wrapper.AddReviewPhoto)
-	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}", wrapper.DeleteReviewPhoto)
-	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}", wrapper.UpdateReviewPhoto)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant}", wrapper.GetReviewPhotoFile)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.DeleteRestaurantReview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.GetRestaurantReview)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.UpdateRestaurantReview)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos", wrapper.AddRestaurantReviewPhoto)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}", wrapper.DeleteRestaurantReviewPhoto)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}", wrapper.UpdateRestaurantReviewPhoto)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant}", wrapper.GetRestaurantReviewPhotoFile)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/recipes", wrapper.ListRecipes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/recipes", wrapper.CreateRecipe)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/recipes/{recipeId}", wrapper.DeleteRecipe)
@@ -9751,6 +9814,81 @@ func (response GetRecipeReviewPhotoFiledefaultApplicationProblemPlusJSONResponse
 	return err
 }
 
+type ListAllRestaurantReviewsRequestObject struct {
+	Params ListAllRestaurantReviewsParams
+}
+
+type ListAllRestaurantReviewsResponseObject interface {
+	VisitListAllRestaurantReviewsResponse(w http.ResponseWriter) error
+}
+
+type ListAllRestaurantReviews200JSONResponse RestaurantReviewList
+
+func (response ListAllRestaurantReviews200JSONResponse) VisitListAllRestaurantReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllRestaurantReviews400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListAllRestaurantReviews400ApplicationProblemPlusJSONResponse) VisitListAllRestaurantReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllRestaurantReviews401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListAllRestaurantReviews401ApplicationProblemPlusJSONResponse) VisitListAllRestaurantReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllRestaurantReviewsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListAllRestaurantReviewsdefaultApplicationProblemPlusJSONResponse) VisitListAllRestaurantReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListRestaurantsRequestObject struct {
 	Params ListRestaurantsParams
 }
@@ -10482,18 +10620,18 @@ func (response ListRestaurantPhotosdefaultApplicationProblemPlusJSONResponse) Vi
 	return err
 }
 
-type ListReviewsRequestObject struct {
+type ListRestaurantReviewsRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
-	Params       ListReviewsParams
+	Params       ListRestaurantReviewsParams
 }
 
-type ListReviewsResponseObject interface {
-	VisitListReviewsResponse(w http.ResponseWriter) error
+type ListRestaurantReviewsResponseObject interface {
+	VisitListRestaurantReviewsResponse(w http.ResponseWriter) error
 }
 
-type ListReviews200JSONResponse ReviewList
+type ListRestaurantReviews200JSONResponse RestaurantReviewList
 
-func (response ListReviews200JSONResponse) VisitListReviewsResponse(w http.ResponseWriter) error {
+func (response ListRestaurantReviews200JSONResponse) VisitListRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10505,11 +10643,11 @@ func (response ListReviews200JSONResponse) VisitListReviewsResponse(w http.Respo
 	return err
 }
 
-type ListReviews400ApplicationProblemPlusJSONResponse struct {
+type ListRestaurantReviews400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response ListReviews400ApplicationProblemPlusJSONResponse) VisitListReviewsResponse(w http.ResponseWriter) error {
+func (response ListRestaurantReviews400ApplicationProblemPlusJSONResponse) VisitListRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10521,11 +10659,11 @@ func (response ListReviews400ApplicationProblemPlusJSONResponse) VisitListReview
 	return err
 }
 
-type ListReviews401ApplicationProblemPlusJSONResponse struct {
+type ListRestaurantReviews401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response ListReviews401ApplicationProblemPlusJSONResponse) VisitListReviewsResponse(w http.ResponseWriter) error {
+func (response ListRestaurantReviews401ApplicationProblemPlusJSONResponse) VisitListRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10541,11 +10679,11 @@ func (response ListReviews401ApplicationProblemPlusJSONResponse) VisitListReview
 	return err
 }
 
-type ListReviews404ApplicationProblemPlusJSONResponse struct {
+type ListRestaurantReviews404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response ListReviews404ApplicationProblemPlusJSONResponse) VisitListReviewsResponse(w http.ResponseWriter) error {
+func (response ListRestaurantReviews404ApplicationProblemPlusJSONResponse) VisitListRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10557,12 +10695,12 @@ func (response ListReviews404ApplicationProblemPlusJSONResponse) VisitListReview
 	return err
 }
 
-type ListReviewsdefaultApplicationProblemPlusJSONResponse struct {
+type ListRestaurantReviewsdefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response ListReviewsdefaultApplicationProblemPlusJSONResponse) VisitListReviewsResponse(w http.ResponseWriter) error {
+func (response ListRestaurantReviewsdefaultApplicationProblemPlusJSONResponse) VisitListRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10574,25 +10712,25 @@ func (response ListReviewsdefaultApplicationProblemPlusJSONResponse) VisitListRe
 	return err
 }
 
-type CreateReviewRequestObject struct {
+type CreateRestaurantReviewRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
-	Body         *CreateReviewJSONRequestBody
+	Body         *CreateRestaurantReviewJSONRequestBody
 }
 
-type CreateReviewResponseObject interface {
-	VisitCreateReviewResponse(w http.ResponseWriter) error
+type CreateRestaurantReviewResponseObject interface {
+	VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error
 }
 
-type CreateReview201ResponseHeaders struct {
+type CreateRestaurantReview201ResponseHeaders struct {
 	Location *string
 }
 
-type CreateReview201JSONResponse struct {
-	Body    Review
-	Headers CreateReview201ResponseHeaders
+type CreateRestaurantReview201JSONResponse struct {
+	Body    RestaurantReview
+	Headers CreateRestaurantReview201ResponseHeaders
 }
 
-func (response CreateReview201JSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview201JSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10607,11 +10745,11 @@ func (response CreateReview201JSONResponse) VisitCreateReviewResponse(w http.Res
 	return err
 }
 
-type CreateReview400ApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReview400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response CreateReview400ApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview400ApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10623,11 +10761,11 @@ func (response CreateReview400ApplicationProblemPlusJSONResponse) VisitCreateRev
 	return err
 }
 
-type CreateReview401ApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReview401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response CreateReview401ApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview401ApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10643,11 +10781,11 @@ func (response CreateReview401ApplicationProblemPlusJSONResponse) VisitCreateRev
 	return err
 }
 
-type CreateReview403ApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReview403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
 
-func (response CreateReview403ApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview403ApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10659,11 +10797,11 @@ func (response CreateReview403ApplicationProblemPlusJSONResponse) VisitCreateRev
 	return err
 }
 
-type CreateReview404ApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReview404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response CreateReview404ApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview404ApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10675,11 +10813,11 @@ func (response CreateReview404ApplicationProblemPlusJSONResponse) VisitCreateRev
 	return err
 }
 
-type CreateReview409ApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReview409ApplicationProblemPlusJSONResponse struct {
 	ConflictApplicationProblemPlusJSONResponse
 }
 
-func (response CreateReview409ApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview409ApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10691,11 +10829,11 @@ func (response CreateReview409ApplicationProblemPlusJSONResponse) VisitCreateRev
 	return err
 }
 
-type CreateReview415ApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReview415ApplicationProblemPlusJSONResponse struct {
 	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
 }
 
-func (response CreateReview415ApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview415ApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10707,11 +10845,11 @@ func (response CreateReview415ApplicationProblemPlusJSONResponse) VisitCreateRev
 	return err
 }
 
-type CreateReview422ApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReview422ApplicationProblemPlusJSONResponse struct {
 	UnprocessableContentApplicationProblemPlusJSONResponse
 }
 
-func (response CreateReview422ApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview422ApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10723,11 +10861,11 @@ func (response CreateReview422ApplicationProblemPlusJSONResponse) VisitCreateRev
 	return err
 }
 
-type CreateReview429ApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReview429ApplicationProblemPlusJSONResponse struct {
 	TooManyRequestsApplicationProblemPlusJSONResponse
 }
 
-func (response CreateReview429ApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReview429ApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10740,12 +10878,12 @@ func (response CreateReview429ApplicationProblemPlusJSONResponse) VisitCreateRev
 	return err
 }
 
-type CreateReviewdefaultApplicationProblemPlusJSONResponse struct {
+type CreateRestaurantReviewdefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response CreateReviewdefaultApplicationProblemPlusJSONResponse) VisitCreateReviewResponse(w http.ResponseWriter) error {
+func (response CreateRestaurantReviewdefaultApplicationProblemPlusJSONResponse) VisitCreateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10757,28 +10895,28 @@ func (response CreateReviewdefaultApplicationProblemPlusJSONResponse) VisitCreat
 	return err
 }
 
-type DeleteReviewRequestObject struct {
+type DeleteRestaurantReviewRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
 	ReviewId     ReviewId     `json:"reviewId"`
 }
 
-type DeleteReviewResponseObject interface {
-	VisitDeleteReviewResponse(w http.ResponseWriter) error
+type DeleteRestaurantReviewResponseObject interface {
+	VisitDeleteRestaurantReviewResponse(w http.ResponseWriter) error
 }
 
-type DeleteReview204Response struct {
+type DeleteRestaurantReview204Response struct {
 }
 
-func (response DeleteReview204Response) VisitDeleteReviewResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReview204Response) VisitDeleteRestaurantReviewResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
 }
 
-type DeleteReview400ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReview400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReview400ApplicationProblemPlusJSONResponse) VisitDeleteReviewResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReview400ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10790,11 +10928,11 @@ func (response DeleteReview400ApplicationProblemPlusJSONResponse) VisitDeleteRev
 	return err
 }
 
-type DeleteReview401ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReview401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReview401ApplicationProblemPlusJSONResponse) VisitDeleteReviewResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReview401ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10810,11 +10948,11 @@ func (response DeleteReview401ApplicationProblemPlusJSONResponse) VisitDeleteRev
 	return err
 }
 
-type DeleteReview403ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReview403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReview403ApplicationProblemPlusJSONResponse) VisitDeleteReviewResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReview403ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10826,11 +10964,11 @@ func (response DeleteReview403ApplicationProblemPlusJSONResponse) VisitDeleteRev
 	return err
 }
 
-type DeleteReview404ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReview404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReview404ApplicationProblemPlusJSONResponse) VisitDeleteReviewResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReview404ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10842,11 +10980,11 @@ func (response DeleteReview404ApplicationProblemPlusJSONResponse) VisitDeleteRev
 	return err
 }
 
-type DeleteReview429ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReview429ApplicationProblemPlusJSONResponse struct {
 	TooManyRequestsApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReview429ApplicationProblemPlusJSONResponse) VisitDeleteReviewResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReview429ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10859,12 +10997,12 @@ func (response DeleteReview429ApplicationProblemPlusJSONResponse) VisitDeleteRev
 	return err
 }
 
-type DeleteReviewdefaultApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReviewdefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response DeleteReviewdefaultApplicationProblemPlusJSONResponse) VisitDeleteReviewResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReviewdefaultApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10876,18 +11014,18 @@ func (response DeleteReviewdefaultApplicationProblemPlusJSONResponse) VisitDelet
 	return err
 }
 
-type GetReviewRequestObject struct {
+type GetRestaurantReviewRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
 	ReviewId     ReviewId     `json:"reviewId"`
 }
 
-type GetReviewResponseObject interface {
-	VisitGetReviewResponse(w http.ResponseWriter) error
+type GetRestaurantReviewResponseObject interface {
+	VisitGetRestaurantReviewResponse(w http.ResponseWriter) error
 }
 
-type GetReview200JSONResponse Review
+type GetRestaurantReview200JSONResponse RestaurantReview
 
-func (response GetReview200JSONResponse) VisitGetReviewResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReview200JSONResponse) VisitGetRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10899,11 +11037,11 @@ func (response GetReview200JSONResponse) VisitGetReviewResponse(w http.ResponseW
 	return err
 }
 
-type GetReview400ApplicationProblemPlusJSONResponse struct {
+type GetRestaurantReview400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response GetReview400ApplicationProblemPlusJSONResponse) VisitGetReviewResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReview400ApplicationProblemPlusJSONResponse) VisitGetRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10915,11 +11053,11 @@ func (response GetReview400ApplicationProblemPlusJSONResponse) VisitGetReviewRes
 	return err
 }
 
-type GetReview401ApplicationProblemPlusJSONResponse struct {
+type GetRestaurantReview401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response GetReview401ApplicationProblemPlusJSONResponse) VisitGetReviewResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReview401ApplicationProblemPlusJSONResponse) VisitGetRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10935,11 +11073,11 @@ func (response GetReview401ApplicationProblemPlusJSONResponse) VisitGetReviewRes
 	return err
 }
 
-type GetReview404ApplicationProblemPlusJSONResponse struct {
+type GetRestaurantReview404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response GetReview404ApplicationProblemPlusJSONResponse) VisitGetReviewResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReview404ApplicationProblemPlusJSONResponse) VisitGetRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10951,12 +11089,12 @@ func (response GetReview404ApplicationProblemPlusJSONResponse) VisitGetReviewRes
 	return err
 }
 
-type GetReviewdefaultApplicationProblemPlusJSONResponse struct {
+type GetRestaurantReviewdefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response GetReviewdefaultApplicationProblemPlusJSONResponse) VisitGetReviewResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewdefaultApplicationProblemPlusJSONResponse) VisitGetRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -10968,19 +11106,19 @@ func (response GetReviewdefaultApplicationProblemPlusJSONResponse) VisitGetRevie
 	return err
 }
 
-type UpdateReviewRequestObject struct {
+type UpdateRestaurantReviewRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
 	ReviewId     ReviewId     `json:"reviewId"`
-	Body         *UpdateReviewApplicationMergePatchPlusJSONRequestBody
+	Body         *UpdateRestaurantReviewApplicationMergePatchPlusJSONRequestBody
 }
 
-type UpdateReviewResponseObject interface {
-	VisitUpdateReviewResponse(w http.ResponseWriter) error
+type UpdateRestaurantReviewResponseObject interface {
+	VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error
 }
 
-type UpdateReview200JSONResponse Review
+type UpdateRestaurantReview200JSONResponse RestaurantReview
 
-func (response UpdateReview200JSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReview200JSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10992,11 +11130,11 @@ func (response UpdateReview200JSONResponse) VisitUpdateReviewResponse(w http.Res
 	return err
 }
 
-type UpdateReview400ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReview400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReview400ApplicationProblemPlusJSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReview400ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11008,11 +11146,11 @@ func (response UpdateReview400ApplicationProblemPlusJSONResponse) VisitUpdateRev
 	return err
 }
 
-type UpdateReview401ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReview401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReview401ApplicationProblemPlusJSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReview401ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11028,11 +11166,11 @@ func (response UpdateReview401ApplicationProblemPlusJSONResponse) VisitUpdateRev
 	return err
 }
 
-type UpdateReview403ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReview403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReview403ApplicationProblemPlusJSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReview403ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11044,11 +11182,11 @@ func (response UpdateReview403ApplicationProblemPlusJSONResponse) VisitUpdateRev
 	return err
 }
 
-type UpdateReview404ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReview404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReview404ApplicationProblemPlusJSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReview404ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11060,11 +11198,11 @@ func (response UpdateReview404ApplicationProblemPlusJSONResponse) VisitUpdateRev
 	return err
 }
 
-type UpdateReview415ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReview415ApplicationProblemPlusJSONResponse struct {
 	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReview415ApplicationProblemPlusJSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReview415ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11076,11 +11214,11 @@ func (response UpdateReview415ApplicationProblemPlusJSONResponse) VisitUpdateRev
 	return err
 }
 
-type UpdateReview422ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReview422ApplicationProblemPlusJSONResponse struct {
 	UnprocessableContentApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReview422ApplicationProblemPlusJSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReview422ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11092,11 +11230,11 @@ func (response UpdateReview422ApplicationProblemPlusJSONResponse) VisitUpdateRev
 	return err
 }
 
-type UpdateReview429ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReview429ApplicationProblemPlusJSONResponse struct {
 	TooManyRequestsApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReview429ApplicationProblemPlusJSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReview429ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11109,12 +11247,12 @@ func (response UpdateReview429ApplicationProblemPlusJSONResponse) VisitUpdateRev
 	return err
 }
 
-type UpdateReviewdefaultApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewdefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response UpdateReviewdefaultApplicationProblemPlusJSONResponse) VisitUpdateReviewResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewdefaultApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11126,27 +11264,27 @@ func (response UpdateReviewdefaultApplicationProblemPlusJSONResponse) VisitUpdat
 	return err
 }
 
-type AddReviewPhotoRequestObject struct {
+type AddRestaurantReviewPhotoRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
 	ReviewId     ReviewId     `json:"reviewId"`
 	ContentType  string
 	Body         io.Reader
 }
 
-type AddReviewPhotoResponseObject interface {
-	VisitAddReviewPhotoResponse(w http.ResponseWriter) error
+type AddRestaurantReviewPhotoResponseObject interface {
+	VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error
 }
 
-type AddReviewPhoto201ResponseHeaders struct {
+type AddRestaurantReviewPhoto201ResponseHeaders struct {
 	Location *string
 }
 
-type AddReviewPhoto201JSONResponse struct {
+type AddRestaurantReviewPhoto201JSONResponse struct {
 	Body    Photo
-	Headers AddReviewPhoto201ResponseHeaders
+	Headers AddRestaurantReviewPhoto201ResponseHeaders
 }
 
-func (response AddReviewPhoto201JSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto201JSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11161,11 +11299,11 @@ func (response AddReviewPhoto201JSONResponse) VisitAddReviewPhotoResponse(w http
 	return err
 }
 
-type AddReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto400ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto400ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11177,11 +11315,11 @@ func (response AddReviewPhoto400ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto401ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto401ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11197,11 +11335,11 @@ func (response AddReviewPhoto401ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto403ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11213,11 +11351,11 @@ func (response AddReviewPhoto403ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto404ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11229,11 +11367,11 @@ func (response AddReviewPhoto404ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhoto409ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto409ApplicationProblemPlusJSONResponse struct {
 	ConflictApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto409ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto409ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11245,11 +11383,11 @@ func (response AddReviewPhoto409ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhoto413ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto413ApplicationProblemPlusJSONResponse struct {
 	ContentTooLargeApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto413ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto413ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11261,11 +11399,11 @@ func (response AddReviewPhoto413ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhoto415ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto415ApplicationProblemPlusJSONResponse struct {
 	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto415ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto415ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11277,11 +11415,11 @@ func (response AddReviewPhoto415ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhoto422ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto422ApplicationProblemPlusJSONResponse struct {
 	InvalidImageApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto422ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto422ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11293,11 +11431,11 @@ func (response AddReviewPhoto422ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhoto429ApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhoto429ApplicationProblemPlusJSONResponse struct {
 	TooManyRequestsApplicationProblemPlusJSONResponse
 }
 
-func (response AddReviewPhoto429ApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhoto429ApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11310,12 +11448,12 @@ func (response AddReviewPhoto429ApplicationProblemPlusJSONResponse) VisitAddRevi
 	return err
 }
 
-type AddReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+type AddRestaurantReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response AddReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitAddReviewPhotoResponse(w http.ResponseWriter) error {
+func (response AddRestaurantReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitAddRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11327,29 +11465,29 @@ func (response AddReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitAdd
 	return err
 }
 
-type DeleteReviewPhotoRequestObject struct {
+type DeleteRestaurantReviewPhotoRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
 	ReviewId     ReviewId     `json:"reviewId"`
 	PhotoId      PhotoId      `json:"photoId"`
 }
 
-type DeleteReviewPhotoResponseObject interface {
-	VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error
+type DeleteRestaurantReviewPhotoResponseObject interface {
+	VisitDeleteRestaurantReviewPhotoResponse(w http.ResponseWriter) error
 }
 
-type DeleteReviewPhoto204Response struct {
+type DeleteRestaurantReviewPhoto204Response struct {
 }
 
-func (response DeleteReviewPhoto204Response) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReviewPhoto204Response) VisitDeleteRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
 }
 
-type DeleteReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReviewPhoto400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReviewPhoto400ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReviewPhoto400ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11361,11 +11499,11 @@ func (response DeleteReviewPhoto400ApplicationProblemPlusJSONResponse) VisitDele
 	return err
 }
 
-type DeleteReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReviewPhoto401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReviewPhoto401ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReviewPhoto401ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11381,11 +11519,11 @@ func (response DeleteReviewPhoto401ApplicationProblemPlusJSONResponse) VisitDele
 	return err
 }
 
-type DeleteReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReviewPhoto403ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11397,11 +11535,11 @@ func (response DeleteReviewPhoto403ApplicationProblemPlusJSONResponse) VisitDele
 	return err
 }
 
-type DeleteReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReviewPhoto404ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11413,11 +11551,11 @@ func (response DeleteReviewPhoto404ApplicationProblemPlusJSONResponse) VisitDele
 	return err
 }
 
-type DeleteReviewPhoto429ApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReviewPhoto429ApplicationProblemPlusJSONResponse struct {
 	TooManyRequestsApplicationProblemPlusJSONResponse
 }
 
-func (response DeleteReviewPhoto429ApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReviewPhoto429ApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11430,12 +11568,12 @@ func (response DeleteReviewPhoto429ApplicationProblemPlusJSONResponse) VisitDele
 	return err
 }
 
-type DeleteReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+type DeleteRestaurantReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response DeleteReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitDeleteReviewPhotoResponse(w http.ResponseWriter) error {
+func (response DeleteRestaurantReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitDeleteRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11447,20 +11585,20 @@ func (response DeleteReviewPhotodefaultApplicationProblemPlusJSONResponse) Visit
 	return err
 }
 
-type UpdateReviewPhotoRequestObject struct {
+type UpdateRestaurantReviewPhotoRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
 	ReviewId     ReviewId     `json:"reviewId"`
 	PhotoId      PhotoId      `json:"photoId"`
-	Body         *UpdateReviewPhotoApplicationMergePatchPlusJSONRequestBody
+	Body         *UpdateRestaurantReviewPhotoApplicationMergePatchPlusJSONRequestBody
 }
 
-type UpdateReviewPhotoResponseObject interface {
-	VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error
+type UpdateRestaurantReviewPhotoResponseObject interface {
+	VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error
 }
 
-type UpdateReviewPhoto200JSONResponse Photo
+type UpdateRestaurantReviewPhoto200JSONResponse Photo
 
-func (response UpdateReviewPhoto200JSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhoto200JSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11472,11 +11610,11 @@ func (response UpdateReviewPhoto200JSONResponse) VisitUpdateReviewPhotoResponse(
 	return err
 }
 
-type UpdateReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewPhoto400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReviewPhoto400ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhoto400ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11488,11 +11626,11 @@ func (response UpdateReviewPhoto400ApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
-type UpdateReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewPhoto401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReviewPhoto401ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhoto401ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11508,11 +11646,11 @@ func (response UpdateReviewPhoto401ApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
-type UpdateReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReviewPhoto403ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11524,11 +11662,11 @@ func (response UpdateReviewPhoto403ApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
-type UpdateReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReviewPhoto404ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11540,11 +11678,11 @@ func (response UpdateReviewPhoto404ApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
-type UpdateReviewPhoto415ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewPhoto415ApplicationProblemPlusJSONResponse struct {
 	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReviewPhoto415ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhoto415ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11556,11 +11694,11 @@ func (response UpdateReviewPhoto415ApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
-type UpdateReviewPhoto422ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewPhoto422ApplicationProblemPlusJSONResponse struct {
 	UnprocessableContentApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReviewPhoto422ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhoto422ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11572,11 +11710,11 @@ func (response UpdateReviewPhoto422ApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
-type UpdateReviewPhoto429ApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewPhoto429ApplicationProblemPlusJSONResponse struct {
 	TooManyRequestsApplicationProblemPlusJSONResponse
 }
 
-func (response UpdateReviewPhoto429ApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhoto429ApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11589,12 +11727,12 @@ func (response UpdateReviewPhoto429ApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
-type UpdateReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+type UpdateRestaurantReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response UpdateReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitUpdateReviewPhotoResponse(w http.ResponseWriter) error {
+func (response UpdateRestaurantReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitUpdateRestaurantReviewPhotoResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11606,31 +11744,31 @@ func (response UpdateReviewPhotodefaultApplicationProblemPlusJSONResponse) Visit
 	return err
 }
 
-type GetReviewPhotoFileRequestObject struct {
+type GetRestaurantReviewPhotoFileRequestObject struct {
 	RestaurantId RestaurantId `json:"restaurantId"`
 	ReviewId     ReviewId     `json:"reviewId"`
 	PhotoId      PhotoId      `json:"photoId"`
 	Variant      PhotoVariant `json:"variant"`
 }
 
-type GetReviewPhotoFileResponseObject interface {
-	VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error
+type GetRestaurantReviewPhotoFileResponseObject interface {
+	VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error
 }
 
-type GetReviewPhotoFile200ResponseHeaders struct {
+type GetRestaurantReviewPhotoFile200ResponseHeaders struct {
 	CacheControl          string
 	ContentSecurityPolicy string
 	ETag                  string
 	XContentTypeOptions   string
 }
 
-type GetReviewPhotoFile200ImagejpegResponse struct {
+type GetRestaurantReviewPhotoFile200ImagejpegResponse struct {
 	Body          io.Reader
-	Headers       GetReviewPhotoFile200ResponseHeaders
+	Headers       GetRestaurantReviewPhotoFile200ResponseHeaders
 	ContentLength int64
 }
 
-func (response GetReviewPhotoFile200ImagejpegResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewPhotoFile200ImagejpegResponse) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 
 	w.Header().Set("Content-Type", "image/jpeg")
 	if response.ContentLength != 0 {
@@ -11649,18 +11787,18 @@ func (response GetReviewPhotoFile200ImagejpegResponse) VisitGetReviewPhotoFileRe
 	return err
 }
 
-type GetReviewPhotoFile206ResponseHeaders struct {
+type GetRestaurantReviewPhotoFile206ResponseHeaders struct {
 	ContentRange string
 	ETag         string
 }
 
-type GetReviewPhotoFile206ImagejpegResponse struct {
+type GetRestaurantReviewPhotoFile206ImagejpegResponse struct {
 	Body          io.Reader
-	Headers       GetReviewPhotoFile206ResponseHeaders
+	Headers       GetRestaurantReviewPhotoFile206ResponseHeaders
 	ContentLength int64
 }
 
-func (response GetReviewPhotoFile206ImagejpegResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewPhotoFile206ImagejpegResponse) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 
 	w.Header().Set("Content-Type", "image/jpeg")
 	if response.ContentLength != 0 {
@@ -11677,25 +11815,25 @@ func (response GetReviewPhotoFile206ImagejpegResponse) VisitGetReviewPhotoFileRe
 	return err
 }
 
-type GetReviewPhotoFile304ResponseHeaders struct {
+type GetRestaurantReviewPhotoFile304ResponseHeaders struct {
 	ETag string
 }
 
-type GetReviewPhotoFile304Response struct {
-	Headers GetReviewPhotoFile304ResponseHeaders
+type GetRestaurantReviewPhotoFile304Response struct {
+	Headers GetRestaurantReviewPhotoFile304ResponseHeaders
 }
 
-func (response GetReviewPhotoFile304Response) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewPhotoFile304Response) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
 	w.WriteHeader(304)
 	return nil
 }
 
-type GetReviewPhotoFile400ApplicationProblemPlusJSONResponse struct {
+type GetRestaurantReviewPhotoFile400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response GetReviewPhotoFile400ApplicationProblemPlusJSONResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewPhotoFile400ApplicationProblemPlusJSONResponse) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11707,11 +11845,11 @@ func (response GetReviewPhotoFile400ApplicationProblemPlusJSONResponse) VisitGet
 	return err
 }
 
-type GetReviewPhotoFile401ApplicationProblemPlusJSONResponse struct {
+type GetRestaurantReviewPhotoFile401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response GetReviewPhotoFile401ApplicationProblemPlusJSONResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewPhotoFile401ApplicationProblemPlusJSONResponse) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11727,11 +11865,11 @@ func (response GetReviewPhotoFile401ApplicationProblemPlusJSONResponse) VisitGet
 	return err
 }
 
-type GetReviewPhotoFile404ApplicationProblemPlusJSONResponse struct {
+type GetRestaurantReviewPhotoFile404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response GetReviewPhotoFile404ApplicationProblemPlusJSONResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewPhotoFile404ApplicationProblemPlusJSONResponse) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11743,26 +11881,26 @@ func (response GetReviewPhotoFile404ApplicationProblemPlusJSONResponse) VisitGet
 	return err
 }
 
-type GetReviewPhotoFile416ResponseHeaders struct {
+type GetRestaurantReviewPhotoFile416ResponseHeaders struct {
 	ContentRange string
 }
 
-type GetReviewPhotoFile416Response struct {
-	Headers GetReviewPhotoFile416ResponseHeaders
+type GetRestaurantReviewPhotoFile416Response struct {
+	Headers GetRestaurantReviewPhotoFile416ResponseHeaders
 }
 
-func (response GetReviewPhotoFile416Response) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewPhotoFile416Response) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Range", fmt.Sprint(response.Headers.ContentRange))
 	w.WriteHeader(416)
 	return nil
 }
 
-type GetReviewPhotoFiledefaultApplicationProblemPlusJSONResponse struct {
+type GetRestaurantReviewPhotoFiledefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response GetReviewPhotoFiledefaultApplicationProblemPlusJSONResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (response GetRestaurantReviewPhotoFiledefaultApplicationProblemPlusJSONResponse) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -12049,18 +12187,18 @@ func (response ListReviewerRecipeReviewsdefaultApplicationProblemPlusJSONRespons
 	return err
 }
 
-type ListReviewerReviewsRequestObject struct {
+type ListReviewerRestaurantReviewsRequestObject struct {
 	ReviewerId ReviewerId `json:"reviewerId"`
-	Params     ListReviewerReviewsParams
+	Params     ListReviewerRestaurantReviewsParams
 }
 
-type ListReviewerReviewsResponseObject interface {
-	VisitListReviewerReviewsResponse(w http.ResponseWriter) error
+type ListReviewerRestaurantReviewsResponseObject interface {
+	VisitListReviewerRestaurantReviewsResponse(w http.ResponseWriter) error
 }
 
-type ListReviewerReviews200JSONResponse ReviewList
+type ListReviewerRestaurantReviews200JSONResponse RestaurantReviewList
 
-func (response ListReviewerReviews200JSONResponse) VisitListReviewerReviewsResponse(w http.ResponseWriter) error {
+func (response ListReviewerRestaurantReviews200JSONResponse) VisitListReviewerRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -12072,11 +12210,11 @@ func (response ListReviewerReviews200JSONResponse) VisitListReviewerReviewsRespo
 	return err
 }
 
-type ListReviewerReviews400ApplicationProblemPlusJSONResponse struct {
+type ListReviewerRestaurantReviews400ApplicationProblemPlusJSONResponse struct {
 	BadRequestApplicationProblemPlusJSONResponse
 }
 
-func (response ListReviewerReviews400ApplicationProblemPlusJSONResponse) VisitListReviewerReviewsResponse(w http.ResponseWriter) error {
+func (response ListReviewerRestaurantReviews400ApplicationProblemPlusJSONResponse) VisitListReviewerRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -12088,11 +12226,11 @@ func (response ListReviewerReviews400ApplicationProblemPlusJSONResponse) VisitLi
 	return err
 }
 
-type ListReviewerReviews401ApplicationProblemPlusJSONResponse struct {
+type ListReviewerRestaurantReviews401ApplicationProblemPlusJSONResponse struct {
 	UnauthorizedApplicationProblemPlusJSONResponse
 }
 
-func (response ListReviewerReviews401ApplicationProblemPlusJSONResponse) VisitListReviewerReviewsResponse(w http.ResponseWriter) error {
+func (response ListReviewerRestaurantReviews401ApplicationProblemPlusJSONResponse) VisitListReviewerRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -12108,11 +12246,11 @@ func (response ListReviewerReviews401ApplicationProblemPlusJSONResponse) VisitLi
 	return err
 }
 
-type ListReviewerReviews404ApplicationProblemPlusJSONResponse struct {
+type ListReviewerRestaurantReviews404ApplicationProblemPlusJSONResponse struct {
 	NotFoundApplicationProblemPlusJSONResponse
 }
 
-func (response ListReviewerReviews404ApplicationProblemPlusJSONResponse) VisitListReviewerReviewsResponse(w http.ResponseWriter) error {
+func (response ListReviewerRestaurantReviews404ApplicationProblemPlusJSONResponse) VisitListReviewerRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -12124,87 +12262,12 @@ func (response ListReviewerReviews404ApplicationProblemPlusJSONResponse) VisitLi
 	return err
 }
 
-type ListReviewerReviewsdefaultApplicationProblemPlusJSONResponse struct {
+type ListReviewerRestaurantReviewsdefaultApplicationProblemPlusJSONResponse struct {
 	Body       Problem
 	StatusCode int
 }
 
-func (response ListReviewerReviewsdefaultApplicationProblemPlusJSONResponse) VisitListReviewerReviewsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListAllReviewsRequestObject struct {
-	Params ListAllReviewsParams
-}
-
-type ListAllReviewsResponseObject interface {
-	VisitListAllReviewsResponse(w http.ResponseWriter) error
-}
-
-type ListAllReviews200JSONResponse ReviewList
-
-func (response ListAllReviews200JSONResponse) VisitListAllReviewsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListAllReviews400ApplicationProblemPlusJSONResponse struct {
-	BadRequestApplicationProblemPlusJSONResponse
-}
-
-func (response ListAllReviews400ApplicationProblemPlusJSONResponse) VisitListAllReviewsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(400)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListAllReviews401ApplicationProblemPlusJSONResponse struct {
-	UnauthorizedApplicationProblemPlusJSONResponse
-}
-
-func (response ListAllReviews401ApplicationProblemPlusJSONResponse) VisitListAllReviewsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	if response.Headers.SetCookie != nil {
-		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
-	}
-	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListAllReviewsdefaultApplicationProblemPlusJSONResponse struct {
-	Body       Problem
-	StatusCode int
-}
-
-func (response ListAllReviewsdefaultApplicationProblemPlusJSONResponse) VisitListAllReviewsResponse(w http.ResponseWriter) error {
+func (response ListReviewerRestaurantReviewsdefaultApplicationProblemPlusJSONResponse) VisitListReviewerRestaurantReviewsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -13363,16 +13426,16 @@ func (response RefreshTokendefaultApplicationProblemPlusJSONResponse) VisitRefre
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
-	// CreateList Create a list of restaurants
+	// CreateList Create a list
 	// (POST /lists)
 	CreateList(ctx context.Context, request CreateListRequestObject) (CreateListResponseObject, error)
-	// DeleteList Delete a list of restaurants
+	// DeleteList Delete a list
 	// (DELETE /lists/{listId})
 	DeleteList(ctx context.Context, request DeleteListRequestObject) (DeleteListResponseObject, error)
-	// GetList Get a list of restaurants
+	// GetList Get a list
 	// (GET /lists/{listId})
 	GetList(ctx context.Context, request GetListRequestObject) (GetListResponseObject, error)
-	// UpdateList Rename a list of restaurants
+	// UpdateList Rename a list
 	// (PATCH /lists/{listId})
 	UpdateList(ctx context.Context, request UpdateListRequestObject) (UpdateListResponseObject, error)
 	// ListListRecipes List the recipes of a list
@@ -13444,6 +13507,9 @@ type StrictServerInterface interface {
 	// GetRecipeReviewPhotoFile Get the image file of a photo of a recipe review
 	// (GET /recipes/{recipeId}/reviews/{reviewId}/photos/{photoId}/{variant})
 	GetRecipeReviewPhotoFile(ctx context.Context, request GetRecipeReviewPhotoFileRequestObject) (GetRecipeReviewPhotoFileResponseObject, error)
+	// ListAllRestaurantReviews List the reviews of all restaurants
+	// (GET /restaurant-reviews)
+	ListAllRestaurantReviews(ctx context.Context, request ListAllRestaurantReviewsRequestObject) (ListAllRestaurantReviewsResponseObject, error)
 	// ListRestaurants List restaurants
 	// (GET /restaurants)
 	ListRestaurants(ctx context.Context, request ListRestaurantsRequestObject) (ListRestaurantsResponseObject, error)
@@ -13462,33 +13528,33 @@ type StrictServerInterface interface {
 	// ListRestaurantPhotos List the photos of all reviews of a restaurant
 	// (GET /restaurants/{restaurantId}/photos)
 	ListRestaurantPhotos(ctx context.Context, request ListRestaurantPhotosRequestObject) (ListRestaurantPhotosResponseObject, error)
-	// ListReviews List the reviews of a restaurant
+	// ListRestaurantReviews List the reviews of a restaurant
 	// (GET /restaurants/{restaurantId}/reviews)
-	ListReviews(ctx context.Context, request ListReviewsRequestObject) (ListReviewsResponseObject, error)
-	// CreateReview Create a review for a restaurant
+	ListRestaurantReviews(ctx context.Context, request ListRestaurantReviewsRequestObject) (ListRestaurantReviewsResponseObject, error)
+	// CreateRestaurantReview Create a review for a restaurant
 	// (POST /restaurants/{restaurantId}/reviews)
-	CreateReview(ctx context.Context, request CreateReviewRequestObject) (CreateReviewResponseObject, error)
-	// DeleteReview Delete a review
+	CreateRestaurantReview(ctx context.Context, request CreateRestaurantReviewRequestObject) (CreateRestaurantReviewResponseObject, error)
+	// DeleteRestaurantReview Delete a review
 	// (DELETE /restaurants/{restaurantId}/reviews/{reviewId})
-	DeleteReview(ctx context.Context, request DeleteReviewRequestObject) (DeleteReviewResponseObject, error)
-	// GetReview Get a review
+	DeleteRestaurantReview(ctx context.Context, request DeleteRestaurantReviewRequestObject) (DeleteRestaurantReviewResponseObject, error)
+	// GetRestaurantReview Get a review
 	// (GET /restaurants/{restaurantId}/reviews/{reviewId})
-	GetReview(ctx context.Context, request GetReviewRequestObject) (GetReviewResponseObject, error)
-	// UpdateReview Update a review
+	GetRestaurantReview(ctx context.Context, request GetRestaurantReviewRequestObject) (GetRestaurantReviewResponseObject, error)
+	// UpdateRestaurantReview Update a review
 	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId})
-	UpdateReview(ctx context.Context, request UpdateReviewRequestObject) (UpdateReviewResponseObject, error)
-	// AddReviewPhoto Add a photo to a review
+	UpdateRestaurantReview(ctx context.Context, request UpdateRestaurantReviewRequestObject) (UpdateRestaurantReviewResponseObject, error)
+	// AddRestaurantReviewPhoto Add a photo to a review
 	// (POST /restaurants/{restaurantId}/reviews/{reviewId}/photos)
-	AddReviewPhoto(ctx context.Context, request AddReviewPhotoRequestObject) (AddReviewPhotoResponseObject, error)
-	// DeleteReviewPhoto Delete a photo
+	AddRestaurantReviewPhoto(ctx context.Context, request AddRestaurantReviewPhotoRequestObject) (AddRestaurantReviewPhotoResponseObject, error)
+	// DeleteRestaurantReviewPhoto Delete a photo
 	// (DELETE /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId})
-	DeleteReviewPhoto(ctx context.Context, request DeleteReviewPhotoRequestObject) (DeleteReviewPhotoResponseObject, error)
-	// UpdateReviewPhoto Change the alt text of a photo
+	DeleteRestaurantReviewPhoto(ctx context.Context, request DeleteRestaurantReviewPhotoRequestObject) (DeleteRestaurantReviewPhotoResponseObject, error)
+	// UpdateRestaurantReviewPhoto Change the alt text of a photo
 	// (PATCH /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId})
-	UpdateReviewPhoto(ctx context.Context, request UpdateReviewPhotoRequestObject) (UpdateReviewPhotoResponseObject, error)
-	// GetReviewPhotoFile Get the image file of a photo
+	UpdateRestaurantReviewPhoto(ctx context.Context, request UpdateRestaurantReviewPhotoRequestObject) (UpdateRestaurantReviewPhotoResponseObject, error)
+	// GetRestaurantReviewPhotoFile Get the image file of a photo
 	// (GET /restaurants/{restaurantId}/reviews/{reviewId}/photos/{photoId}/{variant})
-	GetReviewPhotoFile(ctx context.Context, request GetReviewPhotoFileRequestObject) (GetReviewPhotoFileResponseObject, error)
+	GetRestaurantReviewPhotoFile(ctx context.Context, request GetRestaurantReviewPhotoFileRequestObject) (GetRestaurantReviewPhotoFileResponseObject, error)
 	// GetReviewer Get the public profile of a user
 	// (GET /reviewers/{reviewerId})
 	GetReviewer(ctx context.Context, request GetReviewerRequestObject) (GetReviewerResponseObject, error)
@@ -13498,12 +13564,9 @@ type StrictServerInterface interface {
 	// ListReviewerRecipeReviews List the recipe reviews of a user
 	// (GET /reviewers/{reviewerId}/recipe-reviews)
 	ListReviewerRecipeReviews(ctx context.Context, request ListReviewerRecipeReviewsRequestObject) (ListReviewerRecipeReviewsResponseObject, error)
-	// ListReviewerReviews List the reviews of a user
-	// (GET /reviewers/{reviewerId}/reviews)
-	ListReviewerReviews(ctx context.Context, request ListReviewerReviewsRequestObject) (ListReviewerReviewsResponseObject, error)
-	// ListAllReviews List the reviews of all restaurants
-	// (GET /reviews)
-	ListAllReviews(ctx context.Context, request ListAllReviewsRequestObject) (ListAllReviewsResponseObject, error)
+	// ListReviewerRestaurantReviews List the reviews of a user
+	// (GET /reviewers/{reviewerId}/restaurant-reviews)
+	ListReviewerRestaurantReviews(ctx context.Context, request ListReviewerRestaurantReviewsRequestObject) (ListReviewerRestaurantReviewsResponseObject, error)
 	// SignUp Sign up a user
 	// (POST /users)
 	SignUp(ctx context.Context, request SignUpRequestObject) (SignUpResponseObject, error)
@@ -14347,6 +14410,32 @@ func (sh *strictHandler) GetRecipeReviewPhotoFile(w http.ResponseWriter, r *http
 	}
 }
 
+// ListAllRestaurantReviews operation middleware
+func (sh *strictHandler) ListAllRestaurantReviews(w http.ResponseWriter, r *http.Request, params ListAllRestaurantReviewsParams) {
+	var request ListAllRestaurantReviewsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAllRestaurantReviews(ctx, request.(ListAllRestaurantReviewsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAllRestaurantReviews")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAllRestaurantReviewsResponseObject); ok {
+		if err := validResponse.VisitListAllRestaurantReviewsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListRestaurants operation middleware
 func (sh *strictHandler) ListRestaurants(w http.ResponseWriter, r *http.Request, params ListRestaurantsParams) {
 	var request ListRestaurantsRequestObject
@@ -14516,26 +14605,26 @@ func (sh *strictHandler) ListRestaurantPhotos(w http.ResponseWriter, r *http.Req
 	}
 }
 
-// ListReviews operation middleware
-func (sh *strictHandler) ListReviews(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, params ListReviewsParams) {
-	var request ListReviewsRequestObject
+// ListRestaurantReviews operation middleware
+func (sh *strictHandler) ListRestaurantReviews(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, params ListRestaurantReviewsParams) {
+	var request ListRestaurantReviewsRequestObject
 
 	request.RestaurantId = restaurantId
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListReviews(ctx, request.(ListReviewsRequestObject))
+		return sh.ssi.ListRestaurantReviews(ctx, request.(ListRestaurantReviewsRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListReviews")
+		handler = middleware(handler, "ListRestaurantReviews")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListReviewsResponseObject); ok {
-		if err := validResponse.VisitListReviewsResponse(w); err != nil {
+	} else if validResponse, ok := response.(ListRestaurantReviewsResponseObject); ok {
+		if err := validResponse.VisitListRestaurantReviewsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14543,13 +14632,13 @@ func (sh *strictHandler) ListReviews(w http.ResponseWriter, r *http.Request, res
 	}
 }
 
-// CreateReview operation middleware
-func (sh *strictHandler) CreateReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId) {
-	var request CreateReviewRequestObject
+// CreateRestaurantReview operation middleware
+func (sh *strictHandler) CreateRestaurantReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId) {
+	var request CreateRestaurantReviewRequestObject
 
 	request.RestaurantId = restaurantId
 
-	var body CreateReviewJSONRequestBody
+	var body CreateRestaurantReviewJSONRequestBody
 	if err := runtime.BindJSONBody(r, &body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -14557,18 +14646,18 @@ func (sh *strictHandler) CreateReview(w http.ResponseWriter, r *http.Request, re
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.CreateReview(ctx, request.(CreateReviewRequestObject))
+		return sh.ssi.CreateRestaurantReview(ctx, request.(CreateRestaurantReviewRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "CreateReview")
+		handler = middleware(handler, "CreateRestaurantReview")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(CreateReviewResponseObject); ok {
-		if err := validResponse.VisitCreateReviewResponse(w); err != nil {
+	} else if validResponse, ok := response.(CreateRestaurantReviewResponseObject); ok {
+		if err := validResponse.VisitCreateRestaurantReviewResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14576,26 +14665,26 @@ func (sh *strictHandler) CreateReview(w http.ResponseWriter, r *http.Request, re
 	}
 }
 
-// DeleteReview operation middleware
-func (sh *strictHandler) DeleteReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
-	var request DeleteReviewRequestObject
+// DeleteRestaurantReview operation middleware
+func (sh *strictHandler) DeleteRestaurantReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
+	var request DeleteRestaurantReviewRequestObject
 
 	request.RestaurantId = restaurantId
 	request.ReviewId = reviewId
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.DeleteReview(ctx, request.(DeleteReviewRequestObject))
+		return sh.ssi.DeleteRestaurantReview(ctx, request.(DeleteRestaurantReviewRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DeleteReview")
+		handler = middleware(handler, "DeleteRestaurantReview")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DeleteReviewResponseObject); ok {
-		if err := validResponse.VisitDeleteReviewResponse(w); err != nil {
+	} else if validResponse, ok := response.(DeleteRestaurantReviewResponseObject); ok {
+		if err := validResponse.VisitDeleteRestaurantReviewResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14603,26 +14692,26 @@ func (sh *strictHandler) DeleteReview(w http.ResponseWriter, r *http.Request, re
 	}
 }
 
-// GetReview operation middleware
-func (sh *strictHandler) GetReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
-	var request GetReviewRequestObject
+// GetRestaurantReview operation middleware
+func (sh *strictHandler) GetRestaurantReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
+	var request GetRestaurantReviewRequestObject
 
 	request.RestaurantId = restaurantId
 	request.ReviewId = reviewId
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetReview(ctx, request.(GetReviewRequestObject))
+		return sh.ssi.GetRestaurantReview(ctx, request.(GetRestaurantReviewRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetReview")
+		handler = middleware(handler, "GetRestaurantReview")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetReviewResponseObject); ok {
-		if err := validResponse.VisitGetReviewResponse(w); err != nil {
+	} else if validResponse, ok := response.(GetRestaurantReviewResponseObject); ok {
+		if err := validResponse.VisitGetRestaurantReviewResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14630,14 +14719,14 @@ func (sh *strictHandler) GetReview(w http.ResponseWriter, r *http.Request, resta
 	}
 }
 
-// UpdateReview operation middleware
-func (sh *strictHandler) UpdateReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
-	var request UpdateReviewRequestObject
+// UpdateRestaurantReview operation middleware
+func (sh *strictHandler) UpdateRestaurantReview(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
+	var request UpdateRestaurantReviewRequestObject
 
 	request.RestaurantId = restaurantId
 	request.ReviewId = reviewId
 
-	var body UpdateReviewApplicationMergePatchPlusJSONRequestBody
+	var body UpdateRestaurantReviewApplicationMergePatchPlusJSONRequestBody
 	if err := runtime.BindJSONBody(r, &body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -14645,18 +14734,18 @@ func (sh *strictHandler) UpdateReview(w http.ResponseWriter, r *http.Request, re
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UpdateReview(ctx, request.(UpdateReviewRequestObject))
+		return sh.ssi.UpdateRestaurantReview(ctx, request.(UpdateRestaurantReviewRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UpdateReview")
+		handler = middleware(handler, "UpdateRestaurantReview")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UpdateReviewResponseObject); ok {
-		if err := validResponse.VisitUpdateReviewResponse(w); err != nil {
+	} else if validResponse, ok := response.(UpdateRestaurantReviewResponseObject); ok {
+		if err := validResponse.VisitUpdateRestaurantReviewResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14664,9 +14753,9 @@ func (sh *strictHandler) UpdateReview(w http.ResponseWriter, r *http.Request, re
 	}
 }
 
-// AddReviewPhoto operation middleware
-func (sh *strictHandler) AddReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
-	var request AddReviewPhotoRequestObject
+// AddRestaurantReviewPhoto operation middleware
+func (sh *strictHandler) AddRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId) {
+	var request AddRestaurantReviewPhotoRequestObject
 
 	request.RestaurantId = restaurantId
 	request.ReviewId = reviewId
@@ -14675,18 +14764,18 @@ func (sh *strictHandler) AddReviewPhoto(w http.ResponseWriter, r *http.Request, 
 	request.Body = r.Body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.AddReviewPhoto(ctx, request.(AddReviewPhotoRequestObject))
+		return sh.ssi.AddRestaurantReviewPhoto(ctx, request.(AddRestaurantReviewPhotoRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "AddReviewPhoto")
+		handler = middleware(handler, "AddRestaurantReviewPhoto")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(AddReviewPhotoResponseObject); ok {
-		if err := validResponse.VisitAddReviewPhotoResponse(w); err != nil {
+	} else if validResponse, ok := response.(AddRestaurantReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitAddRestaurantReviewPhotoResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14694,27 +14783,27 @@ func (sh *strictHandler) AddReviewPhoto(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-// DeleteReviewPhoto operation middleware
-func (sh *strictHandler) DeleteReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId) {
-	var request DeleteReviewPhotoRequestObject
+// DeleteRestaurantReviewPhoto operation middleware
+func (sh *strictHandler) DeleteRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId) {
+	var request DeleteRestaurantReviewPhotoRequestObject
 
 	request.RestaurantId = restaurantId
 	request.ReviewId = reviewId
 	request.PhotoId = photoId
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.DeleteReviewPhoto(ctx, request.(DeleteReviewPhotoRequestObject))
+		return sh.ssi.DeleteRestaurantReviewPhoto(ctx, request.(DeleteRestaurantReviewPhotoRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DeleteReviewPhoto")
+		handler = middleware(handler, "DeleteRestaurantReviewPhoto")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DeleteReviewPhotoResponseObject); ok {
-		if err := validResponse.VisitDeleteReviewPhotoResponse(w); err != nil {
+	} else if validResponse, ok := response.(DeleteRestaurantReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitDeleteRestaurantReviewPhotoResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14722,15 +14811,15 @@ func (sh *strictHandler) DeleteReviewPhoto(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-// UpdateReviewPhoto operation middleware
-func (sh *strictHandler) UpdateReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId) {
-	var request UpdateReviewPhotoRequestObject
+// UpdateRestaurantReviewPhoto operation middleware
+func (sh *strictHandler) UpdateRestaurantReviewPhoto(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId) {
+	var request UpdateRestaurantReviewPhotoRequestObject
 
 	request.RestaurantId = restaurantId
 	request.ReviewId = reviewId
 	request.PhotoId = photoId
 
-	var body UpdateReviewPhotoApplicationMergePatchPlusJSONRequestBody
+	var body UpdateRestaurantReviewPhotoApplicationMergePatchPlusJSONRequestBody
 	if err := runtime.BindJSONBody(r, &body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -14738,18 +14827,18 @@ func (sh *strictHandler) UpdateReviewPhoto(w http.ResponseWriter, r *http.Reques
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UpdateReviewPhoto(ctx, request.(UpdateReviewPhotoRequestObject))
+		return sh.ssi.UpdateRestaurantReviewPhoto(ctx, request.(UpdateRestaurantReviewPhotoRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UpdateReviewPhoto")
+		handler = middleware(handler, "UpdateRestaurantReviewPhoto")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UpdateReviewPhotoResponseObject); ok {
-		if err := validResponse.VisitUpdateReviewPhotoResponse(w); err != nil {
+	} else if validResponse, ok := response.(UpdateRestaurantReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitUpdateRestaurantReviewPhotoResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14757,9 +14846,9 @@ func (sh *strictHandler) UpdateReviewPhoto(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-// GetReviewPhotoFile operation middleware
-func (sh *strictHandler) GetReviewPhotoFile(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant) {
-	var request GetReviewPhotoFileRequestObject
+// GetRestaurantReviewPhotoFile operation middleware
+func (sh *strictHandler) GetRestaurantReviewPhotoFile(w http.ResponseWriter, r *http.Request, restaurantId RestaurantId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant) {
+	var request GetRestaurantReviewPhotoFileRequestObject
 
 	request.RestaurantId = restaurantId
 	request.ReviewId = reviewId
@@ -14767,18 +14856,18 @@ func (sh *strictHandler) GetReviewPhotoFile(w http.ResponseWriter, r *http.Reque
 	request.Variant = variant
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetReviewPhotoFile(ctx, request.(GetReviewPhotoFileRequestObject))
+		return sh.ssi.GetRestaurantReviewPhotoFile(ctx, request.(GetRestaurantReviewPhotoFileRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetReviewPhotoFile")
+		handler = middleware(handler, "GetRestaurantReviewPhotoFile")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetReviewPhotoFileResponseObject); ok {
-		if err := validResponse.VisitGetReviewPhotoFileResponse(w); err != nil {
+	} else if validResponse, ok := response.(GetRestaurantReviewPhotoFileResponseObject); ok {
+		if err := validResponse.VisitGetRestaurantReviewPhotoFileResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14866,52 +14955,26 @@ func (sh *strictHandler) ListReviewerRecipeReviews(w http.ResponseWriter, r *htt
 	}
 }
 
-// ListReviewerReviews operation middleware
-func (sh *strictHandler) ListReviewerReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerReviewsParams) {
-	var request ListReviewerReviewsRequestObject
+// ListReviewerRestaurantReviews operation middleware
+func (sh *strictHandler) ListReviewerRestaurantReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerRestaurantReviewsParams) {
+	var request ListReviewerRestaurantReviewsRequestObject
 
 	request.ReviewerId = reviewerId
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListReviewerReviews(ctx, request.(ListReviewerReviewsRequestObject))
+		return sh.ssi.ListReviewerRestaurantReviews(ctx, request.(ListReviewerRestaurantReviewsRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListReviewerReviews")
+		handler = middleware(handler, "ListReviewerRestaurantReviews")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListReviewerReviewsResponseObject); ok {
-		if err := validResponse.VisitListReviewerReviewsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ListAllReviews operation middleware
-func (sh *strictHandler) ListAllReviews(w http.ResponseWriter, r *http.Request, params ListAllReviewsParams) {
-	var request ListAllReviewsRequestObject
-
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListAllReviews(ctx, request.(ListAllReviewsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListAllReviews")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListAllReviewsResponseObject); ok {
-		if err := validResponse.VisitListAllReviewsResponse(w); err != nil {
+	} else if validResponse, ok := response.(ListReviewerRestaurantReviewsResponseObject); ok {
+		if err := validResponse.VisitListReviewerRestaurantReviewsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -15252,348 +15315,349 @@ func (sh *strictHandler) RefreshToken(w http.ResponseWriter, r *http.Request, pa
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"V41dW5TyyZm8CXFMCIz9PwMA",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

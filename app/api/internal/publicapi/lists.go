@@ -144,7 +144,7 @@ func (s *Server) favoritesQuery(sub subject, userID string, records ...*core.Rec
 func toSavedList(list, creator *core.Record, counts listCounts) reviewsapi.SavedList {
 	return reviewsapi.SavedList{
 		Id: list.Id, Name: list.GetString("name"), Kind: reviewsapi.SavedListKind(list.GetString("kind")),
-		Creator: toCreator(creator), ItemCount: counts.restaurants[list.Id], RecipeCount: counts.recipes[list.Id],
+		Creator: toCreator(creator), RestaurantCount: counts.restaurants[list.Id], RecipeCount: counts.recipes[list.Id],
 		Created: apiTimestamp(list.GetDateTime("created")), Updated: apiTimestamp(list.GetDateTime("updated")),
 	}
 }

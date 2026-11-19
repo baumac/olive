@@ -94,13 +94,13 @@ func TestUserApproval(t *testing.T) {
 		for _, l := range e.listsAs(joe.User.ID, joe.Token).Items {
 			favorites = "/v1/lists/" + l.ID
 		}
-		paths := []string{profile, profile + "/reviews", profile + "/lists", favorites, favorites + "/restaurants"}
+		paths := []string{profile, profile + "/restaurant-reviews", profile + "/lists", favorites, favorites + "/restaurants"}
 		for _, path := range paths {
 			e.expect(request{method: "GET", path: path}, http.StatusNotFound)
 			e.expect(request{method: "GET", path: path, token: ana.Token}, http.StatusNotFound)
 			e.expect(request{method: "GET", path: path, token: joe.Token}, http.StatusOK)
 		}
-		e.expect(request{method: "GET", path: profile + "/reviews?limit=0", token: ana.Token}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: profile + "/restaurant-reviews?limit=0", token: ana.Token}, http.StatusBadRequest)
 		setApproved(true)
 		for _, path := range paths {
 			e.expect(request{method: "GET", path: path}, http.StatusOK)

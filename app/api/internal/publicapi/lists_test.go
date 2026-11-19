@@ -13,14 +13,14 @@ import (
 
 type listPage struct {
 	Items []struct {
-		ID            string `json:"id"`
-		Name          string `json:"name"`
-		Kind          string `json:"kind"`
-		ItemCount     int    `json:"item_count"`
-		RecipeCount   int    `json:"recipe_count"`
-		HasRestaurant *bool  `json:"has_restaurant"`
-		HasRecipe     *bool  `json:"has_recipe"`
-		Creator       struct {
+		ID              string `json:"id"`
+		Name            string `json:"name"`
+		Kind            string `json:"kind"`
+		RestaurantCount int    `json:"restaurant_count"`
+		RecipeCount     int    `json:"recipe_count"`
+		HasRestaurant   *bool  `json:"has_restaurant"`
+		HasRecipe       *bool  `json:"has_recipe"`
+		Creator         struct {
 			ID string `json:"id"`
 		} `json:"creator"`
 	} `json:"items"`
@@ -74,7 +74,7 @@ func TestFavorites(t *testing.T) {
 
 	lists := e.lists(ana.User.ID, "")
 	if len(lists.Items) != 1 || lists.Items[0].Kind != "favorites" || lists.Items[0].Name != "Favorites" ||
-		lists.Items[0].ItemCount != 0 || lists.Items[0].Creator.ID != ana.User.ID || lists.Items[0].HasRestaurant != nil {
+		lists.Items[0].RestaurantCount != 0 || lists.Items[0].Creator.ID != ana.User.ID || lists.Items[0].HasRestaurant != nil {
 		t.Fatalf("lists of a new user: %+v", lists.Items)
 	}
 	favorites := "/v1/lists/" + lists.Items[0].ID
@@ -137,8 +137,8 @@ func TestFavorites(t *testing.T) {
 
 	t.Run("a deleted restaurant leaves the list", func(t *testing.T) {
 		e.expect(request{method: "DELETE", path: "/v1/restaurants/" + sole, token: joe.Token}, http.StatusNoContent)
-		if got := e.lists(ana.User.ID, "").Items[0].ItemCount; got != 0 {
-			t.Errorf("item_count %d, want 0", got)
+		if got := e.lists(ana.User.ID, "").Items[0].RestaurantCount; got != 0 {
+			t.Errorf("restaurant_count %d, want 0", got)
 		}
 	})
 }
@@ -157,7 +157,7 @@ func TestLists(t *testing.T) {
 	list := res.object(t)
 	id := list["id"].(string)
 	path := "/v1/lists/" + id
-	if res.header.Get("Location") != path || list["kind"] != "custom" || list["item_count"] != 0.0 ||
+	if res.header.Get("Location") != path || list["kind"] != "custom" || list["restaurant_count"] != 0.0 ||
 		list["creator"].(map[string]any)["name"] != "Ana" {
 		t.Errorf("create: %v, Location %q", list, res.header.Get("Location"))
 	}
@@ -176,7 +176,7 @@ func TestLists(t *testing.T) {
 		}
 	}
 	got := e.expect(request{method: "GET", path: path}, http.StatusOK).object(t)
-	if got["item_count"] != 3.0 || got["name"] != "Date night" {
+	if got["restaurant_count"] != 3.0 || got["name"] != "Date night" {
 		t.Errorf("get: %v", got)
 	}
 
@@ -203,7 +203,7 @@ func TestLists(t *testing.T) {
 			if l.HasRestaurant == nil {
 				t.Fatalf("%s has no has_restaurant", l.Name)
 			}
-			names = append(names, fmt.Sprintf("%s:%d:%v", l.Name, l.ItemCount, *l.HasRestaurant))
+			names = append(names, fmt.Sprintf("%s:%d:%v", l.Name, l.RestaurantCount, *l.HasRestaurant))
 		}
 		if got := strings.Join(names, ","); got != "Favorites:0:false,Lunch:0:false,Date night:3:true" {
 			t.Errorf("lists: %s", got)
@@ -221,7 +221,7 @@ func TestLists(t *testing.T) {
 		e.expect(request{method: "PATCH", path: path, body: `{"name":"favorites"}`, token: ana.Token}, http.StatusConflict)
 		e.expect(request{method: "PATCH", path: "/v1/lists/aaaaaaaaaaaaaaa", body: `{"name":"Dinner"}`, token: ana.Token}, http.StatusNotFound)
 		renamed := e.expect(request{method: "PATCH", path: path, body: `{"name":"DATE night"}`, token: ana.Token}, http.StatusOK).object(t)
-		if renamed["name"] != "DATE night" || renamed["item_count"] != 3.0 {
+		if renamed["name"] != "DATE night" || renamed["restaurant_count"] != 3.0 {
 			t.Errorf("rename: %v", renamed)
 		}
 		same := e.expect(request{method: "PATCH", path: path, body: `{}`, token: ana.Token}, http.StatusOK).object(t)
@@ -341,7 +341,7 @@ func TestFavoritesListOfOtherUsers(t *testing.T) {
 		}
 		e.expect(request{method: "PUT", path: "/v1/lists/favorites/restaurants/" + restaurant, token: ana.Token}, http.StatusNoContent)
 		got := e.lists(ana.User.ID, "").Items
-		if len(got) != 1 || got[0].Kind != "favorites" || got[0].ItemCount != 1 {
+		if len(got) != 1 || got[0].Kind != "favorites" || got[0].RestaurantCount != 1 {
 			t.Errorf("lists after the favorite: %+v", got)
 		}
 	})

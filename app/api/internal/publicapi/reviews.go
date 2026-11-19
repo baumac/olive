@@ -54,11 +54,11 @@ func makeReviewSorts(sub subject) map[string]sortField {
 	return sorts
 }
 
-// ListReviews returns 404 when the restaurant does not exist. It does not
+// ListRestaurantReviews returns 404 when the restaurant does not exist. It does not
 // return an empty list.
-func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsRequestObject) (reviewsapi.ListReviewsResponseObject, error) {
+func (s *Server) ListRestaurantReviews(_ context.Context, req reviewsapi.ListRestaurantReviewsRequestObject) (reviewsapi.ListRestaurantReviewsResponseObject, error) {
 	p := req.Params
-	all := reviewsapi.ListAllReviewsParams{
+	all := reviewsapi.ListAllRestaurantReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, RestaurantEq: &req.RestaurantId,
 		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price, Cleanliness: p.Cleanliness,
 		Overall: p.Overall, Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
@@ -81,36 +81,36 @@ func (s *Server) ListReviews(_ context.Context, req reviewsapi.ListReviewsReques
 	case err != nil:
 		return nil, err
 	case page.bad != "":
-		return reviewsapi.ListReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(page.bad)}, nil
+		return reviewsapi.ListRestaurantReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(page.bad)}, nil
 	case page.notFound:
-		return reviewsapi.ListReviews404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}, nil
+		return reviewsapi.ListRestaurantReviews404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(restaurantNotFound)}, nil
 	}
-	return reviewsapi.ListReviews200JSONResponse(page.list), nil
+	return reviewsapi.ListRestaurantReviews200JSONResponse(page.list), nil
 }
 
-// ListAllReviews lists the reviews of all restaurants. An unknown
+// ListAllRestaurantReviews lists the reviews of all restaurants. An unknown
 // restaurant in restaurant[eq] gives an empty list, not 404.
-func (s *Server) ListAllReviews(_ context.Context, req reviewsapi.ListAllReviewsRequestObject) (reviewsapi.ListAllReviewsResponseObject, error) {
+func (s *Server) ListAllRestaurantReviews(_ context.Context, req reviewsapi.ListAllRestaurantReviewsRequestObject) (reviewsapi.ListAllRestaurantReviewsResponseObject, error) {
 	page, err := s.reviewPage(req.Params, nil, nil)
 	if err != nil {
 		return nil, err
 	}
 	if page.bad != "" {
-		return reviewsapi.ListAllReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(page.bad)}, nil
+		return reviewsapi.ListAllRestaurantReviews400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(page.bad)}, nil
 	}
-	return reviewsapi.ListAllReviews200JSONResponse(page.list), nil
+	return reviewsapi.ListAllRestaurantReviews200JSONResponse(page.list), nil
 }
 
 type reviewPageResult struct {
-	list     reviewsapi.ReviewList
+	list     reviewsapi.RestaurantReviewList
 	bad      string
 	notFound bool
 }
 
 // reviewPage gets a page of restaurant reviews. A nil fingerprintOf uses the
-// parameters of listAllReviews.
+// parameters of listAllRestaurantReviews.
 func (s *Server) reviewPage(
-	p reviewsapi.ListAllReviewsParams,
+	p reviewsapi.ListAllRestaurantReviewsParams,
 	fingerprintOf func(sort string) []any,
 	restaurant func() (*core.Record, error),
 ) (reviewPageResult, error) {
@@ -132,13 +132,13 @@ func (s *Server) reviewPage(
 	if err != nil || page.bad != "" || page.notFound {
 		return reviewPageResult{bad: page.bad, notFound: page.notFound}, err
 	}
-	items := make([]reviewsapi.Review, len(page.records))
+	items := make([]reviewsapi.RestaurantReview, len(page.records))
 	for i, r := range page.records {
 		if items[i], err = toReview(r, page.users[r.GetString("creator")], page.names[r.GetString("restaurant")], page.photos[r.Id]); err != nil {
 			return reviewPageResult{}, err
 		}
 	}
-	return reviewPageResult{list: reviewsapi.ReviewList{Items: items, NextCursor: page.next}}, nil
+	return reviewPageResult{list: reviewsapi.RestaurantReviewList{Items: items, NextCursor: page.next}}, nil
 }
 
 // reviewQuery has the parameters of a review list. Each subject has its own
@@ -267,8 +267,8 @@ func (s *Server) parentNames(sub subject, known map[string]string, reviews ...*c
 	return out, nil
 }
 
-// CreateReview lets each user write one review of a restaurant.
-func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRequestObject) (reviewsapi.CreateReviewResponseObject, error) {
+// CreateRestaurantReview lets each user write one review of a restaurant.
+func (s *Server) CreateRestaurantReview(ctx context.Context, req reviewsapi.CreateRestaurantReviewRequestObject) (reviewsapi.CreateRestaurantReviewResponseObject, error) {
 	user := stateFrom(ctx).user
 	saved, restaurant, p, err := s.createReview(restaurantSubject, req.RestaurantId, user, createInput(req.Body))
 	if err != nil {
@@ -277,9 +277,9 @@ func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRe
 	if p != nil {
 		switch p.status() {
 		case http.StatusNotFound:
-			return reviewsapi.CreateReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+			return reviewsapi.CreateRestaurantReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
 		case http.StatusConflict:
-			return reviewsapi.CreateReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
+			return reviewsapi.CreateRestaurantReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
 		}
 		return nil, p.unexpected()
 	}
@@ -288,9 +288,9 @@ func (s *Server) CreateReview(ctx context.Context, req reviewsapi.CreateReviewRe
 		return nil, err
 	}
 	location := restaurantSubject.reviewPath(req.RestaurantId, saved.Id)
-	return reviewsapi.CreateReview201JSONResponse{
+	return reviewsapi.CreateRestaurantReview201JSONResponse{
 		Body:    out,
-		Headers: reviewsapi.CreateReview201ResponseHeaders{Location: &location},
+		Headers: reviewsapi.CreateRestaurantReview201ResponseHeaders{Location: &location},
 	}, nil
 }
 
@@ -340,14 +340,14 @@ func (s *Server) createReview(sub subject, parentID string, user *core.Record, i
 	return review, parent, nil, nil
 }
 
-// GetReview returns 404 for a review of a different restaurant.
-func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObject) (reviewsapi.GetReviewResponseObject, error) {
+// GetRestaurantReview returns 404 for a review of a different restaurant.
+func (s *Server) GetRestaurantReview(_ context.Context, req reviewsapi.GetRestaurantReviewRequestObject) (reviewsapi.GetRestaurantReviewResponseObject, error) {
 	restaurant, r, detail, err := s.findReview(s.app, restaurantSubject, req.RestaurantId, req.ReviewId)
 	if err != nil {
 		return nil, err
 	}
 	if detail != "" {
-		return reviewsapi.GetReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}, nil
+		return reviewsapi.GetRestaurantReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}, nil
 	}
 	users, err := s.creators(r)
 	if err != nil {
@@ -361,11 +361,11 @@ func (s *Server) GetReview(_ context.Context, req reviewsapi.GetReviewRequestObj
 	if err != nil {
 		return nil, err
 	}
-	return reviewsapi.GetReview200JSONResponse(out), nil
+	return reviewsapi.GetRestaurantReview200JSONResponse(out), nil
 }
 
-// UpdateReview lets only the creator change a review.
-func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRequestObject) (reviewsapi.UpdateReviewResponseObject, error) {
+// UpdateRestaurantReview lets only the creator change a review.
+func (s *Server) UpdateRestaurantReview(ctx context.Context, req reviewsapi.UpdateRestaurantReviewRequestObject) (reviewsapi.UpdateRestaurantReviewResponseObject, error) {
 	user := stateFrom(ctx).user
 	saved, restaurant, p, err := s.updateReview(restaurantSubject, req.RestaurantId, req.ReviewId, user, patchInput(req.Body))
 	if err != nil {
@@ -374,9 +374,9 @@ func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRe
 	if p != nil {
 		switch p.status() {
 		case http.StatusNotFound:
-			return reviewsapi.UpdateReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+			return reviewsapi.UpdateRestaurantReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
 		case http.StatusForbidden:
-			return reviewsapi.UpdateReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+			return reviewsapi.UpdateRestaurantReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
 		}
 		return nil, p.unexpected()
 	}
@@ -388,7 +388,7 @@ func (s *Server) UpdateReview(ctx context.Context, req reviewsapi.UpdateReviewRe
 	if err != nil {
 		return nil, err
 	}
-	return reviewsapi.UpdateReview200JSONResponse(out), nil
+	return reviewsapi.UpdateRestaurantReview200JSONResponse(out), nil
 }
 
 // updateReview lets only the creator change a review. The problem is a 403
@@ -417,8 +417,8 @@ func (s *Server) updateReview(sub subject, parentID, reviewID string, user *core
 	return review, parent, p, err
 }
 
-// DeleteReview lets only the creator delete a review.
-func (s *Server) DeleteReview(ctx context.Context, req reviewsapi.DeleteReviewRequestObject) (reviewsapi.DeleteReviewResponseObject, error) {
+// DeleteRestaurantReview lets only the creator delete a review.
+func (s *Server) DeleteRestaurantReview(ctx context.Context, req reviewsapi.DeleteRestaurantReviewRequestObject) (reviewsapi.DeleteRestaurantReviewResponseObject, error) {
 	p, err := s.deleteReview(restaurantSubject, req.RestaurantId, req.ReviewId, stateFrom(ctx).user)
 	if err != nil {
 		return nil, err
@@ -426,13 +426,13 @@ func (s *Server) DeleteReview(ctx context.Context, req reviewsapi.DeleteReviewRe
 	if p != nil {
 		switch p.status() {
 		case http.StatusNotFound:
-			return reviewsapi.DeleteReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+			return reviewsapi.DeleteRestaurantReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
 		case http.StatusForbidden:
-			return reviewsapi.DeleteReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+			return reviewsapi.DeleteRestaurantReview403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
 		}
 		return nil, p.unexpected()
 	}
-	return reviewsapi.DeleteReview204Response{}, nil
+	return reviewsapi.DeleteRestaurantReview204Response{}, nil
 }
 
 // deleteReview lets only the creator delete a review. The problem is a 403
@@ -487,14 +487,14 @@ func (sub subject) reviewPath(parentID, reviewID string) string {
 	return sub.path(parentID) + "/reviews/" + reviewID
 }
 
-func createInput(body *reviewsapi.ReviewCreate) reviewInput {
+func createInput(body *reviewsapi.RestaurantReviewCreate) reviewInput {
 	return reviewInput{
 		scores: map[string]int{"space": body.Space, "service": body.Service, "food": body.Food, "price": body.Price, "cleanliness": body.Cleanliness},
 		title:  &body.Title, feedback: optional(body.Feedback),
 	}
 }
 
-func patchInput(body *reviewsapi.ReviewPatch) reviewInput {
+func patchInput(body *reviewsapi.RestaurantReviewPatch) reviewInput {
 	in := reviewInput{scores: map[string]int{}, title: body.Title, feedback: body.Feedback}
 	setScore(in.scores, "space", body.Space)
 	setScore(in.scores, "service", body.Service)
@@ -532,19 +532,19 @@ func (in reviewInput) apply(r *core.Record) bool {
 
 // toReview gives an empty photos array for nil photos. The spec requires
 // the array.
-func toReview(r *core.Record, creator *core.Record, restaurantName string, photos []reviewsapi.Photo) (reviewsapi.Review, error) {
+func toReview(r *core.Record, creator *core.Record, restaurantName string, photos []reviewsapi.Photo) (reviewsapi.RestaurantReview, error) {
 	if creator == nil {
-		return reviewsapi.Review{}, fmt.Errorf("review %s has no creator", r.Id)
+		return reviewsapi.RestaurantReview{}, fmt.Errorf("review %s has no creator", r.Id)
 	}
 	if restaurantName == "" {
-		return reviewsapi.Review{}, fmt.Errorf("review %s has no restaurant", r.Id)
+		return reviewsapi.RestaurantReview{}, fmt.Errorf("review %s has no restaurant", r.Id)
 	}
 	if photos == nil {
 		photos = []reviewsapi.Photo{}
 	}
 	space, service, food, price, cleanliness := r.GetInt("space"), r.GetInt("service"), r.GetInt("food"), r.GetInt("price"), r.GetInt("cleanliness")
 	// TestOverallColumnEqualsResponse keeps the overall column equal to this.
-	return reviewsapi.Review{
+	return reviewsapi.RestaurantReview{
 		Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName,
 		Overall: float64(space+service+food+price+cleanliness) / 5,
 		Space:   space, Service: service, Food: food, Price: price, Cleanliness: cleanliness,

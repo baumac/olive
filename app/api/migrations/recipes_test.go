@@ -7,8 +7,10 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tests"
 )
 
 func recipeReview(user, recipe *core.Record, taste int) map[string]any {
@@ -111,5 +113,63 @@ func TestRecipesMigrationDown(t *testing.T) {
 	}
 	if err := addRecipes(app); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestTrimStoredStepsMigration(t *testing.T) {
+	app, err := tests.NewTestApp(testapp.Dir(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	redo := downTo(t, app, "1794268820_trim_stored_steps.go")
+	padded := newRecord(t, app, "recipes", map[string]any{
+		"name": "Shakshuka", "ingredients": []string{"6 eggs"},
+		"steps": []string{"\n\tCook the onion.\r\n", "Add the tomatoes.", " Break the eggs.\n\n"},
+	})
+	plain := newRecord(t, app, "recipes", map[string]any{
+		"name": "Hummus", "ingredients": []string{"1 can of chickpeas"},
+		"steps": []string{"Blend\nthe chickpeas.", "Serve\u00a0"},
+	})
+	updated := padded.GetString("updated")
+	// A save without validation can store steps that are not an array of
+	// text. The migration keeps them.
+	odd := map[string]string{}
+	for _, steps := range []string{`"  Mix. "`, `[" Mix. ",3]`, `{"a":" b "}`, `not json`} {
+		r := newRecord(t, app, "recipes", map[string]any{"name": "Odd", "ingredients": []string{"1 egg"}, "steps": []string{"x"}})
+		if _, err := app.DB().Update("recipes", dbx.Params{"steps": steps}, dbx.HashExp{"id": r.Id}).Execute(); err != nil {
+			t.Fatal(err)
+		}
+		odd[r.Id] = steps
+	}
+	redo()
+
+	for id, want := range odd {
+		var got string
+		if err := app.DB().NewQuery("SELECT [[steps]] FROM {{recipes}} WHERE [[id]] = {:id}").Bind(dbx.Params{"id": id}).Row(&got); err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Errorf("steps %s, want %s", got, want)
+		}
+	}
+	for id, want := range map[string][]string{
+		padded.Id: {"Cook the onion.", "Add the tomatoes.", "Break the eggs."},
+		plain.Id:  {"Blend\nthe chickpeas.", "Serve\u00a0"},
+	} {
+		r, err := app.FindRecordById("recipes", id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var steps []string
+		if err := r.UnmarshalJSONField("steps", &steps); err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(steps, want) {
+			t.Errorf("steps %q, want %q", steps, want)
+		}
+	}
+	if r, _ := app.FindRecordById("recipes", padded.Id); r.GetString("updated") != updated {
+		t.Errorf("the migration changed updated: %s, want %s", r.GetString("updated"), updated)
 	}
 }

@@ -8,8 +8,8 @@ import type {
   RecipeReviewCreate,
   Restaurant,
   RestaurantCreate,
-  Review,
-  ReviewCreate,
+  RestaurantReview,
+  RestaurantReviewCreate,
   SavedList,
 } from '@reviews/sdk'
 import { Configuration, ListsApi, RecipesApi, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
@@ -195,23 +195,23 @@ export class TestApi {
     return new ListsApi(this.config(user.token)).addListRestaurant({ listRef, restaurantId })
   }
 
-  createReview(user: TestUser, restaurantId: string, reviewCreate: ReviewCreate): Promise<Review> {
-    return new RestaurantsApi(this.config(user.token)).createReview({ restaurantId, reviewCreate })
+  createReview(user: TestUser, restaurantId: string, restaurantReviewCreate: RestaurantReviewCreate): Promise<RestaurantReview> {
+    return new RestaurantsApi(this.config(user.token)).createRestaurantReview({ restaurantId, restaurantReviewCreate })
   }
 
-  deleteReview(user: TestUser, review: Review): Promise<void> {
-    return new RestaurantsApi(this.config(user.token)).deleteReview({ restaurantId: review.restaurant, reviewId: review.id })
+  deleteReview(user: TestUser, review: RestaurantReview): Promise<void> {
+    return new RestaurantsApi(this.config(user.token)).deleteRestaurantReview({ restaurantId: review.restaurant, reviewId: review.id })
   }
 
   // addPhoto sends a file of tests/photos with its own content type.
-  async addPhoto(user: TestUser, review: Review, name: string, alt?: string): Promise<Photo> {
+  async addPhoto(user: TestUser, review: RestaurantReview, name: string, alt?: string): Promise<Photo> {
     const type = name.endsWith('.png') ? 'image/png' : 'image/jpeg'
     const api = new RestaurantsApi(this.config(user.token))
     const ids = { restaurantId: review.restaurant, reviewId: review.id }
-    const photo = await api.addReviewPhoto({ ...ids, body: new Blob([new Uint8Array(photoFile(name))], { type }) }, async ({ init }) => ({
+    const photo = await api.addRestaurantReviewPhoto({ ...ids, body: new Blob([new Uint8Array(photoFile(name))], { type }) }, async ({ init }) => ({
       headers: { ...(init.headers as Record<string, string>), 'Content-Type': type },
     }))
-    return alt ? api.updateReviewPhoto({ ...ids, photoId: photo.id, photoPatch: { alt } }) : photo
+    return alt ? api.updateRestaurantReviewPhoto({ ...ids, photoId: photo.id, photoPatch: { alt } }) : photo
   }
 }
 

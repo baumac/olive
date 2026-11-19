@@ -96,7 +96,7 @@ func (g fieldGuard) check(r, original *core.Record) error {
 	if len(errs) > 0 {
 		return apis.NewBadRequestError("The "+g.noun+" has values that the Public API refuses.", errs)
 	}
-	changeProperties(schema, props, "x-trim", trimSpaces)
+	changeProperties(schema, props, "x-trim", trimWhitespace)
 
 	for name, value := range props {
 		if bytes.Equal(value, stored[name]) {

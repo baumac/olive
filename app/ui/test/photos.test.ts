@@ -137,14 +137,14 @@ describe('addPhoto', () => {
   })
 
   it('keeps the added photo when the alt text fails', async () => {
-    vi.spyOn(restaurantsApi, 'addReviewPhoto').mockResolvedValue(photos[1]!)
-    vi.spyOn(restaurantsApi, 'updateReviewPhoto').mockRejectedValue(new Error('offline'))
+    vi.spyOn(restaurantsApi, 'addRestaurantReviewPhoto').mockResolvedValue(photos[1]!)
+    vi.spyOn(restaurantsApi, 'updateRestaurantReviewPhoto').mockRejectedValue(new Error('offline'))
     const got = await addPhoto('k3x9m2p7q1w8z4a', 'r1b8c5e2g9i6k3m', fileOf('image/png', 10), 'A menu')
     expect(got).toEqual({ photo: photos[1], altSaved: false })
   })
 
   it('sends the type of the file', async () => {
-    const add = vi.spyOn(restaurantsApi, 'addReviewPhoto').mockResolvedValue(photos[1]!)
+    const add = vi.spyOn(restaurantsApi, 'addRestaurantReviewPhoto').mockResolvedValue(photos[1]!)
     await addPhoto('k3x9m2p7q1w8z4a', 'r1b8c5e2g9i6k3m', fileOf('image/webp', 10), '')
     const override = add.mock.calls[0]![1] as (c: { init: RequestInit }) => Promise<RequestInit>
     const init = await override({ init: { headers: { Authorization: 'Bearer t', 'Content-Type': 'image/*' } } })

@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.   `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.   The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.   `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.   A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.   The `source` of a recipe with reviews of other users cannot change. 
  *
- * The version of the OpenAPI document: 5.5.0
+ * The version of the OpenAPI document: 6.0.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -522,7 +522,7 @@ export interface RecipesApiInterface {
     addRecipeReviewPhotoRequestOpts(requestParameters: AddRecipeReviewPhotoRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * The same rules as `addReviewPhoto`. Only the creator of the review can add a photo. A review has at most 5 photos. Set the alt text with `updateRecipeReviewPhoto`. 
+     * The same rules as `addRestaurantReviewPhoto`. Only the creator of the review can add a photo. A review has at most 5 photos. Set the alt text with `updateRecipeReviewPhoto`. 
      * @summary Add a photo to a review of a recipe
      * @param {string} recipeId The ID of the recipe.
      * @param {string} reviewId The ID of the review.
@@ -534,7 +534,7 @@ export interface RecipesApiInterface {
     addRecipeReviewPhotoRaw(requestParameters: AddRecipeReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>>;
 
     /**
-     * The same rules as `addReviewPhoto`. Only the creator of the review can add a photo. A review has at most 5 photos. Set the alt text with `updateRecipeReviewPhoto`. 
+     * The same rules as `addRestaurantReviewPhoto`. Only the creator of the review can add a photo. A review has at most 5 photos. Set the alt text with `updateRecipeReviewPhoto`. 
      * Add a photo to a review of a recipe
      */
     addRecipeReviewPhoto(requestParameters: AddRecipeReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo>;
@@ -933,7 +933,7 @@ export interface RecipesApiInterface {
     updateRecipeRequestOpts(requestParameters: UpdateRecipeRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Only the creator of the recipe can update it. A recipe without a creator can be updated by each user who has a review of it. `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe. A value that is equal to the stored value is not a change. A `source` that another recipe has causes `409 Conflict`. The problem then has the ID of that recipe in `recipe`. 
+     * Only the creator of the recipe can update it. A recipe without a creator can be updated by each user who has a review of it. `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe. A stored `source` has the same rule. A recipe without a source can always get one. A value that is equal to the stored value is not a change. The API compares the sources without the case of the scheme and the host, the fragment, and a final `/`. A `source` that another recipe has causes `409 Conflict`. The problem then has the ID of that recipe in `recipe`. 
      * @summary Update a recipe
      * @param {string} recipeId The ID of the recipe.
      * @param {RecipePatch} recipePatch The recipe properties to change.
@@ -944,7 +944,7 @@ export interface RecipesApiInterface {
     updateRecipeRaw(requestParameters: UpdateRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Recipe>>;
 
     /**
-     * Only the creator of the recipe can update it. A recipe without a creator can be updated by each user who has a review of it. `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe. A value that is equal to the stored value is not a change. A `source` that another recipe has causes `409 Conflict`. The problem then has the ID of that recipe in `recipe`. 
+     * Only the creator of the recipe can update it. A recipe without a creator can be updated by each user who has a review of it. `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe. A stored `source` has the same rule. A recipe without a source can always get one. A value that is equal to the stored value is not a change. The API compares the sources without the case of the scheme and the host, the fragment, and a final `/`. A `source` that another recipe has causes `409 Conflict`. The problem then has the ID of that recipe in `recipe`. 
      * Update a recipe
      */
     updateRecipe(requestParameters: UpdateRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Recipe>;
@@ -1068,7 +1068,7 @@ export class RecipesApi extends runtime.BaseAPI implements RecipesApiInterface {
     }
 
     /**
-     * The same rules as `addReviewPhoto`. Only the creator of the review can add a photo. A review has at most 5 photos. Set the alt text with `updateRecipeReviewPhoto`. 
+     * The same rules as `addRestaurantReviewPhoto`. Only the creator of the review can add a photo. A review has at most 5 photos. Set the alt text with `updateRecipeReviewPhoto`. 
      * Add a photo to a review of a recipe
      */
     async addRecipeReviewPhotoRaw(requestParameters: AddRecipeReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>> {
@@ -1079,7 +1079,7 @@ export class RecipesApi extends runtime.BaseAPI implements RecipesApiInterface {
     }
 
     /**
-     * The same rules as `addReviewPhoto`. Only the creator of the review can add a photo. A review has at most 5 photos. Set the alt text with `updateRecipeReviewPhoto`. 
+     * The same rules as `addRestaurantReviewPhoto`. Only the creator of the review can add a photo. A review has at most 5 photos. Set the alt text with `updateRecipeReviewPhoto`. 
      * Add a photo to a review of a recipe
      */
     async addRecipeReviewPhoto(requestParameters: AddRecipeReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo> {
@@ -2010,7 +2010,7 @@ export class RecipesApi extends runtime.BaseAPI implements RecipesApiInterface {
     }
 
     /**
-     * Only the creator of the recipe can update it. A recipe without a creator can be updated by each user who has a review of it. `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe. A value that is equal to the stored value is not a change. A `source` that another recipe has causes `409 Conflict`. The problem then has the ID of that recipe in `recipe`. 
+     * Only the creator of the recipe can update it. A recipe without a creator can be updated by each user who has a review of it. `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe. A stored `source` has the same rule. A recipe without a source can always get one. A value that is equal to the stored value is not a change. The API compares the sources without the case of the scheme and the host, the fragment, and a final `/`. A `source` that another recipe has causes `409 Conflict`. The problem then has the ID of that recipe in `recipe`. 
      * Update a recipe
      */
     async updateRecipeRaw(requestParameters: UpdateRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Recipe>> {
@@ -2021,7 +2021,7 @@ export class RecipesApi extends runtime.BaseAPI implements RecipesApiInterface {
     }
 
     /**
-     * Only the creator of the recipe can update it. A recipe without a creator can be updated by each user who has a review of it. `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe. A value that is equal to the stored value is not a change. A `source` that another recipe has causes `409 Conflict`. The problem then has the ID of that recipe in `recipe`. 
+     * Only the creator of the recipe can update it. A recipe without a creator can be updated by each user who has a review of it. `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe. A stored `source` has the same rule. A recipe without a source can always get one. A value that is equal to the stored value is not a change. The API compares the sources without the case of the scheme and the host, the fragment, and a final `/`. A `source` that another recipe has causes `409 Conflict`. The problem then has the ID of that recipe in `recipe`. 
      * Update a recipe
      */
     async updateRecipe(requestParameters: UpdateRecipeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Recipe> {

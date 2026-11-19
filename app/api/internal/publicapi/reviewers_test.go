@@ -53,7 +53,7 @@ func TestReviewOverall(t *testing.T) {
 		}
 		return strings.Join(out, ",")
 	}
-	joeReviews := "/v1/reviewers/" + joe.User.ID + "/reviews"
+	joeReviews := "/v1/reviewers/" + joe.User.ID + "/restaurant-reviews"
 	for query, want := range map[string]struct{ all, joe string }{
 		"sort=overall":                 {"Low,Mid,High", "High"},
 		"sort=-overall":                {"High,Mid,Low", "High"},
@@ -61,7 +61,7 @@ func TestReviewOverall(t *testing.T) {
 		"overall[gte]=7&sort=-overall": {"High,Mid", "High"},
 		"overall[lt]=7":                {"Low", ""},
 	} {
-		for path, want := range map[string]string{reviews: want.all, "/v1/reviews": want.all, joeReviews: want.joe} {
+		for path, want := range map[string]string{reviews: want.all, "/v1/restaurant-reviews": want.all, joeReviews: want.joe} {
 			if got := list(path + "?" + query); got != want {
 				t.Errorf("%s?%s: %q, want %q", path, query, got, want)
 			}
@@ -98,7 +98,7 @@ func TestReviewers(t *testing.T) {
 	t.Run("the profile has only public fields", func(t *testing.T) {
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID}, http.StatusOK).object(t)
 		// The overall values of Ana are 4.8 and 7.6.
-		want := map[string]any{"id": ana.User.ID, "name": "Ana", "review_count": 2.0, "average_overall": 6.2, "restaurant_count": 1.0,
+		want := map[string]any{"id": ana.User.ID, "name": "Ana", "restaurant_review_count": 2.0, "restaurant_average_overall": 6.2, "restaurant_count": 1.0,
 			"recipe_review_count": 0.0, "recipe_average_overall": nil, "recipe_count": 0.0, "list_count": 1.0}
 		if len(got) != len(want) {
 			t.Errorf("profile %v, want only %v", got, want)
@@ -109,8 +109,8 @@ func TestReviewers(t *testing.T) {
 			}
 		}
 		empty := e.expect(request{method: "GET", path: "/v1/reviewers/" + sam.User.ID, token: joe.Token}, http.StatusOK).object(t)
-		average, ok := empty["average_overall"]
-		if empty["review_count"] != 0.0 || !ok || average != nil || empty["restaurant_count"] != 0.0 {
+		average, ok := empty["restaurant_average_overall"]
+		if empty["restaurant_review_count"] != 0.0 || !ok || average != nil || empty["restaurant_count"] != 0.0 {
 			t.Errorf("profile without reviews: %v", empty)
 		}
 	})
@@ -122,7 +122,7 @@ func TestReviewers(t *testing.T) {
 			e.createReview(tom.Token, id, fmt.Sprintf(`{"space":7,"service":7,"food":7,"price":7,"cleanliness":%d,"title":"T"}`, cleanliness))
 		}
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + tom.User.ID}, http.StatusOK).object(t)
-		if got["average_overall"] != 7.1 || got["restaurant_count"] != 3.0 {
+		if got["restaurant_average_overall"] != 7.1 || got["restaurant_count"] != 3.0 {
 			t.Errorf("profile %v, want an average of 7.1 for 7.2, 7, and 7, and 3 restaurants", got)
 		}
 		var page struct {
@@ -148,7 +148,7 @@ func TestReviewers(t *testing.T) {
 				} `json:"items"`
 				NextCursor *string `json:"next_cursor"`
 			}
-			e.expect(request{method: "GET", path: "/v1/reviewers/" + id + "/reviews?" + query}, http.StatusOK).decode(t, &p)
+			e.expect(request{method: "GET", path: "/v1/reviewers/" + id + "/restaurant-reviews?" + query}, http.StatusOK).decode(t, &p)
 			var out []string
 			for _, it := range p.Items {
 				if it.Creator.ID != id {
@@ -179,17 +179,23 @@ func TestReviewers(t *testing.T) {
 		if first+"|"+second != "Ana at Sole|Ana at Luigi" || end != nil {
 			t.Errorf("pages %q|%q, next %v", first, second, end)
 		}
-		e.expect(request{method: "GET", path: "/v1/reviewers/" + joe.User.ID + "/reviews?cursor=" + url.QueryEscape(*next)}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/reviewers/" + joe.User.ID + "/restaurant-reviews?cursor=" + url.QueryEscape(*next)}, http.StatusBadRequest)
 	})
 
 	t.Run("errors", func(t *testing.T) {
 		unknown := "/v1/reviewers/aaaaaaaaaaaaaaa"
 		e.expect(request{method: "GET", path: unknown}, http.StatusNotFound)
-		e.expect(request{method: "GET", path: unknown + "/reviews"}, http.StatusNotFound)
-		e.expect(request{method: "GET", path: unknown + "/reviews?sort=bad"}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: unknown + "/restaurant-reviews"}, http.StatusNotFound)
+		e.expect(request{method: "GET", path: unknown + "/restaurant-reviews?sort=bad"}, http.StatusBadRequest)
+		// Version 6.0.0 of the spec removed these paths. See decision 00048.
+		for _, path := range []string{"/v1/reviews", "/v1/reviewers/" + ana.User.ID + "/reviews"} {
+			if p := e.expect(request{method: "GET", path: path}, http.StatusNotFound).object(t); p["detail"] != "The path does not exist." {
+				t.Errorf("%s: problem %v, want a path that does not exist", path, p)
+			}
+		}
 		e.expect(request{method: "GET", path: "/v1/reviewers/BAD"}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/reviewers/BAD"}, http.StatusBadRequest)
-		e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID + "/reviews?creator[eq]=" + joe.User.ID}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID + "/restaurant-reviews?creator[eq]=" + joe.User.ID}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID, token: "not-a-token"}, http.StatusUnauthorized)
 	})
 }

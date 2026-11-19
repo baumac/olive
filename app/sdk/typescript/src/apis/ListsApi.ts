@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.   `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.   The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.   `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.   A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.   The `source` of a recipe with reviews of other users cannot change. 
  *
- * The version of the OpenAPI document: 5.5.0
+ * The version of the OpenAPI document: 6.0.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -239,7 +239,7 @@ export interface ListsApiInterface {
     addListRestaurantRequestOpts(requestParameters: AddListRestaurantRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. A new restaurant changes `updated` of the list. 
+     * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. The recipes of the list do not count. A new restaurant changes `updated` of the list. 
      * @summary Add a restaurant to a list
      * @param {string} listRef The ID of the list, or &#x60;favorites&#x60; for the favorites list of the user of the token. Only &#x60;addListRestaurant&#x60;, &#x60;removeListRestaurant&#x60;, &#x60;addListRecipe&#x60;, and &#x60;removeListRecipe&#x60; take &#x60;favorites&#x60;. A client then changes the favorites without a request for the ID of the list. The other operations of &#x60;/lists&#x60; need the ID. &#x60;listReviewerLists&#x60; gives it. 
      * @param {string} restaurantId The ID of the restaurant.
@@ -250,7 +250,7 @@ export interface ListsApiInterface {
     addListRestaurantRaw(requestParameters: AddListRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
 
     /**
-     * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. A new restaurant changes `updated` of the list. 
+     * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. The recipes of the list do not count. A new restaurant changes `updated` of the list. 
      * Add a restaurant to a list
      */
     addListRestaurant(requestParameters: AddListRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
@@ -265,7 +265,7 @@ export interface ListsApiInterface {
 
     /**
      * The list is public. The user of the token is its creator. A name that another list of the user has causes `409 Conflict`. The comparison ignores the case of ASCII letters. A user with 50 lists gets `409 Conflict`. 
-     * @summary Create a list of restaurants
+     * @summary Create a list
      * @param {SavedListCreate} savedListCreate The list to create.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -275,7 +275,7 @@ export interface ListsApiInterface {
 
     /**
      * The list is public. The user of the token is its creator. A name that another list of the user has causes `409 Conflict`. The comparison ignores the case of ASCII letters. A user with 50 lists gets `409 Conflict`. 
-     * Create a list of restaurants
+     * Create a list
      */
     createList(requestParameters: CreateListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedList>;
 
@@ -289,7 +289,7 @@ export interface ListsApiInterface {
 
     /**
      * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants and the recipes of the list stay. 
-     * @summary Delete a list of restaurants
+     * @summary Delete a list
      * @param {string} listId The ID of the list.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -299,7 +299,7 @@ export interface ListsApiInterface {
 
     /**
      * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants and the recipes of the list stay. 
-     * Delete a list of restaurants
+     * Delete a list
      */
     deleteList(requestParameters: DeleteListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
 
@@ -313,7 +313,7 @@ export interface ListsApiInterface {
 
     /**
      * 
-     * @summary Get a list of restaurants
+     * @summary Get a list
      * @param {string} listId The ID of the list.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -322,7 +322,7 @@ export interface ListsApiInterface {
     getListRaw(requestParameters: GetListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SavedList>>;
 
     /**
-     * Get a list of restaurants
+     * Get a list
      */
     getList(requestParameters: GetListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedList>;
 
@@ -473,7 +473,7 @@ export interface ListsApiInterface {
 
     /**
      * Only the creator of the list can rename it. The favorites list cannot be renamed. A name that another list of the user has causes `409 Conflict`. 
-     * @summary Rename a list of restaurants
+     * @summary Rename a list
      * @param {string} listId The ID of the list.
      * @param {SavedListPatch} savedListPatch The list properties to change.
      * @param {*} [options] Override http request option.
@@ -484,7 +484,7 @@ export interface ListsApiInterface {
 
     /**
      * Only the creator of the list can rename it. The favorites list cannot be renamed. A name that another list of the user has causes `409 Conflict`. 
-     * Rename a list of restaurants
+     * Rename a list
      */
     updateList(requestParameters: UpdateListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedList>;
 
@@ -601,7 +601,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
     }
 
     /**
-     * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. A new restaurant changes `updated` of the list. 
+     * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. The recipes of the list do not count. A new restaurant changes `updated` of the list. 
      * Add a restaurant to a list
      */
     async addListRestaurantRaw(requestParameters: AddListRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -612,7 +612,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
     }
 
     /**
-     * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. A new restaurant changes `updated` of the list. 
+     * Only the creator of the list can add a restaurant. A restaurant that the list already has changes nothing. A list with 500 restaurants gets `409 Conflict`. The recipes of the list do not count. A new restaurant changes `updated` of the list. 
      * Add a restaurant to a list
      */
     async addListRestaurant(requestParameters: AddListRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -658,7 +658,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
 
     /**
      * The list is public. The user of the token is its creator. A name that another list of the user has causes `409 Conflict`. The comparison ignores the case of ASCII letters. A user with 50 lists gets `409 Conflict`. 
-     * Create a list of restaurants
+     * Create a list
      */
     async createListRaw(requestParameters: CreateListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SavedList>> {
         const requestOptions = await this.createListRequestOpts(requestParameters);
@@ -669,7 +669,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
 
     /**
      * The list is public. The user of the token is its creator. A name that another list of the user has causes `409 Conflict`. The comparison ignores the case of ASCII letters. A user with 50 lists gets `409 Conflict`. 
-     * Create a list of restaurants
+     * Create a list
      */
     async createList(requestParameters: CreateListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedList> {
         const response = await this.createListRaw(requestParameters, initOverrides);
@@ -713,7 +713,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
 
     /**
      * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants and the recipes of the list stay. 
-     * Delete a list of restaurants
+     * Delete a list
      */
     async deleteListRaw(requestParameters: DeleteListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
         const requestOptions = await this.deleteListRequestOpts(requestParameters);
@@ -724,7 +724,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
 
     /**
      * Only the creator of the list can delete it. The favorites list cannot be deleted. The restaurants and the recipes of the list stay. 
-     * Delete a list of restaurants
+     * Delete a list
      */
     async deleteList(requestParameters: DeleteListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.deleteListRaw(requestParameters, initOverrides);
@@ -766,7 +766,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
     }
 
     /**
-     * Get a list of restaurants
+     * Get a list
      */
     async getListRaw(requestParameters: GetListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SavedList>> {
         const requestOptions = await this.getListRequestOpts(requestParameters);
@@ -776,7 +776,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
     }
 
     /**
-     * Get a list of restaurants
+     * Get a list
      */
     async getList(requestParameters: GetListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedList> {
         const response = await this.getListRaw(requestParameters, initOverrides);
@@ -1143,7 +1143,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
 
     /**
      * Only the creator of the list can rename it. The favorites list cannot be renamed. A name that another list of the user has causes `409 Conflict`. 
-     * Rename a list of restaurants
+     * Rename a list
      */
     async updateListRaw(requestParameters: UpdateListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SavedList>> {
         const requestOptions = await this.updateListRequestOpts(requestParameters);
@@ -1154,7 +1154,7 @@ export class ListsApi extends runtime.BaseAPI implements ListsApiInterface {
 
     /**
      * Only the creator of the list can rename it. The favorites list cannot be renamed. A name that another list of the user has causes `409 Conflict`. 
-     * Rename a list of restaurants
+     * Rename a list
      */
     async updateList(requestParameters: UpdateListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SavedList> {
         const response = await this.updateListRaw(requestParameters, initOverrides);

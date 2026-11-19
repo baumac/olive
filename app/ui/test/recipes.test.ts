@@ -123,9 +123,9 @@ describe('recipe helpers', () => {
   })
 
   it('names the items of a list', () => {
-    expect(listCountText({ itemCount: 2, recipeCount: 0 })).toBe('2 restaurants')
-    expect(listCountText({ itemCount: 0, recipeCount: 1 })).toBe('1 recipe')
-    expect(listCountText({ itemCount: 1, recipeCount: 3 })).toBe('1 restaurant, 3 recipes')
+    expect(listCountText({ restaurantCount: 2, recipeCount: 0 })).toBe('2 restaurants')
+    expect(listCountText({ restaurantCount: 0, recipeCount: 1 })).toBe('1 recipe')
+    expect(listCountText({ restaurantCount: 1, recipeCount: 3 })).toBe('1 restaurant, 3 recipes')
   })
 })
 
@@ -273,7 +273,7 @@ describe('recipe parts of the list and reviewer pages', () => {
     name: 'Brunch',
     kind: 'custom',
     creator: { id: ana.id, name: 'Ana' },
-    itemCount: 0,
+    restaurantCount: 0,
     recipeCount: 1,
     created: '2024-11-04T01:26:55.002Z',
     updated: '2024-11-04T01:26:55.002Z',
@@ -303,15 +303,15 @@ describe('recipe parts of the list and reviewer pages', () => {
     vi.spyOn(reviewersApi, 'getReviewer').mockResolvedValue({
       id: ana.id,
       name: 'Ana',
-      reviewCount: 0,
-      averageOverall: null,
+      restaurantReviewCount: 0,
+      restaurantAverageOverall: null,
       restaurantCount: 0,
       recipeReviewCount: 2,
       recipeAverageOverall: 7.5,
       recipeCount: 1,
       listCount: 1,
     })
-    vi.spyOn(reviewersApi, 'listReviewerReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
     const added = vi.spyOn(recipesApi, 'listRecipes').mockResolvedValue({ items: [recipe], nextCursor: null })
     const w = mount(ReviewerPage, { props: { reviewerId: ana.id }, global: { plugins: [await routerAt(`/reviewers/${ana.id}`)] }, attachTo: attach() })
     await flushPromises()
@@ -373,5 +373,92 @@ describe('recipe parts of the list and reviewer pages', () => {
     await flushPromises()
     expect(w.get('#recipe-steps-message').text()).toBe('The steps cannot change because other people have reviewed this recipe.')
     expect(w.get('#recipe-step-0').attributes('readonly')).toBeDefined()
+  })
+
+  it('keeps a stored source when other people reviewed the recipe', async () => {
+    signIn()
+    vi.spyOn(recipesApi, 'getRecipe').mockResolvedValue({ ...recipe, reviewCount: 1 })
+    vi.spyOn(recipesApi, 'listRecipeReviews').mockResolvedValue({ items: [], nextCursor: null })
+    const update = vi.spyOn(recipesApi, 'updateRecipe').mockResolvedValue(recipe)
+    const w = mount(RecipeFormPage, { props: { recipeId: recipe.id }, global: { plugins: [await routerAt(`/recipes/${recipe.id}/edit`)] }, attachTo: attach() })
+    await flushPromises()
+    expect(w.get('input[name=source]').attributes('readonly')).toBeDefined()
+    expect(w.text()).toContain('The name, the ingredients, the steps, and the source cannot change')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(update.mock.calls[0]![0].recipePatch.source).toBeUndefined()
+    w.unmount()
+  })
+
+  it('shows the stored source after a conflict locks it', async () => {
+    signIn()
+    const get = vi.spyOn(recipesApi, 'getRecipe').mockResolvedValue({ ...recipe, reviewCount: 0 })
+    vi.spyOn(recipesApi, 'listRecipeReviews').mockResolvedValue({ items: [], nextCursor: null })
+    const update = vi.spyOn(recipesApi, 'updateRecipe').mockRejectedValueOnce(rejectWith(409, { code: 'other_reviews', property: 'name' }))
+    const w = mount(RecipeFormPage, { props: { recipeId: recipe.id }, global: { plugins: [await routerAt(`/recipes/${recipe.id}/edit`)] }, attachTo: attach() })
+    await flushPromises()
+    await w.get('input[name=name]').setValue('Green shakshuka')
+    await w.get('input[name=source]').setValue('https://recipes.example/green')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(get).toHaveBeenCalledTimes(2)
+    const source = w.get<HTMLInputElement>('input[name=source]')
+    expect(source.attributes('readonly')).toBeDefined()
+    expect(source.element.value).toBe(recipe.source)
+    update.mockResolvedValue(recipe)
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(update.mock.calls[1]![0].recipePatch.source).toBeUndefined()
+    w.unmount()
+  })
+
+  it('locks a source that another tab stored', async () => {
+    signIn()
+    vi.spyOn(recipesApi, 'getRecipe')
+      .mockResolvedValueOnce({ ...recipe, source: undefined, reviewCount: 0 })
+      .mockResolvedValue({ ...recipe, reviewCount: 2 })
+    vi.spyOn(recipesApi, 'listRecipeReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(recipesApi, 'updateRecipe').mockRejectedValue(rejectWith(409, { code: 'other_reviews', property: 'source' }))
+    const w = mount(RecipeFormPage, { props: { recipeId: recipe.id }, global: { plugins: [await routerAt(`/recipes/${recipe.id}/edit`)] }, attachTo: attach() })
+    await flushPromises()
+    await w.get('input[name=source]').setValue('https://recipes.example/mine')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    const source = w.get<HTMLInputElement>('input[name=source]')
+    expect(source.attributes('readonly')).toBeDefined()
+    expect(source.element.value).toBe(recipe.source)
+    w.unmount()
+  })
+
+  it('keeps the lock of a source conflict when the recipe does not load', async () => {
+    signIn()
+    vi.spyOn(recipesApi, 'getRecipe')
+      .mockResolvedValueOnce({ ...recipe, source: undefined, reviewCount: 0 })
+      .mockRejectedValue(new Error('offline'))
+    vi.spyOn(recipesApi, 'listRecipeReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(recipesApi, 'updateRecipe').mockRejectedValue(rejectWith(409, { code: 'other_reviews', property: 'source' }))
+    const w = mount(RecipeFormPage, { props: { recipeId: recipe.id }, global: { plugins: [await routerAt(`/recipes/${recipe.id}/edit`)] }, attachTo: attach() })
+    await flushPromises()
+    await w.get('input[name=source]').setValue('https://recipes.example/mine')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(w.get('input[name=source]').attributes('readonly')).toBeDefined()
+    w.unmount()
+  })
+
+  it('lets a reviewed recipe without a source get one', async () => {
+    signIn()
+    vi.spyOn(recipesApi, 'getRecipe').mockResolvedValue({ ...recipe, source: undefined, reviewCount: 1 })
+    vi.spyOn(recipesApi, 'listRecipeReviews').mockResolvedValue({ items: [], nextCursor: null })
+    const update = vi.spyOn(recipesApi, 'updateRecipe').mockResolvedValue(recipe)
+    const w = mount(RecipeFormPage, { props: { recipeId: recipe.id }, global: { plugins: [await routerAt(`/recipes/${recipe.id}/edit`)] }, attachTo: attach() })
+    await flushPromises()
+    expect(w.get('input[name=source]').attributes('readonly')).toBeUndefined()
+    expect(w.text()).toContain('The name, the ingredients, and the steps cannot change')
+    await w.get('input[name=source]').setValue('https://recipes.example/other')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(update.mock.calls[0]![0].recipePatch.source).toBe('https://recipes.example/other')
+    w.unmount()
   })
 })

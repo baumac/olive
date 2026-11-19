@@ -26,9 +26,9 @@ const (
 	photoNotFound        = "The photo does not exist."
 )
 
-// AddReviewPhoto lets only the creator of the review add a photo. A review
+// AddRestaurantReviewPhoto lets only the creator of the review add a photo. A review
 // has at most 5 photos.
-func (s *Server) AddReviewPhoto(ctx context.Context, req reviewsapi.AddReviewPhotoRequestObject) (reviewsapi.AddReviewPhotoResponseObject, error) {
+func (s *Server) AddRestaurantReviewPhoto(ctx context.Context, req reviewsapi.AddRestaurantReviewPhotoRequestObject) (reviewsapi.AddRestaurantReviewPhotoResponseObject, error) {
 	saved, p, err := s.addPhoto(ctx, restaurantSubject, req.RestaurantId, req.ReviewId, req.ContentType, req.Body)
 	if err != nil {
 		return nil, err
@@ -36,28 +36,28 @@ func (s *Server) AddReviewPhoto(ctx context.Context, req reviewsapi.AddReviewPho
 	if p != nil {
 		switch p.status() {
 		case http.StatusBadRequest:
-			return reviewsapi.AddReviewPhoto400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: p.badRequest()}, nil
+			return reviewsapi.AddRestaurantReviewPhoto400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: p.badRequest()}, nil
 		case http.StatusForbidden:
-			return reviewsapi.AddReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+			return reviewsapi.AddRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
 		case http.StatusNotFound:
-			return reviewsapi.AddReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+			return reviewsapi.AddRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
 		case http.StatusConflict:
-			return reviewsapi.AddReviewPhoto409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
+			return reviewsapi.AddRestaurantReviewPhoto409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
 		case http.StatusRequestEntityTooLarge:
-			return reviewsapi.AddReviewPhoto413ApplicationProblemPlusJSONResponse{ContentTooLargeApplicationProblemPlusJSONResponse: p.contentTooLarge()}, nil
+			return reviewsapi.AddRestaurantReviewPhoto413ApplicationProblemPlusJSONResponse{ContentTooLargeApplicationProblemPlusJSONResponse: p.contentTooLarge()}, nil
 		case http.StatusUnsupportedMediaType:
-			return reviewsapi.AddReviewPhoto415ApplicationProblemPlusJSONResponse{UnsupportedMediaTypeApplicationProblemPlusJSONResponse: p.unsupportedMediaType()}, nil
+			return reviewsapi.AddRestaurantReviewPhoto415ApplicationProblemPlusJSONResponse{UnsupportedMediaTypeApplicationProblemPlusJSONResponse: p.unsupportedMediaType()}, nil
 		case http.StatusUnprocessableEntity:
-			return reviewsapi.AddReviewPhoto422ApplicationProblemPlusJSONResponse{InvalidImageApplicationProblemPlusJSONResponse: p.invalidImage()}, nil
+			return reviewsapi.AddRestaurantReviewPhoto422ApplicationProblemPlusJSONResponse{InvalidImageApplicationProblemPlusJSONResponse: p.invalidImage()}, nil
 		case http.StatusTooManyRequests:
-			return reviewsapi.AddReviewPhoto429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: p.tooManyRequests()}, nil
+			return reviewsapi.AddRestaurantReviewPhoto429ApplicationProblemPlusJSONResponse{TooManyRequestsApplicationProblemPlusJSONResponse: p.tooManyRequests()}, nil
 		}
 		return nil, p.unexpected()
 	}
 	location := restaurantSubject.photoPath(req.RestaurantId, req.ReviewId, saved.Id)
-	return reviewsapi.AddReviewPhoto201JSONResponse{
+	return reviewsapi.AddRestaurantReviewPhoto201JSONResponse{
 		Body:    toPhoto(restaurantSubject, saved, req.RestaurantId),
-		Headers: reviewsapi.AddReviewPhoto201ResponseHeaders{Location: &location},
+		Headers: reviewsapi.AddRestaurantReviewPhoto201ResponseHeaders{Location: &location},
 	}, nil
 }
 
@@ -171,8 +171,8 @@ func (s *Server) readPhoto(ctx context.Context, body io.Reader, mediaType string
 	return photo, nil, nil
 }
 
-// UpdateReviewPhoto changes only the alt text. The image never changes.
-func (s *Server) UpdateReviewPhoto(ctx context.Context, req reviewsapi.UpdateReviewPhotoRequestObject) (reviewsapi.UpdateReviewPhotoResponseObject, error) {
+// UpdateRestaurantReviewPhoto changes only the alt text. The image never changes.
+func (s *Server) UpdateRestaurantReviewPhoto(ctx context.Context, req reviewsapi.UpdateRestaurantReviewPhotoRequestObject) (reviewsapi.UpdateRestaurantReviewPhotoResponseObject, error) {
 	saved, p, err := s.updatePhoto(restaurantSubject, req.RestaurantId, req.ReviewId, req.PhotoId, stateFrom(ctx).user, req.Body)
 	if err != nil {
 		return nil, err
@@ -180,13 +180,13 @@ func (s *Server) UpdateReviewPhoto(ctx context.Context, req reviewsapi.UpdateRev
 	if p != nil {
 		switch p.status() {
 		case http.StatusNotFound:
-			return reviewsapi.UpdateReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+			return reviewsapi.UpdateRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
 		case http.StatusForbidden:
-			return reviewsapi.UpdateReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+			return reviewsapi.UpdateRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
 		}
 		return nil, p.unexpected()
 	}
-	return reviewsapi.UpdateReviewPhoto200JSONResponse(toPhoto(restaurantSubject, saved, req.RestaurantId)), nil
+	return reviewsapi.UpdateRestaurantReviewPhoto200JSONResponse(toPhoto(restaurantSubject, saved, req.RestaurantId)), nil
 }
 
 // updatePhoto changes the alt text. The problem is a 403 or a 404.
@@ -215,8 +215,8 @@ func (s *Server) updatePhoto(sub subject, parentID, reviewID, photoID string, us
 	return saved, p, err
 }
 
-// DeleteReviewPhoto lets only the creator of the review delete a photo.
-func (s *Server) DeleteReviewPhoto(ctx context.Context, req reviewsapi.DeleteReviewPhotoRequestObject) (reviewsapi.DeleteReviewPhotoResponseObject, error) {
+// DeleteRestaurantReviewPhoto lets only the creator of the review delete a photo.
+func (s *Server) DeleteRestaurantReviewPhoto(ctx context.Context, req reviewsapi.DeleteRestaurantReviewPhotoRequestObject) (reviewsapi.DeleteRestaurantReviewPhotoResponseObject, error) {
 	p, err := s.deletePhoto(restaurantSubject, req.RestaurantId, req.ReviewId, req.PhotoId, stateFrom(ctx).user)
 	if err != nil {
 		return nil, err
@@ -224,13 +224,13 @@ func (s *Server) DeleteReviewPhoto(ctx context.Context, req reviewsapi.DeleteRev
 	if p != nil {
 		switch p.status() {
 		case http.StatusNotFound:
-			return reviewsapi.DeleteReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+			return reviewsapi.DeleteRestaurantReviewPhoto404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
 		case http.StatusForbidden:
-			return reviewsapi.DeleteReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
+			return reviewsapi.DeleteRestaurantReviewPhoto403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: p.forbidden()}, nil
 		}
 		return nil, p.unexpected()
 	}
-	return reviewsapi.DeleteReviewPhoto204Response{}, nil
+	return reviewsapi.DeleteRestaurantReviewPhoto204Response{}, nil
 }
 
 // deletePhoto deletes the record. PocketBase deletes its files after the
@@ -254,14 +254,14 @@ func (s *Server) deletePhoto(sub subject, parentID, reviewID, photoID string, us
 	return p, err
 }
 
-// GetReviewPhotoFile sends the stored JPEG of the variant.
-func (s *Server) GetReviewPhotoFile(ctx context.Context, req reviewsapi.GetReviewPhotoFileRequestObject) (reviewsapi.GetReviewPhotoFileResponseObject, error) {
+// GetRestaurantReviewPhotoFile sends the stored JPEG of the variant.
+func (s *Server) GetRestaurantReviewPhotoFile(ctx context.Context, req reviewsapi.GetRestaurantReviewPhotoFileRequestObject) (reviewsapi.GetRestaurantReviewPhotoFileResponseObject, error) {
 	file, detail, err := s.photoFile(ctx, restaurantSubject, req.RestaurantId, req.ReviewId, req.PhotoId, req.Variant)
 	if err != nil {
 		return nil, err
 	}
 	if detail != "" {
-		return reviewsapi.GetReviewPhotoFile404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}, nil
+		return reviewsapi.GetRestaurantReviewPhotoFile404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: notFound(detail)}, nil
 	}
 	return file, nil
 }
@@ -289,7 +289,7 @@ type photoFileResponse struct {
 	name    string
 }
 
-func (f photoFileResponse) VisitGetReviewPhotoFileResponse(w http.ResponseWriter) error {
+func (f photoFileResponse) VisitGetRestaurantReviewPhotoFileResponse(w http.ResponseWriter) error {
 	fsys, err := f.app.NewFilesystem()
 	if err != nil {
 		return err
@@ -416,7 +416,7 @@ func nullableText(v string) nullable.Nullable[string] {
 	return nullable.NewNullableWithValue(v)
 }
 
-// PhotoFilePath returns the path of the GetReviewPhotoFile operation.
+// PhotoFilePath returns the path of the GetRestaurantReviewPhotoFile operation.
 func PhotoFilePath(restaurantID, reviewID, photoID string, variant reviewsapi.PhotoVariant) string {
 	return restaurantSubject.photoFilePath(restaurantID, reviewID, photoID, variant)
 }

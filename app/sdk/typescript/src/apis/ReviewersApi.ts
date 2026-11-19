@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.   `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.   The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.   `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.   A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.   The `source` of a recipe with reviews of other users cannot change. 
  *
- * The version of the OpenAPI document: 5.5.0
+ * The version of the OpenAPI document: 6.0.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -29,10 +29,10 @@ import {
     RecipeReviewListToJSON,
 } from '../models/RecipeReviewList.js';
 import {
-    type ReviewList,
-    ReviewListFromJSON,
-    ReviewListToJSON,
-} from '../models/ReviewList.js';
+    type RestaurantReviewList,
+    RestaurantReviewListFromJSON,
+    RestaurantReviewListToJSON,
+} from '../models/RestaurantReviewList.js';
 import {
     type Reviewer,
     ReviewerFromJSON,
@@ -131,7 +131,7 @@ export interface ListReviewerRecipeReviewsRequest {
     updated?: TimestampRange;
 }
 
-export interface ListReviewerReviewsRequest {
+export interface ListReviewerRestaurantReviewsRequest {
     /**
      * The ID of the user.
      */
@@ -292,7 +292,7 @@ export interface ReviewersApiInterface {
     listReviewerRecipeReviews(requestParameters: ListReviewerRecipeReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecipeReviewList>;
 
     /**
-     * Creates request options for listReviewerReviews without sending the request
+     * Creates request options for listReviewerRestaurantReviews without sending the request
      * @param {string} reviewerId The ID of the user.
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
@@ -311,10 +311,10 @@ export interface ReviewersApiInterface {
      * @throws {RequiredError}
      * @memberof ReviewersApiInterface
      */
-    listReviewerReviewsRequestOpts(requestParameters: ListReviewerReviewsRequest): Promise<runtime.RequestOpts>;
+    listReviewerRestaurantReviewsRequestOpts(requestParameters: ListReviewerRestaurantReviewsRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * The same filters, sorts, and pages as `listAllReviews`, for the reviews of one user.
+     * The same filters, sorts, and pages as `listAllRestaurantReviews`, for the reviews of one user.
      * @summary List the reviews of a user
      * @param {string} reviewerId The ID of the user.
      * @param {number} [limit] The page size.
@@ -335,13 +335,13 @@ export interface ReviewersApiInterface {
      * @throws {RequiredError}
      * @memberof ReviewersApiInterface
      */
-    listReviewerReviewsRaw(requestParameters: ListReviewerReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReviewList>>;
+    listReviewerRestaurantReviewsRaw(requestParameters: ListReviewerRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReviewList>>;
 
     /**
-     * The same filters, sorts, and pages as `listAllReviews`, for the reviews of one user.
+     * The same filters, sorts, and pages as `listAllRestaurantReviews`, for the reviews of one user.
      * List the reviews of a user
      */
-    listReviewerReviews(requestParameters: ListReviewerReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReviewList>;
+    listReviewerRestaurantReviews(requestParameters: ListReviewerRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReviewList>;
 
 }
 
@@ -513,13 +513,13 @@ export class ReviewersApi extends runtime.BaseAPI implements ReviewersApiInterfa
     }
 
     /**
-     * Creates request options for listReviewerReviews without sending the request
+     * Creates request options for listReviewerRestaurantReviews without sending the request
      */
-    async listReviewerReviewsRequestOpts(requestParameters: ListReviewerReviewsRequest): Promise<runtime.RequestOpts> {
+    async listReviewerRestaurantReviewsRequestOpts(requestParameters: ListReviewerRestaurantReviewsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['reviewerId'] == null) {
             throw new runtime.RequiredError(
                 'reviewerId',
-                'Required parameter "reviewerId" was null or undefined when calling listReviewerReviews().'
+                'Required parameter "reviewerId" was null or undefined when calling listReviewerRestaurantReviews().'
             );
         }
 
@@ -592,7 +592,7 @@ export class ReviewersApi extends runtime.BaseAPI implements ReviewersApiInterfa
             }
         }
 
-        let urlPath = `/reviewers/{reviewerId}/reviews`;
+        let urlPath = `/reviewers/{reviewerId}/restaurant-reviews`;
         urlPath = urlPath.replace('{reviewerId}', encodeURIComponent(String(requestParameters['reviewerId'])));
 
         return {
@@ -604,22 +604,22 @@ export class ReviewersApi extends runtime.BaseAPI implements ReviewersApiInterfa
     }
 
     /**
-     * The same filters, sorts, and pages as `listAllReviews`, for the reviews of one user.
+     * The same filters, sorts, and pages as `listAllRestaurantReviews`, for the reviews of one user.
      * List the reviews of a user
      */
-    async listReviewerReviewsRaw(requestParameters: ListReviewerReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReviewList>> {
-        const requestOptions = await this.listReviewerReviewsRequestOpts(requestParameters);
+    async listReviewerRestaurantReviewsRaw(requestParameters: ListReviewerRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReviewList>> {
+        const requestOptions = await this.listReviewerRestaurantReviewsRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ReviewListFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RestaurantReviewListFromJSON(jsonValue));
     }
 
     /**
-     * The same filters, sorts, and pages as `listAllReviews`, for the reviews of one user.
+     * The same filters, sorts, and pages as `listAllRestaurantReviews`, for the reviews of one user.
      * List the reviews of a user
      */
-    async listReviewerReviews(requestParameters: ListReviewerReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReviewList> {
-        const response = await this.listReviewerReviewsRaw(requestParameters, initOverrides);
+    async listReviewerRestaurantReviews(requestParameters: ListReviewerRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReviewList> {
+        const response = await this.listReviewerRestaurantReviewsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -45,18 +45,24 @@ func TestRecipeLists(t *testing.T) {
 
 	t.Run("a list counts its restaurants and its recipes", func(t *testing.T) {
 		lists := e.lists(ana.User.ID, "?restaurant[eq]="+restaurant+"&recipe[eq]="+dal).Items
-		if lists[0].ID != favorites || lists[0].ItemCount != 1 || lists[0].RecipeCount != 1 || !*lists[0].HasRestaurant || !*lists[0].HasRecipe {
+		if lists[0].ID != favorites || lists[0].RestaurantCount != 1 || lists[0].RecipeCount != 1 || !*lists[0].HasRestaurant || !*lists[0].HasRecipe {
 			t.Errorf("favorites %+v", lists[0])
 		}
-		if lists[1].ID != list || lists[1].ItemCount != 0 || lists[1].RecipeCount != 1 || *lists[1].HasRestaurant || *lists[1].HasRecipe {
+		if lists[1].ID != list || lists[1].RestaurantCount != 0 || lists[1].RecipeCount != 1 || *lists[1].HasRestaurant || *lists[1].HasRecipe {
 			t.Errorf("list %+v", lists[1])
 		}
 		if plain := e.lists(ana.User.ID, "").Items[0]; plain.HasRecipe != nil {
 			t.Errorf("has_recipe %v without recipe[eq]", *plain.HasRecipe)
 		}
 		got := e.expect(request{method: "GET", path: "/v1/lists/" + list}, http.StatusOK).object(t)
-		if got["recipe_count"] != 1.0 || got["item_count"] != 0.0 {
+		if got["recipe_count"] != 1.0 || got["restaurant_count"] != 0.0 {
 			t.Errorf("list %v", got)
+		}
+		item := e.expect(request{method: "GET", path: "/v1/lists/" + list + "/recipes"}, http.StatusOK).object(t)["items"].([]any)[0].(map[string]any)
+		_, ingredients := item["ingredients"]
+		_, steps := item["steps"]
+		if ingredients || steps {
+			t.Errorf("item %v, want a summary without the ingredients and the steps", item)
 		}
 	})
 

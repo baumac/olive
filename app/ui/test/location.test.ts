@@ -249,7 +249,7 @@ describe('RestaurantFormPage drafts', () => {
   async function mountWithDraft(stored: Location | null) {
     saveSession({ token: 't', expires: '2099-01-01T00:00:00.000Z', user })
     vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue({ ...restaurant, location: stored })
-    vi.spyOn(restaurantsApi, 'listReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(restaurantsApi, 'listRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
     vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
     saveDraft(`restaurant:${restaurant.id}`, { name: 'Renamed', description: 'Draft', tags: [], location: canSole.location })
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })

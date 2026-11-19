@@ -108,17 +108,18 @@ func readBody(ctx context.Context, in *openapi3filter.RequestValidationInput, va
 		p := reviewsapi.Problem(unprocessable(sortedErrors(errs)))
 		return nil, &p
 	}
-	if changeProperties(schema, props, "x-trim", trimSpaces) {
+	if changeProperties(schema, props, "x-trim", trimWhitespace) {
 		trimmed, _ := json.Marshal(props)
 		r.Body = io.NopCloser(bytes.NewReader(trimmed))
 	}
 	return props, nil
 }
 
-// trimSpaces removes the ASCII spaces around s. The pattern of a schema with
-// x-trim needs one other character. A valid value then does not become empty.
-func trimSpaces(s string) string {
-	return strings.Trim(s, " ")
+// trimWhitespace removes the ASCII spaces, tabs, and line breaks around s. The
+// pattern of a schema with x-trim needs one other character. A valid value
+// then does not become empty.
+func trimWhitespace(s string) string {
+	return strings.Trim(s, " \t\n\r")
 }
 
 // changeProperties uses change on each string of a schema with the extension

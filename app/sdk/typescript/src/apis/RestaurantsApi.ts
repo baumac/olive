@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.   `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.   The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.   `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.   A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.   The `source` of a recipe with reviews of other users cannot change. 
  *
- * The version of the OpenAPI document: 5.5.0
+ * The version of the OpenAPI document: 6.0.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -74,25 +74,25 @@ import {
     RestaurantPhotoListToJSON,
 } from '../models/RestaurantPhotoList.js';
 import {
-    type Review,
-    ReviewFromJSON,
-    ReviewToJSON,
-} from '../models/Review.js';
+    type RestaurantReview,
+    RestaurantReviewFromJSON,
+    RestaurantReviewToJSON,
+} from '../models/RestaurantReview.js';
 import {
-    type ReviewCreate,
-    ReviewCreateFromJSON,
-    ReviewCreateToJSON,
-} from '../models/ReviewCreate.js';
+    type RestaurantReviewCreate,
+    RestaurantReviewCreateFromJSON,
+    RestaurantReviewCreateToJSON,
+} from '../models/RestaurantReviewCreate.js';
 import {
-    type ReviewList,
-    ReviewListFromJSON,
-    ReviewListToJSON,
-} from '../models/ReviewList.js';
+    type RestaurantReviewList,
+    RestaurantReviewListFromJSON,
+    RestaurantReviewListToJSON,
+} from '../models/RestaurantReviewList.js';
 import {
-    type ReviewPatch,
-    ReviewPatchFromJSON,
-    ReviewPatchToJSON,
-} from '../models/ReviewPatch.js';
+    type RestaurantReviewPatch,
+    RestaurantReviewPatchFromJSON,
+    RestaurantReviewPatchToJSON,
+} from '../models/RestaurantReviewPatch.js';
 import {
     type ScoreRange,
     ScoreRangeFromJSON,
@@ -104,7 +104,7 @@ import {
     TimestampRangeToJSON,
 } from '../models/TimestampRange.js';
 
-export interface AddReviewPhotoRequest {
+export interface AddRestaurantReviewPhotoRequest {
     /**
      * The ID of the restaurant.
      */
@@ -128,7 +128,7 @@ export interface CreateRestaurantRequest {
     restaurantCreate: RestaurantCreate;
 }
 
-export interface CreateReviewRequest {
+export interface CreateRestaurantReviewRequest {
     /**
      * The ID of the restaurant.
      */
@@ -136,7 +136,7 @@ export interface CreateReviewRequest {
     /**
      * The review to create.
      */
-    reviewCreate: ReviewCreate;
+    restaurantReviewCreate: RestaurantReviewCreate;
 }
 
 export interface DeleteRestaurantRequest {
@@ -146,7 +146,7 @@ export interface DeleteRestaurantRequest {
     restaurantId: string;
 }
 
-export interface DeleteReviewRequest {
+export interface DeleteRestaurantReviewRequest {
     /**
      * The ID of the restaurant.
      */
@@ -157,7 +157,7 @@ export interface DeleteReviewRequest {
     reviewId: string;
 }
 
-export interface DeleteReviewPhotoRequest {
+export interface DeleteRestaurantReviewPhotoRequest {
     /**
      * The ID of the restaurant.
      */
@@ -179,7 +179,7 @@ export interface GetRestaurantRequest {
     restaurantId: string;
 }
 
-export interface GetReviewRequest {
+export interface GetRestaurantReviewRequest {
     /**
      * The ID of the restaurant.
      */
@@ -190,7 +190,7 @@ export interface GetReviewRequest {
     reviewId: string;
 }
 
-export interface GetReviewPhotoFileRequest {
+export interface GetRestaurantReviewPhotoFileRequest {
     /**
      * The ID of the restaurant.
      */
@@ -208,10 +208,10 @@ export interface GetReviewPhotoFileRequest {
      * `full` has at most 2048 pixels on its long side. `thumb` has at most 480 pixels on its long side.
      * 
      */
-    variant: GetReviewPhotoFileVariantEnum;
+    variant: GetRestaurantReviewPhotoFileVariantEnum;
 }
 
-export interface ListAllReviewsRequest {
+export interface ListAllRestaurantReviewsRequest {
     /**
      * The page size.
      */
@@ -310,6 +310,85 @@ export interface ListRestaurantPhotosRequest {
      * 
      */
     cursor?: string;
+}
+
+export interface ListRestaurantReviewsRequest {
+    /**
+     * The ID of the restaurant.
+     */
+    restaurantId: string;
+    /**
+     * The page size.
+     */
+    limit?: number;
+    /**
+     * The `next_cursor` value of the previous page.
+     * Clients must not parse or build cursor values.
+     * A cursor is valid only with the same filters and sort that made it.
+     * 
+     */
+    cursor?: string;
+    /**
+     * A comma-separated list of properties.
+     * A `-` prefix sorts a property in descending order.
+     * Each property can occur only one time. A repeated property causes `400 Bad Request`.
+     * The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+     * The `overall` sort uses the `overall` value of the review.
+     * The `relevance` sort puts the best matches of `search` first. It needs `search`.
+     * With `search`, the default sort is `relevance`.
+     * The API always adds `id` as the last sort key.
+     * 
+     */
+    sort?: string;
+    /**
+     * Full-text search in `title`, `feedback`, and `restaurant_name`.
+     * A review matches when it has all words of the search. A word also matches longer words that start with it.
+     * The search ignores case and accents. `Cafe` matches `Café`.
+     * Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
+     * A search without a letter or a digit causes `400 Bad Request`.
+     * 
+     */
+    search?: string;
+    /**
+     * Compares the `space` score. Each key is an operator, for example `space[gte]=`.
+     */
+    space?: ScoreRange;
+    /**
+     * Compares the `service` score. Each key is an operator, for example `service[gte]=`.
+     */
+    service?: ScoreRange;
+    /**
+     * Compares the `food` score. Each key is an operator, for example `food[gte]=`.
+     */
+    food?: ScoreRange;
+    /**
+     * Compares the `price` score. Each key is an operator, for example `price[gte]=`.
+     */
+    price?: ScoreRange;
+    /**
+     * Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
+     */
+    cleanliness?: ScoreRange;
+    /**
+     * Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
+     */
+    overall?: AverageRange;
+    /**
+     * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+     */
+    created?: TimestampRange;
+    /**
+     * Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+     */
+    updated?: TimestampRange;
+    /**
+     * The `creator.id` is equal to the value.
+     */
+    creatorEq?: string;
+    /**
+     * The `creator.id` is equal to any of the values.
+     */
+    creatorIn?: Array<string>;
 }
 
 export interface ListRestaurantsRequest {
@@ -419,85 +498,6 @@ export interface ListRestaurantsRequest {
     listEq?: string;
 }
 
-export interface ListReviewsRequest {
-    /**
-     * The ID of the restaurant.
-     */
-    restaurantId: string;
-    /**
-     * The page size.
-     */
-    limit?: number;
-    /**
-     * The `next_cursor` value of the previous page.
-     * Clients must not parse or build cursor values.
-     * A cursor is valid only with the same filters and sort that made it.
-     * 
-     */
-    cursor?: string;
-    /**
-     * A comma-separated list of properties.
-     * A `-` prefix sorts a property in descending order.
-     * Each property can occur only one time. A repeated property causes `400 Bad Request`.
-     * The `title` sort ignores case only for the ASCII letters `A` to `Z`.
-     * The `overall` sort uses the `overall` value of the review.
-     * The `relevance` sort puts the best matches of `search` first. It needs `search`.
-     * With `search`, the default sort is `relevance`.
-     * The API always adds `id` as the last sort key.
-     * 
-     */
-    sort?: string;
-    /**
-     * Full-text search in `title`, `feedback`, and `restaurant_name`.
-     * A review matches when it has all words of the search. A word also matches longer words that start with it.
-     * The search ignores case and accents. `Cafe` matches `Café`.
-     * Matches in `title` count most for the `relevance` sort, then `restaurant_name`, then `feedback`.
-     * A search without a letter or a digit causes `400 Bad Request`.
-     * 
-     */
-    search?: string;
-    /**
-     * Compares the `space` score. Each key is an operator, for example `space[gte]=`.
-     */
-    space?: ScoreRange;
-    /**
-     * Compares the `service` score. Each key is an operator, for example `service[gte]=`.
-     */
-    service?: ScoreRange;
-    /**
-     * Compares the `food` score. Each key is an operator, for example `food[gte]=`.
-     */
-    food?: ScoreRange;
-    /**
-     * Compares the `price` score. Each key is an operator, for example `price[gte]=`.
-     */
-    price?: ScoreRange;
-    /**
-     * Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
-     */
-    cleanliness?: ScoreRange;
-    /**
-     * Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
-     */
-    overall?: AverageRange;
-    /**
-     * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
-     */
-    created?: TimestampRange;
-    /**
-     * Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
-     */
-    updated?: TimestampRange;
-    /**
-     * The `creator.id` is equal to the value.
-     */
-    creatorEq?: string;
-    /**
-     * The `creator.id` is equal to any of the values.
-     */
-    creatorIn?: Array<string>;
-}
-
 export interface UpdateRestaurantRequest {
     /**
      * The ID of the restaurant.
@@ -509,7 +509,7 @@ export interface UpdateRestaurantRequest {
     restaurantPatch: RestaurantPatch;
 }
 
-export interface UpdateReviewRequest {
+export interface UpdateRestaurantReviewRequest {
     /**
      * The ID of the restaurant.
      */
@@ -521,10 +521,10 @@ export interface UpdateReviewRequest {
     /**
      * The review properties to change.
      */
-    reviewPatch: ReviewPatch;
+    restaurantReviewPatch: RestaurantReviewPatch;
 }
 
-export interface UpdateReviewPhotoRequest {
+export interface UpdateRestaurantReviewPhotoRequest {
     /**
      * The ID of the restaurant.
      */
@@ -551,17 +551,17 @@ export interface UpdateReviewPhotoRequest {
  */
 export interface RestaurantsApiInterface {
     /**
-     * Creates request options for addReviewPhoto without sending the request
+     * Creates request options for addRestaurantReviewPhoto without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
      * @param {Blob} body The bytes of the image. The &#x60;Content-Type&#x60; is &#x60;image/jpeg&#x60;, &#x60;image/png&#x60;, or &#x60;image/webp&#x60;. Other types get &#x60;415&#x60;. 
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    addReviewPhotoRequestOpts(requestParameters: AddReviewPhotoRequest): Promise<runtime.RequestOpts>;
+    addRestaurantReviewPhotoRequestOpts(requestParameters: AddRestaurantReviewPhotoRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateReviewPhoto`. 
+     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateRestaurantReviewPhoto`. 
      * @summary Add a photo to a review
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
@@ -570,13 +570,13 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    addReviewPhotoRaw(requestParameters: AddReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>>;
+    addRestaurantReviewPhotoRaw(requestParameters: AddRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>>;
 
     /**
-     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateReviewPhoto`. 
+     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateRestaurantReviewPhoto`. 
      * Add a photo to a review
      */
-    addReviewPhoto(requestParameters: AddReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo>;
+    addRestaurantReviewPhoto(requestParameters: AddRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo>;
 
     /**
      * Creates request options for createRestaurant without sending the request
@@ -603,30 +603,30 @@ export interface RestaurantsApiInterface {
     createRestaurant(requestParameters: CreateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant>;
 
     /**
-     * Creates request options for createReview without sending the request
+     * Creates request options for createRestaurantReview without sending the request
      * @param {string} restaurantId The ID of the restaurant.
-     * @param {ReviewCreate} reviewCreate The review to create.
+     * @param {RestaurantReviewCreate} restaurantReviewCreate The review to create.
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    createReviewRequestOpts(requestParameters: CreateReviewRequest): Promise<runtime.RequestOpts>;
+    createRestaurantReviewRequestOpts(requestParameters: CreateRestaurantReviewRequest): Promise<runtime.RequestOpts>;
 
     /**
      * A user can have at most one review per restaurant.
      * @summary Create a review for a restaurant
      * @param {string} restaurantId The ID of the restaurant.
-     * @param {ReviewCreate} reviewCreate The review to create.
+     * @param {RestaurantReviewCreate} restaurantReviewCreate The review to create.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    createReviewRaw(requestParameters: CreateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Review>>;
+    createRestaurantReviewRaw(requestParameters: CreateRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReview>>;
 
     /**
      * A user can have at most one review per restaurant.
      * Create a review for a restaurant
      */
-    createReview(requestParameters: CreateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review>;
+    createRestaurantReview(requestParameters: CreateRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReview>;
 
     /**
      * Creates request options for deleteRestaurant without sending the request
@@ -653,13 +653,13 @@ export interface RestaurantsApiInterface {
     deleteRestaurant(requestParameters: DeleteRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
 
     /**
-     * Creates request options for deleteReview without sending the request
+     * Creates request options for deleteRestaurantReview without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    deleteReviewRequestOpts(requestParameters: DeleteReviewRequest): Promise<runtime.RequestOpts>;
+    deleteRestaurantReviewRequestOpts(requestParameters: DeleteRestaurantReviewRequest): Promise<runtime.RequestOpts>;
 
     /**
      * Only the creator of the review can delete it.
@@ -670,23 +670,23 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    deleteReviewRaw(requestParameters: DeleteReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    deleteRestaurantReviewRaw(requestParameters: DeleteRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
 
     /**
      * Only the creator of the review can delete it.
      * Delete a review
      */
-    deleteReview(requestParameters: DeleteReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    deleteRestaurantReview(requestParameters: DeleteRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
 
     /**
-     * Creates request options for deleteReviewPhoto without sending the request
+     * Creates request options for deleteRestaurantReviewPhoto without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
      * @param {string} photoId The ID of the photo.
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    deleteReviewPhotoRequestOpts(requestParameters: DeleteReviewPhotoRequest): Promise<runtime.RequestOpts>;
+    deleteRestaurantReviewPhotoRequestOpts(requestParameters: DeleteRestaurantReviewPhotoRequest): Promise<runtime.RequestOpts>;
 
     /**
      * Only the creator of the review can delete its photos.
@@ -698,13 +698,13 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    deleteReviewPhotoRaw(requestParameters: DeleteReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    deleteRestaurantReviewPhotoRaw(requestParameters: DeleteRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
 
     /**
      * Only the creator of the review can delete its photos.
      * Delete a photo
      */
-    deleteReviewPhoto(requestParameters: DeleteReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    deleteRestaurantReviewPhoto(requestParameters: DeleteRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
 
     /**
      * Creates request options for getRestaurant without sending the request
@@ -730,13 +730,13 @@ export interface RestaurantsApiInterface {
     getRestaurant(requestParameters: GetRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant>;
 
     /**
-     * Creates request options for getReview without sending the request
+     * Creates request options for getRestaurantReview without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    getReviewRequestOpts(requestParameters: GetReviewRequest): Promise<runtime.RequestOpts>;
+    getRestaurantReviewRequestOpts(requestParameters: GetRestaurantReviewRequest): Promise<runtime.RequestOpts>;
 
     /**
      * 
@@ -747,15 +747,15 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    getReviewRaw(requestParameters: GetReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Review>>;
+    getRestaurantReviewRaw(requestParameters: GetRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReview>>;
 
     /**
      * Get a review
      */
-    getReview(requestParameters: GetReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review>;
+    getRestaurantReview(requestParameters: GetRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReview>;
 
     /**
-     * Creates request options for getReviewPhotoFile without sending the request
+     * Creates request options for getRestaurantReviewPhotoFile without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
      * @param {string} photoId The ID of the photo.
@@ -763,7 +763,7 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    getReviewPhotoFileRequestOpts(requestParameters: GetReviewPhotoFileRequest): Promise<runtime.RequestOpts>;
+    getRestaurantReviewPhotoFileRequestOpts(requestParameters: GetRestaurantReviewPhotoFileRequest): Promise<runtime.RequestOpts>;
 
     /**
      * Clients use the `urls` of the photo and do not build this path. The file never changes, so clients can cache it for a long time. The operation supports `HEAD`, `If-None-Match`, and `Range`. 
@@ -776,16 +776,16 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    getReviewPhotoFileRaw(requestParameters: GetReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.HttpFile>>;
+    getRestaurantReviewPhotoFileRaw(requestParameters: GetRestaurantReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.HttpFile>>;
 
     /**
      * Clients use the `urls` of the photo and do not build this path. The file never changes, so clients can cache it for a long time. The operation supports `HEAD`, `If-None-Match`, and `Range`. 
      * Get the image file of a photo
      */
-    getReviewPhotoFile(requestParameters: GetReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.HttpFile>;
+    getRestaurantReviewPhotoFile(requestParameters: GetRestaurantReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.HttpFile>;
 
     /**
-     * Creates request options for listAllReviews without sending the request
+     * Creates request options for listAllRestaurantReviews without sending the request
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses the &#x60;overall&#x60; value of the review. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
@@ -805,10 +805,10 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    listAllReviewsRequestOpts(requestParameters: ListAllReviewsRequest): Promise<runtime.RequestOpts>;
+    listAllRestaurantReviewsRequestOpts(requestParameters: ListAllRestaurantReviewsRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. `listReviewerReviews` also gives the reviews of one user. It returns `404` for an unknown user. 
+     * The same filters, sorts, and pages as `listRestaurantReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. `listReviewerRestaurantReviews` also gives the reviews of one user. It returns `404` for an unknown user. 
      * @summary List the reviews of all restaurants
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
@@ -830,13 +830,13 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    listAllReviewsRaw(requestParameters: ListAllReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReviewList>>;
+    listAllRestaurantReviewsRaw(requestParameters: ListAllRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReviewList>>;
 
     /**
-     * The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. `listReviewerReviews` also gives the reviews of one user. It returns `404` for an unknown user. 
+     * The same filters, sorts, and pages as `listRestaurantReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. `listReviewerRestaurantReviews` also gives the reviews of one user. It returns `404` for an unknown user. 
      * List the reviews of all restaurants
      */
-    listAllReviews(requestParameters: ListAllReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReviewList>;
+    listAllRestaurantReviews(requestParameters: ListAllRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReviewList>;
 
     /**
      * Creates request options for listRestaurantPhotos without sending the request
@@ -865,6 +865,57 @@ export interface RestaurantsApiInterface {
      * List the photos of all reviews of a restaurant
      */
     listRestaurantPhotos(requestParameters: ListRestaurantPhotosRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantPhotoList>;
+
+    /**
+     * Creates request options for listRestaurantReviews without sending the request
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses the &#x60;overall&#x60; value of the review. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
+     * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
+     * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
+     * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    listRestaurantReviewsRequestOpts(requestParameters: ListRestaurantReviewsRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * 
+     * @summary List the reviews of a restaurant
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses the &#x60;overall&#x60; value of the review. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
+     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
+     * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
+     * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
+     * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
+     * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
+     * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
+     * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    listRestaurantReviewsRaw(requestParameters: ListRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReviewList>>;
+
+    /**
+     * List the reviews of a restaurant
+     */
+    listRestaurantReviews(requestParameters: ListRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReviewList>;
 
     /**
      * Creates request options for listRestaurants without sending the request
@@ -920,57 +971,6 @@ export interface RestaurantsApiInterface {
     listRestaurants(requestParameters: ListRestaurantsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantList>;
 
     /**
-     * Creates request options for listReviews without sending the request
-     * @param {string} restaurantId The ID of the restaurant.
-     * @param {number} [limit] The page size.
-     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses the &#x60;overall&#x60; value of the review. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
-     * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
-     * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
-     * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
-     * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
-     * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
-     * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
-     * @throws {RequiredError}
-     * @memberof RestaurantsApiInterface
-     */
-    listReviewsRequestOpts(requestParameters: ListReviewsRequest): Promise<runtime.RequestOpts>;
-
-    /**
-     * 
-     * @summary List the reviews of a restaurant
-     * @param {string} restaurantId The ID of the restaurant.
-     * @param {number} [limit] The page size.
-     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;title&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses the &#x60;overall&#x60; value of the review. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
-     * @param {string} [search] Full-text search in &#x60;title&#x60;, &#x60;feedback&#x60;, and &#x60;restaurant_name&#x60;. A review matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;title&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;restaurant_name&#x60;, then &#x60;feedback&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
-     * @param {ScoreRange} [space] Compares the &#x60;space&#x60; score. Each key is an operator, for example &#x60;space[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [service] Compares the &#x60;service&#x60; score. Each key is an operator, for example &#x60;service[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
-     * @param {ScoreRange} [cleanliness] Compares the &#x60;cleanliness&#x60; score. Each key is an operator, for example &#x60;cleanliness[gte]&#x3D;&#x60;.
-     * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
-     * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
-     * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
-     * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
-     * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof RestaurantsApiInterface
-     */
-    listReviewsRaw(requestParameters: ListReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReviewList>>;
-
-    /**
-     * List the reviews of a restaurant
-     */
-    listReviews(requestParameters: ListReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReviewList>;
-
-    /**
      * Creates request options for updateRestaurant without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @param {RestaurantPatch} restaurantPatch The restaurant properties to change.
@@ -997,35 +997,35 @@ export interface RestaurantsApiInterface {
     updateRestaurant(requestParameters: UpdateRestaurantRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Restaurant>;
 
     /**
-     * Creates request options for updateReview without sending the request
+     * Creates request options for updateRestaurantReview without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
-     * @param {ReviewPatch} reviewPatch The review properties to change.
+     * @param {RestaurantReviewPatch} restaurantReviewPatch The review properties to change.
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    updateReviewRequestOpts(requestParameters: UpdateReviewRequest): Promise<runtime.RequestOpts>;
+    updateRestaurantReviewRequestOpts(requestParameters: UpdateRestaurantReviewRequest): Promise<runtime.RequestOpts>;
 
     /**
      * Only the creator of the review can update it. 
      * @summary Update a review
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
-     * @param {ReviewPatch} reviewPatch The review properties to change.
+     * @param {RestaurantReviewPatch} restaurantReviewPatch The review properties to change.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    updateReviewRaw(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Review>>;
+    updateRestaurantReviewRaw(requestParameters: UpdateRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReview>>;
 
     /**
      * Only the creator of the review can update it. 
      * Update a review
      */
-    updateReview(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review>;
+    updateRestaurantReview(requestParameters: UpdateRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReview>;
 
     /**
-     * Creates request options for updateReviewPhoto without sending the request
+     * Creates request options for updateRestaurantReviewPhoto without sending the request
      * @param {string} restaurantId The ID of the restaurant.
      * @param {string} reviewId The ID of the review.
      * @param {string} photoId The ID of the photo.
@@ -1033,7 +1033,7 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    updateReviewPhotoRequestOpts(requestParameters: UpdateReviewPhotoRequest): Promise<runtime.RequestOpts>;
+    updateRestaurantReviewPhotoRequestOpts(requestParameters: UpdateRestaurantReviewPhotoRequest): Promise<runtime.RequestOpts>;
 
     /**
      * Only the creator of the review can change its photos.
@@ -1046,13 +1046,13 @@ export interface RestaurantsApiInterface {
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
-    updateReviewPhotoRaw(requestParameters: UpdateReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>>;
+    updateRestaurantReviewPhotoRaw(requestParameters: UpdateRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>>;
 
     /**
      * Only the creator of the review can change its photos.
      * Change the alt text of a photo
      */
-    updateReviewPhoto(requestParameters: UpdateReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo>;
+    updateRestaurantReviewPhoto(requestParameters: UpdateRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo>;
 
 }
 
@@ -1062,27 +1062,27 @@ export interface RestaurantsApiInterface {
 export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInterface {
 
     /**
-     * Creates request options for addReviewPhoto without sending the request
+     * Creates request options for addRestaurantReviewPhoto without sending the request
      */
-    async addReviewPhotoRequestOpts(requestParameters: AddReviewPhotoRequest): Promise<runtime.RequestOpts> {
+    async addRestaurantReviewPhotoRequestOpts(requestParameters: AddRestaurantReviewPhotoRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['restaurantId'] == null) {
             throw new runtime.RequiredError(
                 'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling addReviewPhoto().'
+                'Required parameter "restaurantId" was null or undefined when calling addRestaurantReviewPhoto().'
             );
         }
 
         if (requestParameters['reviewId'] == null) {
             throw new runtime.RequiredError(
                 'reviewId',
-                'Required parameter "reviewId" was null or undefined when calling addReviewPhoto().'
+                'Required parameter "reviewId" was null or undefined when calling addRestaurantReviewPhoto().'
             );
         }
 
         if (requestParameters['body'] == null) {
             throw new runtime.RequiredError(
                 'body',
-                'Required parameter "body" was null or undefined when calling addReviewPhoto().'
+                'Required parameter "body" was null or undefined when calling addRestaurantReviewPhoto().'
             );
         }
 
@@ -1115,22 +1115,22 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateReviewPhoto`. 
+     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateRestaurantReviewPhoto`. 
      * Add a photo to a review
      */
-    async addReviewPhotoRaw(requestParameters: AddReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>> {
-        const requestOptions = await this.addReviewPhotoRequestOpts(requestParameters);
+    async addRestaurantReviewPhotoRaw(requestParameters: AddRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>> {
+        const requestOptions = await this.addRestaurantReviewPhotoRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => PhotoFromJSON(jsonValue));
     }
 
     /**
-     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateReviewPhoto`. 
+     * Only the creator of the review can add a photo. A review has at most 5 photos. The body is one JPEG, PNG, or WebP image of at most 10 MB and at most 25 megapixels. The API turns the image upright, makes it smaller, and stores it as JPEG without metadata. Set the alt text with `updateRestaurantReviewPhoto`. 
      * Add a photo to a review
      */
-    async addReviewPhoto(requestParameters: AddReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo> {
-        const response = await this.addReviewPhotoRaw(requestParameters, initOverrides);
+    async addRestaurantReviewPhoto(requestParameters: AddRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo> {
+        const response = await this.addRestaurantReviewPhotoRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1192,20 +1192,20 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Creates request options for createReview without sending the request
+     * Creates request options for createRestaurantReview without sending the request
      */
-    async createReviewRequestOpts(requestParameters: CreateReviewRequest): Promise<runtime.RequestOpts> {
+    async createRestaurantReviewRequestOpts(requestParameters: CreateRestaurantReviewRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['restaurantId'] == null) {
             throw new runtime.RequiredError(
                 'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling createReview().'
+                'Required parameter "restaurantId" was null or undefined when calling createRestaurantReview().'
             );
         }
 
-        if (requestParameters['reviewCreate'] == null) {
+        if (requestParameters['restaurantReviewCreate'] == null) {
             throw new runtime.RequiredError(
-                'reviewCreate',
-                'Required parameter "reviewCreate" was null or undefined when calling createReview().'
+                'restaurantReviewCreate',
+                'Required parameter "restaurantReviewCreate" was null or undefined when calling createRestaurantReview().'
             );
         }
 
@@ -1232,7 +1232,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: ReviewCreateToJSON(requestParameters['reviewCreate']),
+            body: RestaurantReviewCreateToJSON(requestParameters['restaurantReviewCreate']),
         };
     }
 
@@ -1240,19 +1240,19 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * A user can have at most one review per restaurant.
      * Create a review for a restaurant
      */
-    async createReviewRaw(requestParameters: CreateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Review>> {
-        const requestOptions = await this.createReviewRequestOpts(requestParameters);
+    async createRestaurantReviewRaw(requestParameters: CreateRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReview>> {
+        const requestOptions = await this.createRestaurantReviewRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ReviewFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RestaurantReviewFromJSON(jsonValue));
     }
 
     /**
      * A user can have at most one review per restaurant.
      * Create a review for a restaurant
      */
-    async createReview(requestParameters: CreateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review> {
-        const response = await this.createReviewRaw(requestParameters, initOverrides);
+    async createRestaurantReview(requestParameters: CreateRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReview> {
+        const response = await this.createRestaurantReviewRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1311,20 +1311,20 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Creates request options for deleteReview without sending the request
+     * Creates request options for deleteRestaurantReview without sending the request
      */
-    async deleteReviewRequestOpts(requestParameters: DeleteReviewRequest): Promise<runtime.RequestOpts> {
+    async deleteRestaurantReviewRequestOpts(requestParameters: DeleteRestaurantReviewRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['restaurantId'] == null) {
             throw new runtime.RequiredError(
                 'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling deleteReview().'
+                'Required parameter "restaurantId" was null or undefined when calling deleteRestaurantReview().'
             );
         }
 
         if (requestParameters['reviewId'] == null) {
             throw new runtime.RequiredError(
                 'reviewId',
-                'Required parameter "reviewId" was null or undefined when calling deleteReview().'
+                'Required parameter "reviewId" was null or undefined when calling deleteRestaurantReview().'
             );
         }
 
@@ -1357,8 +1357,8 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Only the creator of the review can delete it.
      * Delete a review
      */
-    async deleteReviewRaw(requestParameters: DeleteReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        const requestOptions = await this.deleteReviewRequestOpts(requestParameters);
+    async deleteRestaurantReviewRaw(requestParameters: DeleteRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteRestaurantReviewRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
@@ -1368,32 +1368,32 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Only the creator of the review can delete it.
      * Delete a review
      */
-    async deleteReview(requestParameters: DeleteReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.deleteReviewRaw(requestParameters, initOverrides);
+    async deleteRestaurantReview(requestParameters: DeleteRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deleteRestaurantReviewRaw(requestParameters, initOverrides);
     }
 
     /**
-     * Creates request options for deleteReviewPhoto without sending the request
+     * Creates request options for deleteRestaurantReviewPhoto without sending the request
      */
-    async deleteReviewPhotoRequestOpts(requestParameters: DeleteReviewPhotoRequest): Promise<runtime.RequestOpts> {
+    async deleteRestaurantReviewPhotoRequestOpts(requestParameters: DeleteRestaurantReviewPhotoRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['restaurantId'] == null) {
             throw new runtime.RequiredError(
                 'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling deleteReviewPhoto().'
+                'Required parameter "restaurantId" was null or undefined when calling deleteRestaurantReviewPhoto().'
             );
         }
 
         if (requestParameters['reviewId'] == null) {
             throw new runtime.RequiredError(
                 'reviewId',
-                'Required parameter "reviewId" was null or undefined when calling deleteReviewPhoto().'
+                'Required parameter "reviewId" was null or undefined when calling deleteRestaurantReviewPhoto().'
             );
         }
 
         if (requestParameters['photoId'] == null) {
             throw new runtime.RequiredError(
                 'photoId',
-                'Required parameter "photoId" was null or undefined when calling deleteReviewPhoto().'
+                'Required parameter "photoId" was null or undefined when calling deleteRestaurantReviewPhoto().'
             );
         }
 
@@ -1427,8 +1427,8 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Only the creator of the review can delete its photos.
      * Delete a photo
      */
-    async deleteReviewPhotoRaw(requestParameters: DeleteReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        const requestOptions = await this.deleteReviewPhotoRequestOpts(requestParameters);
+    async deleteRestaurantReviewPhotoRaw(requestParameters: DeleteRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteRestaurantReviewPhotoRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
@@ -1438,8 +1438,8 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Only the creator of the review can delete its photos.
      * Delete a photo
      */
-    async deleteReviewPhoto(requestParameters: DeleteReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.deleteReviewPhotoRaw(requestParameters, initOverrides);
+    async deleteRestaurantReviewPhoto(requestParameters: DeleteRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deleteRestaurantReviewPhotoRaw(requestParameters, initOverrides);
     }
 
     /**
@@ -1496,20 +1496,20 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Creates request options for getReview without sending the request
+     * Creates request options for getRestaurantReview without sending the request
      */
-    async getReviewRequestOpts(requestParameters: GetReviewRequest): Promise<runtime.RequestOpts> {
+    async getRestaurantReviewRequestOpts(requestParameters: GetRestaurantReviewRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['restaurantId'] == null) {
             throw new runtime.RequiredError(
                 'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling getReview().'
+                'Required parameter "restaurantId" was null or undefined when calling getRestaurantReview().'
             );
         }
 
         if (requestParameters['reviewId'] == null) {
             throw new runtime.RequiredError(
                 'reviewId',
-                'Required parameter "reviewId" was null or undefined when calling getReview().'
+                'Required parameter "reviewId" was null or undefined when calling getRestaurantReview().'
             );
         }
 
@@ -1541,50 +1541,50 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     /**
      * Get a review
      */
-    async getReviewRaw(requestParameters: GetReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Review>> {
-        const requestOptions = await this.getReviewRequestOpts(requestParameters);
+    async getRestaurantReviewRaw(requestParameters: GetRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReview>> {
+        const requestOptions = await this.getRestaurantReviewRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ReviewFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RestaurantReviewFromJSON(jsonValue));
     }
 
     /**
      * Get a review
      */
-    async getReview(requestParameters: GetReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review> {
-        const response = await this.getReviewRaw(requestParameters, initOverrides);
+    async getRestaurantReview(requestParameters: GetRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReview> {
+        const response = await this.getRestaurantReviewRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for getReviewPhotoFile without sending the request
+     * Creates request options for getRestaurantReviewPhotoFile without sending the request
      */
-    async getReviewPhotoFileRequestOpts(requestParameters: GetReviewPhotoFileRequest): Promise<runtime.RequestOpts> {
+    async getRestaurantReviewPhotoFileRequestOpts(requestParameters: GetRestaurantReviewPhotoFileRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['restaurantId'] == null) {
             throw new runtime.RequiredError(
                 'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling getReviewPhotoFile().'
+                'Required parameter "restaurantId" was null or undefined when calling getRestaurantReviewPhotoFile().'
             );
         }
 
         if (requestParameters['reviewId'] == null) {
             throw new runtime.RequiredError(
                 'reviewId',
-                'Required parameter "reviewId" was null or undefined when calling getReviewPhotoFile().'
+                'Required parameter "reviewId" was null or undefined when calling getRestaurantReviewPhotoFile().'
             );
         }
 
         if (requestParameters['photoId'] == null) {
             throw new runtime.RequiredError(
                 'photoId',
-                'Required parameter "photoId" was null or undefined when calling getReviewPhotoFile().'
+                'Required parameter "photoId" was null or undefined when calling getRestaurantReviewPhotoFile().'
             );
         }
 
         if (requestParameters['variant'] == null) {
             throw new runtime.RequiredError(
                 'variant',
-                'Required parameter "variant" was null or undefined when calling getReviewPhotoFile().'
+                'Required parameter "variant" was null or undefined when calling getRestaurantReviewPhotoFile().'
             );
         }
 
@@ -1619,8 +1619,8 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Clients use the `urls` of the photo and do not build this path. The file never changes, so clients can cache it for a long time. The operation supports `HEAD`, `If-None-Match`, and `Range`. 
      * Get the image file of a photo
      */
-    async getReviewPhotoFileRaw(requestParameters: GetReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.HttpFile>> {
-        const requestOptions = await this.getReviewPhotoFileRequestOpts(requestParameters);
+    async getRestaurantReviewPhotoFileRaw(requestParameters: GetRestaurantReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.HttpFile>> {
+        const requestOptions = await this.getRestaurantReviewPhotoFileRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.BlobApiResponse(response);
@@ -1630,15 +1630,15 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Clients use the `urls` of the photo and do not build this path. The file never changes, so clients can cache it for a long time. The operation supports `HEAD`, `If-None-Match`, and `Range`. 
      * Get the image file of a photo
      */
-    async getReviewPhotoFile(requestParameters: GetReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.HttpFile> {
-        const response = await this.getReviewPhotoFileRaw(requestParameters, initOverrides);
+    async getRestaurantReviewPhotoFile(requestParameters: GetRestaurantReviewPhotoFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.HttpFile> {
+        const response = await this.getRestaurantReviewPhotoFileRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for listAllReviews without sending the request
+     * Creates request options for listAllRestaurantReviews without sending the request
      */
-    async listAllReviewsRequestOpts(requestParameters: ListAllReviewsRequest): Promise<runtime.RequestOpts> {
+    async listAllRestaurantReviewsRequestOpts(requestParameters: ListAllRestaurantReviewsRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         if (requestParameters['limit'] != null) {
@@ -1716,7 +1716,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             }
         }
 
-        let urlPath = `/reviews`;
+        let urlPath = `/restaurant-reviews`;
 
         return {
             path: urlPath,
@@ -1727,22 +1727,22 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. `listReviewerReviews` also gives the reviews of one user. It returns `404` for an unknown user. 
+     * The same filters, sorts, and pages as `listRestaurantReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. `listReviewerRestaurantReviews` also gives the reviews of one user. It returns `404` for an unknown user. 
      * List the reviews of all restaurants
      */
-    async listAllReviewsRaw(requestParameters: ListAllReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReviewList>> {
-        const requestOptions = await this.listAllReviewsRequestOpts(requestParameters);
+    async listAllRestaurantReviewsRaw(requestParameters: ListAllRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReviewList>> {
+        const requestOptions = await this.listAllRestaurantReviewsRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ReviewListFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RestaurantReviewListFromJSON(jsonValue));
     }
 
     /**
-     * The same filters, sorts, and pages as `listReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. `listReviewerReviews` also gives the reviews of one user. It returns `404` for an unknown user. 
+     * The same filters, sorts, and pages as `listRestaurantReviews`, for the reviews of all restaurants. `restaurant[eq]` and `restaurant[in]` select restaurants. `creator[eq]` gives the reviews of one user. `listReviewerRestaurantReviews` also gives the reviews of one user. It returns `404` for an unknown user. 
      * List the reviews of all restaurants
      */
-    async listAllReviews(requestParameters: ListAllReviewsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReviewList> {
-        const response = await this.listAllReviewsRaw(requestParameters, initOverrides);
+    async listAllRestaurantReviews(requestParameters: ListAllRestaurantReviewsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReviewList> {
+        const response = await this.listAllRestaurantReviewsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1806,6 +1806,115 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      */
     async listRestaurantPhotos(requestParameters: ListRestaurantPhotosRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantPhotoList> {
         const response = await this.listRestaurantPhotosRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listRestaurantReviews without sending the request
+     */
+    async listRestaurantReviewsRequestOpts(requestParameters: ListRestaurantReviewsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['restaurantId'] == null) {
+            throw new runtime.RequiredError(
+                'restaurantId',
+                'Required parameter "restaurantId" was null or undefined when calling listRestaurantReviews().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        if (requestParameters['sort'] != null) {
+            queryParameters['sort'] = requestParameters['sort'];
+        }
+
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
+        }
+
+        if (requestParameters['space'] != null) {
+            queryParameters['space'] = requestParameters['space'];
+        }
+
+        if (requestParameters['service'] != null) {
+            queryParameters['service'] = requestParameters['service'];
+        }
+
+        if (requestParameters['food'] != null) {
+            queryParameters['food'] = requestParameters['food'];
+        }
+
+        if (requestParameters['price'] != null) {
+            queryParameters['price'] = requestParameters['price'];
+        }
+
+        if (requestParameters['cleanliness'] != null) {
+            queryParameters['cleanliness'] = requestParameters['cleanliness'];
+        }
+
+        if (requestParameters['overall'] != null) {
+            queryParameters['overall'] = requestParameters['overall'];
+        }
+
+        if (requestParameters['created'] != null) {
+            queryParameters['created'] = requestParameters['created'];
+        }
+
+        if (requestParameters['updated'] != null) {
+            queryParameters['updated'] = requestParameters['updated'];
+        }
+
+        if (requestParameters['creatorEq'] != null) {
+            queryParameters['creator[eq]'] = requestParameters['creatorEq'];
+        }
+
+        if (requestParameters['creatorIn'] != null) {
+            queryParameters['creator[in]'] = requestParameters['creatorIn'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/restaurants/{restaurantId}/reviews`;
+        urlPath = urlPath.replace('{restaurantId}', encodeURIComponent(String(requestParameters['restaurantId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List the reviews of a restaurant
+     */
+    async listRestaurantReviewsRaw(requestParameters: ListRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReviewList>> {
+        const requestOptions = await this.listRestaurantReviewsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RestaurantReviewListFromJSON(jsonValue));
+    }
+
+    /**
+     * List the reviews of a restaurant
+     */
+    async listRestaurantReviews(requestParameters: ListRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReviewList> {
+        const response = await this.listRestaurantReviewsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1919,115 +2028,6 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Creates request options for listReviews without sending the request
-     */
-    async listReviewsRequestOpts(requestParameters: ListReviewsRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['restaurantId'] == null) {
-            throw new runtime.RequiredError(
-                'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling listReviews().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        if (requestParameters['limit'] != null) {
-            queryParameters['limit'] = requestParameters['limit'];
-        }
-
-        if (requestParameters['cursor'] != null) {
-            queryParameters['cursor'] = requestParameters['cursor'];
-        }
-
-        if (requestParameters['sort'] != null) {
-            queryParameters['sort'] = requestParameters['sort'];
-        }
-
-        if (requestParameters['search'] != null) {
-            queryParameters['search'] = requestParameters['search'];
-        }
-
-        if (requestParameters['space'] != null) {
-            queryParameters['space'] = requestParameters['space'];
-        }
-
-        if (requestParameters['service'] != null) {
-            queryParameters['service'] = requestParameters['service'];
-        }
-
-        if (requestParameters['food'] != null) {
-            queryParameters['food'] = requestParameters['food'];
-        }
-
-        if (requestParameters['price'] != null) {
-            queryParameters['price'] = requestParameters['price'];
-        }
-
-        if (requestParameters['cleanliness'] != null) {
-            queryParameters['cleanliness'] = requestParameters['cleanliness'];
-        }
-
-        if (requestParameters['overall'] != null) {
-            queryParameters['overall'] = requestParameters['overall'];
-        }
-
-        if (requestParameters['created'] != null) {
-            queryParameters['created'] = requestParameters['created'];
-        }
-
-        if (requestParameters['updated'] != null) {
-            queryParameters['updated'] = requestParameters['updated'];
-        }
-
-        if (requestParameters['creatorEq'] != null) {
-            queryParameters['creator[eq]'] = requestParameters['creatorEq'];
-        }
-
-        if (requestParameters['creatorIn'] != null) {
-            queryParameters['creator[in]'] = requestParameters['creatorIn'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("bearerAuth", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/restaurants/{restaurantId}/reviews`;
-        urlPath = urlPath.replace('{restaurantId}', encodeURIComponent(String(requestParameters['restaurantId'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * List the reviews of a restaurant
-     */
-    async listReviewsRaw(requestParameters: ListReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReviewList>> {
-        const requestOptions = await this.listReviewsRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => ReviewListFromJSON(jsonValue));
-    }
-
-    /**
-     * List the reviews of a restaurant
-     */
-    async listReviews(requestParameters: ListReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReviewList> {
-        const response = await this.listReviewsRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
      * Creates request options for updateRestaurant without sending the request
      */
     async updateRestaurantRequestOpts(requestParameters: UpdateRestaurantRequest): Promise<runtime.RequestOpts> {
@@ -2093,27 +2093,27 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
     }
 
     /**
-     * Creates request options for updateReview without sending the request
+     * Creates request options for updateRestaurantReview without sending the request
      */
-    async updateReviewRequestOpts(requestParameters: UpdateReviewRequest): Promise<runtime.RequestOpts> {
+    async updateRestaurantReviewRequestOpts(requestParameters: UpdateRestaurantReviewRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['restaurantId'] == null) {
             throw new runtime.RequiredError(
                 'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling updateReview().'
+                'Required parameter "restaurantId" was null or undefined when calling updateRestaurantReview().'
             );
         }
 
         if (requestParameters['reviewId'] == null) {
             throw new runtime.RequiredError(
                 'reviewId',
-                'Required parameter "reviewId" was null or undefined when calling updateReview().'
+                'Required parameter "reviewId" was null or undefined when calling updateRestaurantReview().'
             );
         }
 
-        if (requestParameters['reviewPatch'] == null) {
+        if (requestParameters['restaurantReviewPatch'] == null) {
             throw new runtime.RequiredError(
-                'reviewPatch',
-                'Required parameter "reviewPatch" was null or undefined when calling updateReview().'
+                'restaurantReviewPatch',
+                'Required parameter "restaurantReviewPatch" was null or undefined when calling updateRestaurantReview().'
             );
         }
 
@@ -2141,7 +2141,7 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             method: 'PATCH',
             headers: headerParameters,
             query: queryParameters,
-            body: ReviewPatchToJSON(requestParameters['reviewPatch']),
+            body: RestaurantReviewPatchToJSON(requestParameters['restaurantReviewPatch']),
         };
     }
 
@@ -2149,51 +2149,51 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Only the creator of the review can update it. 
      * Update a review
      */
-    async updateReviewRaw(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Review>> {
-        const requestOptions = await this.updateReviewRequestOpts(requestParameters);
+    async updateRestaurantReviewRaw(requestParameters: UpdateRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantReview>> {
+        const requestOptions = await this.updateRestaurantReviewRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ReviewFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RestaurantReviewFromJSON(jsonValue));
     }
 
     /**
      * Only the creator of the review can update it. 
      * Update a review
      */
-    async updateReview(requestParameters: UpdateReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Review> {
-        const response = await this.updateReviewRaw(requestParameters, initOverrides);
+    async updateRestaurantReview(requestParameters: UpdateRestaurantReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReview> {
+        const response = await this.updateRestaurantReviewRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for updateReviewPhoto without sending the request
+     * Creates request options for updateRestaurantReviewPhoto without sending the request
      */
-    async updateReviewPhotoRequestOpts(requestParameters: UpdateReviewPhotoRequest): Promise<runtime.RequestOpts> {
+    async updateRestaurantReviewPhotoRequestOpts(requestParameters: UpdateRestaurantReviewPhotoRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['restaurantId'] == null) {
             throw new runtime.RequiredError(
                 'restaurantId',
-                'Required parameter "restaurantId" was null or undefined when calling updateReviewPhoto().'
+                'Required parameter "restaurantId" was null or undefined when calling updateRestaurantReviewPhoto().'
             );
         }
 
         if (requestParameters['reviewId'] == null) {
             throw new runtime.RequiredError(
                 'reviewId',
-                'Required parameter "reviewId" was null or undefined when calling updateReviewPhoto().'
+                'Required parameter "reviewId" was null or undefined when calling updateRestaurantReviewPhoto().'
             );
         }
 
         if (requestParameters['photoId'] == null) {
             throw new runtime.RequiredError(
                 'photoId',
-                'Required parameter "photoId" was null or undefined when calling updateReviewPhoto().'
+                'Required parameter "photoId" was null or undefined when calling updateRestaurantReviewPhoto().'
             );
         }
 
         if (requestParameters['photoPatch'] == null) {
             throw new runtime.RequiredError(
                 'photoPatch',
-                'Required parameter "photoPatch" was null or undefined when calling updateReviewPhoto().'
+                'Required parameter "photoPatch" was null or undefined when calling updateRestaurantReviewPhoto().'
             );
         }
 
@@ -2230,8 +2230,8 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Only the creator of the review can change its photos.
      * Change the alt text of a photo
      */
-    async updateReviewPhotoRaw(requestParameters: UpdateReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>> {
-        const requestOptions = await this.updateReviewPhotoRequestOpts(requestParameters);
+    async updateRestaurantReviewPhotoRaw(requestParameters: UpdateRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Photo>> {
+        const requestOptions = await this.updateRestaurantReviewPhotoRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => PhotoFromJSON(jsonValue));
@@ -2241,8 +2241,8 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      * Only the creator of the review can change its photos.
      * Change the alt text of a photo
      */
-    async updateReviewPhoto(requestParameters: UpdateReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo> {
-        const response = await this.updateReviewPhotoRaw(requestParameters, initOverrides);
+    async updateRestaurantReviewPhoto(requestParameters: UpdateRestaurantReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Photo> {
+        const response = await this.updateRestaurantReviewPhotoRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -2251,8 +2251,8 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
 /**
  * @export
  */
-export const GetReviewPhotoFileVariantEnum = {
+export const GetRestaurantReviewPhotoFileVariantEnum = {
     Full: 'full',
     Thumb: 'thumb',
 } as const;
-export type GetReviewPhotoFileVariantEnum = typeof GetReviewPhotoFileVariantEnum[keyof typeof GetReviewPhotoFileVariantEnum];
+export type GetRestaurantReviewPhotoFileVariantEnum = typeof GetRestaurantReviewPhotoFileVariantEnum[keyof typeof GetRestaurantReviewPhotoFileVariantEnum];
