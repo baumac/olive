@@ -1,26 +1,26 @@
 ---
-description: Create a self-hosted app to save, review, and share our food experiences.
+description: Create a self-hosted app to save, review, and share food experiences.
 status: implemented
 ---
 
 # Motivation
 [motivation]: #motivation
 
-My wife and I are foodies.
+My partner and I are foodies.
 We love to cook, to eat, and to try all kinds of food.
-We want to remember all of our food experiences.
+We want to remember and share all of our food experiences.
 These include recipes, restaurants, wines, and cheeses.
 We want one app to save each experience and to review it.
 
-We also want to share our food experiences with close friends, family, and fellow foodies.
-Then we can compare our experiences and suggest new things to each other.
+We also want to share our food experiences with others including close friends, family, and fellow foodies. Through this app we want to be able to compare our experiences and suggest new things to each other.
 
 Expected outcome:
-- We can save and score our food experiences.
-- We can find a past experience again with search, filters, and sort.
-- Friends and family can make an account, write their own reviews, and read ours.
-- We can share lists of our favorite things with each other.
-- The app runs on our home server at a low cost and needs little maintenance.
+- Users can save and review food experiences
+- Users can recall past food experience
+- Users can search for new food experiences 
+- Users can make an account, write their own reviews, and read others
+- Users can share lists of their favorite things
+- The app is hosted on our home server
 
 # Scope
 [scope]: #scope
