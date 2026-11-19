@@ -27,7 +27,7 @@ Out of scope:
 - the `overall` filter. It compares `rating.overall`, the value that the response shows.
 - the `overall` sort of the review lists. One review has one value.
 - a prior from the average of all reviews. See the alternatives.
-- the UI. It does not show the ranking value.
+- a UI change. The UI does not show the ranking value. See the UI section.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -55,6 +55,18 @@ A restaurant without reviews is last in both directions, as before.
 The order can differ from the order of the `rating.overall` values on the page.
 The spec tells this in the description of the `sort` parameter.
 The ranking of a restaurant with few reviews is near 5.5. It is not near the middle of the list.
+
+## UI
+
+The "Highest rated" sort of the restaurant list uses `sort=-overall`.
+The UI does not tell users that this order also uses the number of reviews.
+It has no help text, no tooltip, and no other label for this sort.
+
+Each restaurant card shows the average score and the number of reviews.
+A user can see that a restaurant with 1 review of 10 is below a restaurant with 200 reviews of 9.4.
+Many review sites use a "Highest rated" label for an order of this type.
+
+The recipe list has the same sort and the same cards. See decision 00047.
 
 # Implementation Details
 [implementation-details]: #implementation-details
@@ -105,6 +117,11 @@ A weight of 5 is small. A restaurant with 20 reviews has a ranking near its aver
 A site with many reviews for each restaurant can need a larger weight.
 
 ## Alternatives
+
+- **A help text or a tooltip on the "Highest rated" sort.** A tooltip does not work on touch screens.
+  A help text adds a line to the filter bar of each list. The review count on each card gives the same fact.
+- **A different label, such as "Best and most reviewed".** It is longer than the other sort labels.
+  The review sorts also have "Highest rated" for the plain `overall` value of one review.
 
 - **The average of all reviews as the prior.** This is the usual form of the Bayesian average.
   Each new review changes the average of all reviews. The ranking of each restaurant then changes.
