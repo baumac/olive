@@ -6,11 +6,13 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 # Backlog
 
+## For claude
+- generate list of unresolved questions and resolve them with the user
+- Undo decision 00021-add-structured-data-and-a-sitemap.md to add structured data and a sitemap for search engines
+- review all decisions against decision 00000-create-reviews-app.md and generate a list of all potential decisions that go against it
+
 ## For Me
-- write 00000-create-reviews-app decision doc that covers the decision to create the app, its intended users, and what it does/does not need to do
-  - rename and/or move the backlog doc to the /docs directory
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
-- review features such as SEO, and social features that don't align with the 00000-create-reviews-app
 - deploy to prod
 
 ## Won't do
