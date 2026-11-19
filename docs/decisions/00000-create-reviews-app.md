@@ -26,10 +26,11 @@ Expected outcome:
 [scope]: #scope
 
 In scope:
-- The goal of the app and its users
-- The kinds of things that users review
-- The parts of the app: an API, a UI, and an admin dashboard
-- Self-hosting on our home server
+- Defining the goal of the app
+- Defining the users of the app
+- Defining the things that can be reviewed
+- Defining the parts of the app: an API, a UI, and an admin dashboard
+- Defining how and where the app will be hosted
 
 Out of scope:
 - The choice of technology. Later decisions cover it. See [Implementation Details](#implementation-details).
