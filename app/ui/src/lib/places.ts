@@ -16,11 +16,15 @@ export function sameLocation(a: Location | null, b: Location | null): boolean {
   return a.latitude === b.latitude && a.longitude === b.longitude && a.address === b.address && (a.placeId ?? '') === (b.placeId ?? '')
 }
 
+const decimal = String.raw`-?\d+(?:\.\d+)?`
+const decimalOnly = new RegExp(`^${decimal}$`)
+const mapPositionPattern = new RegExp(`^(${decimal}),(${decimal}),(${decimal})$`)
+
 // parseCoordinate reads a decimal number with a point or a comma. It returns
 // null for a value outside of -max to max.
 export function parseCoordinate(text: string, max: number): number | null {
   const t = text.trim().replace(',', '.')
-  if (!/^-?\d+(\.\d+)?$/.test(t)) {
+  if (!decimalOnly.test(t)) {
     return null
   }
   const n = Number(t)
@@ -56,9 +60,10 @@ export function mapBox(view: Box): Box {
   return { west: wrapLongitude(view.west), south, east: wrapLongitude(view.east), north }
 }
 
-// roundCoordinate keeps 6 decimals. This is about 0.1 meters.
-export function roundCoordinate(v: number): number {
-  return Math.round(v * 1e6) / 1e6
+// roundCoordinate keeps 6 decimals by default. This is about 0.1 meters.
+export function roundCoordinate(v: number, decimals = 6): number {
+  const f = 10 ** decimals
+  return Math.round(v * f) / f
 }
 
 // directionsLink has the point as the destination of a route. A phone opens
@@ -78,4 +83,41 @@ export function directionsLink(l: { latitude: number; longitude: number }, userA
 // osmLink opens OpenStreetMap with a marker at the point.
 export function osmLink(l: { latitude: number; longitude: number }): string {
   return `https://www.openstreetmap.org/?mlat=${l.latitude}&mlon=${l.longitude}#map=18/${l.latitude}/${l.longitude}`
+}
+
+// MapPosition is the view of the map in the `at` query key of the URL.
+export interface MapPosition {
+  center: { latitude: number; longitude: number }
+  zoom: number
+}
+
+// The zoom limits of MapView.
+export const minMapZoom = 2
+export const maxMapZoom = 19
+
+// 5 decimals are about 1 meter.
+const mapDecimals = 5
+
+// formatMapPosition gives the value `latitude,longitude,zoom`.
+export function formatMapPosition(p: MapPosition): string {
+  const latitude = roundCoordinate(p.center.latitude, mapDecimals)
+  const longitude = roundCoordinate(wrapLongitude(p.center.longitude), mapDecimals)
+  return `${latitude},${longitude},${Math.round(p.zoom)}`
+}
+
+// parseMapPosition returns null for a value that is not a position. It
+// clamps the zoom to the limits of the map.
+export function parseMapPosition(text: string | undefined): MapPosition | null {
+  const m = mapPositionPattern.exec(text ?? '')
+  if (!m) {
+    return null
+  }
+  const [latitude, longitude, zoom] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  if (Math.abs(latitude) > 90 || !Number.isFinite(longitude)) {
+    return null
+  }
+  return {
+    center: { latitude: roundCoordinate(latitude, mapDecimals), longitude: roundCoordinate(wrapLongitude(longitude), mapDecimals) },
+    zoom: Math.min(maxMapZoom, Math.max(minMapZoom, Math.round(zoom))),
+  }
 }

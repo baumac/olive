@@ -12,16 +12,16 @@ import { FilterBar } from '@/components/ui/filter-bar'
 import type { MapPoint } from '@/components/ui/map'
 import { MapView } from '@/components/ui/map'
 import { useListFilter } from '@/composables/useListFilter'
-import { searchRelevance, useListQuery } from '@/composables/useListQuery'
+import { firstQueryValue, searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import type { MapConfig } from '@/lib/mapConfig'
 import { loadMapConfig } from '@/lib/mapConfig'
-import type { Box } from '@/lib/places'
-import { mapBox } from '@/lib/places'
-import { formatRadius, homePoint, preferredLocation, setPreferredLocation } from '@/lib/preferredLocation'
+import type { Box, MapPosition } from '@/lib/places'
+import { formatMapPosition, mapBox, parseMapPosition } from '@/lib/places'
+import { distanceMeters, formatRadius, homePoint, preferredLocation, setPreferredLocation } from '@/lib/preferredLocation'
 import { nearestSort, oldRestaurantSortOptions, restaurantFilterDefs, restaurantFilterParams, restaurantSortOptions } from '@/lib/restaurantFilters'
 import { currentUser } from '@/lib/session'
 
@@ -54,7 +54,7 @@ const { filters, sort, active, sortOptions } = useListQuery(
   () => (origin.value ? [nearestSort, ...restaurantSortOptions] : restaurantSortOptions),
   () => (origin.value ? nearestSort.value : '-overall'),
   searchRelevance,
-  ['view'],
+  ['view', 'at'],
   oldRestaurantSortOptions,
 )
 // filterKey changes only with the values. A load of the lists of the user
@@ -78,6 +78,7 @@ function show(view: 'list' | 'map') {
     query.view = 'map'
   } else {
     delete query.view
+    delete query.at
   }
   void router.replace({ query })
 }
@@ -147,11 +148,36 @@ async function loadMap() {
 }
 
 // The delay waits for the end of a pan or a zoom with more than one step.
-function moved(next: Box, center: MapPoint, zoom: number) {
+function moved(next: Box, center: MapPoint, zoom: number, byUser: boolean) {
   box.value = next
   lastView = { center, zoom }
+  movedHere = true
   clearTimeout(moveTimer)
-  moveTimer = setTimeout(() => void loadMap(), 300)
+  moveTimer = setTimeout(() => {
+    savePosition({ center, zoom }, byUser)
+    void loadMap()
+  }, 300)
+}
+
+// savePosition keeps only a view of the user in the URL. A view with the
+// preferred location in its center is not one. A link then does not show
+// this location.
+function savePosition(position: MapPosition, byUser: boolean) {
+  const at = formatMapPosition(position)
+  const current = firstQueryValue(route.query.at)
+  const linked = parseMapPosition(current)
+  const atHome = preferredLocation.value !== null && distanceMeters(position.center, homePoint()) < 2
+  const next = (byUser && !atHome) || (linked && formatMapPosition(linked) === at) ? at : undefined
+  if (!mapView.value || next === current) {
+    return
+  }
+  const query = { ...route.query }
+  if (next) {
+    query.at = next
+  } else {
+    delete query.at
+  }
+  void router.replace({ query })
 }
 
 watch([filterKey, sort], () => mapView.value && void loadMap())
@@ -159,9 +185,21 @@ watch([filterKey, sort], () => mapView.value && void loadMap())
 // fit is the box of the located restaurants of the list filter. The map
 // moves to it. The list can be far from the preferred location.
 const fit = ref<Box | null>(null)
+// linkedList is the list of a link with a position. The map then stays at
+// this position.
+let linkedList = route.query.at === undefined ? undefined : firstQueryValue(route.query.list)
+watch(listId, (id) => {
+  if (id !== undefined && id !== linkedList) {
+    linkedList = undefined
+  }
+})
 async function frameList() {
   const id = listId.value
   if (!id || !mapView.value) {
+    return
+  }
+  if (id === linkedList) {
+    linkedList = undefined
     return
   }
   try {
@@ -193,8 +231,18 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
 onBeforeUnmount(() => clearTimeout(moveTimer))
 
 // startView changes only with the preferred location. A new center moves
-// the map and starts a new load.
-const startView = ref(lastView ?? { center: homePoint(), zoom: 13 })
+// the map and starts a new load. A later change of `at` does not move the
+// map. The map itself writes it.
+const linkedPosition = parseMapPosition(firstQueryValue(route.query.at))
+const startView = ref(linkedPosition ?? lastView ?? { center: homePoint(), zoom: 13 })
+// movedHere is true after a move of the map on this page. A switch back to
+// the map view then opens at lastView.
+let movedHere = false
+watch(mapView, (on) => {
+  if (on && movedHere && lastView) {
+    startView.value = lastView
+  }
+})
 watch(
   () => preferredLocation.value && `${preferredLocation.value.latitude},${preferredLocation.value.longitude}`,
   (point) => {

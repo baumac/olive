@@ -9,7 +9,7 @@ import { saveDraft } from '@/lib/drafts'
 import { clearSession, saveSession } from '@/lib/session'
 import RestaurantFormPage from '@/pages/RestaurantFormPage.vue'
 import { loadMapConfig, resetMapConfig } from '@/lib/mapConfig'
-import { mapBox, osmLink, parseCoordinate, roundCoordinate, sameLocation } from '@/lib/places'
+import { formatMapPosition, mapBox, osmLink, parseCoordinate, parseMapPosition, roundCoordinate, sameLocation } from '@/lib/places'
 import { expectAccessible } from './axe'
 
 const canSole: Place = {
@@ -72,6 +72,22 @@ describe('maps', () => {
     expect(mapBox({ west: 100, south: 0, east: 180, north: 10 })).toEqual({ west: 100, south: 0, east: 180, north: 10 })
     // A view that moved by one world is the same box.
     expect(mapBox({ west: 362.1, south: 41.3, east: 362.2, north: 41.4 }).west).toBeCloseTo(2.1)
+  })
+
+  it('writes the position of a map for the URL', () => {
+    expect(formatMapPosition({ center: { latitude: 41.387412345, longitude: 2.168601 }, zoom: 13 })).toBe('41.38741,2.1686,13')
+    expect(formatMapPosition({ center: { latitude: -33.9, longitude: 190 }, zoom: 4.6 })).toBe('-33.9,-170,5')
+  })
+
+  it('reads the position of a map from the URL', () => {
+    expect(parseMapPosition('41.3874,2.1686,13')).toEqual({ center: { latitude: 41.3874, longitude: 2.1686 }, zoom: 13 })
+    expect(parseMapPosition('41.387412345,-190,25')).toEqual({ center: { latitude: 41.38741, longitude: 170 }, zoom: 19 })
+    expect(parseMapPosition('0,0,0')).toEqual({ center: { latitude: 0, longitude: 0 }, zoom: 2 })
+    for (const bad of [undefined, '', '41.3,2.1', '41.3,2.1,13,1', '91,2,13', 'a,b,c', '1e2,2,13', '41.3,,13', ' 41.3,2.1,13']) {
+      expect(parseMapPosition(bad)).toBeNull()
+    }
+    const p = parseMapPosition('41.38741,2.1686,13')
+    expect(p && formatMapPosition(p)).toBe('41.38741,2.1686,13')
   })
 
   it('rounds a coordinate to 6 decimals', () => {

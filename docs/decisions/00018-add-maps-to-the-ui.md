@@ -50,7 +50,16 @@ Restaurants page:
 - a click on a pin shows the card of the restaurant under the map. Enter and Space on a pin do the same.
 - the map shows at most 100 restaurants. The status then says "zoom in to see more".
 - a restaurant without a location is only in the list. A text under the map says this.
-- the map opens with its last view when the user comes back to the page, until a reload
+- a pan or a zoom puts the position of the map in the URL, such as `at=41.3874,2.1686,13`. A reload and a link then open this view.
+- the URL has no position before the first pan or zoom. A link then does not show the preferred location of decision 00035.
+- a view with the preferred location in its center gets no position, also after a zoom. A pan or a zoom at the mouse moves the center.
+- the map opens at the first of these views:
+  1. the `at` position of the URL
+  2. the last view of the map before the user left the page or the map view, until a reload
+  3. the restaurants of a list filter
+  4. the preferred location of decision 00035
+  5. the center of Barcelona
+- decision 00035 gives the preferred start of the map. A person sets it with "Set location".
 
 Restaurant form:
 - a selected place shows on a small map
@@ -130,16 +139,28 @@ GET /v1/restaurants?within[west]=2.1&within[south]=41.3&within[east]=2.2&within[
 - a failed request of the map config is not kept. The next map tries again.
 - `useListQuery` gets a list of query keys that a filter change keeps. The restaurants page keeps `view`.
 - a click on the map in the form rounds the coordinates to 6 decimals, about 0.1 meters
+- `formatMapPosition` and `parseMapPosition` in `app/ui/src/lib/places.ts` write and read `at`. They round to 5 decimals, about 1 meter.
+- `parseMapPosition` changes the longitude to -180 to 180 and limits the zoom to 2 to 19. Any other wrong value gives no position.
+- the `move` event of `MapView` tells if the user moved the map. A move to `center` or to `fit` is a move of the app.
+- before a move of the app, `MapView` stops a running pan of the user, such as the glide after a drag. It finds this pan with the class `leaflet-pan-anim` of Leaflet. A Leaflet update needs a check.
+- the page writes `at` after a move of the user, with the 0.3 second delay of the load. The last move in the delay decides. `at` then always gives the current view. It replaces the history entry. The back button then leaves the page.
+- a move of the app removes `at`, for example to a new preferred location. A move of the app to the view of `at` keeps it.
+- a change of `at` does not move the map. Only the map writes it.
+- `useListQuery` keeps `at` after a filter change. The list view removes it.
+- a link with `at` and a list filter does not move the map to the list. A selection of a different list, also later the same list again, does.
+- a switch from the list view to the map view opens the map at its last view on the page
 
 ## Tests
 
 - `location_test.go` tests the `within` filter with a box across the 180th meridian
 - `webui_test.go` tests `TileOrigin`, the policy with the tile origin, and `/map-config.json`
-- `app/ui/test/location.test.ts` tests `mapBox`, the config loader, and the other helpers. jsdom has no layout, so it does not test `MapView`.
+- `app/ui/test/location.test.ts` tests `mapBox`, `parseMapPosition`, the config loader, and the other helpers. jsdom has no layout, so it does not test `MapView`.
 - the fake server of `tests/photon.ts` gives one gray tile for each path under `/tiles`. The end-to-end tests need no network.
 - `tests/e2e/maps.spec.ts` tests the three maps: the pin and the credit, the map view with filters and the keyboard, and the click that sets the point
 - it also checks that an open map view sends no request without a move, and that a second click at one place gives the same point
 - the `noCspViolations` fixture of decision 00005 runs in each of these tests, also during a zoom
+- it also checks `at`: no position for a zoom at the preferred location, the same view after a reload, a link, and the list view, and a wrong `at`
+- a new preferred location removes `at`. A link with `at` and a list filter does not move the map to the list.
 - `accessibility.spec.ts` runs axe on the map view
 - one manual check with the real tiles of OpenStreetMap showed the map of Barcelona with both pins
 

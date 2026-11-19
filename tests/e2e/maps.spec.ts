@@ -154,6 +154,103 @@ test('a location of the device puts the nearest restaurants first', async ({ pag
   await expect(page.getByText('The blue dot is your location.')).toHaveCount(0)
 })
 
+const madrid = { latitude: 40.4168, longitude: -3.7038, address: 'Calle Mayor 1, Madrid' }
+const madridAt = /at=40\.4168(,|%2C)-3\.7038(,|%2C)13/
+
+test('the map view keeps its position in the URL', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const tag = uniqueTag('at')
+  await api.createRestaurant(owner, { name: 'Can Sole', tags: [tag], location: barceloneta })
+  await api.createRestaurant(owner, { name: 'Casa Mayor', tags: [tag], location: madrid })
+  await page.addInitScript(() => {
+    localStorage.setItem('reviews-location', JSON.stringify({ latitude: 41.3766, longitude: 2.1893, label: 'Barceloneta', radius: null }))
+  })
+  const map = page.getByRole('region', { name: 'Map of the restaurants' })
+
+  // A zoom keeps the preferred location in the center. The URL then does
+  // not show it.
+  await page.goto(`/restaurants?tags=${tag}&view=map`)
+  await expect(map.getByRole('button', { name: 'Can Sole' })).toBeVisible()
+  await expect(page.getByText('1 restaurant on the map')).toBeVisible()
+  await map.getByRole('button', { name: 'Zoom in' }).click()
+  await expect(page.getByText('1 restaurant on the map')).toBeVisible()
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- The test checks that the URL does not change in this time.
+  await page.waitForTimeout(1000)
+  await expect(page).not.toHaveURL(/at=/)
+
+  await map.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(page).toHaveURL(/at=41\.\d+(,|%2C)2\.\d+(,|%2C)14$/)
+  const at = new URL(page.url()).searchParams.get('at')
+  await page.reload()
+  await expect(map.getByRole('button', { name: 'Can Sole' })).toBeVisible()
+  expect(new URL(page.url()).searchParams.get('at')).toBe(at)
+
+  // The map view opens again at the last view after the list view, not at
+  // the view of the link.
+  await map.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect.poll(() => new URL(page.url()).searchParams.get('at')).not.toBe(at)
+  const moved = new URL(page.url()).searchParams.get('at')
+  await page.getByRole('button', { name: 'List', exact: true }).click()
+  await expect(page).not.toHaveURL(/at=|view=map/)
+  await page.getByRole('button', { name: 'Map', exact: true }).click()
+  await expect(map.getByRole('button', { name: 'Can Sole' })).toBeVisible()
+  await map.focus()
+  await page.keyboard.press('ArrowUp')
+  await expect(page).toHaveURL(/at=41\.\d+(,|%2C)2\.\d+(,|%2C)14$/)
+  expect(new URL(page.url()).searchParams.get('at')?.split(',')[1]).toBe(moved?.split(',')[1])
+
+  // A link opens at its position, not at the preferred location.
+  await page.goto(`/restaurants?tags=${tag}&view=map&at=40.4168,-3.7038,13`)
+  await expect(map.getByRole('button', { name: 'Casa Mayor' })).toBeVisible()
+  await expect(map.getByRole('button', { name: 'Can Sole' })).toHaveCount(0)
+  await page.getByRole('searchbox', { name: 'Search restaurants' }).fill('casa')
+  await expect(page).toHaveURL(/search=casa/)
+  await expect(page).toHaveURL(madridAt)
+
+  // A position that is not valid gives the preferred location.
+  await page.goto(`/restaurants?tags=${tag}&view=map&at=north`)
+  await expect(map.getByRole('button', { name: 'Can Sole' })).toBeVisible()
+  await expect(page).not.toHaveURL(/at=/)
+})
+
+test('a new location removes the position of the map from the URL', async ({ page, api, context }) => {
+  const owner = await api.signUp('Joe')
+  const tag = uniqueTag('at-move')
+  await api.createRestaurant(owner, { name: 'Can Sole', tags: [tag], location: barceloneta })
+  await api.createRestaurant(owner, { name: 'Casa Mayor', tags: [tag], location: madrid })
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: barceloneta.latitude, longitude: barceloneta.longitude })
+  const map = page.getByRole('region', { name: 'Map of the restaurants' })
+
+  await page.goto(`/restaurants?tags=${tag}&view=map&at=40.4168,-3.7038,13`)
+  await expect(map.getByRole('button', { name: 'Casa Mayor' })).toBeVisible()
+  await page.getByRole('button', { name: 'Set location' }).click()
+  await page.getByRole('button', { name: 'Use my current location' }).click()
+  await expect(map.getByRole('button', { name: 'Can Sole' })).toBeVisible()
+  await expect(page).not.toHaveURL(/at=/)
+})
+
+test('a link with a list and a position does not frame the list', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const list = await api.createList(owner, 'Trip')
+  const sole = await api.createRestaurant(owner, { name: 'Sole Trip', location: barceloneta })
+  await api.addToList(owner, list.id, sole.id)
+  const map = page.getByRole('region', { name: 'Map of the restaurants' })
+
+  await page.goto(`/restaurants?list=${list.id}&view=map&at=40.4168,-3.7038,13`)
+  await expect(page.getByText('0 restaurants on the map')).toBeVisible()
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- The test checks that the map does not move in this time.
+  await page.waitForTimeout(1000)
+  await expect(page.getByText('0 restaurants on the map')).toBeVisible()
+  await expect(page).toHaveURL(madridAt)
+
+  // Without a position, the map shows the list.
+  await page.goto(`/restaurants?list=${list.id}&view=map`)
+  await expect(map.getByRole('button', { name: 'Sole Trip' })).toBeVisible()
+})
+
 test('a click on the map sets the point of a location by hand', async ({ page, user: _user }) => {
   await page.goto('/restaurants/new')
   await page.getByRole('button', { name: 'Enter the location by hand' }).click()

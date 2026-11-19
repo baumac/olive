@@ -5,6 +5,7 @@ import L from 'leaflet'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { MapConfig } from '@/lib/mapConfig'
 import type { Box } from '@/lib/places'
+import { maxMapZoom, minMapZoom } from '@/lib/places'
 import { cn } from '@/lib/utils'
 import type { MapMarker, MapPoint } from '.'
 
@@ -36,14 +37,28 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  // move has the box of the view and the view itself.
-  move: [box: Box, center: MapPoint, zoom: number]
+  // move has the box of the view and the view itself. byUser is false for
+  // a move to center or to fit.
+  move: [box: Box, center: MapPoint, zoom: number, byUser: boolean]
   select: [id: string]
   pick: [point: MapPoint]
 }>()
 
 const el = ref<HTMLElement>()
 let map: L.Map | undefined
+// ownMove is true from a move of the props until its moveend. Leaflet also
+// sends moveend for a move to the same view.
+let ownMove = false
+
+// startOwnMove stops a running pan first, such as the glide after a drag.
+// The moveend of this pan then stays a move of the user. The class is an
+// internal of Leaflet.
+function startOwnMove(m: L.Map) {
+  if (m.getPane('mapPane')?.classList.contains('leaflet-pan-anim')) {
+    m.stop()
+  }
+  ownMove = true
+}
 const layer = L.layerGroup()
 
 // Leaflet stops the load of a tile with a data: image. The Content Security
@@ -274,15 +289,15 @@ onMounted(() => {
     attributionControl: false,
     scrollWheelZoom: props.wheelZoom,
     worldCopyJump: true,
-    minZoom: 2,
-    maxZoom: 19,
+    minZoom: minMapZoom,
+    maxZoom: maxMapZoom,
   })
   const credit = '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>'
   L.control
     .attribution({ prefix: false })
     .addAttribution([escapeHtml(props.config.attribution), credit].filter(Boolean).join(' '))
     .addTo(map)
-  new Tiles(props.config.tiles, { maxZoom: 19 }).addTo(map)
+  new Tiles(props.config.tiles, { maxZoom: maxMapZoom }).addTo(map)
   layer.addTo(map)
   map.on('moveend', () => {
     if (!map) {
@@ -290,7 +305,9 @@ onMounted(() => {
     }
     const b = map.getBounds()
     const c = map.getCenter().wrap()
-    emit('move', { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() }, { latitude: c.lat, longitude: c.lng }, map.getZoom())
+    const byUser = !ownMove
+    ownMove = false
+    emit('move', { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() }, { latitude: c.lat, longitude: c.lng }, map.getZoom(), byUser)
   })
   map.on('zoomend', draw)
   map.on('click', (e) => {
@@ -299,6 +316,7 @@ onMounted(() => {
       emit('pick', { latitude: lat, longitude: lng })
     }
   })
+  ownMove = true
   map.setView([props.center.latitude, props.center.longitude], props.zoom)
   fitView()
   draw()
@@ -311,6 +329,7 @@ const fitMaxZoom = 16
 function fitView() {
   const b = props.fit
   if (map && b) {
+    startOwnMove(map)
     map.fitBounds(
       [
         [b.south, b.west],
@@ -328,7 +347,12 @@ watch(() => props.fit && JSON.stringify(props.fit), fitView)
 // not move the map. A move of the map would start a new load of the page.
 watch(
   () => `${props.center.latitude},${props.center.longitude}`,
-  () => map?.setView([props.center.latitude, props.center.longitude], map.getZoom()),
+  () => {
+    if (map) {
+      startOwnMove(map)
+      map.setView([props.center.latitude, props.center.longitude], map.getZoom())
+    }
+  },
 )
 
 onBeforeUnmount(() => {
