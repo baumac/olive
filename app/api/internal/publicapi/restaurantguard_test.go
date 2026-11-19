@@ -31,6 +31,7 @@ func (e *env) dashboard(req request, status int) response {
 }
 
 func TestDashboardRestaurantEdit(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	bo := e.signUp("bo@example.com", "Bo")
@@ -111,6 +112,7 @@ func TestDashboardRestaurantEdit(t *testing.T) {
 // and its spec pattern differ. Saves outside the PocketBase API get only the
 // field patterns.
 func TestRestaurantFieldPatterns(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	doc, err := reviewsapi.GetSwagger()
 	if err != nil {

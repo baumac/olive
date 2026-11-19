@@ -249,6 +249,7 @@ func errorProperties(t *testing.T, res response) []string {
 }
 
 func TestUsers(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 
 	ana := e.signUp("ana@example.com", "Ana")
@@ -363,6 +364,7 @@ func TestUsers(t *testing.T) {
 }
 
 func TestSignUpBody(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	tests := []struct {
 		name   string
@@ -409,6 +411,7 @@ func (filler) Read(p []byte) (int, error) {
 
 // TestBodyLimit sends bodies over the PocketBase limit of 32 MB.
 func TestBodyLimit(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	const size = 33 << 20
 	tests := []struct {
@@ -444,6 +447,7 @@ func TestBodyLimit(t *testing.T) {
 }
 
 func TestValidationMessages(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	res := e.expect(request{method: "POST", path: "/v1/restaurants", token: ana.Token,
@@ -487,6 +491,7 @@ func TestValidationMessages(t *testing.T) {
 }
 
 func TestUnicodeTags(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	tags := []string{"café", "ラーメン", "चाय", "2-für-1", "ψάρι"}
@@ -548,6 +553,7 @@ func TestUnicodeTags(t *testing.T) {
 }
 
 func TestSkipRequestValidation(t *testing.T) {
+	t.Parallel()
 	opts := testOptions
 	opts.SkipRequestValidation = true
 	e := newEnv(t, opts)
@@ -600,6 +606,7 @@ func TestSkipRequestValidation(t *testing.T) {
 }
 
 func TestSignInRateLimit(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, publicapi.Options{SignInLimit: 2, SignInWindow: time.Minute})
 	body := `{"email":"ana@example.com","password":"wrong-password"}`
 	for range 2 {
@@ -614,6 +621,7 @@ func TestSignInRateLimit(t *testing.T) {
 }
 
 func TestWriteRateLimit(t *testing.T) {
+	t.Parallel()
 	opts := testOptions
 	opts.CreateLimit, opts.EditLimit = 1, 1
 	e := newEnv(t, opts)
@@ -647,6 +655,7 @@ func TestWriteRateLimit(t *testing.T) {
 }
 
 func TestSpacesAroundNamesAndTitles(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "  Ana ")
 	if ana.User.Name != "Ana" {
@@ -694,6 +703,7 @@ func TestSpacesAroundNamesAndTitles(t *testing.T) {
 }
 
 func TestSignInFailureLimit(t *testing.T) {
+	t.Parallel()
 	opts := testOptions
 	opts.SignInFailureLimit, opts.SignInFailureWindow = 3, time.Minute
 	e := newEnv(t, opts)
@@ -748,6 +758,7 @@ func TestSignInFailureLimit(t *testing.T) {
 }
 
 func TestSignOut(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	first := e.signUp("ana@example.com", "Ana")
 	var second authToken
@@ -779,6 +790,7 @@ func TestSignOut(t *testing.T) {
 }
 
 func TestRestaurants(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -878,6 +890,7 @@ func TestRestaurants(t *testing.T) {
 }
 
 func TestReviews(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -1058,6 +1071,7 @@ func TestReviews(t *testing.T) {
 }
 
 func TestRestaurantOwnership(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -1145,6 +1159,7 @@ func TestRestaurantOwnership(t *testing.T) {
 }
 
 func TestListRestaurants(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -1287,6 +1302,7 @@ func TestListRestaurants(t *testing.T) {
 }
 
 func TestUnknownRoutes(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	e.expect(request{method: "HEAD", path: "/v1/restaurants"}, http.StatusOK)
 	e.expect(request{method: "GET", path: "/v1/nothing"}, http.StatusNotFound)
@@ -1297,6 +1313,7 @@ func TestUnknownRoutes(t *testing.T) {
 }
 
 func TestListAllReviews(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -1363,6 +1380,7 @@ func TestListAllReviews(t *testing.T) {
 }
 
 func TestRestaurantRating(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -1413,6 +1431,7 @@ func TestRestaurantRating(t *testing.T) {
 }
 
 func TestListRestaurantsByOverall(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -1490,6 +1509,7 @@ func TestListRestaurantsByOverall(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")

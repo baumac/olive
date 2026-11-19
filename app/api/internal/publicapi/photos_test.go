@@ -130,6 +130,7 @@ func urlOf(photo map[string]any, variant string) string {
 }
 
 func TestAddReviewPhoto(t *testing.T) {
+	t.Parallel()
 	p := newPhotoEnv(t, testOptions)
 	res := p.upload(p.ana.Token, testJPEG(t, 40, 20, 6), "image/jpeg", http.StatusCreated)
 	photo := res.object(t)
@@ -194,6 +195,7 @@ func TestAddReviewPhoto(t *testing.T) {
 }
 
 func TestAddReviewPhotoTypes(t *testing.T) {
+	t.Parallel()
 	p := newPhotoEnv(t, testOptions)
 	webp, err := base64.StdEncoding.DecodeString(webp1x1)
 	if err != nil {
@@ -222,6 +224,7 @@ func TestAddReviewPhotoTypes(t *testing.T) {
 }
 
 func TestAddReviewPhotoErrors(t *testing.T) {
+	t.Parallel()
 	p := newPhotoEnv(t, testOptions)
 	jpg := testJPEG(t, 40, 20, 0)
 	for _, tc := range []struct {
@@ -275,6 +278,7 @@ func TestAddReviewPhotoErrors(t *testing.T) {
 }
 
 func TestParallelUploadsAtTheLastPlace(t *testing.T) {
+	t.Parallel()
 	p := newPhotoEnv(t, testOptions)
 	for range 4 {
 		p.addPhoto()
@@ -303,6 +307,7 @@ func TestParallelUploadsAtTheLastPlace(t *testing.T) {
 }
 
 func TestUpdateReviewPhoto(t *testing.T) {
+	t.Parallel()
 	p := newPhotoEnv(t, testOptions)
 	photo := p.addPhoto()
 	path := p.reviews + "/photos/" + photo["id"].(string)
@@ -332,6 +337,7 @@ func TestUpdateReviewPhoto(t *testing.T) {
 }
 
 func TestDeleteReviewPhoto(t *testing.T) {
+	t.Parallel()
 	p := newPhotoEnv(t, testOptions)
 	photo := p.addPhoto()
 	path := p.reviews + "/photos/" + photo["id"].(string)
@@ -364,6 +370,7 @@ func (p photoEnv) waitForNoFiles(photoID string) {
 }
 
 func TestPhotosOfDeletedReviewsRestaurantsAndUsers(t *testing.T) {
+	t.Parallel()
 	t.Run("review", func(t *testing.T) {
 		p := newPhotoEnv(t, testOptions)
 		photo := p.addPhoto()
@@ -401,6 +408,7 @@ func TestPhotosOfDeletedReviewsRestaurantsAndUsers(t *testing.T) {
 }
 
 func TestPocketBaseDoesNotServePhotoFiles(t *testing.T) {
+	t.Parallel()
 	p := newPhotoEnv(t, testOptions)
 	id := p.addPhoto()["id"].(string)
 	record, err := p.app.FindRecordById("review_photos", id)
@@ -416,6 +424,7 @@ func TestPocketBaseDoesNotServePhotoFiles(t *testing.T) {
 }
 
 func TestPhotoUploadRateLimit(t *testing.T) {
+	t.Parallel()
 	opts := testOptions
 	opts.PhotoUploadLimit = 1
 	p := newPhotoEnv(t, opts)
@@ -431,6 +440,7 @@ func TestPhotoUploadRateLimit(t *testing.T) {
 }
 
 func TestPhotoMemoryLimit(t *testing.T) {
+	t.Parallel()
 	opts := testOptions
 	opts.PhotoMemoryLimit = 64 << 10
 	opts.PhotoUploadLimit = 1
@@ -450,6 +460,7 @@ func TestPhotoMemoryLimit(t *testing.T) {
 }
 
 func TestPhotoMemoryComesBack(t *testing.T) {
+	t.Parallel()
 	opts := testOptions
 	opts.PhotoMemoryLimit = 64 << 10
 	p := newPhotoEnv(t, opts)

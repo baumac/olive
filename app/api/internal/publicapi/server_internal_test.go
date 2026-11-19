@@ -35,6 +35,7 @@ func newTestServerWith(t *testing.T, opts Options) *Server {
 // TestDummyHashUsesThePasswordCost checks both costs. A sign in with an
 // unknown email then takes as long as one with a wrong password.
 func TestDummyHashUsesThePasswordCost(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name string
 		dir  string
@@ -77,12 +78,14 @@ func serveProblem(t *testing.T, s *Server, h http.HandlerFunc) *httptest.Respons
 }
 
 func TestPanicGetsProblemDetails(t *testing.T) {
+	t.Parallel()
 	serveProblem(t, newTestServer(t), func(http.ResponseWriter, *http.Request) { panic("boom") })
 }
 
 // The buffered response has not reached the client at the panic. The
 // client then gets only the 500 response.
 func TestPanicAfterWriteGetsOnlyProblemDetails(t *testing.T) {
+	t.Parallel()
 	w := serveProblem(t, newTestServer(t), func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("X-Partial", "yes")
 		w.WriteHeader(http.StatusOK)
@@ -95,6 +98,7 @@ func TestPanicAfterWriteGetsOnlyProblemDetails(t *testing.T) {
 }
 
 func TestInvalidResponseGetsProblemDetails(t *testing.T) {
+	t.Parallel()
 	w := serveProblem(t, newTestServer(t), func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"items":"not an array"}`))
@@ -105,6 +109,7 @@ func TestInvalidResponseGetsProblemDetails(t *testing.T) {
 }
 
 func TestBufferedWriterWritesOnlyOnFlush(t *testing.T) {
+	t.Parallel()
 	rec := httptest.NewRecorder()
 	rec.Header().Set("Vary", "Origin")
 	b := newBufferedWriter(rec)
@@ -127,6 +132,7 @@ func TestBufferedWriterWritesOnlyOnFlush(t *testing.T) {
 }
 
 func TestSkipResponseValidation(t *testing.T) {
+	t.Parallel()
 	s := newTestServerWith(t, Options{SignInLimit: 10, SignInWindow: time.Minute, SkipResponseValidation: true})
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+basePath+"/restaurants", func(w http.ResponseWriter, _ *http.Request) {
@@ -141,6 +147,7 @@ func TestSkipResponseValidation(t *testing.T) {
 }
 
 func TestResponseProblemLeavesOutValues(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	op := s.spec.operations["GET "+basePath+"/restaurants"]
 	in, err := op.input(httptest.NewRequest("GET", basePath+"/restaurants", nil))
@@ -159,6 +166,7 @@ func TestResponseProblemLeavesOutValues(t *testing.T) {
 }
 
 func TestResponseAcceptsEachStoredEmail(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	op := s.spec.operations["POST "+basePath+"/users/tokens"]
 	in, err := op.input(httptest.NewRequest("POST", basePath+"/users/tokens", nil))

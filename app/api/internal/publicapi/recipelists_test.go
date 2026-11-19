@@ -9,6 +9,7 @@ import (
 )
 
 func TestRecipeLists(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -149,6 +150,7 @@ func TestRecipeLists(t *testing.T) {
 }
 
 func TestListRecipeLimit(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	recipe := e.createRecipe(ana.Token, `{"name":"Dal"}`)["id"].(string)

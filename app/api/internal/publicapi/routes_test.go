@@ -21,6 +21,7 @@ func (p *patternRecorder) HandleFunc(pattern string, h func(http.ResponseWriter,
 
 // A generated operation without a spec operation gets 500 from prepare.
 func TestEveryOperationIsInTheSpec(t *testing.T) {
+	t.Parallel()
 	spec, err := loadSpec()
 	if err != nil {
 		t.Fatal(err)
@@ -39,6 +40,7 @@ func TestEveryOperationIsInTheSpec(t *testing.T) {
 }
 
 func TestAuthAndRateLimitComeFromTheSpec(t *testing.T) {
+	t.Parallel()
 	spec, err := loadSpec()
 	if err != nil {
 		t.Fatal(err)
@@ -67,6 +69,7 @@ func TestAuthAndRateLimitComeFromTheSpec(t *testing.T) {
 // TestWriteOperationsHaveARateLimit finds a new write operation without
 // x-rate-limit. Sign out and the token refresh change no data.
 func TestWriteOperationsHaveARateLimit(t *testing.T) {
+	t.Parallel()
 	spec, err := loadSpec()
 	if err != nil {
 		t.Fatal(err)
@@ -81,6 +84,7 @@ func TestWriteOperationsHaveARateLimit(t *testing.T) {
 }
 
 func TestFileOperationsComeFromTheSpec(t *testing.T) {
+	t.Parallel()
 	spec, err := loadSpec()
 	if err != nil {
 		t.Fatal(err)

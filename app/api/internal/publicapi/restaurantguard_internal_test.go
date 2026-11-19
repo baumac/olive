@@ -10,6 +10,7 @@ import (
 )
 
 func TestRestaurantGuardRefusesBrokenStoredValues(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	collection, err := s.app.FindCollectionByNameOrId("restaurants")
 	if err != nil {

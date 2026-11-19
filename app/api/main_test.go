@@ -13,6 +13,7 @@ import (
 )
 
 func TestOptions(t *testing.T) {
+	t.Parallel()
 	env := func(vars map[string]string) func(string) string {
 		return func(name string) string { return vars[name] }
 	}
@@ -88,6 +89,7 @@ func TestOptions(t *testing.T) {
 }
 
 func TestSetup(t *testing.T) {
+	t.Parallel()
 	env := func(vars map[string]string) func(string) string {
 		return func(name string) string { return vars[name] }
 	}

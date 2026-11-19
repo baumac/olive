@@ -14,6 +14,7 @@ import (
 )
 
 func TestCacheControl(t *testing.T) {
+	t.Parallel()
 	files := fstest.MapFS{"index.html": {}, "assets/app-1a2b.js": {}}
 	for path, want := range map[string]string{
 		"":                   "no-cache",
@@ -28,6 +29,7 @@ func TestCacheControl(t *testing.T) {
 }
 
 func TestNoDotFiles(t *testing.T) {
+	t.Parallel()
 	files := noDotFiles{fstest.MapFS{"index.html": {}, ".gitkeep": {}, "assets/.env": {}}}
 	for _, name := range []string{".gitkeep", "assets/.env"} {
 		if _, err := files.Open(name); err == nil {
@@ -41,6 +43,7 @@ func TestNoDotFiles(t *testing.T) {
 
 // TestRegister uses the embedded build or the placeholder.
 func TestRegister(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -71,6 +74,7 @@ func TestRegister(t *testing.T) {
 }
 
 func TestWatchAppURL(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -101,6 +105,7 @@ func TestWatchAppURL(t *testing.T) {
 }
 
 func TestRoutes(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -172,6 +177,7 @@ func TestRoutes(t *testing.T) {
 }
 
 func TestTileOrigin(t *testing.T) {
+	t.Parallel()
 	for tileURL, want := range map[string]string{
 		DefaultTileURL: "https://tile.openstreetmap.org",
 		"http://127.0.0.1:8096/tiles/{z}/{x}/{y}.png":           "http://127.0.0.1:8096",

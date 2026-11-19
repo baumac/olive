@@ -12,6 +12,7 @@ import (
 // TestExistingIDsReadsEachBatch puts real IDs at the start, in the middle,
 // and at the end of more than two batches.
 func TestExistingIDsReadsEachBatch(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)

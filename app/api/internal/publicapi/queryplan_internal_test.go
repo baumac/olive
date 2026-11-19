@@ -11,6 +11,7 @@ import (
 )
 
 func TestRestaurantListsUseIndexes(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	for _, c := range []struct {
 		name   string
@@ -76,6 +77,7 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 }
 
 func TestOldOverallCursorIsRejected(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	sort := "-overall"
 	for name, version := range map[string][]any{"no version": nil, "version 2": {2}} {
@@ -119,6 +121,7 @@ func queryPlan(t *testing.T, s *Server, q *dbx.Query) string {
 }
 
 func TestGalleryUsesIndexes(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	w := galleryWhere(restaurantSubject, false, "k3x9m2p7q1w8z4a")
 	w.keyset(restaurantSubject.galleryKeys, []any{7.6, "2024-11-04 01:26:55.002Z", "r1b8c5e2g9i6k3m", "2024-11-04 01:26:55.002Z", "p4h7j1l5n9q2s6v"})
@@ -138,6 +141,7 @@ func TestGalleryUsesIndexes(t *testing.T) {
 }
 
 func TestReviewOverallUsesIndexes(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	restaurant := func(w *where) { w.idFilters("reviews", "restaurant", new("k3x9m2p7q1w8z4a"), nil) }
 	creator := func(w *where) { w.idFilters("reviews", "creator", new("u5n1c8r3t6y0b2e"), nil) }
@@ -192,6 +196,7 @@ func TestReviewOverallUsesIndexes(t *testing.T) {
 }
 
 func TestReviewerStatsUseIndexes(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	plan := queryPlan(t, s, s.reviewerStatsQuery("u5n1c8r3t6y0b2e"))
 	for _, want := range []string{"idx_reviews_creator_overall", "COVERING INDEX idx_restaurants_creator_created"} {
@@ -202,6 +207,7 @@ func TestReviewerStatsUseIndexes(t *testing.T) {
 }
 
 func TestReviewerRestaurantsUseIndex(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	sort := "-created"
 	keys, _, detail := parseSort(&sort, "restaurants", restaurantSorts)
@@ -224,6 +230,7 @@ func TestReviewerRestaurantsUseIndex(t *testing.T) {
 }
 
 func TestListsUseIndexes(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	restaurants, err := s.app.FindCollectionByNameOrId("restaurants")
 	if err != nil {

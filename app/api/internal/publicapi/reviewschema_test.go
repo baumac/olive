@@ -9,6 +9,7 @@ import (
 )
 
 func TestOverallColumnEqualsResponse(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	for i, body := range []string{
@@ -31,6 +32,7 @@ func TestOverallColumnEqualsResponse(t *testing.T) {
 }
 
 func TestReviewSchemaGuard(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	for name, change := range map[string]func(c *core.Collection){
 		"overall field": func(c *core.Collection) { c.Fields.Add(&core.NumberField{Name: "overall"}) },
@@ -60,6 +62,7 @@ func TestReviewSchemaGuard(t *testing.T) {
 }
 
 func TestRecipeReviewSchemaGuard(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	reviews, err := e.app.FindCollectionByNameOrId("recipe_reviews")
 	if err != nil {

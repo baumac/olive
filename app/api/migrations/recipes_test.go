@@ -32,6 +32,7 @@ func storedRecipeOverall(t *testing.T, app core.App, recipe string) (overall, ra
 }
 
 func TestRecipeTriggers(t *testing.T) {
+	t.Parallel()
 	app := newIndexApp(t)
 	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
@@ -95,6 +96,7 @@ func TestRecipeTriggers(t *testing.T) {
 }
 
 func TestRecipesMigrationDown(t *testing.T) {
+	t.Parallel()
 	app := newIndexApp(t)
 	items, err := app.FindCollectionByNameOrId("list_recipes")
 	if err != nil {
@@ -117,6 +119,7 @@ func TestRecipesMigrationDown(t *testing.T) {
 }
 
 func TestTrimStoredStepsMigration(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)

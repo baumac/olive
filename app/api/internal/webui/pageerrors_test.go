@@ -32,6 +32,7 @@ func get(h http.Handler, path string) *httptest.ResponseRecorder {
 }
 
 func TestPagesOfUsersWithoutApproval(t *testing.T) {
+	t.Parallel()
 	app := newTestApp(t)
 	pending := save(t, app, "users", map[string]any{"email": "bo@example.com", "password": "correct-horse", "name": "Bo"})
 	list := save(t, app, "lists", map[string]any{"creator": pending.Id, "name": "Date night", "kind": "custom"})
@@ -45,6 +46,7 @@ func TestPagesOfUsersWithoutApproval(t *testing.T) {
 }
 
 func TestReviewPhotoWithoutAlt(t *testing.T) {
+	t.Parallel()
 	app := newTestApp(t)
 	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana", "approved": true})
 	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": user.Id})
@@ -68,6 +70,7 @@ func TestReviewPhotoWithoutAlt(t *testing.T) {
 // A database error gives the default page. The UI then gets the data from
 // the Public API.
 func TestPageMetaDatabaseError(t *testing.T) {
+	t.Parallel()
 	app := newTestApp(t)
 	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana", "approved": true})
 	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": user.Id})
@@ -88,6 +91,7 @@ func TestPageMetaDatabaseError(t *testing.T) {
 }
 
 func TestReadIndexWithoutTitleOrFile(t *testing.T) {
+	t.Parallel()
 	noTitle := `<head><!-- page-meta --><meta property="og:image" content="https://x.example/a.png" /><!-- /page-meta --></head>`
 	for name, files := range map[string]fstest.MapFS{
 		"no title": {"index.html": {Data: []byte(noTitle)}},
@@ -99,6 +103,8 @@ func TestReadIndexWithoutTitleOrFile(t *testing.T) {
 	}
 }
 
+// TestWarningOfBuildWithoutMetaBlock has no t.Parallel. It changes the
+// package variable warnNoMetaBlock.
 func TestWarningOfBuildWithoutMetaBlock(t *testing.T) {
 	warned := 0
 	defer func(warn func(core.App)) { warnNoMetaBlock = warn }(warnNoMetaBlock)
@@ -129,6 +135,7 @@ type failingReader struct{}
 func (failingReader) Read([]byte) (int, error) { return 0, errors.New("connection reset") }
 
 func TestBrokenReportGetsBadRequest(t *testing.T) {
+	t.Parallel()
 	h := newHandler(t, newTestApp(t), placeholder)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, reportPath, failingReader{}))
@@ -138,6 +145,7 @@ func TestBrokenReportGetsBadRequest(t *testing.T) {
 }
 
 func TestScriptOfInvalidValue(t *testing.T) {
+	t.Parallel()
 	if got := (jsonLD{"bad": make(chan int)}).script(); got != "" {
 		t.Errorf("script %q, want empty", got)
 	}

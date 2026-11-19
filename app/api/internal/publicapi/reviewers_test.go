@@ -10,6 +10,7 @@ import (
 )
 
 func TestReviewOverall(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -83,6 +84,7 @@ func TestReviewOverall(t *testing.T) {
 }
 
 func TestReviewers(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")

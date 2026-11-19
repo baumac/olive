@@ -8,6 +8,7 @@ import (
 )
 
 func TestProcessPhotoRefusesBrokenImages(t *testing.T) {
+	t.Parallel()
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 4, 4))); err != nil {
 		t.Fatal(err)

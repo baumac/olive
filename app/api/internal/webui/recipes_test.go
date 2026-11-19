@@ -12,6 +12,7 @@ import (
 )
 
 func TestRecipeMeta(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)

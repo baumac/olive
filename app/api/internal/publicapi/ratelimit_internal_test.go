@@ -7,6 +7,7 @@ import (
 )
 
 func TestRateLimiterWindows(t *testing.T) {
+	t.Parallel()
 	now := time.Unix(0, 0)
 	l := newRateLimiter(2, time.Minute)
 	l.now = func() time.Time { return now }
@@ -33,6 +34,7 @@ func TestRateLimiterWindows(t *testing.T) {
 }
 
 func TestRateLimiterWithoutCap(t *testing.T) {
+	t.Parallel()
 	l := newRateLimiter(1, time.Minute)
 	l.maxWindows = 0
 	l.allow("victim")
@@ -45,6 +47,7 @@ func TestRateLimiterWithoutCap(t *testing.T) {
 }
 
 func TestRateLimiterGiveBack(t *testing.T) {
+	t.Parallel()
 	now := time.Unix(0, 0)
 	l := newRateLimiter(1, time.Minute)
 	l.now = func() time.Time { return now }
@@ -64,6 +67,7 @@ func TestRateLimiterGiveBack(t *testing.T) {
 }
 
 func TestRateLimiterKeepsAtMostMaxWindows(t *testing.T) {
+	t.Parallel()
 	now := time.Unix(0, 0)
 	l := newRateLimiter(1, time.Minute)
 	l.now = func() time.Time { return now }
@@ -83,6 +87,7 @@ func TestRateLimiterKeepsAtMostMaxWindows(t *testing.T) {
 }
 
 func TestClientKey(t *testing.T) {
+	t.Parallel()
 	for ip, want := range map[string]string{
 		"192.0.2.1":            "192.0.2.1",
 		"::ffff:192.0.2.1":     "192.0.2.1",
@@ -99,6 +104,7 @@ func TestClientKey(t *testing.T) {
 }
 
 func TestWrongPasswordLimiterHasACap(t *testing.T) {
+	t.Parallel()
 	s := newTestServerWith(t, Options{})
 	if s.signInFailures.maxWindows != maxFailureWindows {
 		t.Errorf("cap %d, want %d", s.signInFailures.maxWindows, maxFailureWindows)

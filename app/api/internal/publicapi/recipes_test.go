@@ -56,6 +56,7 @@ func (e *env) namesAs(path, token string) (string, *string) {
 }
 
 func TestCreateRecipe(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	pending := e.signUpPending("pat@example.com", "Pat")
@@ -140,6 +141,7 @@ func TestCreateRecipe(t *testing.T) {
 }
 
 func TestListRecipes(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -233,6 +235,7 @@ func TestListRecipes(t *testing.T) {
 }
 
 func TestUpdateRecipe(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -330,6 +333,7 @@ func TestUpdateRecipe(t *testing.T) {
 }
 
 func TestDeleteRecipe(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -350,6 +354,7 @@ func TestDeleteRecipe(t *testing.T) {
 }
 
 func TestRecipeReviews(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -447,6 +452,7 @@ func TestRecipeReviews(t *testing.T) {
 }
 
 func TestRecipeOverallColumnEqualsResponse(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	for i, body := range []string{
@@ -468,6 +474,7 @@ func TestRecipeOverallColumnEqualsResponse(t *testing.T) {
 }
 
 func TestRecipeReviewPhotos(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -550,6 +557,7 @@ func TestRecipeReviewPhotos(t *testing.T) {
 }
 
 func TestDashboardRecipeEdit(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	root := e.superuserToken("root@example.com")
@@ -607,6 +615,7 @@ func TestDashboardRecipeEdit(t *testing.T) {
 // TestSourceTakenDuringTheSave adds a recipe with the source between the
 // check and the save. The rollback of the save also removes that recipe.
 func TestSourceTakenDuringTheSave(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	e.app.OnRecordValidate("recipes").BindFunc(func(ev *core.RecordEvent) error {
@@ -636,6 +645,7 @@ func TestSourceTakenDuringTheSave(t *testing.T) {
 }
 
 func TestSaveWithoutValidationSetsTheSourceKey(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	recipes, err := e.app.FindCollectionByNameOrId("recipes")
 	if err != nil {

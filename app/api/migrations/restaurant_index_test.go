@@ -100,6 +100,7 @@ func storedTags(t *testing.T, app core.App, restaurant string) []string {
 }
 
 func TestOverallTriggers(t *testing.T) {
+	t.Parallel()
 	app := newIndexApp(t)
 	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
@@ -149,6 +150,7 @@ func TestOverallTriggers(t *testing.T) {
 }
 
 func TestFailedSaveKeepsOverall(t *testing.T) {
+	t.Parallel()
 	app := newIndexApp(t)
 	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
@@ -174,6 +176,7 @@ func TestFailedSaveKeepsOverall(t *testing.T) {
 }
 
 func TestRawInsertGetsOverallRow(t *testing.T) {
+	t.Parallel()
 	app := newIndexApp(t)
 	if _, err := app.DB().Insert("restaurants", dbx.Params{"id": "rawrestaurant01", "name": "Raw", "tags": `["cheap"]`}).Execute(); err != nil {
 		t.Fatal(err)
@@ -186,6 +189,7 @@ func TestRawInsertGetsOverallRow(t *testing.T) {
 }
 
 func TestTagTriggers(t *testing.T) {
+	t.Parallel()
 	app := newIndexApp(t)
 	a := newRecord(t, app, "restaurants", map[string]any{"name": "A", "tags": []string{"pasta", "italian", "pasta"}})
 	if got := storedTags(t, app, a.Id); !slices.Equal(got, []string{"italian", "pasta"}) {
@@ -229,6 +233,7 @@ func TestTagTriggers(t *testing.T) {
 }
 
 func TestOverallRankingFillsExistingRows(t *testing.T) {
+	t.Parallel()
 	app := newIndexApp(t)
 	redo := downTo(t, app, "1794268810_add_overall_ranking.go")
 

@@ -45,6 +45,7 @@ func withCookie(token string, header map[string]string) map[string]string {
 }
 
 func TestSessionCookie(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -160,6 +161,7 @@ func TestSessionCookie(t *testing.T) {
 
 // TestSessionCookieSecure uses the host example.com of httptest.NewRequest.
 func TestSessionCookieSecure(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	e.signUp("ana@example.com", "Ana")
 	for _, tc := range []struct {

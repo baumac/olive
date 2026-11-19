@@ -7,6 +7,7 @@ import (
 )
 
 func TestRestaurantGallery(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")

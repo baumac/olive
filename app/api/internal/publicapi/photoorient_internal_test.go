@@ -7,6 +7,7 @@ import (
 )
 
 func TestOrient(t *testing.T) {
+	t.Parallel()
 	// corners has the new place of the top left pixel of a 3 by 2 image.
 	corners := map[int]image.Point{
 		1: {0, 0}, 2: {2, 0}, 3: {2, 1}, 4: {0, 1},
@@ -55,6 +56,7 @@ func jpegWithTIFF(tiff []byte) []byte {
 }
 
 func TestExifOrientation(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		data []byte
@@ -85,6 +87,7 @@ func TestExifOrientation(t *testing.T) {
 }
 
 func TestFit(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ w, h, side, wantW, wantH int }{
 		{4000, 1000, 2048, 2048, 512},
 		{1000, 4000, 2048, 512, 2048},

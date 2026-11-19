@@ -8,6 +8,7 @@ import (
 )
 
 func TestProblemUnexpected(t *testing.T) {
+	t.Parallel()
 	err := conflictProblem(reviewsapi.ProblemCodeReviewExists, "A second review.").unexpected()
 	if err == nil || !strings.Contains(err.Error(), "409") {
 		t.Errorf("error %v, want an error with 409", err)
@@ -15,6 +16,7 @@ func TestProblemUnexpected(t *testing.T) {
 }
 
 func TestProblemBodies(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name string
 		got  *problem

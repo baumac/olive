@@ -7,6 +7,7 @@ import (
 )
 
 func TestEmailHTMLLinksOnlyAURLParagraph(t *testing.T) {
+	t.Parallel()
 	got := emailHTML([]string{
 		"https://evil.example/login (x@example.com) confirmed the email address.",
 		"https://reviews.example.com/confirm-email#token=a.b",
@@ -24,6 +25,7 @@ func TestEmailHTMLLinksOnlyAURLParagraph(t *testing.T) {
 }
 
 func TestDurationText(t *testing.T) {
+	t.Parallel()
 	for d, want := range map[time.Duration]string{72 * time.Hour: "3 days", 5 * time.Hour: "5 hours"} {
 		if got := durationText(d); got != want {
 			t.Errorf("durationText(%v) = %q, want %q", d, got, want)

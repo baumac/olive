@@ -10,6 +10,7 @@ import (
 )
 
 func TestPhotoMemoryRead(t *testing.T) {
+	t.Parallel()
 	m := &photoMemory{limit: 1 << 20}
 	data, held, err := m.read(bytes.NewReader(make([]byte, 300<<10)))
 	if err != nil || len(data) != 300<<10 {
@@ -29,6 +30,7 @@ func TestPhotoMemoryRead(t *testing.T) {
 }
 
 func TestPhotoMemoryReadTooLarge(t *testing.T) {
+	t.Parallel()
 	m := &photoMemory{limit: 64 << 20}
 	var tooLarge *http.MaxBytesError
 	if _, _, err := m.read(io.LimitReader(zeros{}, maxUploadBytes+10)); !errors.As(err, &tooLarge) {
@@ -48,6 +50,7 @@ func (zeros) Read(p []byte) (int, error) {
 
 // An upload that waits for a decode stops with its request.
 func TestReadPhotoGivesBackMemoryOnCancel(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	for range maxParallelDecodes {
 		s.decodes <- struct{}{}

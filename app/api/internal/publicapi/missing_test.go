@@ -8,6 +8,7 @@ import (
 const unknownID = "aaaaaaaaaaaaaaa"
 
 func TestChangesOfMissingRecords(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	bo := e.signUp("bo@example.com", "Bo")

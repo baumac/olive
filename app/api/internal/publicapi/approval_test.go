@@ -6,6 +6,7 @@ import (
 )
 
 func TestUserApproval(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	restaurant := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)

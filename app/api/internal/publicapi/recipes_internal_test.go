@@ -10,6 +10,7 @@ import (
 )
 
 func TestWithDetailsKeepsTheSummary(t *testing.T) {
+	t.Parallel()
 	var sum reviewsapi.RecipeSummary
 	if err := json.Unmarshal([]byte(`{"id":"c4r8e2p6i0s3t7a","name":"Dal","description":"Red","tags":["lentils"],
 		"source":"https://dal.example","total_time":30,"servings":2,"creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},
@@ -39,6 +40,7 @@ func TestWithDetailsKeepsTheSummary(t *testing.T) {
 }
 
 func TestSourceKey(t *testing.T) {
+	t.Parallel()
 	for source, want := range map[string]string{
 		"":                                  "",
 		"https://Recipes.Example/Dal/":      "https://recipes.example/Dal",
@@ -54,6 +56,7 @@ func TestSourceKey(t *testing.T) {
 }
 
 func TestRecipeQueriesUseIndexes(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	recipe := func(w *where) { w.idFilters("recipe_reviews", "recipe", new("c4r8e2p6i0s3t7a"), nil) }
 	creator := func(w *where) { w.idFilters("recipe_reviews", "creator", new("u5n1c8r3t6y0b2e"), nil) }

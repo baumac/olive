@@ -168,6 +168,7 @@ func (e *env) breakIndex(t *testing.T, table string) {
 }
 
 func TestCreate(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 
 	t.Run("restaurant", func(t *testing.T) {
@@ -210,6 +211,7 @@ func TestCreate(t *testing.T) {
 }
 
 func TestSearchTerms(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	pepe := e.restaurant(t, "Casa Pepe", "", []string{"date-night"})
 	cafe := e.restaurant(t, "Café Olé", "", nil)
@@ -236,6 +238,7 @@ func TestSearchTerms(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	cafe := e.restaurant(t, "Café Olé", "Tea", []string{"quiet"})
 	rv := e.review(t, cafe, "Nice tea", "Green tea")
@@ -338,6 +341,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 
 	t.Run("review", func(t *testing.T) {
@@ -373,6 +377,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestFailedIndexChangeKeepsTheRecord(t *testing.T) {
+	t.Parallel()
 	t.Run("restaurant create", func(t *testing.T) {
 		e := newEnv(t)
 		e.breakIndex(t, searchindex.Restaurants)
@@ -463,6 +468,7 @@ func TestFailedIndexChangeKeepsTheRecord(t *testing.T) {
 }
 
 func TestPut(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	cafe := e.restaurant(t, "Café Olé", "", nil)
 	rv := e.review(t, cafe, "Nice tea", "")
@@ -506,6 +512,7 @@ func TestPut(t *testing.T) {
 }
 
 func TestRecipeRows(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	dal := e.save(t, "recipes", map[string]any{
 		"name": "Dal", "description": "Red lentils", "tags": []string{"vegan"},

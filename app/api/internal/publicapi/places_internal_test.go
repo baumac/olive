@@ -16,6 +16,7 @@ import (
 )
 
 func TestPlaceSearchCache(t *testing.T) {
+	t.Parallel()
 	var calls atomic.Int32
 	release := make(chan struct{})
 	agents := make(chan string, 10)
@@ -92,6 +93,7 @@ func TestPlaceSearchCache(t *testing.T) {
 }
 
 func TestPlaceDetails(t *testing.T) {
+	t.Parallel()
 	text := func(v *string) string {
 		if v == nil {
 			return "<nil>"
@@ -133,6 +135,7 @@ func TestPlaceDetails(t *testing.T) {
 }
 
 func TestPlaceFetchErrors(t *testing.T) {
+	t.Parallel()
 	broken := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, `{"features":`)
 	}))
@@ -148,6 +151,7 @@ func TestPlaceFetchErrors(t *testing.T) {
 }
 
 func TestPlaceFetchKeepsAtMostMaxPlaces(t *testing.T) {
+	t.Parallel()
 	photon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		features := make([]string, maxPlaces+2)
 		for i := range features {
@@ -164,6 +168,7 @@ func TestPlaceFetchKeepsAtMostMaxPlaces(t *testing.T) {
 }
 
 func TestCleanPlaceText(t *testing.T) {
+	t.Parallel()
 	for in, want := range map[string]string{
 		"Ca\x01n\u202a So\u00adle": "Can Sole",
 		strings.Repeat("a ", 200):  strings.TrimSpace(strings.Repeat("a ", 128)),

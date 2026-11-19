@@ -62,6 +62,7 @@ func (e *env) listRestaurants(path, token string) (string, *string) {
 }
 
 func TestFavorites(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -144,6 +145,7 @@ func TestFavorites(t *testing.T) {
 }
 
 func TestLists(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -240,6 +242,7 @@ func TestLists(t *testing.T) {
 }
 
 func TestListLimits(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	for i := range 49 {
@@ -252,6 +255,7 @@ func TestListLimits(t *testing.T) {
 }
 
 func TestListItemLimit(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	restaurant := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
@@ -268,6 +272,7 @@ func TestListItemLimit(t *testing.T) {
 }
 
 func TestListNamesAndUpdated(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	restaurant := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
@@ -310,6 +315,7 @@ func TestListNamesAndUpdated(t *testing.T) {
 }
 
 func TestFavoritesListOfOtherUsers(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	restaurant := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
@@ -348,6 +354,7 @@ func TestFavoritesListOfOtherUsers(t *testing.T) {
 }
 
 func TestListFilter(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")

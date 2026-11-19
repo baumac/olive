@@ -26,6 +26,7 @@ func save(t *testing.T, app core.App, collection string, data map[string]any) *c
 }
 
 func TestRun(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -97,6 +98,7 @@ func runJob(t *testing.T, app core.App) {
 }
 
 func TestRegisteredJob(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)

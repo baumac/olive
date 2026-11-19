@@ -67,6 +67,7 @@ Playwright records a trace and a video only on the retry of a failed test.
 While you work, run `make test-app`. It takes seconds.
 Run `make test-race` or `make test-coverage` one time before the end. Each has the race detector. Do not run both.
 For one test, run `go test ./internal/publicapi -run TestName` in `app/api`. See decision 00045.
+Each Go test starts with `t.Parallel()`. A test that changes a package variable or calls `t.Setenv` has no `t.Parallel()`.
 
 `.github/workflows/ci.yml` runs on each push to `main` and on each pull request. See decision 00010.
 The `lint` job runs `make lint`. The `test` job runs `make test-sdk test-coverage`. These are the tests of `make test` with the race detector and a coverage minimum.

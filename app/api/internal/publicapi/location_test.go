@@ -19,6 +19,7 @@ func locationJSON(lat, lon float64, address, placeID string) string {
 }
 
 func TestRestaurantLocation(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -134,6 +135,7 @@ func TestRestaurantLocation(t *testing.T) {
 }
 
 func TestListRestaurantsNear(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	// One degree of latitude is about 111 km. 0.0005 degrees are about 56 m.
@@ -199,6 +201,7 @@ func TestListRestaurantsNear(t *testing.T) {
 }
 
 func TestListRestaurantsByDistance(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	for name, l := range map[string][2]float64{
@@ -262,6 +265,7 @@ func TestListRestaurantsByDistance(t *testing.T) {
 }
 
 func TestSearchFindsTheAddress(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	id := e.createRestaurant(ana.Token, `{"name":"Can Sole","location":`+locationJSON(41.3766, 2.1893, "Carrer de Sant Carles 4, Barcelona", "")+`}`)["id"].(string)
@@ -307,6 +311,7 @@ const photonBody = `{"features":[
 ]}`
 
 func TestSearchPlaces(t *testing.T) {
+	t.Parallel()
 	var calls atomic.Int32
 	var lastQuery atomic.Value
 	status := http.StatusOK
@@ -384,6 +389,7 @@ func TestSearchPlaces(t *testing.T) {
 }
 
 func TestSearchPlacesOffAndBusy(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	e.expect(request{method: "GET", path: "/v1/places?search=can+sole", token: ana.Token}, http.StatusServiceUnavailable)
@@ -410,6 +416,7 @@ func TestSearchPlacesOffAndBusy(t *testing.T) {
 }
 
 func TestListRestaurantsWithin(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	for name, l := range map[string][2]float64{

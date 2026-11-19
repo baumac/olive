@@ -25,6 +25,7 @@ const testIndex = `<!doctype html><html><head><meta property="og:site_name" cont
 </head><body><div id="app"></div></body></html>`
 
 func TestIndexHasMetaBlock(t *testing.T) {
+	t.Parallel()
 	data, err := os.ReadFile("../../../ui/index.html")
 	if err != nil {
 		t.Fatal(err)
@@ -56,6 +57,7 @@ func TestIndexHasMetaBlock(t *testing.T) {
 }
 
 func TestReadIndexWithoutMetaBlock(t *testing.T) {
+	t.Parallel()
 	if _, ok := readIndex(placeholder); ok {
 		t.Error("the placeholder has a page-meta block")
 	}
@@ -66,6 +68,7 @@ func TestReadIndexWithoutMetaBlock(t *testing.T) {
 }
 
 func TestBuiltIndexHasMetaBlock(t *testing.T) {
+	t.Parallel()
 	files := Files()
 	if _, built := files.(noDotFiles); !built {
 		t.Skip("the UI is not built")
@@ -77,6 +80,7 @@ func TestBuiltIndexHasMetaBlock(t *testing.T) {
 }
 
 func TestReadIndexAttributes(t *testing.T) {
+	t.Parallel()
 	data := `<head><!-- page-meta --><TITLE> Site &amp; Co </TITLE>
 <meta content='https://site.example.com/a.png' property=og:image>
 <meta
@@ -88,6 +92,7 @@ func TestReadIndexAttributes(t *testing.T) {
 }
 
 func TestPublicBaseURL(t *testing.T) {
+	t.Parallel()
 	for in, want := range map[string]string{
 		"https://reviews.example.com/":           "https://reviews.example.com",
 		"https://reviews.example.com":            "https://reviews.example.com",
@@ -116,6 +121,7 @@ func TestPublicBaseURL(t *testing.T) {
 }
 
 func TestShorten(t *testing.T) {
+	t.Parallel()
 	long := strings.Repeat("word ", 60)
 	wordEndsAtCut := "abcde" + strings.Repeat(" abcd", 39)
 	for in, want := range map[string]string{
@@ -132,6 +138,7 @@ func TestShorten(t *testing.T) {
 }
 
 func TestPageMeta(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -362,6 +369,7 @@ func with(a, b map[string]any) map[string]any {
 }
 
 func TestCrawlerFiles(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)

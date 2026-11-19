@@ -40,6 +40,7 @@ func (f *failingWriter) Write([]byte) (int, error) {
 }
 
 func TestPrepare(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 
 	t.Run("an operation without spec gets 500", func(t *testing.T) {
@@ -90,6 +91,7 @@ func TestPrepare(t *testing.T) {
 }
 
 func TestHeaderCheckWriterDropsARefusedResponse(t *testing.T) {
+	t.Parallel()
 	rec := httptest.NewRecorder()
 	hw := &headerCheckWriter{ResponseWriter: rec, check: func(int, http.Header) error { return errors.New("no ETag") }}
 	hw.Header().Set("X-Partial", "yes")
@@ -102,6 +104,7 @@ func TestHeaderCheckWriterDropsARefusedResponse(t *testing.T) {
 }
 
 func TestWritersWithoutStatus(t *testing.T) {
+	t.Parallel()
 	if got := newBufferedWriter(httptest.NewRecorder()).Status(); got != http.StatusOK {
 		t.Errorf("buffered status %d", got)
 	}
@@ -121,6 +124,7 @@ func TestWritersWithoutStatus(t *testing.T) {
 }
 
 func TestClientIPWithoutPocketBase(t *testing.T) {
+	t.Parallel()
 	for addr, want := range map[string]string{"192.0.2.1:1234": "192.0.2.1", "pipe": "pipe"} {
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
 		r.RemoteAddr = addr
@@ -131,6 +135,7 @@ func TestClientIPWithoutPocketBase(t *testing.T) {
 }
 
 func TestParamErrorDetail(t *testing.T) {
+	t.Parallel()
 	for err, want := range map[error]string{
 		&reviewsapi.TooManyValuesForParamError{ParamName: "limit"}: "The query parameter limit can occur only one time.",
 		errors.New("other"): "The request has a parameter that is not valid.",
@@ -142,6 +147,7 @@ func TestParamErrorDetail(t *testing.T) {
 }
 
 func TestSecureWithTLS(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.TLS = &tls.ConnectionState{}
 	if !(&Server{}).secure(r) {
@@ -165,6 +171,7 @@ func newRecord(t *testing.T, app core.App, collection string, set func(r *core.R
 
 // Without the PocketBase router, the server reads the bearer token itself.
 func TestBearerTokenWithoutPocketBase(t *testing.T) {
+	t.Parallel()
 	s := newTestServer(t)
 	user := newRecord(t, s.app, "users", func(r *core.Record) {
 		r.SetEmail("ana@example.com")

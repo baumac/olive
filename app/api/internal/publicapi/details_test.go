@@ -10,6 +10,7 @@ import (
 )
 
 func TestRestaurantDetails(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
@@ -91,6 +92,7 @@ func TestRestaurantDetails(t *testing.T) {
 }
 
 func TestSearchPlacesDetails(t *testing.T) {
+	t.Parallel()
 	photon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"features":[
  {"geometry":{"coordinates":[2.1893,41.3766]},"properties":{"name":"Can Solé","street":"Carrer de Sant Carles","osm_key":"amenity","osm_value":"restaurant","osm_type":"N","osm_id":1,
@@ -124,6 +126,7 @@ func TestSearchPlacesDetails(t *testing.T) {
 }
 
 func TestPriceLevelFilter(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	ids := map[string]string{}

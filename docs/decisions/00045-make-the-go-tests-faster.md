@@ -26,7 +26,7 @@ In scope:
 - the race detector of `make test-app`
 
 Out of scope:
-- `t.Parallel()` in the Go tests. The tests have no parallel run at the moment.
+- `t.Parallel()` in the Go tests. The unresolved questions have the answer.
 - the UI, SDK, lint, and end-to-end targets. Each takes less than 30 seconds.
 - the speed of the `migrations` tests. With race, they take about 46 seconds. They use the production schema with the bcrypt cost 10.
 
@@ -66,4 +66,9 @@ The record hooks of `searchindex` and `publicapi` are not in the template. The t
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-None.
+None. The answer of 2026-11-19:
+- The tests run with `t.Parallel()`. With race, the slowest package takes about 30 seconds instead of 59 seconds.
+  - No test calls `t.Setenv` or `os.Setenv`. Only `main.go` reads environment variables.
+  - Each `publicapi.Register` makes its own rate limiters. `newEnv` calls it for each test.
+  - `tests.NewTestApp` copies the template folder for each app. The tests share no database.
+  - `TestWarningOfBuildWithoutMetaBlock` changes the package variable `warnNoMetaBlock`. It has no `t.Parallel()`. Go runs it before the parallel tests continue.

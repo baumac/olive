@@ -7,6 +7,7 @@ import (
 )
 
 func TestSpecHasTheSessionCookie(t *testing.T) {
+	t.Parallel()
 	doc, err := reviewsapi.GetSwagger()
 	if err != nil {
 		t.Fatal(err)

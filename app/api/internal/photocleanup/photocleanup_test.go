@@ -61,6 +61,7 @@ func age(t *testing.T, dir string, by time.Duration) {
 }
 
 func TestRunDeletesOnlyOldFoldersWithoutARecord(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -120,6 +121,7 @@ func TestRunDeletesOnlyOldFoldersWithoutARecord(t *testing.T) {
 }
 
 func TestRegisterAddsTheJob(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -152,6 +154,7 @@ func orphan(t *testing.T, app core.App, id string) string {
 }
 
 func TestRunKeepsAFolderThatItCannotDelete(t *testing.T) {
+	t.Parallel()
 	if os.Geteuid() == 0 {
 		t.Skip("root can delete files in a read-only folder")
 	}
@@ -182,6 +185,7 @@ func TestRunKeepsAFolderThatItCannotDelete(t *testing.T) {
 // TestSuperusersCanStartTheJob uses the cron API of the dashboard page
 // Settings, Crons.
 func TestSuperusersCanStartTheJob(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -230,6 +234,7 @@ func TestSuperusersCanStartTheJob(t *testing.T) {
 
 // The job logs the error of Run. It does not stop the app.
 func TestRegisteredJobWithoutPhotoCollection(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -258,6 +263,7 @@ func TestRegisteredJobWithoutPhotoCollection(t *testing.T) {
 }
 
 func TestRunDeletesOldRecipePhotoFolders(t *testing.T) {
+	t.Parallel()
 	app, err := tests.NewTestApp(testapp.Dir(t))
 	if err != nil {
 		t.Fatal(err)

@@ -41,6 +41,7 @@ func (e *env) addSuperuser(email string) *core.Record {
 }
 
 func TestSignUpConfirmation(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	e.addSuperuser("root@example.com")
 
@@ -182,6 +183,7 @@ func TestSignUpConfirmation(t *testing.T) {
 }
 
 func TestPasswordReset(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	request202 := func(email string) {
@@ -240,6 +242,7 @@ func TestPasswordReset(t *testing.T) {
 }
 
 func TestEmailLimit(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, publicapi.Options{SignInLimit: 1000, SignInWindow: time.Minute, EmailLimit: 2})
 	e.signUp("ana@example.com", "Ana")
 	// The confirmation email has its own count.
@@ -273,6 +276,7 @@ func TestEmailLimit(t *testing.T) {
 }
 
 func TestEmailWithoutSMTP(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	e.app.Settings().SMTP.Enabled = false
 	e.expect(request{method: "POST", path: "/v1/users", body: anaSignUp}, http.StatusAccepted)
@@ -282,6 +286,7 @@ func TestEmailWithoutSMTP(t *testing.T) {
 }
 
 func TestGetCurrentUser(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUpPending("ana@example.com", "Ana")
 
@@ -304,6 +309,7 @@ func TestGetCurrentUser(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUpPending("ana@example.com", "Ana")
 	patch := func(body string, status int) response {
@@ -326,6 +332,7 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestConfirmEmailPasswordLimit(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, publicapi.Options{SignInLimit: 1000, SignInWindow: time.Minute, SignInFailureLimit: 2})
 	e.expect(request{method: "POST", path: "/v1/users", body: anaSignUp}, http.StatusAccepted)
 	token := e.emailToken("ana@example.com")
@@ -350,6 +357,7 @@ func TestConfirmEmailPasswordLimit(t *testing.T) {
 }
 
 func TestChangePassword(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, publicapi.Options{SignInLimit: 1000, SignInWindow: time.Minute, SignInFailureLimit: 3})
 	ana := e.signUpPending("ana@example.com", "Ana")
 	change := func(token, current, password string, status int) response {
@@ -400,6 +408,7 @@ func TestChangePassword(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
