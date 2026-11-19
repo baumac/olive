@@ -24,7 +24,7 @@ In scope:
 
 Out of scope:
 - the Public API. The `signUp` operation does not get the second password.
-- password reset. It stays in `docs/decisions/00000-backlog.md`.
+- password reset. It stays in `docs/decisions/!0000-backlog.md`.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation

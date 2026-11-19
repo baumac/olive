@@ -10,8 +10,8 @@ import RestaurantCard from './RestaurantCard.vue'
 // ReviewerAdded lists the restaurants or the recipes that a user added.
 const props = defineProps<{ creator: string; kind: ReviewKind }>()
 
-// The list is below the reviews. A short page keeps it small.
-const limit = 6
+// The list is above the reviews. A short page keeps the reviews near the top.
+const limit = 3
 
 const list = usePagedList<ParentSummary>(async (cursor) => {
   const page = await kinds[props.kind].listAdded(props.creator, { limit, cursor, sort: '-created' })
@@ -25,7 +25,7 @@ watch(() => props.creator, () => void list.reload(), { immediate: true })
   <PagedList
     :list="list"
     :noun="kinds[kind].plural"
-    list-class="lg:grid-cols-2 xl:grid-cols-3"
+    list-class="lg:grid-cols-3"
     skeleton-class="h-36 rounded-xl"
     :skeleton-count="3"
     unfiltered

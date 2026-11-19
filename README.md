@@ -52,7 +52,7 @@ CI runs the same commands. See `.github/workflows/ci.yml`.
 | `app/sdk` | the TypeScript and Go SDKs, generated from the spec |
 | `app/ui` | the Public UI |
 | `tests` | the end-to-end tests |
-| `docs/decisions` | the design decisions. Start with `00000-backlog.md`. |
+| `docs/decisions` | the design decisions. Start with `!0000-backlog.md`. |
 
 `AGENTS.md` has all commands and the rules for code comments.
 

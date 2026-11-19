@@ -96,18 +96,19 @@ const failedStatus = computed(() => {
         <h2 id="lists-heading" class="text-3xl font-semibold tracking-tight">Lists</h2>
         <ReviewerLists :reviewer-id="reviewerId" :own="isSelf" />
       </section>
-      <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">
-        <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>
-        <KindSwitch :kind="kind" label="Reviews of" />
-        <ReviewList :key="kind" :creator="reviewerId" :kind="kind" :reviewer-name="isSelf ? undefined : reviewer.data.value.name" />
-      </section>
-      <section v-if="reviewer.data.value.restaurantCount" class="flex flex-col gap-6" aria-labelledby="restaurants-heading">
+      <!-- The switch selects the added items and the reviews of one kind. -->
+      <KindSwitch :kind="kind" label="Restaurants or recipes" />
+      <section v-if="kind === 'restaurant' && reviewer.data.value.restaurantCount" class="flex flex-col gap-6" aria-labelledby="restaurants-heading">
         <h2 id="restaurants-heading" class="text-3xl font-semibold tracking-tight">Restaurants added</h2>
         <ReviewerAdded :creator="reviewerId" kind="restaurant" />
       </section>
-      <section v-if="reviewer.data.value.recipeCount" class="flex flex-col gap-6" aria-labelledby="recipes-heading">
+      <section v-if="kind === 'recipe' && reviewer.data.value.recipeCount" class="flex flex-col gap-6" aria-labelledby="recipes-heading">
         <h2 id="recipes-heading" class="text-3xl font-semibold tracking-tight">Recipes added</h2>
         <ReviewerAdded :creator="reviewerId" kind="recipe" />
+      </section>
+      <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">
+        <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>
+        <ReviewList :key="kind" :creator="reviewerId" :kind="kind" :reviewer-name="isSelf ? undefined : reviewer.data.value.name" />
       </section>
     </template>
   </main>

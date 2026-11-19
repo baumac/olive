@@ -18,7 +18,9 @@ declare module 'vue-router' {
 
 export const router = createRouter({
   history: createWebHistory(),
-  scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
+  // The filters, the sorts, and the kind are in the query. A change of them
+  // keeps the position on the page.
+  scrollBehavior: (to, from, saved) => saved ?? (to.path === from.path ? false : { top: 0 }),
   routes: [
     { path: '/', redirect: '/restaurants' },
     { path: '/restaurants', component: () => import('@/pages/RestaurantsPage.vue') },

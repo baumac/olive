@@ -313,7 +313,7 @@ describe('recipe parts of the list and reviewer pages', () => {
     })
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
     const added = vi.spyOn(recipesApi, 'listRecipes').mockResolvedValue({ items: [recipe], nextCursor: null })
-    const w = mount(ReviewerPage, { props: { reviewerId: ana.id }, global: { plugins: [await routerAt(`/reviewers/${ana.id}`)] }, attachTo: attach() })
+    const w = mount(ReviewerPage, { props: { reviewerId: ana.id }, global: { plugins: [await routerAt(`/reviewers/${ana.id}?kind=recipes`)] }, attachTo: attach() })
     await flushPromises()
     expect(w.find('[aria-label="Average recipe score: 7.5 out of 10"]').exists()).toBe(true)
     expect(w.text()).toContain('average of 2 recipe reviews · 1 recipe added')

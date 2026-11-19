@@ -38,21 +38,32 @@ test('a reviewer page names a reviewer without reviews', async ({ page, api }) =
   await expect(page.getByText('Sam has not reviewed a restaurant yet.')).toBeVisible()
 })
 
-test('a reviewer page lists the restaurants that the reviewer added', async ({ page, api }) => {
+test('a reviewer page lists the restaurants or the recipes that the reviewer added above the reviews', async ({ page, api }) => {
   const joe = await api.signUp('Joe')
   const ana = await api.signUp('Ana')
   const first = await api.createRestaurant(joe, { name: 'Joe Kitchen' })
-  await api.createRestaurant(joe, { name: 'Joe Grill' })
+  await Promise.all([
+    ...['Joe Grill', 'Joe Diner', 'Joe Bar'].map((name) => api.createRestaurant(joe, { name })),
+    api.createRecipe(joe, { name: 'Joe Dal' }),
+  ])
   await api.createRestaurant(ana, { name: 'Ana Bistro' })
   await api.createReview(ana, first.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 8, title: 'Ana likes it' })
 
   await page.goto(`/reviewers/${joe.auth.user.id}`)
-  await expect(page.getByText('No restaurant reviews yet · 2 restaurants added', { exact: true })).toBeVisible()
+  await expect(page.getByText('No restaurant reviews yet · 4 restaurants added', { exact: true })).toBeVisible()
+  const headings = page.getByRole('heading', { level: 2 })
+  await expect(headings).toHaveText(['Lists', 'Restaurants added', 'Reviews'])
   const section = page.getByRole('region', { name: 'Restaurants added' })
-  await expect(section.getByRole('heading', { level: 3 })).toHaveCount(2)
-  await expect(section.getByRole('link', { name: 'Joe Grill' })).toBeVisible()
-  await section.getByRole('link', { name: 'Joe Kitchen' }).click()
-  await expect(page).toHaveURL(new RegExp(`/restaurants/${first.id}$`))
+  const cards = section.getByRole('heading', { level: 3 })
+  await expect(cards).toHaveCount(3)
+  await section.getByRole('button', { name: 'Load more restaurants' }).click()
+  await expect(cards).toHaveCount(4)
+  await expect(section.getByRole('button', { name: 'Load more restaurants' })).toHaveCount(0)
+  await expect(section.getByRole('link', { name: 'Joe Kitchen' })).toHaveAttribute('href', `/restaurants/${first.id}`)
+
+  await page.getByRole('navigation', { name: 'Restaurants or recipes' }).getByRole('link', { name: 'Recipes' }).click()
+  await expect(headings).toHaveText(['Lists', 'Recipes added', 'Reviews'])
+  await expect(page.getByRole('region', { name: 'Recipes added' }).getByRole('link', { name: 'Joe Dal' })).toBeVisible()
 })
 
 for (const id of ['aaaaaaaaaaaaaaa', 'BAD']) {

@@ -1,10 +1,11 @@
 import type { Restaurant, RestaurantReview, SavedList } from '@reviews/sdk'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { type RouteLocationNormalized, createMemoryHistory, createRouter } from 'vue-router'
 import ReviewCard from '@/components/app/ReviewCard.vue'
 import { listsApi, restaurantsApi, reviewersApi } from '@/lib/api'
 import ReviewerPage from '@/pages/ReviewerPage.vue'
+import { router as appRouter } from '@/router'
 import { expectAccessible } from './axe'
 import { rejectWith } from './problem'
 
@@ -169,10 +170,10 @@ describe('ReviewerPage', () => {
     const list = vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [restaurant], nextCursor: null })
     const w = await mountPage('u2g6k0m4o8q1s5w')
     expect(w.text()).toContain('No restaurant reviews yet · 2 restaurants added')
-    expect(w.findAll('h2').map((h) => h.text())).toEqual(['Lists', 'Reviews', 'Restaurants added'])
+    expect(w.findAll('h2').map((h) => h.text())).toEqual(['Lists', 'Restaurants added', 'Reviews'])
     expect(w.get('h3 a').text()).toBe("Luigi's Trattoria")
     expect(w.get('h3 a').attributes('href')).toBe('/restaurants/k3x9m2p7q1w8z4a')
-    expect(list.mock.calls[0]![0]).toMatchObject({ creatorEq: 'u2g6k0m4o8q1s5w', sort: '-created' })
+    expect(list.mock.calls[0]![0]).toMatchObject({ creatorEq: 'u2g6k0m4o8q1s5w', sort: '-created', limit: 3 })
     await expectAccessible(w.element)
   })
 
@@ -227,5 +228,19 @@ describe('ReviewerPage', () => {
     expect(w.text()).toContain('We cannot find this page')
     expect(w.text()).toContain('The page may have been deleted, or the link has a typo.')
     expect(list).not.toHaveBeenCalled()
+  })
+})
+
+describe('router scroll', () => {
+  const scroll = appRouter.options.scrollBehavior!
+  const at = (path: string) => ({ path }) as RouteLocationNormalized
+
+  it('keeps the position when only the query changes', () => {
+    expect(scroll(at('/reviewers/u2g6k0m4o8q1s5w'), at('/reviewers/u2g6k0m4o8q1s5w'), null)).toBe(false)
+  })
+
+  it('goes to the top of a new path and back to a saved position', () => {
+    expect(scroll(at('/recipes'), at('/reviewers/u2g6k0m4o8q1s5w'), null)).toEqual({ top: 0 })
+    expect(scroll(at('/recipes'), at('/restaurants'), { left: 0, top: 300 })).toEqual({ left: 0, top: 300 })
   })
 })

@@ -12,8 +12,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - allow users to set a prefered location that will be the default location the map opens for them
 - Update decision 00029 to address the following
   - The UI does not tell users that "Highest rated" uses the number of reviews. The restaurant cards show the number of reviews.
-- Update decision 00032 to address the following
-  - The section is below a review list of up to 20 reviews. A reviewer with many reviews has the restaurants far down the page.
 
 
 ## For Me

@@ -265,5 +265,5 @@ comments you write or edit. Commit messages are always necessary.
 ## Design Decisions
 
 - Substantive design decisions are recorded as decisions under `docs/decisions/`
-  Start from `docs/decisions/00000-template.md`.
-- Backlog items for a future date are in `docs/decisions/00000-backlog.md`
+  Start from `docs/decisions/!0000-template.md`.
+- Backlog items for a future date are in `docs/decisions/!0000-backlog.md`

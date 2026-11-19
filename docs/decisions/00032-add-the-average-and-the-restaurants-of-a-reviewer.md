@@ -53,8 +53,11 @@ Ana
 ```
 
 A reviewer without reviews has "No reviews yet" and no average.
-A reviewer with restaurants has a "Restaurants added" section below the reviews.
-The section has the restaurant cards of the restaurants page, the newest first. It shows 6 cards and a "Load more restaurants" button.
+A reviewer with restaurants has a "Restaurants added" section above the reviews.
+The section has the restaurant cards of the restaurants page, the newest first. It shows 3 cards and a "Load more restaurants" button.
+On a wide screen, the 3 cards are one row.
+The review list has pages of 20 reviews. Below it, the section of a reviewer with many reviews is far down the page.
+Above it, a "Load more" of the reviews does not move the section.
 A reviewer without restaurants has no section.
 
 # Implementation Details
@@ -77,7 +80,12 @@ Server:
 
 UI:
 - `ReviewerPage` shows the average with `RatingDisplay` and the label "Average score"
-- `ReviewerRestaurants` loads `listRestaurants` with `creator[eq]`, the sort `-created`, and a limit of 6
+- `ReviewerRestaurants` loads `listRestaurants` with `creator[eq]`, the sort `-created`, and a limit of 3
+- the page order is the header, the lists of decision 00033, the `KindSwitch` of decision 00047, "Restaurants added", and the reviews
+- decision 00047 changes `ReviewerRestaurants` to `ReviewerAdded`. The switch selects "Restaurants added" or "Recipes added", and the reviews of the same kind.
+  The section of the other kind then does not push the reviews down. The header has the counts of both kinds.
+- the cards are in 3 columns from the `lg` width
+- a change of the query keeps the scroll position. A change of a filter, the sort, or the kind then does not move the page to the top.
 - the page shows the section only for a `restaurant_count` above 0. A reviewer without restaurants causes no list request.
 - `RestaurantCard` has a `heading` property. The cards of the section use `h3` below the `h2` of the section.
 - the restaurant list has no search, filter, or sort. The filters of the review list are in the URL of the page.
