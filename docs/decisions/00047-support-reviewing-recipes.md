@@ -1,13 +1,13 @@
 ---
 description: Let users add recipes with ingredients and steps, review them with their own scores, and save them to lists. Recipes get their own collections, operations, and pages next to the restaurants. The review code of the API works for both kinds.
-status: proposed
+status: implemented
 ---
 
 # Motivation
 [motivation]: #motivation
 
-The backlog has "Support reviewing cheeses, wines, and recipes".
-This decision does the recipes.
+The backlog had "Support reviewing recipes".
+This decision does it.
 The users cook at home and want to tell each other which recipes work.
 Today the app can only review restaurants.
 
@@ -17,7 +17,7 @@ The expected outcome:
 - Other users review it with scores that fit a recipe, a title, feedback, and photos.
 - Users save recipes to their favorites and to their other lists.
 - Recipes have the search, sorts, filters, overall score, reviewer pages, link previews, and structured data of restaurants.
-- Cheeses and wines can later use the same pattern with little new code.
+- Another kind can later use the same pattern with little new code.
 
 # Scope
 [scope]: #scope
@@ -34,7 +34,7 @@ In scope:
 
 Out of scope:
 
-- Cheeses and wines. They stay in the backlog.
+- Cheeses and wines. The backlog has them under "Won't do".
 - Amounts and units as separate values of an ingredient. An ingredient is one line of text, for example `2 cans of chickpeas`.
 - A scale of the servings that changes the amounts.
 - A recipe import from a URL, for example from the schema.org `Recipe` of a web page.
@@ -315,7 +315,7 @@ Each step is one pull request. Each step ends with `make lint test-app` and the 
    Turn on the recipe page meta and the recipe rows of the sitemap.
    The list page, `ReviewerLists.vue`, and the save menu show `recipe_count` next to `item_count`. `item_count` counts only restaurants.
    Check with `make lint-ui lint-eslint test-ui` and `make test-e2e PROJECT=chromium E2E_FILE=e2e/recipes.spec.ts`. Also run `E2E_FILE=e2e/lists.spec.ts`. CI runs all browsers.
-5. **Close the decision.** Set the status of this decision to `implemented`. Change the backlog item to "Support reviewing cheeses and wines".
+5. **Close the decision.** Set the status of this decision to `implemented`. Remove the recipes item from the backlog.
 
 Steps 2 and 3 can be in production without step 4. The UI then has no link to the new operations.
 
