@@ -162,6 +162,5 @@ Only a superuser and SQL can set `approved`.
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- No one tells a superuser that a user waits. A site with few sign ups can check the dashboard. Others need a notice by email.
-- A user gets no message about the approval.
-- The backlog has an item for the two notices. They need SMTP.
+- No one tells a superuser that a user waits. Decision 00037 added an email to the superusers.
+- A user gets no message about the approval. Decision 00037 added the approval email.

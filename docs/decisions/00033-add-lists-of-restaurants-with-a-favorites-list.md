@@ -173,5 +173,5 @@ A user from SQL has no favorites list. `favoritesOf` makes it at the first `PUT`
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- The favorites list is public. A user who wants a private list has no option.
+- The favorites list is public. A user who wants a private list has no option. The backlog has private lists under "Won't do".
 - A list name is public text without moderation, the same as a review title.

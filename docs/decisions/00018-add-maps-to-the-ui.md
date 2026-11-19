@@ -146,7 +146,8 @@ GET /v1/restaurants?within[west]=2.1&within[south]=41.3&within[east]=2.2&within[
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- Groups of pins. A view with more than 100 restaurants shows only the first 100 of the sort.
+- Groups of pins. Decision 00020 added them.
+- A view with more than 100 restaurants shows only the first 100 of the sort.
 - The position of the map is not in the URL. A reload opens Barcelona again.
 - A paid tile server, when the app is commercial or has much more use. Only the two variables change.
 - Leaflet 2 is in beta. It changes the internals that `MapView` replaces.

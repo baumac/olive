@@ -122,5 +122,5 @@ Accepted risks:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- A sign out of one device. It needs a table of sessions.
-- An email to the user when the limit of wrong passwords is reached. It needs email.
+- A sign out of one device. It needs a table of sessions. Decision 00042 keeps it out of scope.
+- An email to the user when the limit of wrong passwords is reached. Decision 00037 added email. The app sends no email for this limit yet.
