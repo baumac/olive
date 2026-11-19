@@ -61,4 +61,4 @@ Example: Ana signs up with `ana@example.com`. Eve then signs up with the same ad
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- A person can still make the sign up of an owner fail for one hour. The person signs up with the address until its email limit. The owner must then reset the password. An invite removes this.
+None.

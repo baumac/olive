@@ -140,4 +140,4 @@ Accepted risks:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- A retry of a failed sign out on the next start of the UI.
+None.

@@ -174,6 +174,4 @@ The page shows no currency sign. The API has no currency for a restaurant.
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- Opening hours that the app can read. They need the syntax of OpenStreetMap or a table for each day. "Open now" also needs the time zone of the restaurant.
-- A request to OpenStreetMap for the tags of the selected place. See the place search section for the reasons against it now.
-- A filter by price level in the restaurant list. Decision 00044 added it.
+None.

@@ -80,4 +80,4 @@ Why 30 and 300:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- A limit per day can be necessary if approved users misuse the hourly limit.
+None.

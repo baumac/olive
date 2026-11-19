@@ -91,4 +91,4 @@ Not tested: an email through a real SMTP server.
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- the log of the dashboard has the links while SMTP is off. Turn on SMTP in production.
+None.

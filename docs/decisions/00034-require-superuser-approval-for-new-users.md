@@ -161,6 +161,3 @@ Only a superuser and SQL can set `approved`.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
-
-- No one tells a superuser that a user waits. Decision 00037 added an email to the superusers.
-- A user gets no message about the approval. Decision 00037 added the approval email.

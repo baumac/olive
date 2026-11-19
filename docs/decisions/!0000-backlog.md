@@ -10,6 +10,14 @@ Each sub-bullet point contains notes about the incomplete decision.
 - generate list of unresolved questions and resolve them with the user
 - Undo decision 00021-add-structured-data-and-a-sitemap.md to add structured data and a sitemap for search engines
 - review all decisions against decision 00000-create-reviews-app.md and generate a list of all potential decisions that go against it
+- Update decision 00018 with improved map UX
+  - encode the position of the map in the url. Currently it is not in the URL, so a reload opens Barcelona again
+  - allow users to set a prefered location that will be the default location the map opens for them
+- Update decision 00029 to address the following
+  - The UI does not tell users that "Highest rated" uses the number of reviews. The restaurant cards show the number of reviews.
+- Update decision 00032 to address the following
+  - The section is below a review list of up to 20 reviews. A reviewer with many reviews has the restaurants far down the page.
+
 
 ## For Me
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
@@ -26,6 +34,8 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Add IOS app: won't do for now as this requires a mac laptop and side-loading the app from that device, or a 99$ per year subscription to host the app in the app store
 - Add load tests: not needed as the number of users are quite low
 - Support oauth2 logins: not needed since email/password based authentication is sufficient
+- Support inviting users via email
+  - Note: A person can still make the sign up of an owner fail for one hour. The person signs up with the address until its email limit. The owner must then reset the password. An invite removes this.
 - Social features: not needed since this is intended to be used by a low number of users that communicate with each other via other means
   - Reviews have no visit date and no owner or reader reply
   - Comments or replies on review

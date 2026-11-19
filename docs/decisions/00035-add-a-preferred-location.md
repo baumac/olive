@@ -118,8 +118,9 @@ The map view sends `near` without a radius, together with `within`.
 - The list has no restaurant in the distance. The empty state then has a "Show any distance" button, also when filters are active.
 - A second location replaces a position of the device that the browser gives later.
 - A page without HTTPS gets a message that the position needs HTTPS.
+- The `distance` sort reads each restaurant that matches the filters. A site with many restaurants can need an R-tree index.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- The `distance` sort reads each restaurant that matches the filters. A site with many restaurants can need an R-tree index.
+None.

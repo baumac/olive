@@ -250,8 +250,4 @@ Environment variables:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- The map of the restaurants and its tile server. Decision 00018 added them.
-- A sort by distance. Decision 00035 added it.
-- OpenStreetMap can delete a place or give it a new ID. The restaurant keeps the old `place_id`, and a second restaurant at the place is then possible.
-- The restaurants from before this decision have no location until a user adds one.
-- A paid geocoder. See the place search section for the conditions.
+None.

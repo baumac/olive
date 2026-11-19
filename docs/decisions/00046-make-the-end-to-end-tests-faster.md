@@ -62,4 +62,4 @@ A test that searches or filters gets its name or tag from `uniqueTag`.
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- Do the email tests need a fake mail server? They wait for the log of PocketBase.
+None.

@@ -66,4 +66,4 @@ The record hooks of `searchindex` and `publicapi` are not in the template. The t
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- Can the tests run with `t.Parallel()`? `t.Setenv`, package variables, and the rate limiters must not be shared.
+None.

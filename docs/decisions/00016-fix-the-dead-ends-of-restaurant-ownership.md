@@ -149,6 +149,4 @@ Alternatives that this decision does not use:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- A typo in the name of a restaurant that other users reviewed. Only a superuser can correct it. The backlog accepts this under "Won't do".
-- The delete of a restaurant with reviews in the dashboard. `reviews.restaurant` is a required relation without a cascade, so a superuser must delete the reviews first. No test checks this.
-- A restaurant without a creator and without reviews stays until a user reviews it or a superuser deletes it.
+None.

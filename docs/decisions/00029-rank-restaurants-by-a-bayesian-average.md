@@ -129,4 +129,4 @@ The second key of an old cursor is a rounded average, not a ranking.
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- The UI does not tell users that "Highest rated" uses the number of reviews. The restaurant cards show the number of reviews.
+None.

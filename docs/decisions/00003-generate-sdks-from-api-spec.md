@@ -227,4 +227,4 @@ We do not change the meaning of the spec to work around a generator without a ne
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- OpenAPI Generator marks its OpenAPI 3.1 support as beta. If `typescript-fetch` cannot handle the spec, we compare other TypeScript generators in a new decision.
+None.

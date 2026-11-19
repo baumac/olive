@@ -92,4 +92,4 @@ Corner cases:
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-- The section is below a review list of up to 20 reviews. A reviewer with many reviews has the restaurants far down the page.
+None.
