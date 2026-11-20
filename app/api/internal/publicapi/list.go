@@ -74,8 +74,15 @@ func parseSort(raw *string, table string, fields map[string]sortField) ([]sortKe
 			return nil, "", fmt.Sprintf("The sort property %q occurs more than one time.", name)
 		}
 		seen[name] = true
-		if len(keys) == 0 || !keys[len(keys)-1].unique {
-			keys = append(keys, field(desc)...)
+		if len(keys) > 0 && keys[len(keys)-1].unique {
+			continue
+		}
+		// A field can have the key of a later field. The date sort of a
+		// review also sorts by created.
+		for _, k := range field(desc) {
+			if !slices.ContainsFunc(keys, func(o sortKey) bool { return o.expr == k.expr }) {
+				keys = append(keys, k)
+			}
 		}
 	}
 	if last := keys[len(keys)-1]; !last.unique {

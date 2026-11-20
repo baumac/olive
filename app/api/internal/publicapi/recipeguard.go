@@ -30,7 +30,7 @@ var recipeGuard = fieldGuard{
 // recipeProperties gets the properties that a response would have. The JSON
 // fields are the stored JSON. A stored string or object then gets an error.
 func recipeProperties(r *core.Record, schema *openapi3.Schema) (map[string]json.RawMessage, error) {
-	raw, err := json.Marshal(toRecipe(r, nil, nil, nil, nil))
+	raw, err := json.Marshal(toRecipe(r, nil, nil, nil, viewerData{}))
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 6.0.0
+  version: 7.0.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants and recipes.
 
@@ -45,6 +45,10 @@ info:
       `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.
       A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.
       The `source` of a recipe with reviews of other users cannot change.
+    - Version 7.0.0 allows many reviews of one user for one restaurant or recipe. A review is one visit or one cook.
+      Each review has a required `date`. The review lists sort by `-date` by default.
+      The `review_exists` code is gone.
+      Restaurants and recipes have the `own_review_count` of the user of the token.
 
 servers:
   - url: /v1
@@ -699,7 +703,7 @@ paths:
         key: user
         name: create
       summary: Create a review for a restaurant
-      description: A user can have at most one review per restaurant.
+      description: A review is one visit. A user can write many reviews of one restaurant.
       tags: [restaurants]
       security:
         - bearerAuth: []
@@ -731,8 +735,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
@@ -1513,7 +1515,7 @@ paths:
         key: user
         name: create
       summary: Create a review for a recipe
-      description: A user can have at most one review per recipe.
+      description: A review is one cook. A user can write many reviews of one recipe.
       tags: [recipes]
       security:
         - bearerAuth: []
@@ -1545,8 +1547,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
@@ -2549,13 +2549,14 @@ components:
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `title` sort ignores case only for the ASCII letters `A` to `Z`.
         The `overall` sort uses the `overall` value of the review.
+        The `date` sort uses the `date` of the visit, then `created`.
         The `relevance` sort puts the best matches of `search` first. It needs `search`.
         With `search`, the default sort is `relevance`.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(overall|space|service|food|price|cleanliness|relevance|title|created|updated)(,-?(overall|space|service|food|price|cleanliness|relevance|title|created|updated))*$'
-        default: '-created'
+        pattern: '^-?(overall|space|service|food|price|cleanliness|relevance|title|date|created|updated)(,-?(overall|space|service|food|price|cleanliness|relevance|title|date|created|updated))*$'
+        default: '-date'
       example: '-food,title'
 
     RecipeSort:
@@ -2588,13 +2589,14 @@ components:
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `title` sort ignores case only for the ASCII letters `A` to `Z`.
         The `overall` sort uses the `overall` value of the review.
+        The `date` sort uses the `date` of the cook, then `created`.
         The `relevance` sort puts the best matches of `search` first. It needs `search`.
         With `search`, the default sort is `relevance`.
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(overall|taste|ease|instructions|value|relevance|title|created|updated)(,-?(overall|taste|ease|instructions|value|relevance|title|created|updated))*$'
-        default: '-created'
+        pattern: '^-?(overall|taste|ease|instructions|value|relevance|title|date|created|updated)(,-?(overall|taste|ease|instructions|value|relevance|title|date|created|updated))*$'
+        default: '-date'
       example: '-taste,title'
 
     RestaurantSearch:
@@ -3015,7 +3017,6 @@ components:
       description: |
         The request conflicts with the current state. The `code` of the problem tells the reason.
 
-        - `review_exists` is a second review of one user for a restaurant or a recipe.
         - `other_reviews` is a delete of a restaurant that has a review of another user, or a change of its `name` or `location`.
           For a recipe, it is a delete or a change of its `name`, `ingredients`, `steps`, or stored `source`.
         - `place_taken` is a `location.place_id` that another restaurant has.
@@ -3134,6 +3135,16 @@ components:
       type: string
       pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
       examples: ['2024-11-04T01:26:55.002Z']
+    ReviewDate:
+      description: |
+        The date of a visit or a cook in the form `YYYY-MM-DD`. It has no time and no time zone.
+        The date must exist and be `1900-01-01` or later.
+        It must not be after the current date in UTC+14, the latest time zone.
+      type: string
+      format: review-date
+      pattern: '^\d{4}-\d{2}-\d{2}$'
+      x-pattern-message: must be a date in the form YYYY-MM-DD
+      examples: ['2024-11-06']
     Name:
       description: |
         A name with at least one character that is not ASCII whitespace.
@@ -3421,7 +3432,7 @@ components:
         A recipe in a list of recipes. It has the properties of `Recipe` without `ingredients` and `steps`.
         `getRecipe` gives these two properties.
       type: object
-      required: [id, name, creator, review_count, rating, cover, favorite, created, updated]
+      required: [id, name, creator, review_count, rating, cover, favorite, own_review_count, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -3445,7 +3456,7 @@ components:
             - $ref: '#/components/schemas/Creator'
             - type: 'null'
         review_count:
-          description: The number of reviews of the recipe.
+          description: The number of reviews of the recipe. Each cook of a user has its own review.
           type: integer
           minimum: 0
         rating:
@@ -3465,6 +3476,12 @@ components:
             `true` if the favorites list of the user of the token has the recipe.
             It is `false` for a request without a token.
           type: boolean
+        own_review_count:
+          description: |
+            The number of reviews of the user of the token for the recipe. Each cook has its own review.
+            It is `0` for a request without a token.
+          type: integer
+          minimum: 0
         created:
           $ref: '#/components/schemas/Timestamp'
         updated:
@@ -3502,6 +3519,7 @@ components:
             value: 8
           cover: null
           favorite: true
+          own_review_count: 0
           created: '2024-11-04T01:26:55.002Z'
           updated: '2024-11-04T01:26:55.002Z'
     RecipeRating:
@@ -3608,6 +3626,7 @@ components:
               rating: null
               cover: null
               favorite: false
+              own_review_count: 0
               created: '2024-11-04T01:26:55.002Z'
               updated: '2024-11-04T01:26:55.002Z'
           next_cursor: null
@@ -3631,7 +3650,7 @@ components:
         name:
           $ref: '#/components/schemas/Name'
         restaurant_review_count:
-          description: The number of restaurant reviews of the user.
+          description: The number of restaurant reviews of the user. Each visit has its own review.
           type: integer
           minimum: 0
         restaurant_average_overall:
@@ -3648,7 +3667,7 @@ components:
           type: integer
           minimum: 0
         recipe_review_count:
-          description: The number of recipe reviews of the user.
+          description: The number of recipe reviews of the user. Each cook has its own review.
           type: integer
           minimum: 0
         recipe_average_overall:
@@ -3743,7 +3762,7 @@ components:
     Restaurant:
       description: A restaurant that can be reviewed.
       type: object
-      required: [id, name, location, creator, review_count, rating, cover, favorite, created, updated]
+      required: [id, name, location, creator, review_count, rating, cover, favorite, own_review_count, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -3772,7 +3791,7 @@ components:
             - $ref: '#/components/schemas/Creator'
             - type: 'null'
         review_count:
-          description: The number of reviews of the restaurant.
+          description: The number of reviews of the restaurant. Each visit of a user has its own review.
           type: integer
           minimum: 0
         rating:
@@ -3792,6 +3811,12 @@ components:
             `true` if the favorites list of the user of the token has the restaurant.
             It is `false` for a request without a token.
           type: boolean
+        own_review_count:
+          description: |
+            The number of reviews of the user of the token for the restaurant. Each visit has its own review.
+            It is `0` for a request without a token.
+          type: integer
+          minimum: 0
         created:
           $ref: '#/components/schemas/Timestamp'
         updated:
@@ -3832,6 +3857,7 @@ components:
               id: u5n1c8r3t6y0b2e
               name: Ana
           favorite: false
+          own_review_count: 0
           created: '2024-11-04T01:26:55.002Z'
           updated: '2024-11-04T01:26:55.002Z'
     RestaurantRating:
@@ -3953,6 +3979,7 @@ components:
               rating: null
               cover: null
               favorite: false
+              own_review_count: 0
               created: '2024-11-04T01:26:55.002Z'
               updated: '2024-11-04T01:26:55.002Z'
           next_cursor: c2Fk9xQe7LmT2vBn
@@ -4054,7 +4081,7 @@ components:
     RestaurantReview:
       description: A review of a restaurant. It scores the space, service, food, price, and cleanliness.
       type: object
-      required: [id, restaurant, restaurant_name, overall, space, service, food, price, cleanliness, title, creator, photos, created, updated]
+      required: [id, restaurant, restaurant_name, date, overall, space, service, food, price, cleanliness, title, creator, photos, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -4066,6 +4093,10 @@ components:
             It is the current name. A rename of the restaurant changes it.
           type: string
           $ref: '#/components/schemas/Name'
+        date:
+          description: The date of the visit.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
         overall:
           description: |
             The average of the five scores. The API computes it. A client cannot set it.
@@ -4103,6 +4134,7 @@ components:
         - id: r1b8c5e2g9i6k3m
           restaurant: k3x9m2p7q1w8z4a
           restaurant_name: Luigi's Trattoria
+          date: '2024-11-06'
           overall: 7.6
           space: 7
           service: 9
@@ -4145,8 +4177,12 @@ components:
       description: The properties of a new review.
       type: object
       additionalProperties: false
-      required: [space, service, food, price, cleanliness, title]
+      required: [date, space, service, food, price, cleanliness, title]
       properties:
+        date:
+          description: The date of the visit.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
         space:
           $ref: '#/components/schemas/SpaceScore'
         service:
@@ -4162,7 +4198,8 @@ components:
         feedback:
           $ref: '#/components/schemas/LongText'
       examples:
-        - space: 7
+        - date: '2024-11-06'
+          space: 7
           service: 9
           food: 8
           price: 6
@@ -4174,6 +4211,10 @@ components:
       type: object
       additionalProperties: false
       properties:
+        date:
+          description: The date of the visit.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
         space:
           $ref: '#/components/schemas/SpaceScore'
         service:
@@ -4210,6 +4251,7 @@ components:
             - id: r7d4f0h2j9l5s3v
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
+              date: '2024-11-06'
               overall: 9
               space: 8
               service: 10
@@ -4226,6 +4268,7 @@ components:
             - id: r1b8c5e2g9i6k3m
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
+              date: '2024-11-06'
               overall: 7.6
               space: 7
               service: 9
@@ -4244,7 +4287,7 @@ components:
     RecipeReview:
       description: A review of a recipe. It scores the taste, the ease, the instructions, and the value.
       type: object
-      required: [id, recipe, recipe_name, overall, taste, ease, instructions, value, title, creator, photos, created, updated]
+      required: [id, recipe, recipe_name, date, overall, taste, ease, instructions, value, title, creator, photos, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -4256,6 +4299,10 @@ components:
             It is the current name. A rename of the recipe changes it.
           type: string
           $ref: '#/components/schemas/Name'
+        date:
+          description: The date of the cook.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
         overall:
           description: |
             The average of the four scores. The API computes it. A client cannot set it.
@@ -4291,6 +4338,7 @@ components:
         - id: v2k6m0p4r8t1w5y
           recipe: c4r8e2p6i0s3t7a
           recipe_name: Shakshuka
+          date: '2024-11-06'
           overall: 8.25
           taste: 9
           ease: 8
@@ -4321,8 +4369,12 @@ components:
       description: The properties of a new recipe review.
       type: object
       additionalProperties: false
-      required: [taste, ease, instructions, value, title]
+      required: [date, taste, ease, instructions, value, title]
       properties:
+        date:
+          description: The date of the cook.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
         taste:
           $ref: '#/components/schemas/TasteScore'
         ease:
@@ -4336,7 +4388,8 @@ components:
         feedback:
           $ref: '#/components/schemas/LongText'
       examples:
-        - taste: 9
+        - date: '2024-11-06'
+          taste: 9
           ease: 8
           instructions: 8
           value: 8
@@ -4347,6 +4400,10 @@ components:
       type: object
       additionalProperties: false
       properties:
+        date:
+          description: The date of the cook.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
         taste:
           $ref: '#/components/schemas/TasteScore'
         ease:
@@ -4381,6 +4438,7 @@ components:
             - id: v2k6m0p4r8t1w5y
               recipe: c4r8e2p6i0s3t7a
               recipe_name: Shakshuka
+              date: '2024-11-06'
               overall: 8.25
               taste: 9
               ease: 8
@@ -4612,7 +4670,6 @@ components:
             - wrong_password_limit
             - not_creator
             - favorites_list
-            - review_exists
             - other_reviews
             - place_taken
             - photo_limit

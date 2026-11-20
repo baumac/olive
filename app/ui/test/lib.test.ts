@@ -5,11 +5,11 @@ import { apiFailure, failureText, fieldErrors, notApprovedText, notCreatorText }
 import { listFailureText } from '@/lib/lists'
 import { restaurantFilterDefs, restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
-import { formatCount, formatDate, formatScore, initials, parseTimestamp } from '@/lib/format'
-import { parentAccess } from '@/lib/parents'
+import { formatCount, formatDate, formatDay, formatScore, initials, localDay, parseDay, parseTimestamp } from '@/lib/format'
+import { ownReviewsText, parentAccess } from '@/lib/parents'
 import { directionsLink } from '@/lib/places'
 import { overallOf, scoreFields } from '@/lib/reviews'
-import { checkLongText, checkName, checkPassword, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
+import { checkLongText, checkName, checkPassword, checkReviewDay, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
 import { rejectWith } from './problem'
 
 describe('format', () => {
@@ -182,26 +182,64 @@ describe('scoreFields', () => {
 
 describe('parentAccess', () => {
   const creator = { id: 'u5n1c8r3t6y0b2e', name: 'Ana' }
+  const of = (reviewCount: number, ownReviewCount: number, c: typeof creator | null = creator) => ({ creator: c, reviewCount, ownReviewCount })
 
   it('lets the creator change the restaurant', () => {
-    expect(parentAccess({ creator, reviewCount: 0 }, creator.id, false)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess({ creator, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess({ creator, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(parentAccess({ creator, reviewCount: 2 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(parentAccess({ creator, reviewCount: 0 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess({ creator, reviewCount: 1 }, 'u2g6k0m4o8q1s5w', true).canChange).toBe(false)
-    expect(parentAccess({ creator, reviewCount: 0 }, undefined, false).canChange).toBe(false)
+    expect(parentAccess(of(0, 0), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess(of(1, 1), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess(of(1, 0), creator.id)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(parentAccess(of(2, 1), creator.id)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(parentAccess(of(1, 0), 'u2g6k0m4o8q1s5w').canChange).toBe(false)
+    expect(parentAccess(of(0, 0), undefined).canChange).toBe(false)
   })
 
   it('lets a reviewer change a restaurant without a creator', () => {
-    expect(parentAccess({ creator: null, reviewCount: 1 }, creator.id, true)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess({ creator: null, reviewCount: 1 }, creator.id, false)).toEqual({ canChange: false, hasOtherReviews: true })
+    expect(parentAccess(of(1, 1, null), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess(of(1, 0, null), creator.id)).toEqual({ canChange: false, hasOtherReviews: true })
   })
 
-  it('leaves the decision to the API after a failed lookup', () => {
-    expect(parentAccess({ creator, reviewCount: 1 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess({ creator, reviewCount: 2 }, creator.id, null)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(parentAccess({ creator: null, reviewCount: 1 }, creator.id, null).canChange).toBe(false)
+  it('counts each own review', () => {
+    expect(parentAccess(of(3, 3), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
+    expect(parentAccess(of(3, 2), creator.id)).toEqual({ canChange: true, hasOtherReviews: true })
+    expect(parentAccess(of(2, 2, null), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
+  })
+
+  it('ignores a stale own count after the sign out', () => {
+    expect(parentAccess(of(2, 2), undefined)).toEqual({ canChange: false, hasOtherReviews: true })
+  })
+})
+
+describe('review dates', () => {
+  it('reads a date as a local day', () => {
+    expect(parseDay('2024-11-04')).toEqual(new Date(2024, 10, 4))
+    for (const bad of ['2024-02-30', '2023-02-29', '2024-13-01', '2024-11-4', '04/11/2024', '']) {
+      expect(parseDay(bad)).toBeNull()
+    }
+  })
+
+  it('shows the day without a change of time zone', () => {
+    expect(formatDay('2024-11-04')).toBe('4 Nov 2024')
+    expect(formatDay('2024-01-01')).toBe('1 Jan 2024')
+  })
+
+  it('gives the local date of the browser', () => {
+    expect(localDay(new Date(2024, 10, 4, 23, 59))).toBe('2024-11-04')
+    expect(localDay(new Date(2024, 0, 9, 0, 1))).toBe('2024-01-09')
+  })
+
+  it('allows the dates from 1900 to today', () => {
+    expect(checkReviewDay('2024-11-04', '2024-11-04')).toBe('')
+    expect(checkReviewDay('1900-01-01', '2024-11-04')).toBe('')
+    expect(checkReviewDay('2024-11-05', '2024-11-04')).toBe('Enter a date from 1 Jan 1900 to today.')
+    expect(checkReviewDay('1899-12-31', '2024-11-04')).toBe('Enter a date from 1 Jan 1900 to today.')
+    expect(checkReviewDay('', '2024-11-04')).toBe('Enter a date.')
+  })
+})
+
+describe('own reviews', () => {
+  it('tells that the delete removes each own review', () => {
+    expect(ownReviewsText(1)).toBe('Your review and its photos will be deleted too.')
+    expect(ownReviewsText(3)).toBe('Your 3 reviews and their photos will be deleted too.')
   })
 })
 

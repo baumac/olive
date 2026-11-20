@@ -38,6 +38,7 @@ New Concepts:
 - **Review**: scores and feedback for a single restaurant
   - a review must have exactly one restaurant
   - a user can have at most one review per restaurant
+    - decision 00050 removes this rule. A review is one visit, and each review has a date.
   - a review scores five categories: space, service, food, price, and cleanliness
 - **Restaurant**: a restaurant that can be reviewed
   - a restaurant has zero to many reviews
@@ -597,6 +598,7 @@ The PocketBase collections need this additional setup:
   - PocketBase removes the user ID from `creator` in the same transaction as the delete of the user
   - a hook outside that transaction could clear `creator` and then fail to delete the user. A test checks the PocketBase behavior.
 - the reviews collection has a unique index on the `restaurant` and `creator` fields
+  - decision 00050 removes the `UNIQUE` of this index
   - two requests at the same time can both pass the duplicate check of the API
   - the API changes the unique index error to `409 Conflict`, not `500 Internal Server Error`
 - the [Users API](#users-api) wraps the PocketBase password auth of the `users` collection

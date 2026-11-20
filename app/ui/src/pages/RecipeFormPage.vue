@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { Recipe } from '@reviews/sdk'
 import { ArrowDownIcon, ArrowUpIcon, CircleAlertIcon, PlusIcon, XIcon } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -16,7 +15,7 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, notApprovedText, recipesApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { normalizeWebsite } from '@/lib/restaurantDetails'
-import { findOwnReviewId, parentAccess } from '@/lib/parents'
+import { parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import {
@@ -105,20 +104,10 @@ function setSteps(steps: string[]) {
 onMounted(async () => {
   if (props.recipeId) {
     try {
-      const userId = currentUser.value?.id
-      const [r, hasOwnReview]: [Recipe, boolean | null] = await Promise.all([
-        recipesApi.getRecipe({ recipeId: props.recipeId }),
-        userId
-          ? findOwnReviewId('recipe', props.recipeId, userId).then(
-              (id) => !!id,
-              () => null,
-            )
-          : false,
-      ])
-      const access = parentAccess(r, userId, hasOwnReview)
+      const r = await recipesApi.getRecipe({ recipeId: props.recipeId })
+      const access = parentAccess(r, currentUser.value?.id)
       if (!access.canChange) {
-        // Without a creator, the access depends on the failed lookup.
-        failed.value = { status: !r.creator && hasOwnReview === null ? null : 403 }
+        failed.value = { status: 403 }
         return
       }
       locked.value = access.hasOtherReviews

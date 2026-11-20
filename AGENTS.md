@@ -125,6 +125,9 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and restaurant review operations. The names of restaurant review operations, schemas, and paths have `restaurant`, like the recipe ones. See decision 00048.
     - the `recipes` tag has the recipe and recipe review operations. Recipes have ingredients, steps, and four scores. See decision 00047.
+    - a review is one visit or one cook. A user can write many reviews of one restaurant or recipe. See decision 00050.
+    - each review has a `date` without a time. The `review-date` format allows the dates from 1900-01-01 to today in UTC+14. The review lists sort by `-date` by default.
+    - `own_review_count` of a restaurant or a recipe counts the reviews of the user of the token, like `favorite`. The UI uses it for the rules of decision 00016.
     - a list of recipes has `RecipeSummary` items without the ingredients and the steps. `getRecipe` has them. See decision 00048.
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
     - the operations of `/users/me` change the name and the password and delete the user. See decision 00037.
@@ -187,6 +190,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Written in TypeScript with Vue, Vue Router, and shadcn-vue on Tailwind CSS. See decision 00002.
   - Follows `specs/design-system`. Components live in `app/ui/src/components/ui`, route-aware components in `app/ui/src/components/app`, and screens in `app/ui/src/pages`.
   - `app/ui/src/lib/reviewKinds.ts` has the score fields, the paths, and the API calls of restaurants and recipes. The review form, the review page, the review list, and the gallery work for both. See decision 00047.
+  - The UI shows the `date` of a review as "Visited on" or "Cooked on". `parseDay` of `format.ts` reads it as a local date. `new Date()` would read it as UTC. See decision 00050.
   - `?kind=recipes` selects the recipes on "My reviews", a reviewer page, and a list page. `KindSwitch` sets it.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database

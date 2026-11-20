@@ -121,6 +121,8 @@ func Register(app core.App, opts Options) {
 	guardReviewOverall(app, recipeSubject)
 	restaurantGuard.register(app)
 	recipeGuard.register(app)
+	reviewDateGuard(restaurantSubject, "RestaurantReviewCreate").register(app)
+	reviewDateGuard(recipeSubject, "RecipeReviewCreate").register(app)
 	registerSourceKey(app)
 	registerFavorites(app)
 	post := newPostman(app, opts)

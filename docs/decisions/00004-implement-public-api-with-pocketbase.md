@@ -145,6 +145,7 @@ Update and delete of a restaurant, and create, update, and delete of a review ru
 The transaction reads the records again, checks the rules, and saves.
 PocketBase uses one SQLite writer, so a parallel request cannot break the `409` checks.
 The unique index on `restaurant` and `creator` of `reviews` also changes a duplicate to `409`.
+Decision 00050 allows many reviews of one user and restaurant. The index is then not unique.
 
 ## Lists
 

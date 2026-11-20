@@ -8,13 +8,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For claude
 
-### 1. One review for each user and subject, with no visit date
-00001 allows one review for each user and restaurant. 00047 has the same rule for recipes. A second review gets 409 with review_exists. A review also has no visit date. The backlog puts "no visit date" under the social features, but a visit date is not a social feature.
-
-00000 wants to "remember and share all of our food experiences". A second dinner at a restaurant or a second cook of a recipe is a new experience. The user must now change the old review. The old scores, text, and date are then lost. The app cannot show how a restaurant changed, or how often we cooked a recipe.
-
-Decide if a review is "my opinion of this subject" or "one visit or one cook". For M1, the second is the better fit. A middle way keeps one review and adds dated visits to it.
-
 ### 2. Restaurants and recipes are locked against other approved users
 00016 lets only the creator change a restaurant. Reviews of other users lock the name and the delete. 00017 locks the location, and 00048 locks the source of a recipe. The backlog accepts that the website, phone, hours, and tags stay old when the creator is inactive.
 
@@ -33,6 +26,8 @@ Reviews	rating.overall	Ranking
 00035 makes "Highest rated" the default sort. The UI does not tell the user that the order also uses the number of reviews. A user then sees a 9.0 above a 10.0 and does not know why.
 
 Decide if a smaller prior, such as 1 review, or the plain average with a minimum review count, fits the group better. 
+
+Decision 00050 allows a review for each visit or cook. The count of reviews then also counts the visits of one user. A user who visits a restaurant often then moves its ranking more.
 
 
 ### 4. All pages are open to search engines
@@ -75,7 +70,7 @@ This is a small conflict with M1. If conflict 3 opens the tags to all approved u
 - Support inviting users via email
   - Note: A person can still make the sign up of an owner fail for one hour. The person signs up with the address until its email limit. The owner must then reset the password. An invite removes this.
 - Social features: not needed since this is intended to be used by a low number of users that communicate with each other via other means
-  - Reviews have no visit date and no owner or reader reply
+  - Reviews have no owner or reader reply
   - Comments or replies on review
   - Helpful votes or likes on reviews
   - Following users, or an activity feed

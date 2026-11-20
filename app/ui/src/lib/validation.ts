@@ -1,3 +1,5 @@
+import { parseDay } from './format'
+
 // The rules match the Public API spec. Checking them in the UI stops most
 // errors before a request.
 
@@ -28,6 +30,21 @@ export function checkName(v: string, empty: string): string {
     return 'Use at most 255 characters.'
   }
   return hidden.test(v) ? hiddenText : ''
+}
+
+// firstReviewDay is the first date that the API allows. See decision 00050.
+export const firstReviewDay = '1900-01-01'
+
+// checkReviewDay allows the dates from firstReviewDay to today. A text
+// comparison orders dates of the form 2024-11-04.
+export function checkReviewDay(v: string, today: string): string {
+  if (!parseDay(v)) {
+    return 'Enter a date.'
+  }
+  if (v < firstReviewDay || v > today) {
+    return 'Enter a date from 1 Jan 1900 to today.'
+  }
+  return ''
 }
 
 export function checkLongText(v: string): string {

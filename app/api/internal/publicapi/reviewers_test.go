@@ -18,9 +18,9 @@ func TestReviewOverall(t *testing.T) {
 	id := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
 	reviews := "/v1/restaurants/" + id + "/reviews"
 
-	low := e.createReview(ana.Token, id, `{"space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"Low"}`)
-	e.createReview(joe.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"High"}`)
-	e.createReview(sam.Token, id, `{"space":7,"service":7,"food":7,"price":7,"cleanliness":7,"title":"Mid"}`)
+	low := e.createReview(ana.Token, id, `{"date":"2024-11-06","space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"Low"}`)
+	e.createReview(joe.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"High"}`)
+	e.createReview(sam.Token, id, `{"date":"2024-11-06","space":7,"service":7,"food":7,"price":7,"cleanliness":7,"title":"Mid"}`)
 
 	if low["overall"] != 5.0 {
 		t.Errorf("create: overall %v, want 5", low["overall"])
@@ -91,11 +91,11 @@ func TestReviewers(t *testing.T) {
 	sam := e.signUp("sam@example.com", "Sam")
 	luigi := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
 	sole := e.createRestaurant(joe.Token, `{"name":"Can Sole"}`)["id"].(string)
-	e.createReview(ana.Token, luigi, `{"space":4,"service":4,"food":4,"price":4,"cleanliness":8,"title":"Ana at Luigi"}`)
+	e.createReview(ana.Token, luigi, `{"date":"2024-11-04","space":4,"service":4,"food":4,"price":4,"cleanliness":8,"title":"Ana at Luigi"}`)
 	time.Sleep(2 * time.Millisecond)
-	e.createReview(joe.Token, luigi, `{"space":2,"service":2,"food":2,"price":2,"cleanliness":8,"title":"Joe at Luigi"}`)
+	e.createReview(joe.Token, luigi, `{"date":"2024-11-05","space":2,"service":2,"food":2,"price":2,"cleanliness":8,"title":"Joe at Luigi"}`)
 	time.Sleep(2 * time.Millisecond)
-	e.createReview(ana.Token, sole, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Ana at Sole"}`)
+	e.createReview(ana.Token, sole, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Ana at Sole"}`)
 
 	t.Run("the profile has only public fields", func(t *testing.T) {
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID}, http.StatusOK).object(t)
@@ -121,7 +121,7 @@ func TestReviewers(t *testing.T) {
 		tom := e.signUp("tom@example.com", "Tom")
 		for name, cleanliness := range map[string]int{"Tom A": 8, "Tom B": 7, "Tom C": 7} {
 			id := e.createRestaurant(tom.Token, fmt.Sprintf(`{"name":%q}`, name))["id"].(string)
-			e.createReview(tom.Token, id, fmt.Sprintf(`{"space":7,"service":7,"food":7,"price":7,"cleanliness":%d,"title":"T"}`, cleanliness))
+			e.createReview(tom.Token, id, fmt.Sprintf(`{"date":"2024-11-06","space":7,"service":7,"food":7,"price":7,"cleanliness":%d,"title":"T"}`, cleanliness))
 		}
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + tom.User.ID}, http.StatusOK).object(t)
 		if got["restaurant_average_overall"] != 7.1 || got["restaurant_count"] != 3.0 {

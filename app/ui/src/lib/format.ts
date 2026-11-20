@@ -50,8 +50,37 @@ export function formatFullDate(value: string): string {
   return `${fullDay.format(date)}, ${fullTime.format(date)}`
 }
 
+// isEdited is true when a record changed after its create.
+export function isEdited(created: string, updated: string | undefined): boolean {
+  return updated !== undefined && parseTimestamp(updated) > parseTimestamp(created)
+}
+
 export function isoDate(value: string): string {
   return parseTimestamp(value).toISOString()
+}
+
+// parseDay reads a date of the form 2024-11-04 as a local date. new Date()
+// reads it as midnight UTC. West of UTC, that is the day before.
+export function parseDay(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) {
+    return null
+  }
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])]
+  const date = new Date(year, month - 1, day)
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null
+}
+
+// formatDay gives "4 Nov 2024" for the date of a review.
+export function formatDay(value: string): string {
+  const date = parseDay(value)
+  return date ? short.format(date) : value
+}
+
+// localDay gives the date of the browser in the form 2024-11-04.
+export function localDay(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
 const plural = new Intl.PluralRules(locale)

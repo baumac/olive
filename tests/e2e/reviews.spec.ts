@@ -17,6 +17,7 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: `${score} out of 10` }).click()
   }
   await expect(page.getByRole('status').filter({ hasText: 'Overall' })).toHaveText('Overall7')
+  await page.getByLabel('Visited on').fill('2024-03-01')
   await page.getByLabel('Title').fill('Great food, a bit expensive')
   await page.getByLabel('Feedback').fill('Friendly staff.\nGreat pasta.')
   await expect(page.getByLabel('Tags')).toHaveCount(0)
@@ -31,18 +32,34 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
   await card.getByRole('button', { name: 'Hide scores of Great food, a bit expensive' }).click()
   await expect(card.getByRole('img')).toHaveCount(1)
   await expect(card).toContainText(user.name)
-  await expect(page.getByRole('link', { name: 'Edit your review' })).toBeVisible()
+  await expect(card).toContainText('Visited on 1 Mar 2024')
+  await expect(page.getByRole('link', { name: 'Write a review' })).toBeVisible()
 })
 
-test('write a review opens the edit form for a user with a review', async ({ page, api, user }) => {
+test('a user writes a review of each visit', async ({ page, api, user }) => {
   const owner = await api.signUp('Joe')
   const restaurant = await api.createRestaurant(owner, { name: 'Bao House' })
-  const review = await api.createReview(user, restaurant.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'Fine' })
+  await api.createReview(user, restaurant.id, { date: '2024-01-15', space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'First visit' })
 
-  await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
-  await expect(page).toHaveURL(new RegExp(`/reviews/${review.id}/edit$`))
-  await expect(page.getByRole('heading', { name: 'Edit review' })).toBeVisible()
-  await expect(page.getByLabel('Title')).toHaveValue('Fine')
+  await page.goto(`/restaurants/${restaurant.id}`)
+  await page.getByRole('link', { name: 'Write a review' }).click()
+  await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}/reviews/new$`))
+  await expect(page.getByLabel('Title')).toHaveValue('')
+  await page.getByLabel('Visited on').fill('2024-06-01')
+  for (const label of ['Space', 'Service', 'Food', 'Value', 'Cleanliness']) {
+    await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: '9 out of 10' }).click()
+  }
+  await page.getByLabel('Title').fill('Second visit')
+  await page.getByRole('button', { name: 'Save review' }).click()
+
+  await expect(page.getByText('Review saved')).toBeVisible()
+  const titles = page.getByRole('region', { name: 'Reviews' }).getByRole('heading', { level: 3 })
+  await expect(titles).toHaveText(['Second visit', 'First visit'])
+  await expect(page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').first()).toContainText('Visited on 1 Jun 2024')
+  await expect(page.getByText('out of 10 · 2 reviews')).toBeVisible()
+
+  await page.goto(`/restaurants/${restaurant.id}?sort=date`)
+  await expect(titles).toHaveText(['First visit', 'Second visit'])
 })
 
 test('filters and score sorts select and order reviews', async ({ page, api }) => {
@@ -102,8 +119,8 @@ test('my reviews lists the reviews of the user at all restaurants', async ({ pag
   const owner = await api.signUp('Joe')
   const first = await api.createRestaurant(owner, { name: 'First Place' })
   const second = await api.createRestaurant(owner, { name: 'Second Place' })
-  await api.createReview(user, first.id, { space: 4, service: 4, food: 4, price: 4, cleanliness: 4, title: 'Mine at first' })
-  await api.createReview(user, second.id, { space: 2, service: 2, food: 2, price: 2, cleanliness: 2, title: 'Mine at second' })
+  await api.createReview(user, first.id, { date: '2024-01-01', space: 4, service: 4, food: 4, price: 4, cleanliness: 4, title: 'Mine at first' })
+  await api.createReview(user, second.id, { date: '2024-02-01', space: 2, service: 2, food: 2, price: 2, cleanliness: 2, title: 'Mine at second' })
   await api.createReview(owner, first.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'Not mine' })
 
   await page.goto('/restaurants')

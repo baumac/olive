@@ -21,6 +21,8 @@ export type ParentSummary = Restaurant | RecipeSummary
 export type ParentPhoto = RestaurantPhoto | RecipePhoto
 
 export interface ReviewFields {
+  // date is the day of the visit or the cook, such as 2024-11-04.
+  date: string
   scores: Record<string, number>
   title: string
   feedback?: string | null
@@ -41,6 +43,10 @@ export interface KindInfo {
   plural: string
   // path is the path of the list page, such as /restaurants.
   path: string
+  // dateLabel names the date of a review. See decision 00050.
+  dateLabel: string
+  // occasion is the noun of one visit or one cook.
+  occasion: string
   scoreFields: ScoreField[]
   getParent(id: string): Promise<Parent>
   getReview(parentId: string, reviewId: string): Promise<AnyReview>
@@ -63,11 +69,11 @@ export interface KindInfo {
 
 // The score fields of the SDK have the type any. These builders name each
 // field. A missing or a wrong score is then a type error.
-function restaurantScores(s: Record<string, number>): Omit<RestaurantReviewCreate, 'title'> {
+function restaurantScores(s: Record<string, number>): Omit<RestaurantReviewCreate, 'date' | 'title'> {
   return { space: s.space, service: s.service, food: s.food, price: s.price, cleanliness: s.cleanliness }
 }
 
-function recipeScores(s: Record<string, number>): Omit<RecipeReviewCreate, 'title'> {
+function recipeScores(s: Record<string, number>): Omit<RecipeReviewCreate, 'date' | 'title'> {
   return { taste: s.taste, ease: s.ease, instructions: s.instructions, value: s.value }
 }
 
@@ -80,16 +86,21 @@ const restaurant: KindInfo = {
   noun: 'restaurant',
   plural: 'restaurants',
   path: '/restaurants',
+  dateLabel: 'Visited on',
+  occasion: 'visit',
   scoreFields,
   getParent: (restaurantId) => restaurantsApi.getRestaurant({ restaurantId }),
   getReview: (restaurantId, reviewId) => restaurantsApi.getRestaurantReview({ restaurantId, reviewId }),
   listReviews: (restaurantId, params) => restaurantsApi.listRestaurantReviews({ restaurantId, ...params }),
   listReviewerReviews: (reviewerId, params) => reviewersApi.listReviewerRestaurantReviews({ reviewerId, ...params }),
   listAdded: (creatorEq, params) => restaurantsApi.listRestaurants({ creatorEq, ...params }),
-  createReview: (restaurantId, { scores, title, feedback }) =>
-    restaurantsApi.createRestaurantReview({ restaurantId, restaurantReviewCreate: { ...restaurantScores(scores), title, feedback: feedback ?? undefined } }),
-  updateReview: (restaurantId, reviewId, { scores, title, feedback }) =>
-    restaurantsApi.updateRestaurantReview({ restaurantId, reviewId, restaurantReviewPatch: { ...restaurantScores(scores), title, feedback } }),
+  createReview: (restaurantId, { date, scores, title, feedback }) =>
+    restaurantsApi.createRestaurantReview({
+      restaurantId,
+      restaurantReviewCreate: { date, ...restaurantScores(scores), title, feedback: feedback ?? undefined },
+    }),
+  updateReview: (restaurantId, reviewId, { date, scores, title, feedback }) =>
+    restaurantsApi.updateRestaurantReview({ restaurantId, reviewId, restaurantReviewPatch: { date, ...restaurantScores(scores), title, feedback } }),
   deleteReview: (restaurantId, reviewId) => restaurantsApi.deleteRestaurantReview({ restaurantId, reviewId }),
   addPhoto: (restaurantId, reviewId, file) => restaurantsApi.addRestaurantReviewPhoto({ restaurantId, reviewId, body: file }, contentType(file)),
   updatePhoto: (restaurantId, reviewId, photoId, alt) =>
@@ -105,16 +116,18 @@ const recipe: KindInfo = {
   noun: 'recipe',
   plural: 'recipes',
   path: '/recipes',
+  dateLabel: 'Cooked on',
+  occasion: 'cook',
   scoreFields: recipeScoreFields,
   getParent: (recipeId) => recipesApi.getRecipe({ recipeId }),
   getReview: (recipeId, reviewId) => recipesApi.getRecipeReview({ recipeId, reviewId }),
   listReviews: (recipeId, params) => recipesApi.listRecipeReviews({ recipeId, ...params }),
   listReviewerReviews: (reviewerId, params) => reviewersApi.listReviewerRecipeReviews({ reviewerId, ...params }),
   listAdded: (creatorEq, params) => recipesApi.listRecipes({ creatorEq, ...params }),
-  createReview: (recipeId, { scores, title, feedback }) =>
-    recipesApi.createRecipeReview({ recipeId, recipeReviewCreate: { ...recipeScores(scores), title, feedback: feedback ?? undefined } }),
-  updateReview: (recipeId, reviewId, { scores, title, feedback }) =>
-    recipesApi.updateRecipeReview({ recipeId, reviewId, recipeReviewPatch: { ...recipeScores(scores), title, feedback } }),
+  createReview: (recipeId, { date, scores, title, feedback }) =>
+    recipesApi.createRecipeReview({ recipeId, recipeReviewCreate: { date, ...recipeScores(scores), title, feedback: feedback ?? undefined } }),
+  updateReview: (recipeId, reviewId, { date, scores, title, feedback }) =>
+    recipesApi.updateRecipeReview({ recipeId, reviewId, recipeReviewPatch: { date, ...recipeScores(scores), title, feedback } }),
   deleteReview: (recipeId, reviewId) => recipesApi.deleteRecipeReview({ recipeId, reviewId }),
   addPhoto: (recipeId, reviewId, file) => recipesApi.addRecipeReviewPhoto({ recipeId, reviewId, body: file }, contentType(file)),
   updatePhoto: (recipeId, reviewId, photoId, alt) =>

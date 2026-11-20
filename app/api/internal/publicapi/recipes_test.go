@@ -12,7 +12,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-const recipeReviewBody = `{"taste":9,"ease":8,"instructions":8,"value":8,"title":"Good"}`
+const recipeReviewBody = `{"date":"2024-11-06","taste":9,"ease":8,"instructions":8,"value":8,"title":"Good"}`
 
 // createRecipe adds one ingredient and one step to a body without them.
 func (e *env) createRecipe(token, body string) map[string]any {
@@ -363,10 +363,10 @@ func TestRecipeReviews(t *testing.T) {
 	reviews := "/v1/recipes/" + id + "/reviews"
 
 	res := e.expect(request{method: "POST", path: reviews, token: ana.Token,
-		body: `{"taste":9,"ease":8,"instructions":8,"value":8,"title":" Quick breakfast ","feedback":"More salt"}`}, http.StatusCreated)
+		body: `{"date":"2024-11-06","taste":9,"ease":8,"instructions":8,"value":8,"title":" Quick breakfast ","feedback":"More salt"}`}, http.StatusCreated)
 	review := res.object(t)
 	reviewID := review["id"].(string)
-	e.createRecipeReview(joe.Token, id, `{"taste":5,"ease":5,"instructions":5,"value":5,"title":"Fine"}`)
+	e.createRecipeReview(joe.Token, id, `{"date":"2024-11-06","taste":5,"ease":5,"instructions":5,"value":5,"title":"Fine"}`)
 
 	t.Run("a review has the average of its four scores", func(t *testing.T) {
 		if loc := res.header.Get("Location"); loc != reviews+"/"+reviewID {
@@ -380,10 +380,6 @@ func TestRecipeReviews(t *testing.T) {
 		}
 	})
 
-	t.Run("a second review of the user gets 409", func(t *testing.T) {
-		e.expectCode(request{method: "POST", path: reviews, token: ana.Token, body: recipeReviewBody}, http.StatusConflict, "review_exists")
-	})
-
 	t.Run("a review of an unknown recipe gets 404", func(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/recipes/aaaaaaaaaaaaaaa/reviews", token: ana.Token, body: recipeReviewBody}, http.StatusNotFound)
 		e.expect(request{method: "GET", path: "/v1/recipes/aaaaaaaaaaaaaaa/reviews"}, http.StatusNotFound)
@@ -392,9 +388,9 @@ func TestRecipeReviews(t *testing.T) {
 
 	t.Run("a score out of range gets 422", func(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/recipes/" + other + "/reviews", token: ana.Token,
-			body: `{"taste":11,"ease":8,"instructions":8,"value":8,"title":"T"}`}, http.StatusUnprocessableEntity)
+			body: `{"date":"2024-11-06","taste":11,"ease":8,"instructions":8,"value":8,"title":"T"}`}, http.StatusUnprocessableEntity)
 		e.expect(request{method: "POST", path: "/v1/recipes/" + other + "/reviews", token: ana.Token,
-			body: `{"space":8,"ease":8,"instructions":8,"value":8,"title":"T"}`}, http.StatusBadRequest)
+			body: `{"date":"2024-11-06","space":8,"ease":8,"instructions":8,"value":8,"title":"T"}`}, http.StatusBadRequest)
 	})
 
 	for _, tc := range []struct{ path, want string }{
@@ -456,10 +452,10 @@ func TestRecipeOverallColumnEqualsResponse(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	for i, body := range []string{
-		`{"taste":1,"ease":1,"instructions":1,"value":2,"title":"T"}`,
-		`{"taste":7,"ease":9,"instructions":8,"value":6,"title":"T"}`,
-		`{"taste":10,"ease":10,"instructions":10,"value":9,"title":"T"}`,
-		`{"taste":3,"ease":3,"instructions":4,"value":4,"title":"T"}`,
+		`{"date":"2024-11-06","taste":1,"ease":1,"instructions":1,"value":2,"title":"T"}`,
+		`{"date":"2024-11-06","taste":7,"ease":9,"instructions":8,"value":6,"title":"T"}`,
+		`{"date":"2024-11-06","taste":10,"ease":10,"instructions":10,"value":9,"title":"T"}`,
+		`{"date":"2024-11-06","taste":3,"ease":3,"instructions":4,"value":4,"title":"T"}`,
 	} {
 		recipe := e.createRecipe(ana.Token, fmt.Sprintf(`{"name":"R%d"}`, i))["id"].(string)
 		review := e.createRecipeReview(ana.Token, recipe, body)

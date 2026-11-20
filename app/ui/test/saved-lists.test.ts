@@ -45,6 +45,7 @@ const restaurant: Restaurant = {
   rating: null,
   cover: null,
   favorite: false,
+  ownReviewCount: 0,
   created: '2024-11-04T01:26:55.002Z',
   updated: '2024-11-04T01:26:55.002Z',
 }

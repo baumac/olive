@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import DateText from '@/components/app/DateText.vue'
+import ReviewDate from '@/components/app/ReviewDate.vue'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import ReviewerLink from '@/components/app/ReviewerLink.vue'
 import ReviewPhotos from '@/components/app/ReviewPhotos.vue'
@@ -64,7 +65,8 @@ async function remove() {
       <div class="flex flex-col gap-3">
         <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ review.title }}</h1>
         <p class="text-muted-foreground text-sm">
-          <ReviewerLink :creator="review.creator" /> · <DateText :created="review.created" :updated="review.updated" />
+          <ReviewerLink :creator="review.creator" /> · <ReviewDate :review="review" /> · Written
+          <DateText :created="review.created" :updated="review.updated" />
         </p>
       </div>
       <ScoreSummary :scores="review" :kind="kind.kind" />

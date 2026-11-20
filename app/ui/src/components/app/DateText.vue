@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatDate, formatFullDate, isoDate, parseTimestamp } from '@/lib/format'
+import { formatDate, formatFullDate, isEdited, isoDate } from '@/lib/format'
 
 const props = defineProps<{
   created: string
   updated?: string
 }>()
 
-const edited = computed(
-  () => props.updated !== undefined && parseTimestamp(props.updated) > parseTimestamp(props.created),
-)
+const edited = computed(() => isEdited(props.created, props.updated))
 </script>
 
 <template>

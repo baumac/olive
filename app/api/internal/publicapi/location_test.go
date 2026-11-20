@@ -23,7 +23,7 @@ func TestRestaurantLocation(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
-	const review = `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`
+	const review = `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`
 	barceloneta := locationJSON(41.3766, 2.1893, "Carrer de Sant Carles 4, 08003 Barcelona", "osm:N1")
 
 	r := e.createRestaurant(ana.Token, `{"name":"Can Sole","location":`+barceloneta+`}`)

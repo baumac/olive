@@ -413,7 +413,7 @@ func TestDeleteUser(t *testing.T) {
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
 	restaurant := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
-	review := `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Good"}`
+	review := `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Good"}`
 	e.createReview(ana.Token, restaurant, review)
 	e.createReview(joe.Token, restaurant, review)
 	list := e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Date night"}`, token: ana.Token}, http.StatusCreated).object(t)["id"].(string)

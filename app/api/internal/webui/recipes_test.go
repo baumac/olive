@@ -27,7 +27,7 @@ func TestRecipeMeta(t *testing.T) {
 	})
 	plain := save(t, app, "recipes", map[string]any{"name": "Bread", "ingredients": []string{"flour"}, "steps": []string{"Bake."}})
 	review := save(t, app, "recipe_reviews", map[string]any{
-		"recipe": recipe.Id, "creator": user.Id, "title": "Quick", "feedback": "More salt.",
+		"recipe": recipe.Id, "creator": user.Id, "date": "2024-11-06", "title": "Quick", "feedback": "More salt.",
 		"taste": 9, "ease": 8, "instructions": 8, "value": 8,
 	})
 	photo := savePhoto(t, app, "recipe_review_photos", review.Id)

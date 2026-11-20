@@ -111,6 +111,7 @@ Recipes get their own collections. They do not share the `restaurants`, `reviews
   A record hook sets it on each save. A save in the dashboard then also gets the duplicate check.
   The normalization makes the scheme and the host lowercase and removes the fragment and a final `/`.
 - One review per user and recipe. A second review gets `409` with `review_exists`.
+  Decision 00050 removes this rule. A review is one cook, and each review has a date.
 
 The migration also makes, like the migrations of restaurants:
 

@@ -25,7 +25,7 @@ import { apiFailure, failureText, restaurantsApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { useMapConfig } from '@/lib/mapConfig'
 import { directionsLink, osmLink } from '@/lib/places'
-import { findOwnReviewId, parentAccess } from '@/lib/parents'
+import { ownReviewsText, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
@@ -33,32 +33,11 @@ const props = defineProps<{ restaurantId: string }>()
 const router = useRouter()
 
 const restaurant = useLoad<Restaurant>(() => restaurantsApi.getRestaurant({ restaurantId: props.restaurantId }))
-watch(() => props.restaurantId, () => void restaurant.load(), { immediate: true })
+// ownReviewCount and favorite belong to the signed in user.
+watch([() => props.restaurantId, () => currentUser.value?.id], () => void restaurant.load(), { immediate: true })
 
 usePageTitle(() => restaurant.data.value?.name ?? '')
 
-// ownReviewId is the review of the signed in user, if any. A user can have
-// at most one review per restaurant.
-const ownReviewId = ref<string | null>(null)
-const ownReviewLookup = ref<'loading' | 'done' | 'failed'>('loading')
-watch(
-  [() => props.restaurantId, currentUser],
-  async ([restaurantId, user]) => {
-    ownReviewId.value = null
-    ownReviewLookup.value = 'done'
-    if (!user) {
-      return
-    }
-    ownReviewLookup.value = 'loading'
-    try {
-      ownReviewId.value = await findOwnReviewId('restaurant', restaurantId, user.id)
-      ownReviewLookup.value = 'done'
-    } catch {
-      ownReviewLookup.value = 'failed'
-    }
-  },
-  { immediate: true },
-)
 
 const mapConfig = useMapConfig()
 // The wide layout shows the map next to the summary. The narrow layout
@@ -82,24 +61,15 @@ const directions = computed(() => {
   return l ? directionsLink(l) : null
 })
 
-const access = computed(() => {
-  if (!restaurant.data.value || ownReviewLookup.value === 'loading') {
-    return null
-  }
-  const hasOwnReview = ownReviewLookup.value === 'failed' ? null : !!ownReviewId.value
-  return parentAccess(restaurant.data.value, currentUser.value?.id, hasOwnReview)
-})
+const access = computed(() => (restaurant.data.value ? parentAccess(restaurant.data.value, currentUser.value?.id) : null))
 
 const deleteDescription = computed(() => {
   const text = `${restaurant.data.value?.name} will be deleted permanently.`
-  return ownReviewId.value ? `${text} Your review and its photos will be deleted too.` : text
+  const own = currentUser.value ? (restaurant.data.value?.ownReviewCount ?? 0) : 0
+  return own ? `${text} ${ownReviewsText(own)}` : text
 })
 
-const writePath = computed(() =>
-  ownReviewId.value
-    ? `/restaurants/${props.restaurantId}/reviews/${ownReviewId.value}/edit`
-    : `/restaurants/${props.restaurantId}/reviews/new`,
-)
+const writePath = computed(() => `/restaurants/${props.restaurantId}/reviews/new`)
 
 async function remove() {
   const name = restaurant.data.value?.name
@@ -251,7 +221,7 @@ async function remove() {
         <div class="flex flex-wrap items-center justify-between gap-4">
           <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>
           <Button as-child>
-            <RouterLink :to="writePath">{{ ownReviewId ? 'Edit your review' : 'Write a review' }}</RouterLink>
+            <RouterLink :to="writePath">Write a review</RouterLink>
           </Button>
         </div>
         <ReviewList :parent="restaurant.data.value" :write-path="writePath" />

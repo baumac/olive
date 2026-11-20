@@ -17,11 +17,11 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, notApprovedText, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
-import { formatScore } from '@/lib/format'
+import { formatScore, localDay } from '@/lib/format'
 import { type AnyReview, type Parent, kinds, scoreOf } from '@/lib/reviewKinds'
 import { overallOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
-import { checkLongText, checkName, maxPhotos } from '@/lib/validation'
+import { checkLongText, checkName, checkReviewDay, firstReviewDay, maxPhotos } from '@/lib/validation'
 
 // The route gives a restaurantId or a recipeId.
 const props = defineProps<{ restaurantId?: string; recipeId?: string; reviewId?: string }>()
@@ -37,19 +37,24 @@ const editing = computed(() => props.reviewId !== undefined)
 usePageTitle(() => (editing.value ? 'Edit review' : 'Write a review'))
 
 interface Fields {
+  date: string
   scores: Record<string, number | null>
   title: string
   feedback: string
 }
 
 const restaurant = ref<Parent | null>(null)
+// today is the local date of the browser. The API allows it in each time
+// zone. A form that stays open after midnight gets the new date.
+const today = ref(localDay())
 const fields = ref<Fields>({
+  date: today.value,
   scores: Object.fromEntries(scoreFields.map((f) => [f.name, null])),
   title: '',
   feedback: '',
 })
 const errors = ref<Record<string, string>>({})
-const alert = ref<{ title: string; description: string; link?: string } | null>(null)
+const alert = ref<{ title: string; description: string } | null>(null)
 const saving = ref(false)
 const loading = ref(true)
 const failed = ref<{ status: number | null } | null>(null)
@@ -82,17 +87,9 @@ onMounted(async () => {
       for (const f of scoreFields) {
         fields.value.scores[f.name] = scoreOf(review, f)
       }
+      fields.value.date = review.date
       fields.value.title = review.title
       fields.value.feedback = review.feedback ?? ''
-    } else if (currentUser.value) {
-      // A user has at most one review per restaurant or recipe. The API
-      // refuses a second one with 409. The page opens the existing review
-      // instead.
-      const own = await kind.listReviews(parentId, { creatorEq: currentUser.value.id, limit: 1 })
-      if (own.items[0]) {
-        void router.replace(`${restaurantPath.value}/reviews/${own.items[0].id}/edit`)
-        return
-      }
     }
     if (!props.reviewId) {
       for (const p of takePendingPhotos(draftKey.value)) {
@@ -107,7 +104,8 @@ onMounted(async () => {
       for (const s of scoreFields) {
         scores[s.name] = draft.scores?.[s.name] ?? scores[s.name] ?? null
       }
-      fields.value = { title: draft.title, feedback: draft.feedback, scores }
+      // A draft from before decision 00050 has no date.
+      fields.value = { date: draft.date ?? fields.value.date, title: draft.title, feedback: draft.feedback, scores }
     }
   } catch (error) {
     failed.value = { status: (await apiFailure(error)).status }
@@ -118,6 +116,8 @@ onMounted(async () => {
 
 function validate(): boolean {
   const next: Record<string, string> = {}
+  today.value = localDay()
+  next.date = checkReviewDay(fields.value.date, today.value)
   for (const s of scoreFields) {
     if (fields.value.scores[s.name] == null) {
       next[s.name] = `Select a ${s.label.toLowerCase()} score.`
@@ -126,7 +126,7 @@ function validate(): boolean {
   next.title = checkName(fields.value.title, 'Enter a title with at least one character that is not a space.')
   next.feedback = checkLongText(fields.value.feedback)
   errors.value = next
-  const order = [...scoreFields.map((s) => s.name), 'title', 'feedback']
+  const order = ['date', ...scoreFields.map((s) => s.name), 'title', 'feedback']
   const first = order.find((k) => next[k])
   if (first) {
     focusField(`review-${first}`)
@@ -238,11 +238,11 @@ async function submit() {
   }
   saving.value = true
   saveDraft(draftKey.value, fields.value)
-  const { title, feedback } = fields.value
+  const { date, title, feedback } = fields.value
   try {
     const result = props.reviewId
-      ? await kind.updateReview(parentId, props.reviewId, { scores: scoreValues(), title, feedback: feedback || null })
-      : await kind.createReview(parentId, { scores: scoreValues(), title, feedback: feedback || undefined })
+      ? await kind.updateReview(parentId, props.reviewId, { date, scores: scoreValues(), title, feedback: feedback || null })
+      : await kind.createReview(parentId, { date, scores: scoreValues(), title, feedback: feedback || undefined })
     clearDraft(draftKey.value)
     toast.success('Review saved', { description: result.title })
     if (!(await uploadQueued(result.id))) {
@@ -263,12 +263,6 @@ async function submit() {
     }
     if (status === 422) {
       errors.value = fieldErrors(problem)
-    } else if (code === 'review_exists') {
-      alert.value = {
-        title: `You already reviewed this ${kind.noun}`,
-        description: `Each person can write one review per ${kind.noun}. Edit your review instead.`,
-        link: restaurantPath.value,
-      }
     } else if (code === 'not_approved') {
       alert.value = { title: 'Your account waits for approval', description: notApprovedText }
     } else if (status === 403) {
@@ -302,13 +296,16 @@ async function submit() {
       <Alert v-if="alert" variant="destructive">
         <CircleAlertIcon aria-hidden="true" />
         <AlertTitle>{{ alert.title }}</AlertTitle>
-        <AlertDescription>
-          {{ alert.description }}
-          <RouterLink v-if="alert.link" :to="alert.link" class="font-medium underline underline-offset-4">
-            Go to the {{ kind.noun }}
-          </RouterLink>
-        </AlertDescription>
+        <AlertDescription>{{ alert.description }}</AlertDescription>
       </Alert>
+
+      <FormItem id="review-date" :error="errors.date">
+        <FormLabel>{{ kind.dateLabel }}</FormLabel>
+        <FormControl>
+          <Input v-model="fields.date" type="date" name="date" required :min="firstReviewDay" :max="today" class="w-fit" @focus="today = localDay()" />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
 
       <div class="grid gap-4">
         <div v-for="s in scoreFields" :key="s.name" class="grid gap-2">

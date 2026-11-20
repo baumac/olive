@@ -130,24 +130,22 @@ func (s *Server) recipeReviewPage(
 	return recipeReviewPageResult{list: reviewsapi.RecipeReviewList{Items: items, NextCursor: page.next}}, nil
 }
 
-// CreateRecipeReview lets each user write one review of a recipe.
+// CreateRecipeReview makes a review of one cook. A user can write many
+// reviews of one recipe. See decision 00050.
 func (s *Server) CreateRecipeReview(ctx context.Context, req reviewsapi.CreateRecipeReviewRequestObject) (reviewsapi.CreateRecipeReviewResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
 	in := reviewInput{
 		scores: map[string]int{"taste": b.Taste, "ease": b.Ease, "instructions": b.Instructions, "value": b.Value},
-		title:  &b.Title, feedback: optional(b.Feedback),
+		date:   &b.Date, title: &b.Title, feedback: optional(b.Feedback),
 	}
 	saved, recipe, p, err := s.createReview(recipeSubject, req.RecipeId, user, in)
 	if err != nil {
 		return nil, err
 	}
 	if p != nil {
-		switch p.status() {
-		case http.StatusNotFound:
+		if p.status() == http.StatusNotFound {
 			return reviewsapi.CreateRecipeReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
-		case http.StatusConflict:
-			return reviewsapi.CreateRecipeReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
 		}
 		return nil, p.unexpected()
 	}
@@ -190,7 +188,7 @@ func (s *Server) GetRecipeReview(_ context.Context, req reviewsapi.GetRecipeRevi
 func (s *Server) UpdateRecipeReview(ctx context.Context, req reviewsapi.UpdateRecipeReviewRequestObject) (reviewsapi.UpdateRecipeReviewResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
-	in := reviewInput{scores: map[string]int{}, title: b.Title, feedback: b.Feedback}
+	in := reviewInput{scores: map[string]int{}, date: b.Date, title: b.Title, feedback: b.Feedback}
 	setScore(in.scores, "taste", b.Taste)
 	setScore(in.scores, "ease", b.Ease)
 	setScore(in.scores, "instructions", b.Instructions)
@@ -254,8 +252,8 @@ func toRecipeReview(r *core.Record, creator *core.Record, recipeName string, pho
 	// to this.
 	return reviewsapi.RecipeReview{
 		Id: r.Id, Recipe: r.GetString("recipe"), RecipeName: recipeName,
-		Overall: float64(taste+ease+instructions+value) / 4,
-		Taste:   taste, Ease: ease, Instructions: instructions, Value: value,
+		Date: r.GetString("date"), Overall: float64(taste+ease+instructions+value) / 4,
+		Taste: taste, Ease: ease, Instructions: instructions, Value: value,
 		Title: r.GetString("title"), Feedback: optionalText(r, "feedback"),
 		Creator: toCreator(creator), Photos: photos, Created: apiTimestamp(r.GetDateTime("created")), Updated: apiTimestamp(r.GetDateTime("updated")),
 	}, nil

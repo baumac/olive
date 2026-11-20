@@ -28,7 +28,7 @@ import (
 // encode WebP.
 const webp1x1 = "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
 
-const reviewBody = `{"space":7,"service":8,"food":9,"price":6,"cleanliness":8,"title":"Good"}`
+const reviewBody = `{"date":"2024-11-06","space":7,"service":8,"food":9,"price":6,"cleanliness":8,"title":"Good"}`
 
 // testJPEG encodes an image of w by h pixels. A non-zero orientation adds
 // an EXIF segment with that orientation and a GPS latitude.

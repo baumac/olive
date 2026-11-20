@@ -13,6 +13,7 @@ const review: RestaurantReview = {
   id: 'r1b8c5e2g9i6k3m',
   restaurant: 'k3x9m2p7q1w8z4a',
   restaurantName: "Luigi's Trattoria",
+  date: '2024-11-06',
   overall: 7.6,
   space: 7,
   service: 9,
@@ -35,6 +36,7 @@ const restaurant: Restaurant = {
   rating: null,
   cover: null,
   favorite: false,
+  ownReviewCount: 0,
   created: '2024-11-04T01:26:55.002Z',
   updated: '2024-11-04T01:26:55.002Z',
 }
@@ -130,7 +132,8 @@ describe('ReviewerPage', () => {
     expect(w.findAll('a').some((a) => a.text() === 'Ana')).toBe(false)
     expect(w.text()).toContain('Great food, a bit expensive')
     expect(w.text()).toContain("Luigi's Trattoria")
-    expect(list.mock.calls[0]![0]).toMatchObject({ reviewerId: 'u5n1c8r3t6y0b2e', sort: '-created' })
+    expect(w.get('time[datetime="2024-11-06"]').element.parentElement!.textContent).toBe('Visited on 6 Nov 2024')
+    expect(list.mock.calls[0]![0]).toMatchObject({ reviewerId: 'u5n1c8r3t6y0b2e', sort: '-date' })
     expect(document.title).toBe('Ana · Sponga47 Reviews')
     await expectAccessible(w.element)
   })

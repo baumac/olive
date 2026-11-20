@@ -112,8 +112,16 @@ for (const colorScheme of ['light', 'dark'] as const) {
     })
 
     test('the review form has no axe violations', async ({ page, api, user }) => {
-      const restaurant = await restaurantWithReview(api, user)
+      const restaurant = await api.createRestaurant(user, { name: uniqueTag('Form Place') })
+      const review = await api.createReview(user, restaurant.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 6, title: 'Great food' })
       await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
+      await expect(page.getByRole('heading', { name: 'Write a review' })).toBeVisible()
+      await expectNoViolations(page)
+      await page.getByRole('button', { name: 'Save review' }).click()
+      await expect(page.getByText('Select a space score.')).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.goto(`/restaurants/${restaurant.id}/reviews/${review.id}/edit`)
       await expect(page.getByRole('heading', { name: 'Edit review' })).toBeVisible()
       await expectNoViolations(page)
     })

@@ -63,7 +63,7 @@ func restaurantFields(name, description string, tags any) map[string]any {
 
 func (e *env) reviewFields(restaurant *core.Record, title, feedback string) map[string]any {
 	return map[string]any{
-		"restaurant": restaurant.Id, "creator": e.user.Id, "title": title, "feedback": feedback,
+		"restaurant": restaurant.Id, "creator": e.user.Id, "date": "2024-11-06", "title": title, "feedback": feedback,
 		"space": 8, "service": 8, "food": 8, "price": 8, "cleanliness": 8,
 	}
 }
@@ -519,7 +519,7 @@ func TestRecipeRows(t *testing.T) {
 		"ingredients": []string{"1 cup of lentils", "2 onions"}, "steps": []string{"Boil."},
 	})
 	rv := e.save(t, "recipe_reviews", map[string]any{
-		"recipe": dal.Id, "creator": e.user.Id, "title": "Warm", "feedback": "Good on rice",
+		"recipe": dal.Id, "creator": e.user.Id, "date": "2024-11-06", "title": "Warm", "feedback": "Good on rice",
 		"taste": 8, "ease": 8, "instructions": 8, "value": 8,
 	})
 	var recipe struct {

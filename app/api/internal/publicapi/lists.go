@@ -114,6 +114,47 @@ func (s *Server) listsWith(sub subject, parentID string, lists []*core.Record) (
 	return out, err
 }
 
+// viewerData has the values of a response that depend on the user of the
+// token. A request without a token has none.
+type viewerData struct {
+	favorites  map[string]bool
+	ownReviews map[string]int
+}
+
+func (s *Server) viewerDataOf(sub subject, user *core.Record, records ...*core.Record) (viewerData, error) {
+	favorites, err := s.favoriteIDs(sub, user, records...)
+	if err != nil {
+		return viewerData{}, err
+	}
+	ownReviews, err := s.ownReviewCounts(sub, user, records...)
+	return viewerData{favorites: favorites, ownReviews: ownReviews}, err
+}
+
+// ownReviewCounts counts the reviews of the user for each record. A user can
+// have many reviews of one parent. See decision 00050.
+func (s *Server) ownReviewCounts(sub subject, user *core.Record, records ...*core.Record) (map[string]int, error) {
+	out := map[string]int{}
+	if user == nil || len(records) == 0 {
+		return out, nil
+	}
+	ids := make([]any, len(records))
+	for i, r := range records {
+		ids[i] = r.Id
+	}
+	var rows []struct {
+		Parent string `db:"parent"`
+		Count  int    `db:"n"`
+	}
+	err := s.app.DB().Select(column(sub.Reviews, sub.Parent)+" AS parent", "COUNT(*) AS n").From(sub.Reviews).
+		Where(dbx.HashExp{column(sub.Reviews, "creator"): user.Id}).
+		AndWhere(dbx.In(column(sub.Reviews, sub.Parent), ids...)).
+		GroupBy(column(sub.Reviews, sub.Parent)).All(&rows)
+	for _, r := range rows {
+		out[r.Parent] = r.Count
+	}
+	return out, err
+}
+
 // favoriteIDs returns the parents of records that the favorites list of the
 // user has. A nil user has none.
 func (s *Server) favoriteIDs(sub subject, user *core.Record, records ...*core.Record) (map[string]bool, error) {

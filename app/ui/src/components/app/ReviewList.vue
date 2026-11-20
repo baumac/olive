@@ -7,7 +7,7 @@ import { FilterBar } from '@/components/ui/filter-bar'
 import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
 import { formatCount } from '@/lib/format'
-import { oldReviewSortOptionsOf, reviewFilterDefsOf, reviewFilterParamsOf, reviewSortOptions } from '@/lib/reviewFilters'
+import { oldReviewSortOptionsOf, reviewDefaultSort, reviewFilterDefsOf, reviewFilterParamsOf, reviewSortOptionsOf } from '@/lib/reviewFilters'
 import { type AnyReview, type Parent, type ReviewKind, kinds } from '@/lib/reviewKinds'
 import PagedList from './PagedList.vue'
 import ReviewCard from './ReviewCard.vue'
@@ -33,12 +33,12 @@ const filterDefs = computed(() => reviewFilterDefsOf(props.kind))
 const limit = 20
 // A shorter list shows without the search, the filters, and the sort.
 const toolbarMinimum = 10
-const defaultSort = '-created'
+const defaultSort = reviewDefaultSort
 
 // The kind query key of the reviewer pages stays after a filter change.
 const { filters, sort, active, sortOptions } = useListQuery(
   filterDefs,
-  reviewSortOptions,
+  () => reviewSortOptionsOf(props.kind),
   defaultSort,
   searchRelevance,
   ['kind'],

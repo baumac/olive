@@ -154,7 +154,7 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 
 	location := basePath + "/restaurants/" + r.Id
 	return reviewsapi.CreateRestaurant201JSONResponse{
-		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}, nil, nil, nil),
+		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}, nil, nil, viewerData{}),
 		Headers: reviewsapi.CreateRestaurant201ResponseHeaders{Location: &location},
 	}, nil
 }
@@ -411,7 +411,7 @@ func (s *Server) restaurantResponse(user, r *core.Record) (reviewsapi.Restaurant
 }
 
 // restaurantsOf gets the creators, ratings, and covers of records. A nil
-// user has no favorite.
+// user has no favorite and no own review.
 func (s *Server) restaurantsOf(user *core.Record, records ...*core.Record) ([]reviewsapi.Restaurant, error) {
 	users, err := s.creators(records...)
 	if err != nil {
@@ -425,35 +425,36 @@ func (s *Server) restaurantsOf(user *core.Record, records ...*core.Record) ([]re
 	if err != nil {
 		return nil, err
 	}
-	favorites, err := s.favoriteIDs(restaurantSubject, user, records...)
+	viewer, err := s.viewerDataOf(restaurantSubject, user, records...)
 	if err != nil {
 		return nil, err
 	}
 	items := make([]reviewsapi.Restaurant, len(records))
 	for i, r := range records {
-		items[i] = toRestaurant(r, users, ratings, covers, favorites)
+		items[i] = toRestaurant(r, users, ratings, covers, viewer)
 	}
 	return items, nil
 }
 
 // toRestaurant gives a restaurant that ratings does not list no reviews.
-func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[string]restaurantRating, covers map[string]reviewsapi.RestaurantPhoto, favorites map[string]bool) reviewsapi.Restaurant {
+func toRestaurant(r *core.Record, users map[string]*core.Record, ratings map[string]restaurantRating, covers map[string]reviewsapi.RestaurantPhoto, viewer viewerData) reviewsapi.Restaurant {
 	out := reviewsapi.Restaurant{
-		Id:           r.Id,
-		Name:         r.GetString("name"),
-		Description:  optionalText(r, "description"),
-		Tags:         tagsOf(r),
-		Location:     locationOf(r),
-		Website:      optionalText(r, "website"),
-		Phone:        optionalText(r, "phone"),
-		OpeningHours: optionalText(r, "opening_hours"),
-		PriceLevel:   priceLevelOf(r),
-		Creator:      nullable.NewNullNullable[reviewsapi.Creator](),
-		Rating:       nullable.NewNullNullable[reviewsapi.RestaurantRating](),
-		Cover:        nullable.NewNullNullable[reviewsapi.RestaurantPhoto](),
-		Favorite:     favorites[r.Id],
-		Created:      apiTimestamp(r.GetDateTime("created")),
-		Updated:      apiTimestamp(r.GetDateTime("updated")),
+		Id:             r.Id,
+		Name:           r.GetString("name"),
+		Description:    optionalText(r, "description"),
+		Tags:           tagsOf(r),
+		Location:       locationOf(r),
+		Website:        optionalText(r, "website"),
+		Phone:          optionalText(r, "phone"),
+		OpeningHours:   optionalText(r, "opening_hours"),
+		PriceLevel:     priceLevelOf(r),
+		Creator:        nullable.NewNullNullable[reviewsapi.Creator](),
+		Rating:         nullable.NewNullNullable[reviewsapi.RestaurantRating](),
+		Cover:          nullable.NewNullNullable[reviewsapi.RestaurantPhoto](),
+		Favorite:       viewer.favorites[r.Id],
+		OwnReviewCount: viewer.ownReviews[r.Id],
+		Created:        apiTimestamp(r.GetDateTime("created")),
+		Updated:        apiTimestamp(r.GetDateTime("updated")),
 	}
 	if u, ok := users[r.GetString("creator")]; ok {
 		out.Creator = nullable.NewNullableWithValue(toCreator(u))

@@ -23,6 +23,15 @@ type WithTagArray<T> = T extends unknown ? Omit<T, 'tags'> & { tags?: string[] }
 // TestRestaurant is a create body with an optional location.
 type TestRestaurant = Omit<WithTagArray<RestaurantCreate>, 'location'> & { location?: Location }
 
+// WithOptionalDate is a review body without a required date. The helpers
+// then use today.
+type WithOptionalDate<T> = Omit<T, 'date'> & { date?: string }
+
+// today is the date in UTC. The API allows each date up to today in UTC+14.
+function today(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
 // randomLocation is a point in the South Pacific. Restaurants of different
 // tests are then not near each other.
 export function randomLocation(): Location {
@@ -170,8 +179,8 @@ export class TestApi {
     })
   }
 
-  createRecipeReview(user: TestUser, recipeId: string, recipeReviewCreate: RecipeReviewCreate): Promise<RecipeReview> {
-    return new RecipesApi(this.config(user.token)).createRecipeReview({ recipeId, recipeReviewCreate })
+  createRecipeReview(user: TestUser, recipeId: string, review: WithOptionalDate<RecipeReviewCreate>): Promise<RecipeReview> {
+    return new RecipesApi(this.config(user.token)).createRecipeReview({ recipeId, recipeReviewCreate: { date: today(), ...review } })
   }
 
   addRecipeToList(user: TestUser, listRef: string, recipeId: string): Promise<void> {
@@ -195,8 +204,11 @@ export class TestApi {
     return new ListsApi(this.config(user.token)).addListRestaurant({ listRef, restaurantId })
   }
 
-  createReview(user: TestUser, restaurantId: string, restaurantReviewCreate: RestaurantReviewCreate): Promise<RestaurantReview> {
-    return new RestaurantsApi(this.config(user.token)).createRestaurantReview({ restaurantId, restaurantReviewCreate })
+  createReview(user: TestUser, restaurantId: string, review: WithOptionalDate<RestaurantReviewCreate>): Promise<RestaurantReview> {
+    return new RestaurantsApi(this.config(user.token)).createRestaurantReview({
+      restaurantId,
+      restaurantReviewCreate: { date: today(), ...review },
+    })
   }
 
   deleteReview(user: TestUser, review: RestaurantReview): Promise<void> {

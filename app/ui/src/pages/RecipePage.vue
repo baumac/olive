@@ -21,7 +21,7 @@ import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, failureText, recipesApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
-import { findOwnReviewId, parentAccess } from '@/lib/parents'
+import { ownReviewsText, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 
@@ -29,32 +29,11 @@ const props = defineProps<{ recipeId: string }>()
 const router = useRouter()
 
 const recipe = useLoad<Recipe>(() => recipesApi.getRecipe({ recipeId: props.recipeId }))
-watch(() => props.recipeId, () => void recipe.load(), { immediate: true })
+// ownReviewCount and favorite belong to the signed in user.
+watch([() => props.recipeId, () => currentUser.value?.id], () => void recipe.load(), { immediate: true })
 
 usePageTitle(() => recipe.data.value?.name ?? '')
 
-// ownReviewId is the review of the signed in user, if any. A user can have
-// at most one review per recipe.
-const ownReviewId = ref<string | null>(null)
-const ownReviewLookup = ref<'loading' | 'done' | 'failed'>('loading')
-watch(
-  [() => props.recipeId, currentUser],
-  async ([recipeId, user]) => {
-    ownReviewId.value = null
-    ownReviewLookup.value = 'done'
-    if (!user) {
-      return
-    }
-    ownReviewLookup.value = 'loading'
-    try {
-      ownReviewId.value = await findOwnReviewId('recipe', recipeId, user.id)
-      ownReviewLookup.value = 'done'
-    } catch {
-      ownReviewLookup.value = 'failed'
-    }
-  },
-  { immediate: true },
-)
 
 const gallery = ref<InstanceType<typeof PhotoGallery> | null>(null)
 const coverButton = ref<HTMLButtonElement | null>(null)
@@ -63,22 +42,15 @@ const coverLabel = computed(() => {
   return alt ? `Open the cover photo: ${alt}` : 'Open the cover photo'
 })
 
-const access = computed(() => {
-  if (!recipe.data.value || ownReviewLookup.value === 'loading') {
-    return null
-  }
-  const hasOwnReview = ownReviewLookup.value === 'failed' ? null : !!ownReviewId.value
-  return parentAccess(recipe.data.value, currentUser.value?.id, hasOwnReview)
-})
+const access = computed(() => (recipe.data.value ? parentAccess(recipe.data.value, currentUser.value?.id) : null))
 
 const deleteDescription = computed(() => {
   const text = `${recipe.data.value?.name} will be deleted permanently.`
-  return ownReviewId.value ? `${text} Your review and its photos will be deleted too.` : text
+  const own = currentUser.value ? (recipe.data.value?.ownReviewCount ?? 0) : 0
+  return own ? `${text} ${ownReviewsText(own)}` : text
 })
 
-const writePath = computed(() =>
-  ownReviewId.value ? `/recipes/${props.recipeId}/reviews/${ownReviewId.value}/edit` : `/recipes/${props.recipeId}/reviews/new`,
-)
+const writePath = computed(() => `/recipes/${props.recipeId}/reviews/new`)
 
 async function remove() {
   const name = recipe.data.value?.name
@@ -169,7 +141,7 @@ async function remove() {
         <div class="flex flex-wrap items-center justify-between gap-4">
           <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>
           <Button as-child>
-            <RouterLink :to="writePath">{{ ownReviewId ? 'Edit your review' : 'Write a review' }}</RouterLink>
+            <RouterLink :to="writePath">Write a review</RouterLink>
           </Button>
         </div>
         <ReviewList :parent="recipe.data.value" kind="recipe" :write-path="writePath" />

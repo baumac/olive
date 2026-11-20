@@ -77,6 +77,9 @@ func TestRecipeQueriesUseIndexes(t *testing.T) {
 		{"reviews of a reviewer", "recipe_reviews", "-overall", recipeSubject.reviewSorts, creator, "idx_recipe_reviews_creator_overall"},
 		{"all reviews", "recipe_reviews", "-overall", recipeSubject.reviewSorts, nil, "idx_recipe_reviews_overall"},
 		{"all reviews by title", "recipe_reviews", "title", recipeSubject.reviewSorts, nil, "idx_recipe_reviews_title"},
+		{"reviews of a recipe by date", "recipe_reviews", "-date", recipeSubject.reviewSorts, recipe, "idx_recipe_reviews_recipe_date"},
+		{"reviews of a reviewer by date", "recipe_reviews", "-date", recipeSubject.reviewSorts, creator, "idx_recipe_reviews_creator_date"},
+		{"all reviews by date", "recipe_reviews", "-date", recipeSubject.reviewSorts, nil, "idx_recipe_reviews_date"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			keys, _, detail := parseSort(&c.sort, c.table, c.sorts)

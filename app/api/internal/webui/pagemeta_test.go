@@ -152,10 +152,10 @@ func TestPageMeta(t *testing.T) {
 	plain := save(t, app, "restaurants", map[string]any{"name": "Plain", "creator": user.Id})
 	scores := map[string]any{"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7}
 	review := save(t, app, "reviews", with(scores, map[string]any{
-		"restaurant": restaurant.Id, "creator": user.Id, "title": "Great <b>food</b>", "feedback": "The best pasta.",
+		"restaurant": restaurant.Id, "creator": user.Id, "date": "2024-11-06", "title": "Great <b>food</b>", "feedback": "The best pasta.",
 		"cleanliness": 9,
 	}))
-	other := save(t, app, "reviews", with(scores, map[string]any{"restaurant": plain.Id, "creator": user.Id, "title": "Fine"}))
+	other := save(t, app, "reviews", with(scores, map[string]any{"restaurant": plain.Id, "creator": user.Id, "date": "2024-11-06", "title": "Fine"}))
 	photo := savePhoto(t, app, "review_photos", review.Id)
 	list := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Date <i>night</i>", "kind": "custom"})
 	save(t, app, "list_items", map[string]any{"list": list.Id, "restaurant": plain.Id})

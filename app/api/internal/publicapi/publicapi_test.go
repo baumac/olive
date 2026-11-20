@@ -3,7 +3,6 @@ package publicapi_test
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,7 +17,6 @@ import (
 	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	_ "github.com/baumac/reviews-app/app/api/migrations"
 	"github.com/pocketbase/dbx"
-	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -681,7 +679,7 @@ func TestSpacesAroundNamesAndTitles(t *testing.T) {
 		t.Errorf("rename: name %q", renamed["name"])
 	}
 
-	review := e.createReview(ana.Token, restaurant["id"].(string), `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"  Good "}`)
+	review := e.createReview(ana.Token, restaurant["id"].(string), `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"  Good "}`)
 	if review["title"] != "Good" {
 		t.Errorf("create: title %q", review["title"])
 	}
@@ -870,7 +868,7 @@ func TestRestaurants(t *testing.T) {
 		}
 	})
 
-	review := e.createReview(joe.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`)
+	review := e.createReview(joe.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`)
 
 	t.Run("name cannot change with reviews", func(t *testing.T) {
 		e.expectCode(request{method: "PATCH", path: path, body: `{"name":"New name"}`, token: ana.Token}, http.StatusConflict, "other_reviews")
@@ -898,8 +896,8 @@ func TestReviews(t *testing.T) {
 	other := e.createRestaurant(ana.Token, `{"name":"Other"}`)["id"].(string)
 	reviews := "/v1/restaurants/" + id + "/reviews"
 
-	good := e.createReview(joe.Token, id, `{"space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"Good","feedback":"Nice"}`)
-	great := e.createReview(ana.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great food"}`)
+	good := e.createReview(joe.Token, id, `{"date":"2024-11-06","space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"Good","feedback":"Nice"}`)
+	great := e.createReview(ana.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great food"}`)
 	goodPath := reviews + "/" + good["id"].(string)
 	otherReviews := "/v1/restaurants/" + other + "/reviews"
 
@@ -918,43 +916,28 @@ func TestReviews(t *testing.T) {
 	})
 
 	t.Run("create errors", func(t *testing.T) {
-		e.expectCode(request{method: "POST", path: reviews, body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Again"}`, token: joe.Token}, http.StatusConflict, "review_exists")
-		e.expect(request{method: "POST", path: "/v1/restaurants/aaaaaaaaaaaaaaa/reviews", body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusNotFound)
+		e.expect(request{method: "POST", path: "/v1/restaurants/aaaaaaaaaaaaaaa/reviews", body: `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusNotFound)
 		e.expect(request{method: "POST", path: otherReviews, body: `{"kind":"joc_de_cartes","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "POST", path: otherReviews, body: `{"rating":3,"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
-		e.expect(request{method: "POST", path: otherReviews, body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X","tags":["pasta"]}`, token: joe.Token}, http.StatusBadRequest)
+		e.expect(request{method: "POST", path: otherReviews, body: `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X","tags":["pasta"]}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "PATCH", path: goodPath, body: `{"tags":null}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: reviews + "?tags[has]=pasta"}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/restaurant-reviews?tags[has_any]=pasta"}, http.StatusBadRequest)
 
 		for body, want := range map[string]string{
-			`{"space":7,"service":9,"food":8,"price":6,"cleanliness":0,"title":"X"}`:          "cleanliness",
-			`{"space":11,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`:         "space",
-			`{"space":7,"service":9,"title":"X"}`:                                             "cleanliness,food,price",
-			`{"space":9999999999,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`: "space",
-			`{"space":7,"service":2.5,"food":8,"price":6,"cleanliness":8,"title":"X"}`:        "service",
-			`{"space":7.0,"service":9,"food":8,"price":6,"cleanliness":1e1,"title":"X"}`:      "cleanliness,space",
+			`{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":0,"title":"X"}`:          "cleanliness",
+			`{"date":"2024-11-06","space":11,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`:         "space",
+			`{"date":"2024-11-06","space":7,"service":9,"title":"X"}`:                                             "cleanliness,food,price",
+			`{"date":"2024-11-06","space":9999999999,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`: "space",
+			`{"date":"2024-11-06","space":7,"service":2.5,"food":8,"price":6,"cleanliness":8,"title":"X"}`:        "service",
+			`{"date":"2024-11-06","space":7.0,"service":9,"food":8,"price":6,"cleanliness":1e1,"title":"X"}`:      "cleanliness,space",
 		} {
 			res := e.expect(request{method: "POST", path: otherReviews, body: body, token: joe.Token}, http.StatusUnprocessableEntity)
 			if got := strings.Join(errorProperties(t, res), ","); got != want {
 				t.Errorf("%s: properties %q, want %q", body, got, want)
 			}
 		}
-		e.expect(request{method: "POST", path: otherReviews, body: `{"space":"x","space":4,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
-	})
-
-	t.Run("the unique index blocks a second review of a user", func(t *testing.T) {
-		collection, err := e.app.FindCollectionByNameOrId("reviews")
-		if err != nil {
-			t.Fatal(err)
-		}
-		r := core.NewRecord(collection)
-		r.Load(map[string]any{"restaurant": id, "creator": joe.User.ID, "space": 1, "service": 1, "food": 1, "price": 1, "cleanliness": 1, "title": "Copy"})
-		err = e.app.Save(r)
-		var invalid validation.Errors
-		if !errors.As(err, &invalid) || invalid["creator"] == nil {
-			t.Errorf("save: %v", err)
-		}
+		e.expect(request{method: "POST", path: otherReviews, body: `{"date":"2024-11-06","space":"x","space":4,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: joe.Token}, http.StatusBadRequest)
 	})
 
 	t.Run("get", func(t *testing.T) {
@@ -1027,7 +1010,7 @@ func TestReviews(t *testing.T) {
 
 	t.Run("pages of a score sort", func(t *testing.T) {
 		sam := e.signUp("sam@example.com", "Sam")
-		e.createReview(sam.Token, id, `{"space":1,"service":1,"food":1,"price":9,"cleanliness":8,"title":"Best"}`)
+		e.createReview(sam.Token, id, `{"date":"2024-11-06","space":1,"service":1,"food":1,"price":9,"cleanliness":8,"title":"Best"}`)
 		for sort, want := range map[string]string{
 			"-price": "9,6,2",
 			"price":  "2,6,9",
@@ -1076,7 +1059,7 @@ func TestRestaurantOwnership(t *testing.T) {
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
 	eva := e.signUp("eva@example.com", "Eva")
-	const review = `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`
+	const review = `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`
 	count := func(table, column, id string) int {
 		t.Helper()
 		var n int
@@ -1319,11 +1302,11 @@ func TestListAllReviews(t *testing.T) {
 	joe := e.signUp("joe@example.com", "Joe")
 	luigi := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
 	sole := e.createRestaurant(joe.Token, `{"name":"Can Sole"}`)["id"].(string)
-	e.createReview(ana.Token, luigi, `{"space":4,"service":4,"food":4,"price":4,"cleanliness":8,"title":"Ana at Luigi"}`)
+	e.createReview(ana.Token, luigi, `{"date":"2024-11-04","space":4,"service":4,"food":4,"price":4,"cleanliness":8,"title":"Ana at Luigi"}`)
 	time.Sleep(2 * time.Millisecond)
-	e.createReview(joe.Token, luigi, `{"space":2,"service":2,"food":2,"price":2,"cleanliness":8,"title":"Joe at Luigi"}`)
+	e.createReview(joe.Token, luigi, `{"date":"2024-11-05","space":2,"service":2,"food":2,"price":2,"cleanliness":8,"title":"Joe at Luigi"}`)
 	time.Sleep(2 * time.Millisecond)
-	created := e.createReview(ana.Token, sole, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Ana at Sole"}`)
+	created := e.createReview(ana.Token, sole, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Ana at Sole"}`)
 
 	if created["restaurant_name"] != "Can Sole" {
 		t.Errorf("create: restaurant_name %v", created["restaurant_name"])
@@ -1396,9 +1379,9 @@ func TestRestaurantRating(t *testing.T) {
 		t.Error("create: rating is missing, want null")
 	}
 
-	e.createReview(ana.Token, id, `{"space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"A"}`)
-	e.createReview(joe.Token, id, `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"B"}`)
-	e.createReview(sam.Token, id, `{"space":1,"service":1,"food":1,"price":1,"cleanliness":1,"title":"C"}`)
+	e.createReview(ana.Token, id, `{"date":"2024-11-06","space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"A"}`)
+	e.createReview(joe.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"B"}`)
+	e.createReview(sam.Token, id, `{"date":"2024-11-06","space":1,"service":1,"food":1,"price":1,"cleanliness":1,"title":"C"}`)
 	e.createRestaurant(ana.Token, `{"name":"Empty"}`)
 
 	want := map[string]any{"overall": 4.5, "space": 4.0, "service": 5.0, "food": 5.0, "price": 4.7, "cleanliness": 4.0}
@@ -1436,7 +1419,7 @@ func TestListRestaurantsByOverall(t *testing.T) {
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
 	scores := func(n int) string {
-		return fmt.Sprintf(`{"space":%d,"service":%d,"food":%d,"price":%d,"cleanliness":%d,"title":"T"}`, n, n, n, n, n)
+		return fmt.Sprintf(`{"date":"2024-11-06","space":%d,"service":%d,"food":%d,"price":%d,"cleanliness":%d,"title":"T"}`, n, n, n, n, n)
 	}
 	high := e.createRestaurant(ana.Token, `{"name":"High"}`)["id"].(string)
 	mid := e.createRestaurant(ana.Token, `{"name":"Mid"}`)["id"].(string)
@@ -1444,7 +1427,7 @@ func TestListRestaurantsByOverall(t *testing.T) {
 	e.createRestaurant(ana.Token, `{"name":"None"}`)
 	e.createReview(ana.Token, high, scores(9))
 	e.createReview(joe.Token, high, scores(8))
-	e.createReview(ana.Token, mid, `{"space":7,"service":7,"food":7,"price":7,"cleanliness":6,"title":"T"}`)
+	e.createReview(ana.Token, mid, `{"date":"2024-11-06","space":7,"service":7,"food":7,"price":7,"cleanliness":6,"title":"T"}`)
 	lowReview := e.createReview(ana.Token, low, scores(2))["id"].(string)
 
 	names := func(query string) string {
@@ -1610,8 +1593,8 @@ func TestSearch(t *testing.T) {
 	})
 
 	t.Run("reviews", func(t *testing.T) {
-		e.createReview(joe.Token, pasta, `{"space":5,"service":5,"food":9,"price":5,"cleanliness":5,"title":"Great carbonara","feedback":"Creamy sauce"}`)
-		e.createReview(ana.Token, cafe, `{"space":5,"service":5,"food":5,"price":5,"cleanliness":5,"title":"Nice tea","feedback":"Carbonara was a special"}`)
+		e.createReview(joe.Token, pasta, `{"date":"2024-11-06","space":5,"service":5,"food":9,"price":5,"cleanliness":5,"title":"Great carbonara","feedback":"Creamy sauce"}`)
+		e.createReview(ana.Token, cafe, `{"date":"2024-11-06","space":5,"service":5,"food":5,"price":5,"cleanliness":5,"title":"Nice tea","feedback":"Carbonara was a special"}`)
 		for path, want := range map[string]string{
 			"/v1/restaurant-reviews?search=carbonara":               "Great carbonara,Nice tea",
 			"/v1/restaurant-reviews?search=carbonara&limit=1":       "Great carbonara,Nice tea",

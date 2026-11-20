@@ -11,8 +11,6 @@ import (
 
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
-	"github.com/pocketbase/dbx"
-	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -20,6 +18,7 @@ import (
 // before.
 type reviewInput struct {
 	scores   map[string]int
+	date     *string
 	title    *string
 	feedback nullable.Nullable[string]
 }
@@ -40,13 +39,39 @@ func (sub subject) overallFilter(sort string) string {
 	return "+" + sub.reviewOverall()
 }
 
+// reviewDefaultSort puts the newest visit or cook first. See decision 00050.
+const reviewDefaultSort = "-date"
+
+// legacyReviewSort is the default sort before decision 00050.
+const legacyReviewSort = "-created"
+
+// defaultReviewSort keeps the legacy sort for a cursor that the legacy
+// default made. An open page can then load more after the deploy.
+func defaultReviewSort(cursor *string, fingerprintOf func(sort string) []any) string {
+	if cursor == nil {
+		return reviewDefaultSort
+	}
+	query, err := fingerprint(fingerprintOf(legacyReviewSort)...)
+	if err != nil {
+		return reviewDefaultSort
+	}
+	if _, detail := decodeCursor(cursor, query, 2); detail == "" {
+		return legacyReviewSort
+	}
+	return reviewDefaultSort
+}
+
 func makeReviewSorts(sub subject) map[string]sortField {
 	sorts := map[string]sortField{
 		"overall":   func(desc bool) []sortKey { return []sortKey{{expr: sub.reviewOverall(), desc: desc}} },
 		"title":     textSort(sub.Reviews, "title"),
 		"relevance": relevanceSort,
-		"created":   columnSort(sub.Reviews, "created"),
-		"updated":   columnSort(sub.Reviews, "updated"),
+		// The reviews of one day sort by the time that the user wrote them.
+		"date": func(desc bool) []sortKey {
+			return []sortKey{{expr: column(sub.Reviews, "date"), desc: desc}, {expr: column(sub.Reviews, "created"), desc: desc}}
+		},
+		"created": columnSort(sub.Reviews, "created"),
+		"updated": columnSort(sub.Reviews, "updated"),
 	}
 	for _, name := range sub.Scores {
 		sorts[name] = columnSort(sub.Reviews, name)
@@ -186,6 +211,9 @@ func (s *Server) reviewsOf(
 	if detail != "" {
 		return reviewRecords{bad: detail}, nil
 	}
+	if sortSpec == nil {
+		sortSpec = new(defaultReviewSort(q.cursor, fingerprintOf))
+	}
 	keys, sort, detail := parseSort(sortSpec, sub.Reviews, sub.reviewSorts)
 	if detail != "" {
 		return reviewRecords{bad: detail}, nil
@@ -267,7 +295,8 @@ func (s *Server) parentNames(sub subject, known map[string]string, reviews ...*c
 	return out, nil
 }
 
-// CreateRestaurantReview lets each user write one review of a restaurant.
+// CreateRestaurantReview makes a review of one visit. A user can write many
+// reviews of one restaurant. See decision 00050.
 func (s *Server) CreateRestaurantReview(ctx context.Context, req reviewsapi.CreateRestaurantReviewRequestObject) (reviewsapi.CreateRestaurantReviewResponseObject, error) {
 	user := stateFrom(ctx).user
 	saved, restaurant, p, err := s.createReview(restaurantSubject, req.RestaurantId, user, createInput(req.Body))
@@ -275,11 +304,8 @@ func (s *Server) CreateRestaurantReview(ctx context.Context, req reviewsapi.Crea
 		return nil, err
 	}
 	if p != nil {
-		switch p.status() {
-		case http.StatusNotFound:
+		if p.status() == http.StatusNotFound {
 			return reviewsapi.CreateRestaurantReview404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
-		case http.StatusConflict:
-			return reviewsapi.CreateRestaurantReview409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: p.conflict()}, nil
 		}
 		return nil, p.unexpected()
 	}
@@ -294,11 +320,9 @@ func (s *Server) CreateRestaurantReview(ctx context.Context, req reviewsapi.Crea
 	}, nil
 }
 
-// createReview runs the duplicate check and the save in one transaction.
-// The unique index on the parent and the creator also blocks a second
-// review. The problem is a 404 or a 409.
+// createReview reads the parent and saves the review in one transaction. The
+// problem is a 404.
 func (s *Server) createReview(sub subject, parentID string, user *core.Record, in reviewInput) (review, parent *core.Record, p *problem, err error) {
-	duplicate := conflictProblem(reviewsapi.ProblemCodeReviewExists, "The user already has a review for this "+sub.noun+".")
 	err = s.app.RunInTransaction(func(tx core.App) error {
 		var err error
 		if parent, err = findParent(tx, sub, parentID); errors.Is(err, sql.ErrNoRows) {
@@ -306,15 +330,6 @@ func (s *Server) createReview(sub subject, parentID string, user *core.Record, i
 			return nil
 		} else if err != nil {
 			return err
-		}
-
-		n, err := tx.CountRecords(sub.Reviews, dbx.HashExp{sub.Parent: parentID, "creator": user.Id})
-		if err != nil {
-			return err
-		}
-		if n > 0 {
-			p = duplicate
-			return nil
 		}
 
 		collection, err := tx.FindCachedCollectionByNameOrId(sub.Reviews)
@@ -328,10 +343,7 @@ func (s *Server) createReview(sub subject, parentID string, user *core.Record, i
 		review = r
 		return tx.Save(r)
 	})
-	var invalid validation.Errors
 	switch {
-	case errors.As(err, &invalid) && isNotUnique(invalid, "creator"):
-		return nil, nil, duplicate, nil
 	case err != nil:
 		return nil, nil, nil, err
 	case p != nil:
@@ -490,12 +502,12 @@ func (sub subject) reviewPath(parentID, reviewID string) string {
 func createInput(body *reviewsapi.RestaurantReviewCreate) reviewInput {
 	return reviewInput{
 		scores: map[string]int{"space": body.Space, "service": body.Service, "food": body.Food, "price": body.Price, "cleanliness": body.Cleanliness},
-		title:  &body.Title, feedback: optional(body.Feedback),
+		date:   &body.Date, title: &body.Title, feedback: optional(body.Feedback),
 	}
 }
 
 func patchInput(body *reviewsapi.RestaurantReviewPatch) reviewInput {
-	in := reviewInput{scores: map[string]int{}, title: body.Title, feedback: body.Feedback}
+	in := reviewInput{scores: map[string]int{}, date: body.Date, title: body.Title, feedback: body.Feedback}
 	setScore(in.scores, "space", body.Space)
 	setScore(in.scores, "service", body.Service)
 	setScore(in.scores, "food", body.Food)
@@ -523,6 +535,9 @@ func (in reviewInput) apply(r *core.Record) bool {
 	for name, v := range in.scores {
 		ch.set(name, float64(v))
 	}
+	if in.date != nil {
+		ch.set("date", *in.date)
+	}
 	if in.title != nil {
 		ch.set("title", *in.title)
 	}
@@ -546,8 +561,8 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string, photo
 	// TestOverallColumnEqualsResponse keeps the overall column equal to this.
 	return reviewsapi.RestaurantReview{
 		Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName,
-		Overall: float64(space+service+food+price+cleanliness) / 5,
-		Space:   space, Service: service, Food: food, Price: price, Cleanliness: cleanliness,
+		Date: r.GetString("date"), Overall: float64(space+service+food+price+cleanliness) / 5,
+		Space: space, Service: service, Food: food, Price: price, Cleanliness: cleanliness,
 		Title: r.GetString("title"), Feedback: optionalText(r, "feedback"),
 		Creator: toCreator(creator), Photos: photos, Created: apiTimestamp(r.GetDateTime("created")), Updated: apiTimestamp(r.GetDateTime("updated")),
 	}, nil

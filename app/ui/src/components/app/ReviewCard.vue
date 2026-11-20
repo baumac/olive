@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RatingDisplay } from '@/components/ui/rating-display'
+import { isEdited } from '@/lib/format'
 import { type AnyReview, kindOf, kinds, parentNameOf, parentPathOf, reviewPathOf, scoreOf } from '@/lib/reviewKinds'
-import DateText from './DateText.vue'
+import ReviewDate from './ReviewDate.vue'
 import ReviewerLink from './ReviewerLink.vue'
 import ReviewPhotos from './ReviewPhotos.vue'
 
@@ -18,6 +19,7 @@ const props = defineProps<{
 
 const scoresOpen = ref(false)
 const fields = computed(() => kinds[kindOf(props.review)].scoreFields)
+const edited = computed(() => isEdited(props.review.created, props.review.updated))
 </script>
 
 <template>
@@ -38,7 +40,7 @@ const fields = computed(() => kinds[kindOf(props.review)].scoreFields)
       <ReviewPhotos :review="review" />
       <p class="text-muted-foreground text-sm">
         <template v-if="showCreator"><ReviewerLink :creator="review.creator" /> · </template>
-        <DateText :created="review.created" :updated="review.updated" /> ·
+        <ReviewDate :review="review" /><template v-if="edited"> · edited</template> ·
         <button
           type="button"
           class="rounded-sm underline underline-offset-4"

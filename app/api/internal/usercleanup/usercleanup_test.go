@@ -46,12 +46,12 @@ func TestRun(t *testing.T) {
 	saver := user("saver", false)
 	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": owner.Id})
 	save(t, app, "reviews", map[string]any{
-		"restaurant": restaurant.Id, "creator": reviewer.Id, "title": "Good",
+		"restaurant": restaurant.Id, "creator": reviewer.Id, "date": "2024-11-06", "title": "Good",
 		"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7,
 	})
 	recipe := save(t, app, "recipes", map[string]any{"name": "Dal", "creator": cook.Id, "ingredients": []string{"lentils"}, "steps": []string{"Boil."}})
 	save(t, app, "recipe_reviews", map[string]any{
-		"recipe": recipe.Id, "creator": taster.Id, "title": "Good",
+		"recipe": recipe.Id, "creator": taster.Id, "date": "2024-11-06", "title": "Good",
 		"taste": 7, "ease": 7, "instructions": 7, "value": 7,
 	})
 	list := save(t, app, "lists", map[string]any{"creator": lister.Id, "name": "Favorites", "kind": "favorites"})

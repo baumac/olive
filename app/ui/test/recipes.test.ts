@@ -39,6 +39,7 @@ const recipe: Recipe = {
   rating: { overall: 8.3, taste: 9, ease: 8, instructions: 8, value: 8 },
   cover: null,
   favorite: false,
+  ownReviewCount: 0,
   created: '2024-11-04T01:26:55.002Z',
   updated: '2024-11-04T01:26:55.002Z',
 }
@@ -47,6 +48,7 @@ const review: RecipeReview = {
   id: 'v2k6m0p4r8t1w5y',
   recipe: recipe.id,
   recipeName: recipe.name,
+  date: '2024-11-06',
   overall: 8.25,
   taste: 9,
   ease: 8,
@@ -165,6 +167,7 @@ describe('ReviewCard of a recipe review', () => {
     const w = mount(ReviewCard, { props: { review, showRestaurant: true }, global: { plugins: [await routerAt('/my-reviews')] }, attachTo: attach() })
     expect(w.get('h3 a').attributes('href')).toBe('/recipes/c4r8e2p6i0s3t7a/reviews/v2k6m0p4r8t1w5y')
     expect(w.text()).toContain('Shakshuka')
+    expect(w.text()).toContain('Cooked on 6 Nov 2024')
     await w.get('button[aria-expanded]').trigger('click')
     expect(w.findAll('li [role=img]').map((s) => s.attributes('aria-label'))).toEqual(
       kinds.recipe.scoreFields.map((f) => `${f.label}: ${(review as unknown as Record<string, number>)[f.name]} out of 10`),

@@ -28,7 +28,7 @@ func TestRestaurantGallery(t *testing.T) {
 	// Ana and Bob have the overall 7.6. Joe has 9. Bob is newer than Ana.
 	anaReview := e.createReview(ana.Token, restaurant, reviewBody)["id"].(string)
 	a1, a2 := addPhoto(ana.Token, anaReview), addPhoto(ana.Token, anaReview)
-	joeReview := e.createReview(joe.Token, restaurant, `{"space":9,"service":9,"food":9,"price":9,"cleanliness":9,"title":"Best"}`)["id"].(string)
+	joeReview := e.createReview(joe.Token, restaurant, `{"date":"2024-11-06","space":9,"service":9,"food":9,"price":9,"cleanliness":9,"title":"Best"}`)["id"].(string)
 	j1 := addPhoto(joe.Token, joeReview)
 	bobReview := e.createReview(bob.Token, restaurant, reviewBody)["id"].(string)
 	b1 := addPhoto(bob.Token, bobReview)

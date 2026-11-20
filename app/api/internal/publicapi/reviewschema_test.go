@@ -13,10 +13,10 @@ func TestOverallColumnEqualsResponse(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	for i, body := range []string{
-		`{"space":1,"service":1,"food":1,"price":1,"cleanliness":2,"title":"T"}`,
-		`{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"T"}`,
-		`{"space":10,"service":10,"food":10,"price":10,"cleanliness":9,"title":"T"}`,
-		`{"space":3,"service":3,"food":4,"price":3,"cleanliness":3,"title":"T"}`,
+		`{"date":"2024-11-06","space":1,"service":1,"food":1,"price":1,"cleanliness":2,"title":"T"}`,
+		`{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"T"}`,
+		`{"date":"2024-11-06","space":10,"service":10,"food":10,"price":10,"cleanliness":9,"title":"T"}`,
+		`{"date":"2024-11-06","space":3,"service":3,"food":4,"price":3,"cleanliness":3,"title":"T"}`,
 	} {
 		restaurant := e.createRestaurant(ana.Token, `{"name":"R`+string(rune('a'+i))+`"}`)["id"].(string)
 		review := e.createReview(ana.Token, restaurant, body)

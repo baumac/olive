@@ -151,7 +151,7 @@ var restaurantGuard = fieldGuard{
 // tags are the stored JSON. A stored string or object then gets an error.
 // A location without an address gets an error of the address.
 func restaurantProperties(r *core.Record, schema *openapi3.Schema) (map[string]json.RawMessage, error) {
-	raw, err := json.Marshal(toRestaurant(r, nil, nil, nil, nil))
+	raw, err := json.Marshal(toRestaurant(r, nil, nil, nil, viewerData{}))
 	if err != nil {
 		return nil, err
 	}

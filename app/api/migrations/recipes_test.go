@@ -14,7 +14,7 @@ import (
 )
 
 func recipeReview(user, recipe *core.Record, taste int) map[string]any {
-	return map[string]any{"recipe": recipe.Id, "creator": user.Id, "title": "T", "taste": taste, "ease": 8, "instructions": 8, "value": 8}
+	return map[string]any{"recipe": recipe.Id, "creator": user.Id, "title": "T", "date": "2024-11-06", "taste": taste, "ease": 8, "instructions": 8, "value": 8}
 }
 
 // storedRecipeOverall returns false when the recipe has no row.

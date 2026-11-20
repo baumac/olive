@@ -25,6 +25,7 @@ const restaurant: Restaurant = {
   rating: null,
   cover: null,
   favorite: false,
+  ownReviewCount: 0,
   created: user.created,
   updated: user.updated,
 }

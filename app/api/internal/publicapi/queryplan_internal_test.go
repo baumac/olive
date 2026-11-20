@@ -152,7 +152,9 @@ func TestReviewOverallUsesIndexes(t *testing.T) {
 		filter  func(w *where)
 		overall bool
 		cursor  bool
-		want    []string
+		// after is the cursor of a sort that is not overall.
+		after []any
+		want  []string
 	}{
 		{name: "restaurant", sort: "-overall", filter: restaurant, want: []string{"idx_reviews_restaurant_overall"}},
 		{name: "restaurant after cursor", sort: "-overall", filter: restaurant, cursor: true, want: []string{"idx_reviews_restaurant_overall", cursorRange}},
@@ -166,6 +168,11 @@ func TestReviewOverallUsesIndexes(t *testing.T) {
 		{name: "restaurant by created with overall filter", sort: "-created", filter: restaurant, overall: true, want: []string{"idx_reviews_restaurant_created"}},
 		{name: "all by created with overall filter", sort: "-created", overall: true, want: []string{"idx_reviews_created"}},
 		{name: "all by title with overall filter", sort: "title", overall: true, want: []string{"idx_reviews_title"}},
+		{name: "restaurant by date", sort: "-date", filter: restaurant, want: []string{"idx_reviews_restaurant_date"}},
+		{name: "restaurant by date after cursor", sort: "-date", filter: restaurant, cursor: true,
+			after: []any{"2024-11-06", "2024-11-06 19:02:11.120Z", "r1b8c5e2g9i6k3m"}, want: []string{"idx_reviews_restaurant_date", "(date,created,id)"}},
+		{name: "reviewer by date", sort: "-date", filter: creator, want: []string{"idx_reviews_creator_date"}},
+		{name: "all by date with overall filter", sort: "-date", overall: true, want: []string{"idx_reviews_date"}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			keys, sort, detail := parseSort(&c.sort, "reviews", restaurantSubject.reviewSorts)
@@ -179,7 +186,9 @@ func TestReviewOverallUsesIndexes(t *testing.T) {
 			if c.overall {
 				w.compare(restaurantSubject.overallFilter(sort), []comparison{{">=", 8.0}})
 			}
-			if c.cursor {
+			if c.after != nil {
+				w.keyset(keys, c.after)
+			} else if c.cursor {
 				w.keyset(keys, []any{7.6, "r1b8c5e2g9i6k3m"})
 			}
 			plan := queryPlan(t, s, s.sortQuery("reviews", w, keys, defaultLimit+1).Build())
@@ -199,10 +208,14 @@ func TestReviewerStatsUseIndexes(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
 	plan := queryPlan(t, s, s.reviewerStatsQuery("u5n1c8r3t6y0b2e"))
-	for _, want := range []string{"idx_reviews_creator_overall", "COVERING INDEX idx_restaurants_creator_created"} {
+	// The creator indexes of the overall and of the date read the same rows.
+	for _, want := range []string{"SEARCH reviews USING INDEX idx_reviews_creator_", "COVERING INDEX idx_restaurants_creator_created"} {
 		if !strings.Contains(plan, want) {
 			t.Errorf("plan has no %q:\n%s", want, plan)
 		}
+	}
+	if strings.Contains(plan, "SCAN") {
+		t.Errorf("plan scans a table:\n%s", plan)
 	}
 }
 

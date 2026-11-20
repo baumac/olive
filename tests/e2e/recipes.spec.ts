@@ -98,6 +98,18 @@ test('a signed in user reviews a recipe', async ({ page, api, user }) => {
   await expect(page).toHaveURL(/\/my-reviews\?kind=recipes$/)
   await expect(page.getByRole('heading', { name: 'Smooth and quick' })).toBeVisible()
   await expect(page.getByRole('link', { name: recipe.name })).toBeVisible()
+
+  await page.goto(`/recipes/${recipe.id}/reviews/new`)
+  await page.getByLabel('Cooked on').fill('2024-02-10')
+  for (const label of ['Taste', 'Ease', 'Instructions', 'Value']) {
+    await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: '6 out of 10' }).click()
+  }
+  await page.getByLabel('Title').fill('Too much garlic')
+  await page.getByRole('button', { name: 'Save review' }).click()
+  await expect(page.getByText('Review saved')).toBeVisible()
+  const titles = page.getByRole('region', { name: 'Reviews' }).getByRole('heading', { level: 3 })
+  await expect(titles).toHaveText(['Smooth and quick', 'Too much garlic'])
+  await expect(page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').last()).toContainText('Cooked on 10 Feb 2024')
 })
 
 test('the recipe page shows the photos of its reviews', async ({ page, api }) => {

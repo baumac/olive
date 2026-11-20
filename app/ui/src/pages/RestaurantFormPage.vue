@@ -19,7 +19,7 @@ import { apiFailure, fieldErrors, notApprovedText, restaurantsApi, writeLimitTex
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { nearbyRadius, sameLocation } from '@/lib/places'
 import { normalizeWebsite, priceLevels } from '@/lib/restaurantDetails'
-import { findOwnReviewId, parentAccess } from '@/lib/parents'
+import { parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, checkOpeningHours, checkPhone, checkWebsite } from '@/lib/validation'
@@ -60,20 +60,10 @@ const cancelPath = computed(() => (props.restaurantId ? `/restaurants/${props.re
 onMounted(async () => {
   if (props.restaurantId) {
     try {
-      const userId = currentUser.value?.id
-      const [r, hasOwnReview]: [Restaurant, boolean | null] = await Promise.all([
-        restaurantsApi.getRestaurant({ restaurantId: props.restaurantId }),
-        userId
-          ? findOwnReviewId('restaurant', props.restaurantId, userId).then(
-              (id) => !!id,
-              () => null,
-            )
-          : false,
-      ])
-      const access = parentAccess(r, userId, hasOwnReview)
+      const r = await restaurantsApi.getRestaurant({ restaurantId: props.restaurantId })
+      const access = parentAccess(r, currentUser.value?.id)
       if (!access.canChange) {
-        // Without a creator, the access depends on the failed lookup.
-        failed.value = { status: !r.creator && hasOwnReview === null ? null : 403 }
+        failed.value = { status: 403 }
         return
       }
       nameLocked.value = access.hasOtherReviews

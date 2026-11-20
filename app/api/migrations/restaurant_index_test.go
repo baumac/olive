@@ -28,7 +28,7 @@ func scores(n int) map[string]any {
 }
 
 func review(user, restaurant *core.Record, s map[string]any) map[string]any {
-	data := map[string]any{"restaurant": restaurant.Id, "creator": user.Id, "title": "T"}
+	data := map[string]any{"restaurant": restaurant.Id, "creator": user.Id, "title": "T", "date": "2024-11-06"}
 	for k, v := range s {
 		data[k] = v
 	}

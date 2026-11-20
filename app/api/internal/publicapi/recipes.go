@@ -148,7 +148,7 @@ func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRe
 	}
 	location := recipeSubject.path(r.Id)
 	return reviewsapi.CreateRecipe201JSONResponse{
-		Body:    toRecipe(r, map[string]*core.Record{user.Id: user}, nil, nil, nil),
+		Body:    toRecipe(r, map[string]*core.Record{user.Id: user}, nil, nil, viewerData{}),
 		Headers: reviewsapi.CreateRecipe201ResponseHeaders{Location: &location},
 	}, nil
 }
@@ -415,8 +415,8 @@ func (s *Server) recipeOf(user *core.Record, r *core.Record) (reviewsapi.Recipe,
 	return withDetails(items[0], r), nil
 }
 
-// recipeSummaries gets the creators, the ratings, the covers, and the
-// favorites of records. A nil user has no favorite.
+// recipeSummaries gets the creators, the ratings, the covers, the favorites,
+// and the own reviews of records. A nil user has none of the last two.
 func (s *Server) recipeSummaries(user *core.Record, records ...*core.Record) ([]reviewsapi.RecipeSummary, error) {
 	users, err := s.creators(records...)
 	if err != nil {
@@ -434,19 +434,19 @@ func (s *Server) recipeSummaries(user *core.Record, records ...*core.Record) ([]
 	for id, r := range rows {
 		covers[id] = r.recipePhoto()
 	}
-	favorites, err := s.favoriteIDs(recipeSubject, user, records...)
+	viewer, err := s.viewerDataOf(recipeSubject, user, records...)
 	if err != nil {
 		return nil, err
 	}
 	items := make([]reviewsapi.RecipeSummary, len(records))
 	for i, r := range records {
-		items[i] = toRecipeSummary(r, users, ratings, covers, favorites)
+		items[i] = toRecipeSummary(r, users, ratings, covers, viewer)
 	}
 	return items, nil
 }
 
-func toRecipe(r *core.Record, users map[string]*core.Record, ratings map[string]recipeRating, covers map[string]reviewsapi.RecipePhoto, favorites map[string]bool) reviewsapi.Recipe {
-	return withDetails(toRecipeSummary(r, users, ratings, covers, favorites), r)
+func toRecipe(r *core.Record, users map[string]*core.Record, ratings map[string]recipeRating, covers map[string]reviewsapi.RecipePhoto, viewer viewerData) reviewsapi.Recipe {
+	return withDetails(toRecipeSummary(r, users, ratings, covers, viewer), r)
 }
 
 // withDetails copies each field of sum by its name. A new field of
@@ -463,21 +463,22 @@ func withDetails(sum reviewsapi.RecipeSummary, r *core.Record) reviewsapi.Recipe
 }
 
 // toRecipeSummary gives a recipe that ratings does not list no reviews.
-func toRecipeSummary(r *core.Record, users map[string]*core.Record, ratings map[string]recipeRating, covers map[string]reviewsapi.RecipePhoto, favorites map[string]bool) reviewsapi.RecipeSummary {
+func toRecipeSummary(r *core.Record, users map[string]*core.Record, ratings map[string]recipeRating, covers map[string]reviewsapi.RecipePhoto, viewer viewerData) reviewsapi.RecipeSummary {
 	out := reviewsapi.RecipeSummary{
-		Id:          r.Id,
-		Name:        r.GetString("name"),
-		Description: optionalText(r, "description"),
-		Tags:        tagsOf(r),
-		Source:      optionalText(r, "source"),
-		TotalTime:   optionalNumber(r, "total_time"),
-		Servings:    optionalNumber(r, "servings"),
-		Creator:     nullable.NewNullNullable[reviewsapi.Creator](),
-		Rating:      nullable.NewNullNullable[reviewsapi.RecipeRating](),
-		Cover:       nullable.NewNullNullable[reviewsapi.RecipePhoto](),
-		Favorite:    favorites[r.Id],
-		Created:     apiTimestamp(r.GetDateTime("created")),
-		Updated:     apiTimestamp(r.GetDateTime("updated")),
+		Id:             r.Id,
+		Name:           r.GetString("name"),
+		Description:    optionalText(r, "description"),
+		Tags:           tagsOf(r),
+		Source:         optionalText(r, "source"),
+		TotalTime:      optionalNumber(r, "total_time"),
+		Servings:       optionalNumber(r, "servings"),
+		Creator:        nullable.NewNullNullable[reviewsapi.Creator](),
+		Rating:         nullable.NewNullNullable[reviewsapi.RecipeRating](),
+		Cover:          nullable.NewNullNullable[reviewsapi.RecipePhoto](),
+		Favorite:       viewer.favorites[r.Id],
+		OwnReviewCount: viewer.ownReviews[r.Id],
+		Created:        apiTimestamp(r.GetDateTime("created")),
+		Updated:        apiTimestamp(r.GetDateTime("updated")),
 	}
 	if u, ok := users[r.GetString("creator")]; ok {
 		out.Creator = nullable.NewNullableWithValue(toCreator(u))

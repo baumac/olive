@@ -99,6 +99,7 @@ describe('RestaurantCard', () => {
       rating: null,
       cover: null,
       favorite: false,
+      ownReviewCount: 0,
       location: { latitude: 41.39, longitude: 2.16, address: 'Carrer Nou 1' },
     } as unknown as Restaurant
     const w = mount(RestaurantCard, { props: { restaurant, from: barceloneta } })

@@ -319,6 +319,9 @@ func schemaMessage(e *openapi3.SchemaError) string {
 		if s.Format == "tag" {
 			return "must not have invisible characters"
 		}
+		if s.Format == "review-date" {
+			return "must be a date from " + firstReviewDate + " to today"
+		}
 	case "minimum", "maximum":
 		if s.Min != nil && s.Max != nil {
 			return fmt.Sprintf("must be between %v and %v", *s.Min, *s.Max)

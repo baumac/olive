@@ -76,6 +76,7 @@ The UI shows "You made many changes in a short time. Try again later." for a `42
 Why 30 and 300:
 - 30 new restaurants in one hour is more than a person adds after a long trip.
 - One review per restaurant and user already limits the reviews.
+  Decision 00050 removes this rule. The `create` limit then also limits the reviews.
 - A person can add and remove many favorites in a short time. 300 changes of one operation is more than this.
 
 # Unresolved questions

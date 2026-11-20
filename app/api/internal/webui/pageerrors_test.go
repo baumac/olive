@@ -51,7 +51,7 @@ func TestReviewPhotoWithoutAlt(t *testing.T) {
 	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana", "approved": true})
 	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": user.Id})
 	review := save(t, app, "reviews", map[string]any{
-		"restaurant": restaurant.Id, "creator": user.Id, "title": "Good",
+		"restaurant": restaurant.Id, "creator": user.Id, "date": "2024-11-06", "title": "Good",
 		"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7,
 	})
 	photo := savePhoto(t, app, "review_photos", review.Id)

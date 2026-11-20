@@ -43,7 +43,7 @@ Each `403` and each `409` problem has a `code`.
 | `email_not_confirmed` | 403 | a sign in before the confirmation |
 | `not_creator` | 403 | the user is not the creator. For a restaurant without a creator, the user has no review of it. |
 | `favorites_list` | 403 | a rename or a delete of a favorites list |
-| `review_exists` | 409 | a second review of one user for a restaurant |
+| `review_exists` | 409 | a second review of one user for a restaurant. Decision 00050 removes it. |
 | `other_reviews` | 409 | a delete, a rename, or a move of a restaurant with a review of another user |
 | `place_taken` | 409 | a `location.place_id` that another restaurant has |
 | `photo_limit` | 409 | a sixth photo of a review |

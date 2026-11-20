@@ -1,5 +1,5 @@
 import type { FilterDef, FilterValue, Option } from '@/components/ui/filter-bar'
-import type { ReviewKind } from '@/lib/reviewKinds'
+import { type ReviewKind, kinds } from '@/lib/reviewKinds'
 import { recipeScoreFields } from '@/lib/reviews'
 
 // The review filters and sorts of the restaurant and recipe pages and the
@@ -19,15 +19,27 @@ export const reviewFilterDefs: FilterDef[] = [
   { key: 'cleanliness', label: 'Cleanliness', type: 'select', options: scoreOptions(10), chip: (v) => `Cleanliness: ${v} or more` },
 ]
 
-export const reviewSortOptions: Option[] = [
-  { value: '-created', label: 'Newest' },
-  { value: '-overall', label: 'Highest rated' },
-  { value: 'overall', label: 'Lowest rated' },
+// reviewDefaultSort puts the newest visit or cook first. See decision 00050.
+export const reviewDefaultSort = '-date'
+
+export function reviewSortOptionsOf(kind: ReviewKind): Option[] {
+  return [
+    { value: reviewDefaultSort, label: `Newest ${kinds[kind].occasion}` },
+    { value: '-overall', label: 'Highest rated' },
+    { value: 'overall', label: 'Lowest rated' },
+  ]
+}
+
+// writtenSortOptions sort by the time that the user wrote the review.
+const writtenSortOptions: Option[] = [
+  { value: '-created', label: 'Newest written' },
+  { value: 'created', label: 'Oldest written' },
 ]
 
 // oldReviewSortOptions are the sorts that only a link can select.
 export const oldReviewSortOptions: Option[] = [
-  { value: 'created', label: 'Oldest' },
+  { value: 'date', label: `Oldest ${kinds.restaurant.occasion}` },
+  ...writtenSortOptions,
   { value: '-food', label: 'Best food' },
   { value: '-service', label: 'Best service' },
   { value: '-space', label: 'Best space' },
@@ -51,7 +63,8 @@ export const recipeReviewFilterDefs: FilterDef[] = [
 ]
 
 export const oldRecipeReviewSortOptions: Option[] = [
-  { value: 'created', label: 'Oldest' },
+  { value: 'date', label: `Oldest ${kinds.recipe.occasion}` },
+  ...writtenSortOptions,
   { value: '-taste', label: 'Best taste' },
   { value: '-ease', label: 'Easiest' },
   { value: '-instructions', label: 'Clearest steps' },
