@@ -31,7 +31,8 @@ In scope:
 
 Out of scope:
 - who can create a restaurant. Each signed in user can, as before.
-- changes by users who are not the creator while the creator exists. See the guide-level explanation.
+- changes by users who are not the creator while the creator exists.
+  Changes by all users need an edit history and a report flow to undo vandalism. The app has neither, and sign up has no email verification.
 - a moderator role. A moderator needs reports from users, and the backlog has reports under "Won't Do".
 - an edit history of restaurants
 - a rename after other users wrote reviews. Only a superuser can do it in the dashboard.
@@ -51,6 +52,8 @@ Out of scope:
 
 For a restaurant without a creator, "the creator" is each user who has a review of it.
 
+One review of another user blocks the rename and the delete, as before. The reviews of other users are about the restaurant with this name.
+
 A user who cannot change the restaurant gets `403 Forbidden`.
 A request that fails the condition gets `409 Conflict`.
 
@@ -67,15 +70,9 @@ Joe then writes a review of a second restaurant of Ana.
 Ana can still change its description and its tags. She cannot change its name or delete it.
 The form shows the name field as read-only with the reason. The page shows the reason in place of the delete button.
 
-## The answers to the open questions
-
-- Only the creator changes a restaurant while the creator exists.
-  Changes by all users need an edit history and a report flow to undo vandalism. The app has neither, and sign up has no email verification.
-- One review of another user blocks the rename and the delete, as before. The reviews of other users are about the restaurant with this name.
-- The creator can still replace the description and the tags after reviews exist.
-  A restaurant changes over time. Decision 00011 gives the tags to the creator. The locked name keeps the subject of the reviews.
-  A superuser corrects a misuse in the dashboard.
-- A restaurant does not become immutable when its creator is deleted. See the next section.
+The creator can still replace the description and the tags after reviews exist.
+A restaurant changes over time. Decision 00011 gives the tags to the creator. The locked name keeps the subject of the reviews.
+A superuser corrects a misuse in the dashboard.
 
 ## A restaurant without a creator
 
