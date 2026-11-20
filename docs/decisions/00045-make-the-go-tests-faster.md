@@ -59,7 +59,7 @@ Each test package has a `main_test.go` with a `TestMain` that calls `testapp.Mai
 - The migrations tests and the tests of the other packages use `Dir`. They check the schema that production has.
 - The sign in of an unknown email checks a dummy hash with the cost of the `users` password field. `TestDummyHashUsesThePasswordCost` checks the default cost 10 and the cost 4.
 - `make test-coverage-app` gives `-coverpkg` all packages except `internal/testapp`. The coverage then counts only the code of the app.
-- The tests will run with `t.Parallel()`. With race, the slowest package takes about 30 seconds instead of 59 seconds.
+- The tests run with `t.Parallel()`. With race, the slowest package takes about 30 seconds instead of 59 seconds.
   - No test calls `t.Setenv` or `os.Setenv`. Only `main.go` reads environment variables.
   - Each `publicapi.Register` makes its own rate limiters. `newEnv` calls it for each test.
   - `tests.NewTestApp` copies the template folder for each app. The tests share no database.
