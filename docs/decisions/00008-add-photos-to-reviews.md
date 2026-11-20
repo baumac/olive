@@ -367,7 +367,7 @@ The policy of decision 00005 changes in one place:
 - the token check runs before the upload limit, because the key is the user. Anonymous requests get `401` and never count.
 - the PATCH and DELETE operations have no new limit
 - the file operation has no limit in the app. A reverse proxy can limit it.
-- the limit is in memory, like the sign in limit. Decision 00004 has the same open question for more than one server.
+- the limit is in memory, like the sign in limit
 
 ## Deletion
 

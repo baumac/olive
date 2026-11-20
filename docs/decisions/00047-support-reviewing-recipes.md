@@ -323,10 +323,4 @@ Steps 2 and 3 can be in production without step 4. The UI then has no link to th
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-None. The answers of 2026-11-18:
-
-- A recipe needs its ingredients and its steps. The source link is optional.
-- A recipe review scores `taste`, `ease`, `instructions`, and `value`.
-- The reviewer profile and the lists keep the restaurant counts and get separate recipe counts.
-- Recipes are in lists and have the favorites heart in the first version.
-- The only duplicate check is the unique source link.
+None.

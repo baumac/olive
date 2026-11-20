@@ -28,7 +28,7 @@ In scope:
 - the tests
 
 Out of scope:
-- opening hours that the app can read, such as "open now" or a filter for open restaurants. See the unresolved questions.
+- opening hours that the app can read, such as "open now" or a filter for open restaurants
 - a filter or a sort by price level
 - a second request to OpenStreetMap for the tags of a place. See the place search section.
 - the details of the restaurants that exist. Their creators add them.

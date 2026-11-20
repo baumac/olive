@@ -26,7 +26,6 @@ In scope:
 - the race detector of `make test-app`
 
 Out of scope:
-- `t.Parallel()` in the Go tests. The unresolved questions have the answer.
 - the UI, SDK, lint, and end-to-end targets. Each takes less than 30 seconds.
 - the speed of the `migrations` tests. With race, they take about 46 seconds. They use the production schema with the bcrypt cost 10.
 
@@ -60,15 +59,16 @@ Each test package has a `main_test.go` with a `TestMain` that calls `testapp.Mai
 - The migrations tests and the tests of the other packages use `Dir`. They check the schema that production has.
 - The sign in of an unknown email checks a dummy hash with the cost of the `users` password field. `TestDummyHashUsesThePasswordCost` checks the default cost 10 and the cost 4.
 - `make test-coverage-app` gives `-coverpkg` all packages except `internal/testapp`. The coverage then counts only the code of the app.
+- The tests will run with `t.Parallel()`. With race, the slowest package takes about 30 seconds instead of 59 seconds.
+  - No test calls `t.Setenv` or `os.Setenv`. Only `main.go` reads environment variables.
+  - Each `publicapi.Register` makes its own rate limiters. `newEnv` calls it for each test.
+  - `tests.NewTestApp` copies the template folder for each app. The tests share no database.
+  - `TestWarningOfBuildWithoutMetaBlock` changes the package variable `warnNoMetaBlock`. It has no `t.Parallel()`. Go runs it before the parallel tests continue.
+
 
 The record hooks of `searchindex` and `publicapi` are not in the template. The tests registered these hooks after the migrations before this decision too.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-None. The answer of 2026-11-19:
-- The tests run with `t.Parallel()`. With race, the slowest package takes about 30 seconds instead of 59 seconds.
-  - No test calls `t.Setenv` or `os.Setenv`. Only `main.go` reads environment variables.
-  - Each `publicapi.Register` makes its own rate limiters. `newEnv` calls it for each test.
-  - `tests.NewTestApp` copies the template folder for each app. The tests share no database.
-  - `TestWarningOfBuildWithoutMetaBlock` changes the package variable `warnNoMetaBlock`. It has no `t.Parallel()`. Go runs it before the parallel tests continue.
+None.

@@ -77,7 +77,7 @@ The cursor has the sort values and the `id` of the last item. The fingerprint ha
 A cursor is then valid only for the same point and radius.
 
 SQLite computes the distance for each restaurant that matches the filters and sorts them. No index gives this order.
-With a radius, only the restaurants in its latitude range match. See the unresolved questions.
+With a radius, only the restaurants in its latitude range match.
 
 ## Storage
 
