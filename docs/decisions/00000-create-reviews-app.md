@@ -12,7 +12,7 @@ We want to remember and share all of our food experiences.
 These include recipes, restaurants, wines, and cheeses.
 We want one app to save each experience and to review it.
 
-We also want to share our food experiences with others including close friends, family, and fellow foodies. Through this app we want to be able to compare our experiences and suggest new things to each other.
+We also want to share our food experiences with others including close friends, family, and fellow foodies. Through this app we want to be able to share our experiences with others.
 
 Expected outcome:
 - Users can save and review food experiences
@@ -47,8 +47,8 @@ Each design choice is recorded as a decision in `docs/decisions`.
 
 The app has an API and a UI that users use.
 It also has an admin dashboard for admins.
-The app runs on our home serve.
-It is reachable via the public internet at reviews.spong47.com.
+The app runs on our home server.
+It is reachable via the public internet at reviews.sponga47.com.
 
 New concepts:
 - **Subjects**: a thing that users review. The app has restaurants and recipes.
