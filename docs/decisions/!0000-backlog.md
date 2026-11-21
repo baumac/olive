@@ -31,6 +31,8 @@ Decide if robots.txt gets Disallow: /, or the pages get a noindex tag. The link 
 
 ## For Me
 
+- review and confirm that users cannot edit other users reviews, lists, or user details.
+-  Restaurants and reviews should have a versioned history so that edits can be reverted
 - review all decisions against decision 00000-create-reviews-app.md
   - Useful prompt: `"00000-create-reviews-app.md" contains the original motivations for the creating the app. Can you review all decisions in doc/decisions against "00000-create-reviews-app.md" and create a list of any decisions that are not aligned with the original motivations?`
   - generate a list of all potential decisions that go against it
@@ -54,7 +56,7 @@ Decide if robots.txt gets Disallow: /, or the pages get a noindex tag. The link 
 - Support oauth2 logins: not needed since email/password based authentication is sufficient
 - Support inviting users via email
   - Note: A person can still make the sign up of an owner fail for one hour. The person signs up with the address until its email limit. The owner must then reset the password. An invite removes this.
-- Social features: not needed since this is intended to be used by a low number of users that communicate with each other via other means
+- Social features: not needed since this is intended to be used by a low number of trusted users that communicate with each other via other means
   - Reviews have no owner or reader reply
   - Comments or replies on review
   - Helpful votes or likes on reviews
@@ -63,5 +65,5 @@ Decide if robots.txt gets Disallow: /, or the pages get a noindex tag. The link 
   - Profile pictures or bios (the avatar field was removed)
   - Private or collaborative lists
   - A share button in the UI (sharing works by copying the page link)
-  - A way for users to report content
+  - Content moderation and a way for users to report content
     - a superuser must find it and delete it in the dashboard. Decision 00008 accepts this for photos.
