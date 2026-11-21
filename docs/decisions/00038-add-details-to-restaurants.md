@@ -62,6 +62,7 @@ All four properties are optional. A restaurant without a value has no property i
 - `createRestaurant` takes each property
 - `updateRestaurant` takes each property. `null` removes the stored value, as for `description`.
 - the same users as for the description can change the details. Reviews of other users do not lock them. They are facts that change, unlike the name and the place.
+  Decision 00051 lets each approved user change them.
 - the price level is not the `price` score of a review. The score tells if the price was fair. The level tells how much a meal costs.
 - the API has no currency. The level is relative to the restaurants of the same city.
 

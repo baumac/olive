@@ -846,7 +846,7 @@ func TestRestaurants(t *testing.T) {
 	})
 
 	t.Run("patch", func(t *testing.T) {
-		e.expectCode(request{method: "PATCH", path: path, body: `{"description":"x"}`, token: joe.Token}, http.StatusForbidden, "not_creator")
+		e.expect(request{method: "PATCH", path: path, body: `{"description":"x","name":"Joe's"}`, token: joe.Token}, http.StatusOK)
 		e.expect(request{method: "PATCH", path: path, body: `{"description":"x"}`, token: ana.Token, contentType: "application/json"}, http.StatusUnsupportedMediaType)
 		e.expect(request{method: "PATCH", path: path, body: `{"name":null}`, token: ana.Token}, http.StatusUnprocessableEntity)
 
@@ -870,8 +870,8 @@ func TestRestaurants(t *testing.T) {
 
 	review := e.createReview(joe.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`)
 
-	t.Run("name cannot change with reviews", func(t *testing.T) {
-		e.expectCode(request{method: "PATCH", path: path, body: `{"name":"New name"}`, token: ana.Token}, http.StatusConflict, "other_reviews")
+	t.Run("the creator renames with reviews of other users", func(t *testing.T) {
+		e.expect(request{method: "PATCH", path: path, body: `{"name":"New name"}`, token: ana.Token}, http.StatusOK)
 		e.expect(request{method: "PATCH", path: path, body: `{"name":"Luigi's Trattoria","tags":["italian"]}`, token: ana.Token}, http.StatusOK)
 	})
 
@@ -1088,7 +1088,6 @@ func TestRestaurantOwnership(t *testing.T) {
 		}
 
 		other := e.createReview(joe.Token, id, review)["id"].(string)
-		e.expect(request{method: "PATCH", path: path, body: `{"name":"New name"}`, token: ana.Token}, http.StatusConflict)
 		e.expect(request{method: "PATCH", path: path, body: `{"description":"x","tags":["italian"]}`, token: ana.Token}, http.StatusOK)
 		e.expect(request{method: "DELETE", path: path, token: ana.Token}, http.StatusConflict)
 		e.expect(request{method: "GET", path: path + "/reviews/" + own}, http.StatusOK)
@@ -1106,6 +1105,29 @@ func TestRestaurantOwnership(t *testing.T) {
 		}
 	})
 
+	t.Run("each user changes each property", func(t *testing.T) {
+		id := e.createRestaurant(ana.Token, `{"name":"Can Sloe"}`)["id"].(string)
+		path := "/v1/restaurants/" + id
+		other := e.createReview(joe.Token, id, review)["id"].(string)
+
+		facts := `{"description":"Seafood","tags":["tapas"],"website":"https://cansole.example","phone":"932215012","opening_hours":"Mo-Su 13:00-23:00","price_level":3}`
+		got := e.expect(request{method: "PATCH", path: path, body: facts, token: eva.Token}, http.StatusOK).object(t)
+		if got["phone"] != "932215012" || got["description"] != "Seafood" || got["creator"].(map[string]any)["name"] != "Ana" {
+			t.Errorf("facts of another user: %v", got)
+		}
+		got = e.expect(request{method: "PATCH", path: path, body: `{"name":"Can Sole","location":` + locationJSON(41.38, 2.19, "Moll 1", "") + `}`, token: eva.Token}, http.StatusOK).object(t)
+		if got["name"] != "Can Sole" || got["location"].(map[string]any)["address"] != "Moll 1" {
+			t.Errorf("name and location of another user: %v", got)
+		}
+		r := e.expect(request{method: "GET", path: path + "/reviews/" + other}, http.StatusOK).object(t)
+		if r["restaurant_name"] != "Can Sole" {
+			t.Errorf("restaurant_name %v", r["restaurant_name"])
+		}
+		e.expect(request{method: "PATCH", path: path, body: `{"location":` + testLocation + `}`, token: ana.Token}, http.StatusOK)
+		e.expect(request{method: "DELETE", path: path, token: eva.Token}, http.StatusForbidden)
+		e.expectCode(request{method: "DELETE", path: path, token: ana.Token}, http.StatusConflict, "other_reviews")
+	})
+
 	t.Run("a restaurant without a creator", func(t *testing.T) {
 		tom := e.signUp("tom@example.com", "Tom")
 		id := e.createRestaurant(tom.Token, `{"name":"Can Sole"}`)["id"].(string)
@@ -1120,9 +1142,11 @@ func TestRestaurantOwnership(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		e.expect(request{method: "PATCH", path: path, body: `{"description":"x"}`, token: eva.Token}, http.StatusForbidden)
+		e.expect(request{method: "PATCH", path: path, body: `{"description":"Eva's words"}`, token: eva.Token}, http.StatusOK)
+		e.expect(request{method: "PATCH", path: path, body: `{"name":"Eva's"}`, token: eva.Token}, http.StatusOK)
 		e.expect(request{method: "DELETE", path: path, token: eva.Token}, http.StatusForbidden)
-		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + empty, body: `{"description":"x"}`, token: joe.Token}, http.StatusForbidden)
+		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + empty, body: `{"description":"x"}`, token: joe.Token}, http.StatusOK)
+		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + empty, body: `{"name":"Full"}`, token: joe.Token}, http.StatusOK)
 		e.expect(request{method: "DELETE", path: "/v1/restaurants/" + empty, token: joe.Token}, http.StatusForbidden)
 
 		got := e.expect(request{method: "PATCH", path: path, body: `{"name":"Can Solé","description":"x"}`, token: joe.Token}, http.StatusOK).object(t)
@@ -1132,7 +1156,10 @@ func TestRestaurantOwnership(t *testing.T) {
 
 		e.createReview(eva.Token, id, review)
 		e.expect(request{method: "PATCH", path: path, body: `{"tags":["catalan"]}`, token: eva.Token}, http.StatusOK)
-		e.expect(request{method: "PATCH", path: path, body: `{"name":"Other"}`, token: eva.Token}, http.StatusConflict)
+		got = e.expect(request{method: "PATCH", path: path, body: `{"name":"Can Solé Mar"}`, token: eva.Token}, http.StatusOK).object(t)
+		if got["name"] != "Can Solé Mar" {
+			t.Errorf("rename by a reviewer: %v", got)
+		}
 		e.expect(request{method: "DELETE", path: path, token: joe.Token}, http.StatusConflict)
 
 		e.createReview(joe.Token, empty, review)

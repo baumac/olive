@@ -165,7 +165,7 @@ describe('RestaurantFormPage details', () => {
     await flushPromises()
     expect(update).toHaveBeenCalledWith({
       restaurantId: restaurant.id,
-      restaurantPatch: expect.objectContaining({ website: null, phone: null, openingHours: 'a'.repeat(498), priceLevel: 3 }),
+      restaurantPatch: { website: null, phone: null, openingHours: 'a'.repeat(498) },
     })
   })
 })

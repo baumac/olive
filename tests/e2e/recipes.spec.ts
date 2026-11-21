@@ -1,5 +1,5 @@
 import { uniqueTag } from '../api'
-import { expect, test } from '../fixtures'
+import { expect, signIn, test } from '../fixtures'
 
 test('the header links the restaurants and the recipes', async ({ page }) => {
   await page.goto('/restaurants')
@@ -49,6 +49,29 @@ test('a signed in user adds, edits, and deletes a recipe', async ({ page, user: 
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByText('Recipe deleted', { exact: true })).toBeVisible()
   await expect(page).toHaveURL(/\/recipes$/)
+})
+
+test('another user changes each field of a recipe but cannot delete it', async ({ page, api }) => {
+  const owner = await api.signUp('Joe')
+  const recipe = await api.createRecipe(owner, { name: 'Dal', servings: 2 })
+  await api.createRecipeReview(owner, recipe.id, { taste: 8, ease: 8, instructions: 8, value: 8, title: 'Good' })
+  const other = await api.signUp('Ana')
+  await signIn(page, other)
+
+  await page.goto(`/recipes/${recipe.id}`)
+  await expect(page.getByRole('heading', { name: 'Dal', level: 1 })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Delete recipe' })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Edit recipe' }).click()
+
+  await page.getByLabel('Name').fill('Tarka dal')
+  await page.getByLabel('Ingredients').fill('1 cup of lentils')
+  await page.getByLabel('Servings').fill('4')
+  await page.getByRole('button', { name: 'Save recipe' }).click()
+
+  await expect(page.getByText('Recipe saved', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tarka dal', level: 1 })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Ingredients' }).getByRole('listitem')).toHaveText(['1 cup of lentils'])
+  await expect(page.getByText('4 servings')).toBeVisible()
 })
 
 test('a second recipe with the same source opens the first one', async ({ page, api, user: _ }) => {

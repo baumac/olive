@@ -70,7 +70,10 @@ func TestRestaurantDetails(t *testing.T) {
 		if same["updated"] != r["updated"] {
 			t.Error("equal details changed updated")
 		}
-		e.expect(request{method: "PATCH", path: path, body: `{"phone":"932215012"}`, token: joe.Token}, http.StatusForbidden)
+		byJoe := e.expect(request{method: "PATCH", path: path, body: `{"phone":"932215013"}`, token: joe.Token}, http.StatusOK).object(t)
+		if byJoe["phone"] != "932215013" {
+			t.Errorf("phone of another user %v", byJoe["phone"])
+		}
 
 		changed := e.expect(request{method: "PATCH", path: path, body: `{"phone":"932215012","price_level":1}`, token: ana.Token}, http.StatusOK).object(t)
 		if changed["phone"] != "932215012" || changed["price_level"] != float64(1) || changed["website"] != want["website"] {

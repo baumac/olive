@@ -33,6 +33,7 @@ Out of scope:
 - who can create a restaurant. Each signed in user can, as before.
 - changes by users who are not the creator while the creator exists.
   Changes by all users need an edit history and a report flow to undo vandalism. The app has neither, and sign up has no email verification.
+  Decision 00051 changes this. Each approved user can change each restaurant at any time. The delete rules stay.
 - a moderator role. A moderator needs reports from users, and the backlog has reports under "Won't Do".
 - an edit history of restaurants
 - a rename after other users wrote reviews. Only a superuser can do it in the dashboard.

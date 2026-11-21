@@ -275,10 +275,8 @@ func (s *Server) GetRecipe(ctx context.Context, req reviewsapi.GetRecipeRequestO
 	return reviewsapi.GetRecipe200JSONResponse(out), nil
 }
 
-// UpdateRecipe runs the review check and the save in one transaction. The
-// name, the ingredients, and the steps are what the reviews of other users
-// scored. They then cannot change. A stored source cannot change either. It
-// tells which recipe the reviews scored.
+// UpdateRecipe runs the source check and the save in one transaction. Each
+// approved user can change each property. See decision 00051.
 func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRequestObject) (reviewsapi.UpdateRecipeResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
@@ -295,17 +293,8 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 		if err != nil {
 			return err
 		}
-		if detail, err := changeForbidden(tx, recipeSubject, r, user.Id); err != nil {
-			return err
-		} else if detail != "" {
-			response = reviewsapi.UpdateRecipe403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator(detail)}
-			return nil
-		}
-
 		ch := &changes{r: r}
-		var frozen []string
-		if b.Name != nil && *b.Name != r.GetString("name") {
-			frozen = append(frozen, "name")
+		if b.Name != nil {
 			ch.set("name", *b.Name)
 		}
 		for _, list := range []struct {
@@ -313,7 +302,6 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 			v     *[]string
 		}{{"ingredients", b.Ingredients}, {"steps", b.Steps}} {
 			if list.v != nil && !slices.Equal(*list.v, listOf(r, list.field)) {
-				frozen = append(frozen, list.field)
 				r.Set(list.field, *list.v)
 				ch.changed = true
 			}
@@ -322,24 +310,9 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 		ch.patchTags(b.Tags)
 		oldSource := r.GetString("source")
 		ch.patchText("source", b.Source)
-		if oldSource != "" && sourceKey(r.GetString("source")) != sourceKey(oldSource) {
-			frozen = append(frozen, "source")
-		}
 		ch.patchNumber("total_time", b.TotalTime)
 		ch.patchNumber("servings", b.Servings)
 
-		if len(frozen) > 0 {
-			n, err := countReviewsOfOtherUsers(tx, recipeSubject, r.Id, user.Id)
-			if err != nil {
-				return err
-			}
-			if n > 0 {
-				property := frozen[0]
-				response = reviewsapi.UpdateRecipe409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: propertyConflict(
-					reviewsapi.ProblemCodeOtherReviews, property, "The "+property+" cannot change because the recipe has reviews of other users.")}
-				return nil
-			}
-		}
 		if r.GetString("source") != oldSource {
 			duplicate, err := recipeWithSource(tx, r)
 			if err != nil {

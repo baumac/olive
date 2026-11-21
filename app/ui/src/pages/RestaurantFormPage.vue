@@ -19,7 +19,7 @@ import { apiFailure, fieldErrors, notApprovedText, restaurantsApi, writeLimitTex
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { nearbyRadius, sameLocation } from '@/lib/places'
 import { normalizeWebsite, priceLevels } from '@/lib/restaurantDetails'
-import { parentAccess } from '@/lib/parents'
+import { changedPatch, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, checkOpeningHours, checkPhone, checkWebsite } from '@/lib/validation'
@@ -48,13 +48,15 @@ const alert = ref<{ title: string; description: string; restaurant?: string } | 
 // stored is the location of the restaurant before the edit.
 const stored = ref<Location | null>(null)
 const nearby = ref<Restaurant[]>([])
+// loaded has the values of the restaurant before the edit.
+const loaded = ref<Fields>({ ...emptyFields })
 const saving = ref(false)
-const nameLocked = ref(false)
+// deleteBlocked is true when the reviews of other users block the delete of
+// the creator. Each user can change the restaurant. See decision 00051.
+const deleteBlocked = ref(false)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `restaurant:${props.restaurantId ?? 'new'}`)
-// The reviews of other users lock a stored location, like the name.
-const locationLocked = computed(() => nameLocked.value && stored.value !== null)
 const cancelPath = computed(() => (props.restaurantId ? `/restaurants/${props.restaurantId}` : '/restaurants'))
 
 onMounted(async () => {
@@ -62,13 +64,9 @@ onMounted(async () => {
     try {
       const r = await restaurantsApi.getRestaurant({ restaurantId: props.restaurantId })
       const access = parentAccess(r, currentUser.value?.id)
-      if (!access.canChange) {
-        failed.value = { status: 403 }
-        return
-      }
-      nameLocked.value = access.hasOtherReviews
+      deleteBlocked.value = access.isCreator && access.hasOtherReviews
       stored.value = r.location
-      fields.value = {
+      loaded.value = {
         name: r.name,
         description: r.description ?? '',
         tags: tagList(r.tags),
@@ -78,6 +76,7 @@ onMounted(async () => {
         openingHours: r.openingHours ?? '',
         priceLevel: r.priceLevel ?? null,
       }
+      fields.value = { ...loaded.value, tags: [...loaded.value.tags] }
     } catch (error) {
       failed.value = { status: (await apiFailure(error)).status }
       return
@@ -88,12 +87,7 @@ onMounted(async () => {
   const draft = takeDraft<Fields>(draftKey.value)
   if (draft) {
     // A draft from before decision 00038 has no details.
-    fields.value = {
-      ...emptyFields,
-      ...draft,
-      name: nameLocked.value ? fields.value.name : draft.name,
-      location: locationLocked.value ? fields.value.location : draft.location,
-    }
+    fields.value = { ...emptyFields, ...draft }
   }
 })
 
@@ -175,6 +169,19 @@ function validate(): boolean {
   return !first
 }
 
+// patchOf has the properties of a patch except the location.
+function patchOf(f: Fields) {
+  return {
+    name: f.name,
+    description: f.description || null,
+    tags: f.tags.length ? new Set(f.tags) : null,
+    website: f.website || null,
+    phone: f.phone || null,
+    openingHours: f.openingHours || null,
+    priceLevel: f.priceLevel,
+  }
+}
+
 async function submit() {
   alert.value = null
   if (!validate()) {
@@ -189,14 +196,8 @@ async function submit() {
       ? await restaurantsApi.updateRestaurant({
           restaurantId: props.restaurantId,
           restaurantPatch: {
-            name: nameLocked.value ? undefined : name,
-            description: description || null,
-            tags: tags.length ? new Set(tags) : null,
-            location: !location || locationLocked.value || sameLocation(location, stored.value) ? undefined : location,
-            website: website || null,
-            phone: phone || null,
-            openingHours: openingHours || null,
-            priceLevel,
+            ...changedPatch(patchOf(fields.value), patchOf(loaded.value)),
+            location: !location || sameLocation(location, stored.value) ? undefined : location,
           },
         })
       : await restaurantsApi.createRestaurant({
@@ -231,15 +232,12 @@ async function submit() {
         description: 'Add your review to it, or select a different place.',
         restaurant: problem.restaurant,
       }
-    } else if (code === 'other_reviews' && (problem?.property === 'name' || problem?.property === 'location')) {
-      const field = problem.property
-      errors.value = { [field]: `The ${field} cannot change because other people have reviewed this restaurant.` }
     } else if (status === 409) {
       alert.value = { title: 'Restaurant not saved', description: 'Reload the page and try again.' }
     } else if (code === 'not_approved') {
       alert.value = { title: 'Your account waits for approval', description: notApprovedText }
     } else if (status === 403) {
-      alert.value = { title: 'You cannot change this restaurant', description: 'Only the person who added it can change it. If that person has no account now, write a review first.' }
+      alert.value = { title: 'Restaurant not saved', description: 'Reload the page and try again.' }
     } else if (status === 404) {
       alert.value = { title: 'This restaurant no longer exists', description: 'Someone deleted it. Go back to the restaurants.' }
     } else if (status === 429) {
@@ -271,7 +269,7 @@ async function submit() {
           </RouterLink>
         </AlertDescription>
       </Alert>
-      <FormItem id="restaurant-name" :error="errors.name" :description="nameLocked">
+      <FormItem id="restaurant-name" :error="errors.name">
         <FormLabel>Name</FormLabel>
         <FormControl>
           <Input
@@ -280,12 +278,8 @@ async function submit() {
             maxlength="255"
             required
             placeholder="Luigi's Trattoria"
-            :readonly="nameLocked"
           />
         </FormControl>
-        <FormDescription v-if="nameLocked">
-          The name cannot change because other people have reviewed this restaurant.
-        </FormDescription>
         <FormMessage />
       </FormItem>
       <FormItem id="restaurant-location" :error="errors.location" description>
@@ -293,17 +287,12 @@ async function submit() {
         <LocationField
           id="restaurant-location"
           v-model="fields.location"
-          :locked="locationLocked"
           :invalid="!!errors.location"
           :described-by="`restaurant-location-description${errors.location ? ' restaurant-location-message' : ''}`"
           @selected="usePlace"
         />
         <FormDescription>
-          {{
-            locationLocked
-              ? 'The location cannot change because other people have reviewed this restaurant.'
-              : 'Search for the restaurant or its address and select it. You can also enter the location by hand.'
-          }}
+          Search for the restaurant or its address and select it. You can also enter the location by hand.
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -396,7 +385,7 @@ async function submit() {
         </Button>
         <Button variant="outline" as-child><RouterLink :to="cancelPath">Cancel</RouterLink></Button>
       </div>
-      <p v-if="nameLocked" class="text-muted-foreground text-sm">
+      <p v-if="deleteBlocked" class="text-muted-foreground text-sm">
         Other people have reviewed this restaurant. You cannot delete it.
       </p>
     </form>

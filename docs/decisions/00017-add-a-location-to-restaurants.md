@@ -74,6 +74,7 @@ The rules extend decision 00016.
 For a restaurant without a creator, "the creator" is each user who has a review of it.
 A change that fails the condition gets `409 Conflict`, like a change of the name. The problem has `"property": "location"`.
 The reviews of other users are about the restaurant at this place.
+Decision 00051 lets each approved user add or change the location at any time.
 
 ## The place search
 

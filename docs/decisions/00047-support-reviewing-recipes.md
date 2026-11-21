@@ -192,6 +192,7 @@ Rules that the new operations follow:
   Reviewers can change a recipe without a creator. See decision 00016.
 - Reviews of other users also block a change of `name`, `ingredients`, and `steps` with `other_reviews`.
   The reviews scored these values. The problem names the first changed property in `property`.
+  Decision 00051 lets each approved user change each property of a recipe. The reviews of other users do not block a change any more.
 - `name`, `title`, the ingredients, the steps, and the alt texts have `x-trim: true`. `Tag` keeps `x-nfc: true`. See decisions 00040 and 00041.
 - The `Problem` code enum gets `source_taken` and `list_recipe_limit`.
   The `source_taken` problem has the ID of the other recipe in `recipe`.

@@ -127,7 +127,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `recipes` tag has the recipe and recipe review operations. Recipes have ingredients, steps, and four scores. See decision 00047.
     - a review is one visit or one cook. A user can write many reviews of one restaurant or recipe. See decision 00050.
     - each review has a `date` without a time. The `review-date` format allows the dates from 1900-01-01 to today in UTC+14. The review lists sort by `-date` by default.
-    - `own_review_count` of a restaurant or a recipe counts the reviews of the user of the token, like `favorite`. The UI uses it for the rules of decision 00016.
+    - `own_review_count` of a restaurant or a recipe counts the reviews of the user of the token, like `favorite`. The UI uses it for the rules of decisions 00016 and 00051.
     - a list of recipes has `RecipeSummary` items without the ingredients and the steps. `getRecipe` has them. See decision 00048.
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
     - the operations of `/users/me` change the name and the password and delete the user. See decision 00037.
@@ -137,6 +137,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - each `403` and `409` problem has a `code`. A new reason needs a value in the `code` enum of `Problem`. See decision 00040.
     - a schema with `x-trim: true` loses the ASCII spaces, tabs, and line breaks around its value. Names, titles, addresses, alt texts, ingredients, and steps have it. See decisions 00040 and 00048.
     - a `Tag` has the lowercase letters and digits of all scripts. A schema with `x-nfc: true` gets Unicode normalization form C before the validation, in the body and in the query. See decision 00041.
+    - each approved user can change each property of each restaurant and recipe. The reviews of other users do not lock a property. See decision 00051.
+    - only the creator can delete a restaurant or a recipe. The reviews of other users block the delete. See decision 00016.
     - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out, token refresh, and the operations of `/users/me`. See decision 00034.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the lists of the restaurant reviews and the recipe reviews of a user

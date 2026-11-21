@@ -102,53 +102,76 @@ test('the place search fills the details, and the creator changes and removes th
   await expect(details).toHaveCount(1)
 })
 
-test('only the creator sees edit and delete', async ({ page, api }) => {
+test('another user changes the name, the location, and the details but cannot delete', async ({ page, api }) => {
   const owner = await api.signUp('Joe')
-  const restaurant = await api.createRestaurant(owner, { name: 'Can Sole' })
+  const restaurant = await api.createRestaurant(owner, { name: 'Can Sloe' })
+  await api.createReview(owner, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
   const other = await api.signUp('Ana')
   await signIn(page, other)
 
   await page.goto(`/restaurants/${restaurant.id}`)
-  await expect(page.getByRole('heading', { name: 'Can Sole', level: 1 })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Edit restaurant' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Can Sloe', level: 1 })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Delete restaurant' })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Edit restaurant' }).click()
 
-  await page.goto(`/restaurants/${restaurant.id}/edit`)
-  await expect(page.getByRole('heading', { name: 'You cannot open this page' })).toBeVisible()
+  await page.getByLabel('Name').fill('Can Sole')
+  await selectPlace(page, uniqueTag('fix'))
+  await page.getByLabel('Phone').fill('+34 600 11 22 44')
+  await expect(page.getByText('You cannot delete it')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Save restaurant' }).click()
+
+  await expect(page.getByText('Restaurant saved')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Can Sole', level: 1 })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Test Street 4, 08003 Testville, Testland/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: '+34 600 11 22 44' })).toBeVisible()
+  await expect(page.getByText('Added by Joe')).toBeVisible()
 })
 
-test('a restaurant with a review of another user keeps its name and cannot be deleted', async ({ page, api, user }) => {
-  const restaurant = await api.createRestaurant(user, { name: "Luigi's" })
+test('a save keeps the change of another user to a different field', async ({ page, api, user }) => {
+  const restaurant = await api.createRestaurant(user, { name: 'Two Editors' })
+  await page.goto(`/restaurants/${restaurant.id}/edit`)
+  await expect(page.getByLabel('Name')).toHaveValue('Two Editors')
+
+  const other = await api.signUp('Joe')
+  await api.updateRestaurant(other, restaurant.id, { phone: '+34 600 11 22 55' })
+  await page.getByLabel('Opening hours').fill('Mo-Su 12:00-22:00')
+  await page.getByRole('button', { name: 'Save restaurant' }).click()
+
+  await expect(page.getByText('Restaurant saved')).toBeVisible()
+  await expect(page.getByRole('link', { name: '+34 600 11 22 55' })).toBeVisible()
+  await expect(page.getByRole('definition').filter({ hasText: 'Mo-Su 12:00-22:00' })).toBeVisible()
+})
+
+test('a restaurant with a review of another user cannot be deleted', async ({ page, api, user }) => {
+  const restaurant = await api.createRestaurant(user, { name: 'Luigis' })
   const reviewer = await api.signUp('Joe')
   await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
 
   await page.goto(`/restaurants/${restaurant.id}/edit`)
-  await expect(page.getByLabel('Name')).not.toBeEditable()
-  await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
-  await expect(page.getByText('The location cannot change because other people have reviewed this restaurant.')).toBeVisible()
+  await expect(page.getByLabel('Location')).toBeEditable()
   await expect(page.getByText('Other people have reviewed this restaurant. You cannot delete it.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Enter the location by hand' })).toHaveCount(0)
-  await expect(page.getByLabel('Location')).not.toBeEditable()
+  await page.getByLabel('Name').fill("Luigi's")
   await page.getByLabel('Description').fill('Family run')
   await page.getByRole('button', { name: 'Save restaurant' }).click()
 
   await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}$`))
+  await expect(page.getByRole('heading', { name: "Luigi's", level: 1 })).toBeVisible()
   await expect(page.getByText('Family run')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Edit restaurant' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Delete restaurant' })).toHaveCount(0)
 })
 
-test('a review that arrives after the form opens blocks the rename', async ({ page, api, user }) => {
+test('a review that arrives after the form opens does not block the move', async ({ page, api, user }) => {
   const restaurant = await api.createRestaurant(user, { name: "Luigi's" })
   await page.goto(`/restaurants/${restaurant.id}/edit`)
   await expect(page.getByLabel('Name')).toHaveValue("Luigi's")
 
   const reviewer = await api.signUp('Joe')
   await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
-  await page.getByLabel('Name').fill("Luigi's Trattoria")
+  await selectPlace(page, uniqueTag('move'))
   await page.getByRole('button', { name: 'Save restaurant' }).click()
-  await expect(page.getByText('The name cannot change because other people have reviewed this restaurant.')).toBeVisible()
-  await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}/edit$`))
+  await expect(page.getByText('Restaurant saved')).toBeVisible()
+  await expect(page.getByRole('link', { name: /Test Street 4, 08003 Testville, Testland/ })).toBeVisible()
 })
 
 test('a restaurant needs a location', async ({ page, user: _user }) => {

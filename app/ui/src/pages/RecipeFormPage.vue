@@ -15,7 +15,7 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, notApprovedText, recipesApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { normalizeWebsite } from '@/lib/restaurantDetails'
-import { parentAccess } from '@/lib/parents'
+import { changedPatch, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import {
@@ -64,37 +64,15 @@ const stepKeys = ref<number[]>([nextKey++])
 const errors = ref<Record<string, string>>({})
 const alert = ref<{ title: string; description: string; recipe?: string } | null>(null)
 const saving = ref(false)
-// locked is true when other people reviewed the recipe. The API then
-// refuses a change of the name, the ingredients, the steps, and a stored
-// source.
-const locked = ref(false)
-const storedSource = ref('')
-// sourceConflict keeps the lock of a source conflict when the stored source
-// did not load.
-const sourceConflict = ref(false)
-const sourceLocked = computed(() => locked.value && (storedSource.value !== '' || sourceConflict.value))
-const lockedText = computed(
-  () =>
-    `Other people have reviewed this recipe. The name, the ingredients, ${sourceLocked.value ? 'the steps, and the source' : 'and the steps'} cannot change, and you cannot delete it.`,
-)
+// loaded has the values of the recipe before the edit.
+const loaded = ref<Fields>(emptyFields())
+// deleteBlocked is true when the reviews of other users block the delete of
+// the creator. Each user can change the recipe. See decision 00051.
+const deleteBlocked = ref(false)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `recipe:${props.recipeId ?? 'new'}`)
 const cancelPath = computed(() => (props.recipeId ? `/recipes/${props.recipeId}` : '/recipes'))
-
-// showStoredSource gets the source after a conflict. The page can have an old
-// source. A locked field then shows the value that the API keeps.
-async function showStoredSource(property: string) {
-  try {
-    const r = await recipesApi.getRecipe({ recipeId: props.recipeId! })
-    storedSource.value = r.source ?? ''
-  } catch {
-    sourceConflict.value ||= property === 'source'
-  }
-  if (sourceLocked.value && storedSource.value !== '') {
-    fields.value.source = storedSource.value
-  }
-}
 
 function setSteps(steps: string[]) {
   fields.value.steps = steps.length ? steps : ['']
@@ -106,23 +84,19 @@ onMounted(async () => {
     try {
       const r = await recipesApi.getRecipe({ recipeId: props.recipeId })
       const access = parentAccess(r, currentUser.value?.id)
-      if (!access.canChange) {
-        failed.value = { status: 403 }
-        return
-      }
-      locked.value = access.hasOtherReviews
-      storedSource.value = r.source ?? ''
-      fields.value = {
+      deleteBlocked.value = access.isCreator && access.hasOtherReviews
+      loaded.value = {
         name: r.name,
         description: r.description ?? '',
         tags: tagList(r.tags),
         ingredients: r.ingredients.join('\n'),
-        steps: [],
+        steps: [...r.steps],
         source: r.source ?? '',
         totalTime: r.totalTime ? String(r.totalTime) : '',
         servings: r.servings ? String(r.servings) : '',
       }
-      setSteps(r.steps)
+      fields.value = { ...loaded.value, tags: [...loaded.value.tags] }
+      setSteps([...r.steps])
     } catch (error) {
       failed.value = { status: (await apiFailure(error)).status }
       return
@@ -132,15 +106,8 @@ onMounted(async () => {
   }
   const draft = takeDraft<Fields>(draftKey.value)
   if (draft) {
-    const current = fields.value
-    fields.value = {
-      ...emptyFields(),
-      ...draft,
-      name: locked.value ? current.name : draft.name,
-      ingredients: locked.value ? current.ingredients : draft.ingredients,
-      source: sourceLocked.value ? current.source : draft.source,
-    }
-    setSteps(locked.value ? current.steps : draft.steps)
+    fields.value = { ...emptyFields(), ...draft }
+    setSteps(draft.steps)
   }
 })
 
@@ -206,6 +173,19 @@ function withStepErrors(errs: Record<string, string>, problem: Parameters<typeof
   return errs
 }
 
+function patchOf(f: Fields) {
+  return {
+    name: f.name,
+    description: f.description || null,
+    tags: f.tags.length ? new Set(f.tags) : null,
+    ingredients: ingredientLines(f.ingredients),
+    steps: f.steps,
+    source: f.source || null,
+    totalTime: f.totalTime.trim() ? Number(f.totalTime) : null,
+    servings: f.servings.trim() ? Number(f.servings) : null,
+  }
+}
+
 async function submit() {
   alert.value = null
   if (!validate()) {
@@ -222,14 +202,7 @@ async function submit() {
       ? await recipesApi.updateRecipe({
           recipeId: props.recipeId,
           recipePatch: {
-            name: locked.value ? undefined : f.name,
-            description: f.description || null,
-            tags: f.tags.length ? new Set(f.tags) : null,
-            ingredients: locked.value ? undefined : ingredients,
-            steps: locked.value ? undefined : f.steps,
-            source: sourceLocked.value ? undefined : f.source || null,
-            totalTime,
-            servings,
+            ...changedPatch(patchOf(f), patchOf(loaded.value)),
           },
         })
       : await recipesApi.createRecipe({
@@ -264,21 +237,12 @@ async function submit() {
         description: 'Add your review to it, or enter a different source.',
         recipe: problem?.recipe,
       }
-    } else if (code === 'other_reviews' && problem?.property) {
-      errors.value = { [problem.property]: `The ${problem.property} cannot change because other people have reviewed this recipe.` }
-      locked.value = true
-      await showStoredSource(problem.property)
-      await nextTick()
-      document.getElementById(`recipe-${problem.property}`)?.focus()
     } else if (status === 409) {
       alert.value = { title: 'Recipe not saved', description: 'Reload the page and try again.' }
     } else if (code === 'not_approved') {
       alert.value = { title: 'Your account waits for approval', description: notApprovedText }
     } else if (status === 403) {
-      alert.value = {
-        title: 'You cannot change this recipe',
-        description: 'Only the person who added it can change it. If that person has no account now, write a review first.',
-      }
+      alert.value = { title: 'Recipe not saved', description: 'Reload the page and try again.' }
     } else if (status === 404) {
       alert.value = { title: 'This recipe no longer exists', description: 'Someone deleted it. Go back to the recipes.' }
     } else if (status === 429) {
@@ -310,11 +274,10 @@ async function submit() {
           </RouterLink>
         </AlertDescription>
       </Alert>
-      <p v-if="locked" class="text-muted-foreground text-sm">{{ lockedText }}</p>
       <FormItem id="recipe-name" :error="errors.name">
         <FormLabel>Name</FormLabel>
         <FormControl>
-          <Input v-model="fields.name" name="name" maxlength="255" required placeholder="Shakshuka" :readonly="locked" />
+          <Input v-model="fields.name" name="name" maxlength="255" required placeholder="Shakshuka" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -346,7 +309,6 @@ async function submit() {
             name="ingredients"
             rows="6"
             required
-            :readonly="locked"
             placeholder="6 eggs&#10;1 can of tomatoes&#10;1 onion"
           />
         </FormControl>
@@ -365,12 +327,11 @@ async function submit() {
               :name="`step-${i + 1}`"
               rows="3"
               maxlength="2000"
-              :readonly="locked"
               :aria-invalid="!!errors[`step-${i}`]"
               :aria-describedby="errors[`step-${i}`] ? `recipe-step-${i}-message` : undefined"
             />
             <p v-if="errors[`step-${i}`]" :id="`recipe-step-${i}-message`" class="text-destructive text-sm">{{ errors[`step-${i}`] }}</p>
-            <div v-if="!locked" class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2">
               <Button
                 :id="`recipe-step-${i}-up`"
                 type="button"
@@ -406,7 +367,7 @@ async function submit() {
             </div>
           </li>
         </ol>
-        <Button v-if="!locked && fields.steps.length < maxSteps" type="button" variant="secondary" class="w-fit" @click="addStep">
+        <Button v-if="fields.steps.length < maxSteps" type="button" variant="secondary" class="w-fit" @click="addStep">
           <PlusIcon aria-hidden="true" />Add step
         </Button>
       </fieldset>
@@ -423,7 +384,6 @@ async function submit() {
               inputmode="url"
               maxlength="2048"
               placeholder="https://recipes.example/shakshuka"
-              :readonly="sourceLocked"
             />
           </FormControl>
           <FormDescription>The web page of the original recipe.</FormDescription>
@@ -451,6 +411,7 @@ async function submit() {
         </Button>
         <Button variant="outline" as-child><RouterLink :to="cancelPath">Cancel</RouterLink></Button>
       </div>
+      <p v-if="deleteBlocked" class="text-muted-foreground text-sm">Other people have reviewed this recipe. You cannot delete it.</p>
     </form>
   </main>
 </template>

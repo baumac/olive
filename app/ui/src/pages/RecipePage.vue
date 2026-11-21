@@ -102,12 +102,12 @@ async function remove() {
               @change="recipe.data.value.favorite = $event"
             />
             <SaveToListMenu :recipe-id="recipeId" />
-            <template v-if="access?.canChange">
+            <template v-if="access?.canEdit">
               <Button variant="outline" as-child>
                 <RouterLink :to="`/recipes/${recipeId}/edit`"><PencilIcon aria-hidden="true" />Edit recipe</RouterLink>
               </Button>
               <ConfirmDelete
-                v-if="!access.hasOtherReviews"
+                v-if="access.isCreator && !access.hasOtherReviews"
                 label="Delete recipe"
                 title="Delete this recipe?"
                 :description="deleteDescription"

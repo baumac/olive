@@ -84,6 +84,7 @@ Ana adds "Dal" with the source `https://dal.example/tarka`. Joe reviews it.
 - Ana clears the source with `null`. The API returns the same problem.
 - Ana changes the source to `https://DAL.example/tarka/`. The API compares the sources without the case of the host and without a final `/`. The change is allowed.
 - A recipe without a source can always get one, like a restaurant without a location.
+  Decision 00051 lets each approved user add or change the source at any time.
 
 The recipe form makes a stored source read only when other people reviewed the recipe.
 Its note then names the source with the name, the ingredients, and the steps.
