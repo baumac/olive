@@ -127,7 +127,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `recipes` tag has the recipe and recipe review operations. Recipes have ingredients, steps, and four scores. See decision 00047.
     - a review is one visit or one cook. A user can write many reviews of one restaurant or recipe. See decision 00050.
     - each review has a `date` without a time. The `review-date` format allows the dates from 1900-01-01 to today in UTC+14. The review lists sort by `-date` by default.
-    - `own_review_count` of a restaurant or a recipe counts the reviews of the user of the token, like `favorite`. The UI uses it for the rules of decisions 00016 and 00051.
+    - `own_review_count` of a restaurant or a recipe counts the reviews of the user of the token, like `favorite`. The UI uses it for the delete rules of decision 00016.
     - a list of recipes has `RecipeSummary` items without the ingredients and the steps. `getRecipe` has them. See decision 00048.
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
     - the operations of `/users/me` change the name and the password and delete the user. See decision 00037.

@@ -44,11 +44,13 @@ Out of scope:
 
 ## The rules
 
+**Decision 00051 replaces the rules of a change in this section.** Each approved user can change each property at any time. The reviews of other users do not lock a property. The delete rules stay.
+
 | Action | Who | Condition |
 | --- | --- | --- |
 | Create | each signed in user | none |
-| Change `description` and `tags` | the creator | none |
-| Change `name` | the creator | no other user has a review of the restaurant |
+| Change `description` and `tags` | the creator. Decision 00051: each approved user. | none |
+| Change `name` | the creator. Decision 00051: each approved user. | no other user has a review of the restaurant. Decision 00051: none. |
 | Delete | the creator | no other user has a review of the restaurant |
 
 For a restaurant without a creator, "the creator" is each user who has a review of it.
@@ -69,7 +71,7 @@ The confirm dialog of the UI says "Your review and its photos will be deleted to
 
 Joe then writes a review of a second restaurant of Ana.
 Ana can still change its description and its tags. She cannot change its name or delete it.
-The form shows the name field as read-only with the reason. The page shows the reason in place of the delete button.
+The form shows the name field as read-only with the reason. The page shows the reason in place of the delete button. Decision 00051 removes the read-only field.
 
 The creator can still replace the description and the tags after reviews exist.
 A restaurant changes over time. Decision 00011 gives the tags to the creator. The locked name keeps the subject of the reviews.
@@ -129,7 +131,7 @@ Alternatives that this decision does not use:
 - `RestaurantPage` already gets the review of the user for the "Write a review" button. `RestaurantFormPage` gets it at the same time as the restaurant.
 - this request can fail. The UI then counts as if the user has a review, so it does not lock more than the API. The API decides.
   A restaurant without a creator needs the request. The form then shows the error page with "Try again".
-- the name field is read-only when other users have reviews. A `FormDescription` gives the reason. Focus can still reach the field.
+- the name field is read-only when other users have reviews. A `FormDescription` gives the reason. Focus can still reach the field. Decision 00051 removes the read-only field.
   `Input` shows a read-only field with the `muted` fill. The form does not send the `name` then.
 - the page shows "Other people have reviewed this restaurant. You cannot delete it." in place of the delete button
 - the page can be older than a new review of another user. The API then answers `409`, and the UI shows the error as before.

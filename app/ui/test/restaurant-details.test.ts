@@ -152,6 +152,24 @@ describe('RestaurantFormPage details', () => {
     expect(document.activeElement?.id).toBe('restaurant-website')
   })
 
+  it('sends only the changed name and location of a user who is not the creator', async () => {
+    vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue({ ...restaurant, creator: { id: 'u2g6k0m4o8q1s5w', name: 'Joe' }, reviewCount: 1 })
+    const update = vi.spyOn(restaurantsApi, 'updateRestaurant').mockResolvedValue(restaurant)
+    const w = await mountForm(restaurant.id)
+    expect(w.get('input[name=name]').attributes('readonly')).toBeUndefined()
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(update.mock.calls[0]![0].restaurantPatch).toEqual({})
+
+    const moved = { latitude: 41.38, longitude: 2.19, address: 'Moll 1' }
+    await w.get('input[name=name]').setValue('Can Solé Mar')
+    w.getComponent(LocationField).vm.$emit('update:modelValue', moved)
+    await flushPromises()
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(update.mock.calls[1]![0].restaurantPatch).toEqual({ name: 'Can Solé Mar', location: moved })
+  })
+
   it('removes the cleared details of a restaurant', async () => {
     vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue(restaurant)
     const update = vi.spyOn(restaurantsApi, 'updateRestaurant').mockResolvedValue(restaurant)

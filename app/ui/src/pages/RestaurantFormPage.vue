@@ -45,8 +45,6 @@ const emptyFields: Fields = { name: '', description: '', tags: [], location: nul
 const fields = ref<Fields>({ ...emptyFields })
 const errors = ref<Record<string, string>>({})
 const alert = ref<{ title: string; description: string; restaurant?: string } | null>(null)
-// stored is the location of the restaurant before the edit.
-const stored = ref<Location | null>(null)
 const nearby = ref<Restaurant[]>([])
 // loaded has the values of the restaurant before the edit.
 const loaded = ref<Fields>({ ...emptyFields })
@@ -65,7 +63,6 @@ onMounted(async () => {
       const r = await restaurantsApi.getRestaurant({ restaurantId: props.restaurantId })
       const access = parentAccess(r, currentUser.value?.id)
       deleteBlocked.value = access.isCreator && access.hasOtherReviews
-      stored.value = r.location
       loaded.value = {
         name: r.name,
         description: r.description ?? '',
@@ -100,7 +97,7 @@ watch(
   async (location) => {
     const check = ++nearbyCheck
     nearby.value = []
-    if (!location || sameLocation(location, stored.value)) {
+    if (!location || sameLocation(location, loaded.value.location)) {
       return
     }
     try {
@@ -155,7 +152,7 @@ function validate(): boolean {
     // A restaurant from before locations can stay without one.
     location: fields.value.location
       ? checkName(fields.value.location.address, 'Enter the address.')
-      : editing.value && !stored.value
+      : editing.value && !loaded.value.location
         ? ''
         : 'Search for the place and select it, or enter the location by hand.',
     website: checkWebsite(fields.value.website),
@@ -197,7 +194,7 @@ async function submit() {
           restaurantId: props.restaurantId,
           restaurantPatch: {
             ...changedPatch(patchOf(fields.value), patchOf(loaded.value)),
-            location: !location || sameLocation(location, stored.value) ? undefined : location,
+            location: !location || sameLocation(location, loaded.value.location) ? undefined : location,
           },
         })
       : await restaurantsApi.createRestaurant({
