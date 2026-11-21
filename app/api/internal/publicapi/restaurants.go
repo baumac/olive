@@ -174,8 +174,8 @@ func (s *Server) GetRestaurant(ctx context.Context, req reviewsapi.GetRestaurant
 	return reviewsapi.GetRestaurant200JSONResponse(out), nil
 }
 
-// UpdateRestaurant runs the review check and the save in one transaction. A
-// review that another request adds cannot make the name check wrong.
+// UpdateRestaurant runs the place check and the save in one transaction. Each
+// approved user can change each property. See decision 00051.
 func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRestaurantRequestObject) (reviewsapi.UpdateRestaurantResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
@@ -191,15 +191,6 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 		if err != nil {
 			return err
 		}
-		if detail, err := changeForbidden(tx, restaurantSubject, r, user.Id); err != nil {
-			return err
-		} else if detail != "" {
-			response = reviewsapi.UpdateRestaurant403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: notCreator(detail)}
-			return nil
-		}
-
-		hadLocation := r.GetString("address") != ""
-		renames := b.Name != nil && *b.Name != r.GetString("name")
 		ch := &changes{r: r}
 		if b.Name != nil {
 			ch.set("name", *b.Name)
@@ -214,21 +205,6 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 		if moves {
 			setLocation(r, *b.Location)
 			ch.changed = true
-		}
-		if renames || (moves && hadLocation) {
-			n, err := countReviewsOfOtherUsers(tx, restaurantSubject, r.Id, user.Id)
-			if err != nil {
-				return err
-			}
-			if n > 0 {
-				property := "name"
-				if !renames {
-					property = "location"
-				}
-				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: propertyConflict(
-					reviewsapi.ProblemCodeOtherReviews, property, "The "+property+" cannot change because the restaurant has reviews of other users.")}
-				return nil
-			}
 		}
 		if moves {
 			duplicate, err := restaurantWithPlace(tx, r)
@@ -292,7 +268,7 @@ func (s *Server) deleteParent(sub subject, id string, user *core.Record) (p *pro
 		if err != nil {
 			return err
 		}
-		if detail, err := changeForbidden(tx, sub, r, user.Id); err != nil {
+		if detail, err := deleteForbidden(tx, sub, r, user.Id); err != nil {
 			return err
 		} else if detail != "" {
 			p = notCreatorProblem(detail)
@@ -374,13 +350,13 @@ func locationOf(r *core.Record) nullable.Nullable[reviewsapi.Location] {
 	return nullable.NewNullableWithValue(l)
 }
 
-// changeForbidden returns a detail for the 403 response if the user cannot
-// change or delete the parent. A parent without a creator belongs to each
-// user who has a review of it.
-func changeForbidden(app core.App, sub subject, r *core.Record, userID string) (string, error) {
+// deleteForbidden returns a detail for the 403 response if the user cannot
+// delete the parent. A parent without a creator belongs to each user who has
+// a review of it.
+func deleteForbidden(app core.App, sub subject, r *core.Record, userID string) (string, error) {
 	if creator := r.GetString("creator"); creator != "" {
 		if creator != userID {
-			return "Only the creator of the " + sub.noun + " can change or delete it.", nil
+			return "Only the creator of the " + sub.noun + " can delete it.", nil
 		}
 		return "", nil
 	}
@@ -389,7 +365,7 @@ func changeForbidden(app core.App, sub subject, r *core.Record, userID string) (
 		return "", err
 	}
 	if n == 0 {
-		return "The " + sub.noun + " has no creator. Only a user with a review of it can change or delete it.", nil
+		return "The " + sub.noun + " has no creator. Only a user with a review of it can delete it.", nil
 	}
 	return "", nil
 }

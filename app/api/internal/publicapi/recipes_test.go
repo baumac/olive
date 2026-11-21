@@ -243,8 +243,15 @@ func TestUpdateRecipe(t *testing.T) {
 	id := e.createRecipe(ana.Token, `{"name":"Dal","source":"https://dal.example","servings":2}`)["id"].(string)
 	path := "/v1/recipes/" + id
 
-	t.Run("only the creator changes a recipe", func(t *testing.T) {
-		e.expectCode(request{method: "PATCH", path: path, token: joe.Token, body: `{"servings":3}`}, http.StatusForbidden, "not_creator")
+	t.Run("each user changes each property of a recipe", func(t *testing.T) {
+		got := e.expect(request{method: "PATCH", path: path, token: joe.Token,
+			body: `{"servings":3,"total_time":30,"tags":["lentils"],"description":"Yellow","name":"Joe's dal","ingredients":["2 eggs"],"steps":["Fry it."],"source":"https://joe.example/dal"}`},
+			http.StatusOK).object(t)
+		if got["servings"] != 3.0 || got["name"] != "Joe's dal" || got["source"] != "https://joe.example/dal" || got["steps"].([]any)[0] != "Fry it." {
+			t.Errorf("recipe %v", got)
+		}
+		e.expect(request{method: "PATCH", path: path, token: ana.Token,
+			body: `{"name":"Dal","ingredients":["1 egg"],"steps":["Cook it."],"source":"https://dal.example"}`}, http.StatusOK)
 	})
 
 	t.Run("null clears an optional property", func(t *testing.T) {
@@ -266,7 +273,7 @@ func TestUpdateRecipe(t *testing.T) {
 		}
 	})
 
-	t.Run("the creator changes the name, the ingredients, and the steps without reviews of others", func(t *testing.T) {
+	t.Run("the creator changes the name, the ingredients, and the steps", func(t *testing.T) {
 		e.createRecipeReview(ana.Token, id, recipeReviewBody)
 		got := e.expect(request{method: "PATCH", path: path, token: ana.Token,
 			body: `{"name":"Tarka dal","ingredients":["1 cup of lentils"],"steps":["Boil.","Fry."]}`}, http.StatusOK).object(t)
@@ -279,19 +286,14 @@ func TestUpdateRecipe(t *testing.T) {
 		}
 	})
 
-	t.Run("a review of another user freezes the name, the ingredients, and the steps", func(t *testing.T) {
+	t.Run("a review of another user does not freeze the recipe", func(t *testing.T) {
 		e.createRecipeReview(joe.Token, id, recipeReviewBody)
-		for property, body := range map[string]string{
-			"name":        `{"name":"Dal makhani"}`,
-			"ingredients": `{"ingredients":["2 cups of lentils"]}`,
-			"steps":       `{"steps":["Boil."]}`,
-		} {
-			p := e.expectCode(request{method: "PATCH", path: path, token: ana.Token, body: body}, http.StatusConflict, "other_reviews").object(t)
-			if p["property"] != property {
-				t.Errorf("%s: property %v", body, p["property"])
-			}
+		got := e.expect(request{method: "PATCH", path: path, token: sam.Token,
+			body: `{"name":"Dal tadka","ingredients":["2 cups of lentils"],"steps":["Boil."]}`}, http.StatusOK).object(t)
+		if got["name"] != "Dal tadka" || got["ingredients"].([]any)[0] != "2 cups of lentils" {
+			t.Errorf("change after other reviews: %v", got)
 		}
-		e.expect(request{method: "PATCH", path: path, token: ana.Token, body: `{"tags":["lentils"],"total_time":40}`}, http.StatusOK)
+		e.expect(request{method: "PATCH", path: path, token: ana.Token, body: `{"name":"Tarka dal"}`}, http.StatusOK)
 	})
 
 	t.Run("a source of another recipe gets 409", func(t *testing.T) {
@@ -303,28 +305,23 @@ func TestUpdateRecipe(t *testing.T) {
 		}
 	})
 
-	t.Run("a review of another user freezes a stored source", func(t *testing.T) {
+	t.Run("a review of another user does not freeze a stored source", func(t *testing.T) {
 		e.expect(request{method: "PATCH", path: path, token: ana.Token, body: `{"source":"https://dal.example/tarka"}`}, http.StatusOK)
-		for _, body := range []string{`{"source":"https://dal.example/other"}`, `{"source":null}`} {
-			p := e.expectCode(request{method: "PATCH", path: path, token: ana.Token, body: body}, http.StatusConflict, "other_reviews").object(t)
-			if p["property"] != "source" {
-				t.Errorf("%s: property %v", body, p["property"])
-			}
-		}
-		// The API compares the source keys. The case of the host is not a
-		// change of the recipe.
-		got := e.expect(request{method: "PATCH", path: path, token: ana.Token, body: `{"source":"https://DAL.example/tarka/"}`}, http.StatusOK).object(t)
-		if got["source"] != "https://DAL.example/tarka/" {
-			t.Errorf("source %v", got["source"])
+		e.expect(request{method: "PATCH", path: path, token: sam.Token, body: `{"source":"https://dal.example/other"}`}, http.StatusOK)
+		got := e.expect(request{method: "PATCH", path: path, token: sam.Token, body: `{"source":null}`}, http.StatusOK).object(t)
+		if _, ok := got["source"]; ok {
+			t.Errorf("source %v, want none", got["source"])
 		}
 	})
 
-	t.Run("a recipe without a creator belongs to its reviewers", func(t *testing.T) {
+	t.Run("only a reviewer deletes a recipe without a creator", func(t *testing.T) {
 		if _, err := e.app.DB().Update("recipes", dbx.Params{"creator": ""}, dbx.HashExp{"id": id}).Execute(); err != nil {
 			t.Fatal(err)
 		}
-		e.expect(request{method: "PATCH", path: path, token: joe.Token, body: `{"description":"Joe's words"}`}, http.StatusOK)
-		e.expectCode(request{method: "PATCH", path: path, token: sam.Token, body: `{"description":"Sam's words"}`}, http.StatusForbidden, "not_creator")
+		e.expect(request{method: "PATCH", path: path, token: joe.Token, body: `{"description":"Joe's words","name":"Joe's dal"}`}, http.StatusOK)
+		e.expect(request{method: "PATCH", path: path, token: sam.Token, body: `{"description":"Sam's words"}`}, http.StatusOK)
+		e.expect(request{method: "PATCH", path: path, token: sam.Token, body: `{"name":"Sam's dal"}`}, http.StatusOK)
+		e.expect(request{method: "DELETE", path: path, token: sam.Token}, http.StatusForbidden)
 	})
 
 	t.Run("an unknown recipe gets 404", func(t *testing.T) {

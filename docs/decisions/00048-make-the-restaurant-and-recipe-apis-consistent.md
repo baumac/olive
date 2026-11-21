@@ -78,6 +78,8 @@ The search of `listRecipes` still finds the words of the ingredients.
 
 ## The source of a reviewed recipe
 
+**Decision 00051 removes the lock of this section.** Each approved user can add, change, or clear the source at any time. The duplicate check of decision 00047 stays.
+
 Ana adds "Dal" with the source `https://dal.example/tarka`. Joe reviews it.
 
 - Ana changes the source to `https://dal.example/other`. The API returns `409` with `other_reviews` and the `property` `source`.

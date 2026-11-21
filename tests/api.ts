@@ -8,6 +8,7 @@ import type {
   RecipeReviewCreate,
   Restaurant,
   RestaurantCreate,
+  RestaurantPatch,
   RestaurantReview,
   RestaurantReviewCreate,
   SavedList,
@@ -169,6 +170,10 @@ export class TestApi {
     return new RestaurantsApi(this.config(user.token)).createRestaurant({
       restaurantCreate: { ...rest, tags: tags ? new Set(tags) : undefined, location: location ?? randomLocation() },
     })
+  }
+
+  updateRestaurant(user: TestUser, restaurantId: string, restaurantPatch: RestaurantPatch): Promise<Restaurant> {
+    return new RestaurantsApi(this.config(user.token)).updateRestaurant({ restaurantId, restaurantPatch })
   }
 
   // createRecipe gives a recipe without ingredients or steps one of each.

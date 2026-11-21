@@ -122,12 +122,12 @@ async function remove() {
                 @change="restaurant.data.value.favorite = $event"
               />
               <SaveToListMenu :restaurant-id="restaurantId" />
-              <template v-if="access?.canChange">
+              <template v-if="access?.canEdit">
                 <Button variant="outline" as-child>
                   <RouterLink :to="`/restaurants/${restaurantId}/edit`"><PencilIcon aria-hidden="true" />Edit restaurant</RouterLink>
                 </Button>
                 <ConfirmDelete
-                  v-if="!access.hasOtherReviews"
+                  v-if="access.isCreator && !access.hasOtherReviews"
                   label="Delete restaurant"
                   title="Delete this restaurant?"
                   :description="deleteDescription"
@@ -172,7 +172,7 @@ async function remove() {
               {{ mapOpen ? 'Hide map' : 'Show map' }}
             </button>
           </p>
-          <p v-else-if="access?.canChange" class="text-muted-foreground flex items-start gap-2">
+          <p v-else-if="access?.canEdit" class="text-muted-foreground flex items-start gap-2">
             <MapPinIcon class="mt-1 size-4 shrink-0" aria-hidden="true" />
             <span>
               This restaurant has no location.

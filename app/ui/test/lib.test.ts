@@ -6,7 +6,7 @@ import { listFailureText } from '@/lib/lists'
 import { restaurantFilterDefs, restaurantFilterParams } from '@/lib/restaurantFilters'
 import { reviewFilterParams } from '@/lib/reviewFilters'
 import { formatCount, formatDate, formatDay, formatScore, initials, localDay, parseDay, parseTimestamp } from '@/lib/format'
-import { ownReviewsText, parentAccess } from '@/lib/parents'
+import { changedPatch, ownReviewsText, parentAccess } from '@/lib/parents'
 import { directionsLink } from '@/lib/places'
 import { overallOf, scoreFields } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkReviewDay, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
@@ -182,30 +182,34 @@ describe('scoreFields', () => {
 
 describe('parentAccess', () => {
   const creator = { id: 'u5n1c8r3t6y0b2e', name: 'Ana' }
+  const other = 'u2g6k0m4o8q1s5w'
   const of = (reviewCount: number, ownReviewCount: number, c: typeof creator | null = creator) => ({ creator: c, reviewCount, ownReviewCount })
 
-  it('lets the creator change the restaurant', () => {
-    expect(parentAccess(of(0, 0), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess(of(1, 1), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess(of(1, 0), creator.id)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(parentAccess(of(2, 1), creator.id)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(parentAccess(of(1, 0), 'u2g6k0m4o8q1s5w').canChange).toBe(false)
-    expect(parentAccess(of(0, 0), undefined).canChange).toBe(false)
+  it('lets the creator delete the restaurant', () => {
+    expect(parentAccess(of(0, 0), creator.id)).toEqual({ canEdit: true, isCreator: true, hasOtherReviews: false })
+    expect(parentAccess(of(1, 1), creator.id)).toEqual({ canEdit: true, isCreator: true, hasOtherReviews: false })
+    expect(parentAccess(of(1, 0), creator.id)).toEqual({ canEdit: true, isCreator: true, hasOtherReviews: true })
+    expect(parentAccess(of(2, 1), creator.id)).toEqual({ canEdit: true, isCreator: true, hasOtherReviews: true })
   })
 
-  it('lets a reviewer change a restaurant without a creator', () => {
-    expect(parentAccess(of(1, 1, null), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess(of(1, 0, null), creator.id)).toEqual({ canChange: false, hasOtherReviews: true })
+  it('lets each signed in user edit the restaurant', () => {
+    expect(parentAccess(of(1, 0), other)).toEqual({ canEdit: true, isCreator: false, hasOtherReviews: true })
+    expect(parentAccess(of(0, 0), undefined)).toEqual({ canEdit: false, isCreator: false, hasOtherReviews: false })
   })
 
-  it('counts each own review', () => {
-    expect(parentAccess(of(3, 3), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
-    expect(parentAccess(of(3, 2), creator.id)).toEqual({ canChange: true, hasOtherReviews: true })
-    expect(parentAccess(of(2, 2, null), creator.id)).toEqual({ canChange: true, hasOtherReviews: false })
+  it('lets a reviewer delete a restaurant without a creator', () => {
+    expect(parentAccess(of(1, 1, null), creator.id)).toEqual({ canEdit: true, isCreator: true, hasOtherReviews: false })
+    expect(parentAccess(of(1, 0, null), creator.id)).toEqual({ canEdit: true, isCreator: false, hasOtherReviews: true })
   })
+})
 
-  it('ignores a stale own count after the sign out', () => {
-    expect(parentAccess(of(2, 2), undefined)).toEqual({ canChange: false, hasOtherReviews: true })
+describe('changedPatch', () => {
+  const loaded = { name: 'Dal', tags: new Set(['a', 'b']) as Set<string> | null, steps: ['Boil.'], servings: 2 as number | null }
+
+  it('keeps only the changed properties', () => {
+    expect(changedPatch({ ...loaded, tags: new Set(['b', 'a']), steps: ['Boil.'] }, loaded)).toEqual({})
+    expect(changedPatch({ ...loaded, servings: null, steps: ['Boil.', 'Fry.'] }, loaded)).toEqual({ servings: null, steps: ['Boil.', 'Fry.'] })
+    expect(changedPatch({ ...loaded, tags: null }, loaded)).toEqual({ tags: null })
   })
 })
 

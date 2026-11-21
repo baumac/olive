@@ -190,8 +190,10 @@ Rules that the new operations follow:
 - Each operation with a token needs an approved user and has a `403` response. See decision 00034.
 - Only the creator changes or deletes a recipe. Reviews of other users block the delete with `other_reviews`.
   Reviewers can change a recipe without a creator. See decision 00016.
+  **Decision 00051 replaces the rule of a change.** Each approved user can change each recipe. The delete rule stays.
 - Reviews of other users also block a change of `name`, `ingredients`, and `steps` with `other_reviews`.
   The reviews scored these values. The problem names the first changed property in `property`.
+  **Decision 00051 removes this rule.** The reviews of other users do not block a change.
 - `name`, `title`, the ingredients, the steps, and the alt texts have `x-trim: true`. `Tag` keeps `x-nfc: true`. See decisions 00040 and 00041.
 - The `Problem` code enum gets `source_taken` and `list_recipe_limit`.
   The `source_taken` problem has the ID of the other recipe in `recipe`.
@@ -278,7 +280,7 @@ The restaurant details stay restaurant code: the location, `place_id`, the place
 - `AppHeader.vue` has a `nav` "Sections" with the links "Restaurants" and "Recipes". This changes the rule of decision 00019 that the header has no navigation links. The design system of `AppHeader` has the same change.
 - Routes and pages: `/recipes` with `RecipesPage.vue`, `/recipes/new` and `/recipes/:recipeId/edit` with `RecipeFormPage.vue`, and `/recipes/:recipeId` with `RecipePage.vue`.
 - `RecipeFormPage.vue` has a text area for the ingredients with one ingredient on each line. The steps are a list of text areas that the user can add, remove, and move.
-  The reviews of other users make the name, the ingredients, and the steps read only, like the name of a restaurant.
+  The reviews of other users make the name, the ingredients, and the steps read only, like the name of a restaurant. Decision 00051 removes the read-only fields.
 - `RecipePage.vue` shows the ingredients as a list and the steps as a numbered list in `RecipeDetails.vue`. It has no map.
 - `/recipes/:recipeId/reviews/new`, `/recipes/:recipeId/reviews/:reviewId`, and its `/edit` use `ReviewFormPage.vue` and `ReviewPage.vue`. The route gives a `recipeId` in the place of a `restaurantId`.
 - `lib/reviewKinds.ts` has the score fields, the paths, and the API calls of each kind. `ReviewCard.vue`, `ScoreSummary.vue`, `ReviewList.vue`, and `ReviewPhotos.vue` read them and do not name a score.

@@ -23,6 +23,7 @@ func TestRestaurantLocation(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	joe := e.signUp("joe@example.com", "Joe")
+	eva := e.signUp("eva@example.com", "Eva")
 	const review = `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`
 	barceloneta := locationJSON(41.3766, 2.1893, "Carrer de Sant Carles 4, 08003 Barcelona", "osm:N1")
 
@@ -84,7 +85,8 @@ func TestRestaurantLocation(t *testing.T) {
 		}
 		e.expect(request{method: "PATCH", path: path, body: `{"location":null}`, token: ana.Token}, http.StatusUnprocessableEntity)
 		e.expect(request{method: "PATCH", path: path, body: `{"location":{"latitude":1}}`, token: ana.Token}, http.StatusUnprocessableEntity)
-		e.expect(request{method: "PATCH", path: path, body: `{"location":` + barceloneta + `}`, token: joe.Token}, http.StatusForbidden)
+		e.expect(request{method: "PATCH", path: path, body: `{"location":` + barceloneta + `}`, token: joe.Token}, http.StatusOK)
+		e.expect(request{method: "PATCH", path: path, body: `{"location":` + locationJSON(41.38, 2.19, "Moll 1", "") + `}`, token: joe.Token}, http.StatusOK)
 
 		moved := e.expect(request{method: "PATCH", path: path,
 			body: `{"location":` + locationJSON(41.38, 2.19, "Passeig de Joan de Borbó 1", "") + `}`, token: ana.Token}, http.StatusOK).object(t)
@@ -96,19 +98,14 @@ func TestRestaurantLocation(t *testing.T) {
 		e.expect(request{method: "PATCH", path: path, body: `{"location":` + barceloneta + `}`, token: ana.Token}, http.StatusOK)
 	})
 
-	t.Run("reviews of other users lock the location", func(t *testing.T) {
+	t.Run("reviews of other users do not lock the location", func(t *testing.T) {
 		e.createReview(ana.Token, id, review)
-		e.expect(request{method: "PATCH", path: path, body: `{"location":` + locationJSON(41.3766, 2.1893, "Sant Carles 4", "osm:N1") + `}`, token: ana.Token}, http.StatusOK)
 		e.createReview(joe.Token, id, review)
-		res := e.expect(request{method: "PATCH", path: path, body: `{"location":` + barceloneta + `}`, token: ana.Token}, http.StatusConflict)
-		if got := res.object(t); got["restaurant"] != nil || got["property"] != "location" {
-			t.Errorf("lock conflict %s", res.body)
+		e.expect(request{method: "PATCH", path: path, body: `{"location":` + locationJSON(41.3766, 2.1893, "Sant Carles 4", "osm:N1") + `}`, token: ana.Token}, http.StatusOK)
+		moved := e.expect(request{method: "PATCH", path: path, body: `{"location":` + barceloneta + `}`, token: eva.Token}, http.StatusOK).object(t)
+		if l := moved["location"].(map[string]any); l["address"] != "Carrer de Sant Carles 4, 08003 Barcelona" {
+			t.Errorf("location of another user %v", l)
 		}
-		res = e.expect(request{method: "PATCH", path: path, body: `{"name":"Other"}`, token: ana.Token}, http.StatusConflict)
-		if got := res.object(t)["property"]; got != "name" {
-			t.Errorf("name conflict %s", res.body)
-		}
-		e.expect(request{method: "PATCH", path: path, body: `{"description":"x","location":` + locationJSON(41.3766, 2.1893, "Sant Carles 4", "osm:N1") + `}`, token: ana.Token}, http.StatusOK)
 	})
 
 	t.Run("a restaurant from before locations can get one", func(t *testing.T) {
@@ -129,8 +126,9 @@ func TestRestaurantLocation(t *testing.T) {
 			t.Errorf("location %v, want null", l)
 		}
 		e.createReview(joe.Token, old, review)
-		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + old, body: `{"location":` + testLocation + `}`, token: ana.Token}, http.StatusOK)
-		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + old, body: `{"location":` + locationJSON(1, 1, "Other", "") + `}`, token: ana.Token}, http.StatusConflict)
+		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + old, body: `{"location":` + testLocation + `}`, token: eva.Token}, http.StatusOK)
+		// A wrong location of one user can be fixed by another user.
+		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + old, body: `{"location":` + locationJSON(1, 1, "Other", "") + `}`, token: joe.Token}, http.StatusOK)
 	})
 }
 

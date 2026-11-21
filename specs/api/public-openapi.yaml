@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 7.0.0
+  version: 7.1.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants and recipes.
 
@@ -49,6 +49,8 @@ info:
       Each review has a required `date`. The review lists sort by `-date` by default.
       The `review_exists` code is gone.
       Restaurants and recipes have the `own_review_count` of the user of the token.
+    - Version 7.1.0 lets each approved user change each property of each restaurant and recipe.
+      The reviews of other users do not lock the `name`, the `location`, the `source`, the `ingredients`, or the `steps` any more.
 
 servers:
   - url: /v1
@@ -618,10 +620,7 @@ paths:
         name: edit
       summary: Update a restaurant
       description: |
-        Only the creator of the restaurant can update it.
-        A restaurant without a creator can be updated by each user who has a review of it.
-        `name` can change only while no other user has a review of the restaurant.
-        A stored `location` has the same rule. A restaurant without a location can always get one.
+        Each approved user can update each restaurant. The reviews of other users do not block an update.
         A value that is equal to the stored value is not a change.
         A `location.place_id` that another restaurant has causes `409 Conflict`.
         The problem then has the ID of that restaurant in `restaurant`.
@@ -1429,10 +1428,7 @@ paths:
         name: edit
       summary: Update a recipe
       description: |
-        Only the creator of the recipe can update it.
-        A recipe without a creator can be updated by each user who has a review of it.
-        `name`, `ingredients`, and `steps` can change only while no other user has a review of the recipe.
-        A stored `source` has the same rule. A recipe without a source can always get one.
+        Each approved user can update each recipe. The reviews of other users do not block an update.
         A value that is equal to the stored value is not a change.
         The API compares the sources without the case of the scheme and the host, the fragment, and a final `/`.
         A `source` that another recipe has causes `409 Conflict`.
@@ -2995,8 +2991,9 @@ components:
             $ref: '#/components/schemas/Problem'
     Forbidden:
       description: |
-        The user is not the creator of the resource. For a restaurant or a recipe without a creator, the user has no review of it.
-        The problem then has the `code` `not_creator`.
+        A change or a delete of a review, a photo, or a list gets this response when the user is not its creator.
+        A delete of a restaurant or a recipe gets it when the user is not its creator. For a restaurant or a recipe without a creator, the user has no review of it.
+        The problem then has the `code` `not_creator`. An update of a restaurant or a recipe never gets `not_creator`.
         A rename or a delete of a favorites list gets this response also. The `code` is `favorites_list`.
         A user who is not approved gets this response for each operation that needs a token.
         The problem then has the `code` `not_approved`.
@@ -3017,8 +3014,7 @@ components:
       description: |
         The request conflicts with the current state. The `code` of the problem tells the reason.
 
-        - `other_reviews` is a delete of a restaurant that has a review of another user, or a change of its `name` or `location`.
-          For a recipe, it is a delete or a change of its `name`, `ingredients`, `steps`, or stored `source`.
+        - `other_reviews` is a delete of a restaurant or a recipe that has a review of another user.
         - `place_taken` is a `location.place_id` that another restaurant has.
         - `source_taken` is a `source` that another recipe has.
         - `photo_limit` is a sixth photo of a review.

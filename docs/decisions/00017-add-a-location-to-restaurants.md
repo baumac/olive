@@ -64,12 +64,14 @@ Out of scope:
 
 ## Who can change the location
 
+**Decision 00051 replaces the rules of a change in this section.** Each approved user can change each property at any time. The reviews of other users do not lock a property. The delete rules stay.
+
 The rules extend decision 00016.
 
 | Action | Who | Condition |
 | --- | --- | --- |
-| Add a location to a restaurant without one | the creator | none |
-| Change a stored location | the creator | no other user has a review of the restaurant |
+| Add a location to a restaurant without one | the creator. Decision 00051: each approved user. | none |
+| Change a stored location | the creator. Decision 00051: each approved user. | no other user has a review of the restaurant. Decision 00051: none. |
 
 For a restaurant without a creator, "the creator" is each user who has a review of it.
 A change that fails the condition gets `409 Conflict`, like a change of the name. The problem has `"property": "location"`.
@@ -168,7 +170,7 @@ GET /v1/restaurants?near[latitude]=41.3766&near[longitude]=2.1893&near[radius]=7
 - the name of the selected place goes into an empty "Name" field
 - "Enter the location by hand" shows the fields "Address", "Latitude", and "Longitude". The form opens them when the search fails.
 - a link under the search credits OpenStreetMap. The OpenStreetMap attribution guidelines require it for an app with such a search.
-- the edit form of a restaurant with reviews of other users shows the address in a read-only field, with the reason. Focus can reach it.
+- the edit form of a restaurant with reviews of other users shows the address in a read-only field, with the reason. Focus can reach it. Decision 00051 removes the read-only field.
 - a restaurant without a location shows "Add the location" on its page to the user who can change it
 
 # Implementation Details

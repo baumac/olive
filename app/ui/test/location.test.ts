@@ -200,16 +200,6 @@ describe('LocationField', () => {
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([{ address: 'Carrer Nou 1', latitude: 41.3766, longitude: 2.1893 }])
   })
 
-  it('shows only the location when it is locked', async () => {
-    const w = mountField({ modelValue: canSole.location, locked: true, describedBy: 'reason' })
-    const input = w.get('input')
-    expect(w.findAll('input, button')).toHaveLength(1)
-    expect(input.attributes('id')).toBe('location')
-    expect(input.attributes('readonly')).toBeDefined()
-    expect(input.attributes('aria-describedby')).toBe('reason')
-    expect((input.element as HTMLInputElement).value).toBe(canSole.location.address)
-  })
-
   it('names the address field only Address', async () => {
     const w = mountField()
     await w.get('button').trigger('click')
@@ -263,9 +253,9 @@ describe('RestaurantFormPage drafts', () => {
     clearSession()
   })
 
-  async function mountWithDraft(stored: Location | null) {
+  async function mountWithDraft(stored: Location | null, creator = restaurant.creator) {
     saveSession({ token: 't', expires: '2099-01-01T00:00:00.000Z', user })
-    vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue({ ...restaurant, location: stored })
+    vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue({ ...restaurant, location: stored, creator })
     vi.spyOn(restaurantsApi, 'listRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
     vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
     saveDraft(`restaurant:${restaurant.id}`, { name: 'Renamed', description: 'Draft', tags: [], location: canSole.location })
@@ -275,16 +265,17 @@ describe('RestaurantFormPage drafts', () => {
     return w
   }
 
-  it('keeps the drafted location of a restaurant without one', async () => {
+  it('keeps the drafted name and location of a restaurant without one', async () => {
     const w = await mountWithDraft(null)
-    expect((w.get('input[name=name]').element as HTMLInputElement).value).toBe('Old Place')
+    expect((w.get('input[name=name]').element as HTMLInputElement).value).toBe('Renamed')
     expect(w.text()).toContain('Selected location: Carrer de Sant Carles 4, 08003 Barcelona')
     w.unmount()
   })
 
-  it('keeps the stored location when it is locked', async () => {
-    const w = await mountWithDraft(house.location)
-    expect((w.get('input[name=address]').element as HTMLInputElement).value).toBe(house.location.address)
+  it('takes the drafted location of a user who is not the creator', async () => {
+    const w = await mountWithDraft(house.location, { id: 'u2g6k0m4o8q1s5w', name: 'Joe' })
+    expect((w.get('input[name=name]').element as HTMLInputElement).value).toBe('Renamed')
+    expect(w.text()).toContain('Selected location: Carrer de Sant Carles 4, 08003 Barcelona')
     w.unmount()
   })
 })

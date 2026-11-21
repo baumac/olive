@@ -18,8 +18,6 @@ defineProps<{
   id: string
   invalid?: boolean
   describedBy?: string
-  // locked shows only the location. The API refuses a change.
-  locked?: boolean
 }>()
 
 const location = defineModel<Location | null>({ default: null })
@@ -98,20 +96,12 @@ watch(
 
 <template>
   <div class="grid gap-3">
-    <Input
-      v-if="locked"
-      :id="id"
-      :model-value="location?.address ?? ''"
-      name="address"
-      readonly
-      :aria-describedby="describedBy"
-    />
-    <p v-else-if="location && !byHand" class="flex items-start gap-2 text-sm">
+    <p v-if="location && !byHand" class="flex items-start gap-2 text-sm">
       <MapPinIcon class="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <span><span class="sr-only">Selected location: </span>{{ location.address }}</span>
     </p>
     <MapView
-      v-if="location && mapConfig && (locked || !byHand)"
+      v-if="location && mapConfig && !byHand"
       :config="mapConfig"
       label="Map of the selected place"
       :center="location"
@@ -119,7 +109,7 @@ watch(
       :markers="[{ id: 'location', latitude: location.latitude, longitude: location.longitude, label: location.address }]"
       class="h-48"
     />
-    <template v-if="!locked && byHand">
+    <template v-if="byHand">
       <p v-if="state === 'failed'" class="text-sm" role="status">
         The place search does not answer. Enter the location by hand.
       </p>
@@ -182,7 +172,7 @@ watch(
         <Button type="button" variant="outline" size="sm" @click="byHand = false">Search for the place</Button>
       </div>
     </template>
-    <template v-else-if="!locked">
+    <template v-else>
       <Input
         :id="id"
         v-model="text"
