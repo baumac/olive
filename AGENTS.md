@@ -134,7 +134,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
     - the operations of `/users/me` change the name and the password and delete the user. See decision 00003.
     - `getCurrentUser` returns the user of the token without a new token. The UI uses it at start. See decision 00003.
-    - `confirmEmail` needs the token of the link and the password. The wrong password limit counts each email address, with or without a user. Its limiter has a cap of 100,000 addresses. See decision 00003.
+    - `confirmEmail` needs the token of the link and the password. The wrong password limit counts each email address, with or without a user. Its limiter has a cap of 100,000 addresses. See decisions 00003 and 00004.
     - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. Sign out and the token refresh are the exceptions. See decision 00004.
     - each `403` and `409` problem has a `code`. A new reason needs a value in the `code` enum of `Problem`. See decision 00001.
     - a schema with `x-trim: true` loses the ASCII spaces, tabs, and line breaks around its value. Names, titles, addresses, alt texts, ingredients, and steps have it. See decision 00001.
@@ -162,7 +162,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/api/main.go`** - the PocketBase app
   - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, `list_recipes`, `restaurant_versions`, and `recipe_versions` collections
     - A migration that drops or renames a property of `restaurants` or `recipes` also changes the `snapshot` of their versions. See decision 00006.
-    - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decision 00007.
+    - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decisions 00005 and 00007.
     - `restaurant_overall` and `recipe_overall` have the rating of each restaurant or recipe. Each reviewer counts one time. The `overall` sort uses the overall and the number of reviewers. See decision 00007.
     - A migration that drops a score column of `reviews` or `recipe_reviews` also drops its column of the overall table.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.

@@ -40,7 +40,7 @@ Out of scope:
 - all APIs of PocketBase. Clients use only the Public API.
 - publishing the SDKs to npm or to another registry. Only this repository uses them.
 - a Go client. The app needs only the server code.
-- API documentation from the spec. The backlog has it.
+- API documentation from the spec. The spec is the documentation.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation

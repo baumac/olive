@@ -36,7 +36,7 @@ Out of scope:
 - server-side rendering of the page body
 - structured data, such as schema.org JSON-LD, and a sitemap
 - a canonical link, an `X-Robots-Tag` header, and a `robots` meta tag
-- an `Allow` group for the link preview bots that obey robots.txt. The backlog has a check of the previews after the deploy.
+- an `Allow` group for the link preview bots that obey robots.txt. A later decision can add it after a check of the previews on the deployed site.
 - blocks of crawlers that do not obey robots.txt. They need firewall rules.
 - the average scores in a description, and a cover in the preview of a subject
 - page meta for the list screens, such as `/restaurants` and `/my-reviews`. They keep the tags of the site.

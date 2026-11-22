@@ -49,7 +49,7 @@ The first set covers the Public API. From shadcn-vue: `Button`, `Input`, `Textar
 
 The previews here are static HTML renditions of the Vue components. They show the look and the states, not the behavior. The UI in `app/ui` now has the real components. Replace the previews with them with the real components: sync this system from the code with `/design-sync` in Claude Code, so the previews run the Vue components and stay in step with them.
 
-Photos follow decision 00009. Each `<img>` gets `width` and `height` from the API, so the page does not move while it loads. Thumbnails load lazily, show `Skeleton` until they load, and show the image-off icon on `muted` when they fail. A photo without alt text is "Photo 2 of 5" for screen readers. UI text: "Add photo", "Delete this photo?", "Describe the photo for people who cannot see it". Decision 00009 adds the cover photo of restaurants and the "Photos" section of the restaurant page.
+Photos follow decision 00009. Each `<img>` gets `width` and `height` from the API, so the page does not move while it loads. Thumbnails load lazily, show `Skeleton` until they load, and show the image-off icon on `muted` when they fail. A photo without alt text is "Photo 2 of 5" for screen readers. UI text: "Add photo", "Delete this photo?", "Describe the photo for people who cannot see it". The cover photo of restaurants and the "Photos" section of the restaurant page follow the same rules.
 
 Format dates, numbers and API text as the "Dates, numbers and language" section says. Sign up, sign in, tokens and sign out follow the "User authentication" section.
 

@@ -10,7 +10,7 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For Me
 - Can you make a plan to consolidate decision docs into far fewer decision docs? For context, decisions are meant to be living documents that evolve as requirements change. Today, there are many decisions that were initially made and then either superseded, fixed, or replaced by a future decision. This results in duplicate information and makes the duplicates hard to follow.
-  - Some examples are:
+  - Some examples, with the old decision numbers of `!0000-old-numbers.md`:
     - 00001: only restaurants, no text search, and one review per user and restaurant. Fixed by 00047, the search index, and 00050.
     - 00013: canonical links for search engines. Fixed by 00053.
     - 00016: only the creator can edit, for "an open public site". Fixed by 00051 and 00055.
