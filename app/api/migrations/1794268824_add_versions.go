@@ -10,7 +10,7 @@ import (
 
 // versionKind has the SQL of the baseline snapshot of one parent
 // collection. The history package makes the same snapshot. See decision
-// 00055.
+// 00006.
 type versionKind struct {
 	parent   string
 	table    string
@@ -36,7 +36,7 @@ func list(name string) string {
 }
 
 // location is null for a restaurant without an address. Such a restaurant is
-// from before decision 00017.
+// from before the location field.
 const location = "'location', CASE WHEN [[address]] != '' THEN " +
 	"CASE WHEN [[place_id]] != '' " +
 	"THEN json_object('latitude', [[latitude]], 'longitude', [[longitude]], 'address', [[address]], 'place_id', [[place_id]]) " +
@@ -60,7 +60,7 @@ var versionKinds = []versionKind{
 }
 
 // Each restaurant and recipe gets a baseline version with its snapshot. The
-// history of the next change starts from it. See decision 00055.
+// history of the next change starts from it. See decision 00006.
 func init() {
 	m.Register(func(app core.App) error {
 		users, err := app.FindCollectionByNameOrId("users")

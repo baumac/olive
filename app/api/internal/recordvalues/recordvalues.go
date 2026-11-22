@@ -1,5 +1,5 @@
 // Package recordvalues gets the API values of the fields of a restaurant or
-// a recipe. The Public API and the history use it. See decision 00055.
+// a recipe. The Public API and the history use it. See decision 00006.
 package recordvalues
 
 import "github.com/pocketbase/pocketbase/core"
@@ -49,7 +49,7 @@ type Location struct {
 }
 
 // LocationOf returns nil for a restaurant without an address. Such a
-// restaurant is from before decision 00017.
+// restaurant is from before the location field.
 func LocationOf(r *core.Record) *Location {
 	address := r.GetString("address")
 	if address == "" {

@@ -17,7 +17,7 @@ import (
 )
 
 // SignUp gives the same response for a new and a used email address. An
-// email tells the person the difference. See decision 00037.
+// email tells the person the difference. See decision 00003.
 func (s *Server) SignUp(_ context.Context, req reviewsapi.SignUpRequestObject) (reviewsapi.SignUpResponseObject, error) {
 	b := req.Body
 	users, err := s.app.FindCachedCollectionByNameOrId("users")
@@ -76,7 +76,7 @@ func (s *Server) SignUp(_ context.Context, req reviewsapi.SignUpRequestObject) (
 
 // ConfirmEmail checks the password and signs the user of a confirmation
 // token in. A sign up of another person can set that password. See decision
-// 00039.
+// 00003.
 func (s *Server) ConfirmEmail(ctx context.Context, req reviewsapi.ConfirmEmailRequestObject) (reviewsapi.ConfirmEmailResponseObject, error) {
 	user := s.userOfEmailToken(req.Body.Token, core.TokenTypeVerification)
 	if user == nil {

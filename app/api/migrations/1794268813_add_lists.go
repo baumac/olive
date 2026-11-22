@@ -6,7 +6,7 @@ import (
 )
 
 // Each user gets a favorites list. A unique index keeps it to one for each
-// user. See decision 00033.
+// user. See decision 00008.
 func init() {
 	m.Register(func(app core.App) error {
 		users, err := app.FindCollectionByNameOrId("users")

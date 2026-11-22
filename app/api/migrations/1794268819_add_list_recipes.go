@@ -6,7 +6,7 @@ import (
 )
 
 // list_recipes has the fields and the indexes of list_items with a recipe in
-// the place of the restaurant. See decision 00047.
+// the place of the restaurant. See decision 00005.
 func init() {
 	m.Register(func(app core.App) error {
 		lists, err := app.FindCollectionByNameOrId("lists")

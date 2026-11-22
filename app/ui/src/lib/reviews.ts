@@ -44,7 +44,7 @@ export const scoreFields: ScoreField[] = [
   },
 ]
 
-// recipeScoreFields are the scores of a recipe review. See decision 00047.
+// recipeScoreFields are the scores of a recipe review. See decision 00005.
 export const recipeScoreFields: ScoreField[] = [
   {
     name: 'taste',

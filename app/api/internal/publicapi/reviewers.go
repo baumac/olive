@@ -108,7 +108,7 @@ func (s *Server) ListReviewerRestaurantReviews(ctx context.Context, req reviewsa
 
 // findReviewer returns a nil record and no error when the user does not
 // exist. A user without approval has a public profile only for the own
-// token. See decision 00034.
+// token. See decision 00003.
 func (s *Server) findReviewer(viewer *core.Record, id string) (*core.Record, error) {
 	user, err := s.app.FindRecordById("users", id)
 	if errors.Is(err, sql.ErrNoRows) {

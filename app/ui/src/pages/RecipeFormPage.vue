@@ -71,13 +71,13 @@ const saving = ref(false)
 // loaded has the values of the recipe before the edit.
 const loaded = ref<Fields>(emptyFields())
 // deleteBlocked is true when the reviews of other users block the delete of
-// the creator. Each user can change the recipe. See decision 00051.
+// the creator. Each user can change the recipe. See decision 00006.
 const deleteBlocked = ref(false)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `recipe:${props.recipeId ?? 'new'}`)
 // undo is the change that ?undo of the history page undoes. See decision
-// 00055.
+// 00006.
 const undo = ref<Undo | null | undefined>(undefined)
 const cancelPath = computed(() => (props.recipeId ? `/recipes/${props.recipeId}` : '/recipes'))
 

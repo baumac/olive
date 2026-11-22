@@ -6,7 +6,7 @@ import (
 )
 
 // The API removes the ASCII spaces around these values of a request. The
-// values from before that change get the same rule. See decision 00040.
+// values from before that change get the same rule. See decision 00001.
 func init() {
 	m.Register(func(app core.App) error {
 		return execAll(app,

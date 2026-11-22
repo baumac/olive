@@ -7,7 +7,7 @@ import (
 
 // The overall column of reviews is not a field of the collection. A
 // migration that drops a score column must first drop it and its indexes.
-// See decision 00031.
+// See decision 00007.
 func init() {
 	m.Register(func(app core.App) error {
 		reviews, err := app.FindCollectionByNameOrId("reviews")

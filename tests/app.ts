@@ -11,7 +11,7 @@ const binary = fileURLToPath(new URL('../bin/reviews-app', import.meta.url))
 
 export interface RunningApp {
   baseURL: string
-  // superuserToken approves the users of the tests. See decision 00034.
+  // superuserToken approves the users of the tests. See decision 00003.
   superuserToken: string
   stop: () => Promise<void>
 }

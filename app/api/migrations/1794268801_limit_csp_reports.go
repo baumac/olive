@@ -7,7 +7,7 @@ import (
 	m "github.com/pocketbase/pocketbase/migrations"
 )
 
-// cspReportRule limits the CSP reports of decision 00005 per IP address.
+// cspReportRule limits the CSP reports of decision 00002 per IP address.
 // Anybody can send them. The limit keeps the log small.
 var cspReportRule = core.RateLimitRule{Label: "POST /csp-report", MaxRequests: 20, Duration: 60}
 

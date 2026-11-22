@@ -1,5 +1,5 @@
 // Package usercleanup deletes old users without approval that have no
-// data. Decision 00034 has the details.
+// data. Decision 00003 has the details.
 package usercleanup
 
 import (

@@ -13,7 +13,7 @@ const stepSpace = "' ' || char(9) || char(10) || char(13)"
 const storedSteps = "CASE WHEN json_valid([[steps]]) AND json_type([[steps]]) = 'array' THEN [[steps]] ELSE '[]' END"
 
 // The API removes the ASCII spaces, tabs, and line breaks around each step of
-// a request. The stored steps get the same rule. See decision 00048.
+// a request. The stored steps get the same rule. See decision 00001.
 func init() {
 	m.Register(func(app core.App) error {
 		return execAll(app,

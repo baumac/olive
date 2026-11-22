@@ -175,7 +175,7 @@ func (s *Server) GetRestaurant(ctx context.Context, req reviewsapi.GetRestaurant
 }
 
 // UpdateRestaurant runs the place check and the save in one transaction. Each
-// approved user can change each property. See decision 00051.
+// approved user can change each property. See decision 00006.
 func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRestaurantRequestObject) (reviewsapi.UpdateRestaurantResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
@@ -337,7 +337,7 @@ func restaurantWithPlace(app core.App, r *core.Record) (string, error) {
 }
 
 // locationOf returns null for a restaurant without an address. Such a
-// restaurant is from before decision 00017.
+// restaurant is from before the location field.
 func locationOf(r *core.Record) nullable.Nullable[reviewsapi.Location] {
 	stored := recordvalues.LocationOf(r)
 	if stored == nil {

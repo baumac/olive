@@ -26,7 +26,7 @@ export async function signIn(page: Page, user: TestUser) {
 
 export const test = base.extend<{ api: TestApi; user: TestUser; noCspViolations: void }>({
   // noCspViolations fails a test if the browser blocks anything under the
-  // Content Security Policy of decision 00005. It runs in every test.
+  // Content Security Policy of decision 00002. It runs in every test.
   noCspViolations: [
     async ({ page }, use) => {
       const violations: string[] = []

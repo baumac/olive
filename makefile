@@ -116,7 +116,7 @@ test-sdk-ts: $(NODE_MODULES)
 GO_TEST_TIMEOUT := 15m
 
 # test-app has no race detector. test-race and test-coverage-app have it. See
-# decision 00045.
+# decision 00014.
 test-app:
 	cd app/api && go test -timeout $(GO_TEST_TIMEOUT) ./...
 
@@ -142,7 +142,7 @@ test-coverage-app:
 test-coverage-ui: build-sdk-ts
 	npm run coverage --workspace @reviews/ui
 
-# The end-to-end tests start ./bin/reviews-app. See decision 00006.
+# The end-to-end tests start ./bin/reviews-app. See decision 00014.
 # PROJECT runs one Playwright project, such as make test-e2e PROJECT=webkit.
 # E2E_FILE runs the spec files that match it, such as
 # E2E_FILE=e2e/auth.spec.ts. Make also reads it from the environment.
@@ -183,7 +183,7 @@ build-app: build-ui
 	go build -o $(APP_BIN) ./app/api
 
 # The docker job of CI and developers build the image the same way. See
-# decision 00022.
+# decision 00013.
 build-image:
 	docker build -f deploy/Dockerfile -t reviews-app:local .
 
@@ -208,7 +208,7 @@ renovate-local:
 # renovate opens or updates the pull request on GitHub. The Renovate workflow
 # runs it. RENOVATE_REPOSITORIES has the repository, such as owner/name.
 renovate:
-	@test -n "$$RENOVATE_TOKEN" || { echo "Set RENOVATE_TOKEN. See decision 00026."; exit 1; }
+	@test -n "$$RENOVATE_TOKEN" || { echo "Set RENOVATE_TOKEN. See decision 00015."; exit 1; }
 	@test -n "$$RENOVATE_REPOSITORIES" || { echo "Set RENOVATE_REPOSITORIES, such as owner/name."; exit 1; }
 	docker run --rm -e RENOVATE_TOKEN -e RENOVATE_REPOSITORIES -e RENOVATE_ONBOARDING=false -e LOG_LEVEL \
 		$(RENOVATE_IMAGE) renovate

@@ -21,7 +21,7 @@ export default defineConfig({
   use: {
     baseURL,
     // A trace and a video of each test make a run about one third slower.
-    // A failed test gets them on its retry. See decision 00046.
+    // A failed test gets them on its retry. See decision 00014.
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',

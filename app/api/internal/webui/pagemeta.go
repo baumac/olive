@@ -22,7 +22,7 @@ import (
 )
 
 // The page-meta block of index.html starts and ends with these comments.
-// Decision 00013 has the details.
+// Decision 00012 has the details.
 const (
 	metaStart = "<!-- page-meta -->"
 	metaEnd   = "<!-- /page-meta -->"
@@ -173,7 +173,7 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		if err != nil {
 			return pageMeta{}, true, notFound(err)
 		}
-		// A user without approval has no public profile. See decision 00034.
+		// A user without approval has no public profile. See decision 00003.
 		if !user.GetBool("approved") {
 			return pageMeta{}, true, errNoRecord
 		}

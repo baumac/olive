@@ -131,7 +131,7 @@ func (s *Server) recipeReviewPage(
 }
 
 // CreateRecipeReview makes a review of one cook. A user can write many
-// reviews of one recipe. See decision 00050.
+// reviews of one recipe. See decision 00007.
 func (s *Server) CreateRecipeReview(ctx context.Context, req reviewsapi.CreateRecipeReviewRequestObject) (reviewsapi.CreateRecipeReviewResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body

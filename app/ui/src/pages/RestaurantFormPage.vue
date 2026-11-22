@@ -53,13 +53,13 @@ const nearby = ref<Restaurant[]>([])
 const loaded = ref<Fields>({ ...emptyFields })
 const saving = ref(false)
 // deleteBlocked is true when the reviews of other users block the delete of
-// the creator. Each user can change the restaurant. See decision 00051.
+// the creator. Each user can change the restaurant. See decision 00006.
 const deleteBlocked = ref(false)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `restaurant:${props.restaurantId ?? 'new'}`)
 // undo is the change that ?undo of the history page undoes. See decision
-// 00055.
+// 00006.
 const undo = ref<Undo | null | undefined>(undefined)
 const cancelPath = computed(() => (props.restaurantId ? `/restaurants/${props.restaurantId}` : '/restaurants'))
 
@@ -100,7 +100,7 @@ onMounted(async () => {
   }
   const draft = takeDraft<Fields>(draftKey.value)
   if (draft) {
-    // A draft from before decision 00038 has no details.
+    // A draft of an older version has no details.
     fields.value = { ...emptyFields, ...draft }
   }
 })

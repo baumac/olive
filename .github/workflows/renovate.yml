@@ -1,4 +1,4 @@
-# Runs Renovate on the first day of each month. Decision 00026 explains the
+# Runs Renovate on the first day of each month. Decision 00015 explains the
 # token and the settings. .github/renovate.json has the rules of the updates.
 # The repository setting "Allow GitHub Actions to create and approve pull
 # requests" must be on.

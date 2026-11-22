@@ -71,7 +71,7 @@ func loadSpec() (*apiSpec, error) {
 }
 
 // specOf makes the operations of doc. It refuses a spec that breaks the
-// rules of decisions 00034 and 00036.
+// rules of decisions 00003 and 00004.
 func specOf(doc *openapi3.T) (*apiSpec, error) {
 	s := &apiSpec{operations: map[string]*operation{}}
 	for path, item := range doc.Paths.Map() {
@@ -109,7 +109,7 @@ func specOf(doc *openapi3.T) (*apiSpec, error) {
 
 // needsApproval is true for the operations that need a token. The
 // x-allow-unapproved extension is the exception. A new operation then needs
-// approval without a change here. See decision 00034.
+// approval without a change here. See decision 00003.
 func needsApproval(doc *openapi3.T, op *openapi3.Operation) bool {
 	return authOf(doc, op) == authRequired && op.Extensions["x-allow-unapproved"] != true
 }

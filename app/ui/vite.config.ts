@@ -10,7 +10,7 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   build: {
-    // The PocketBase app embeds this folder. See decision 00005.
+    // The PocketBase app embeds this folder. See decision 00002.
     outDir: '../api/internal/webui/dist',
     emptyOutDir: true,
     // Every asset is a file. The Content Security Policy blocks data: URLs.

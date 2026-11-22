@@ -10,7 +10,7 @@ import (
 )
 
 // subject has the tables of one kind of thing that users review. The review,
-// photo, rating, search, and list code takes a subject. See decision 00047.
+// photo, rating, search, and list code takes a subject. See decision 00005.
 type subject struct {
 	subjects.Tables
 	noun          string

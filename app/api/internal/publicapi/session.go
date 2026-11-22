@@ -13,7 +13,7 @@ const sessionCookieName = "reviews_session"
 var crossOrigin = http.NewCrossOriginProtection()
 
 // sameOrigin is false for an unsafe request that a browser sent from
-// another origin. Decision 00027 has the rules.
+// another origin. Decision 00003 has the rules.
 func sameOrigin(r *http.Request) bool {
 	return crossOrigin.Check(r) == nil
 }

@@ -7,7 +7,7 @@ import (
 
 // The reviewer page lists the restaurants of one creator by -created. The
 // new index also serves the queries of idx_restaurants_creator. See decision
-// 00032.
+// 00008.
 func init() {
 	m.Register(func(app core.App) error {
 		restaurants, err := app.FindCollectionByNameOrId("restaurants")

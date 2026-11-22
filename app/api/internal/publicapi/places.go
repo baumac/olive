@@ -206,7 +206,7 @@ type photonFeature struct {
 		OSMType     string `json:"osm_type"`
 		OSMID       int64  `json:"osm_id"`
 		// Extra has the OpenStreetMap tags of a server that imports them
-		// with -extra-tags. The public server has none. See decision 00038.
+		// with -extra-tags. The public server has none. See decision 00005.
 		Extra map[string]any `json:"extra"`
 	} `json:"properties"`
 }

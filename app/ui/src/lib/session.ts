@@ -5,11 +5,11 @@ import { parseTimestamp } from './format'
 const storageKey = 'reviews-session'
 
 // Session has no token. The token is in an HttpOnly cookie. See decision
-// 00027.
+// 00003.
 export interface Session {
   expires: string
   // issued is the browser time when the UI got the token. A session from
-  // before decision 00042 has no issued value.
+  // an older version has no issued value.
   issued?: string
   user: User
   // token is only in a session that an older version stored.
@@ -29,7 +29,7 @@ const session = ref<Session | null>(load())
 
 export const currentUser = computed(() => session.value?.user ?? null)
 export const signedIn = computed(() => session.value !== null)
-// A session from before decision 00034 has no approved value. Its user was
+// A session of an older version has no approved value. Its user was
 // approved by the migration.
 export const pendingApproval = computed(() => session.value?.user.approved === false)
 

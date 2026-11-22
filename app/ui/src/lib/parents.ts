@@ -3,7 +3,7 @@ import { formatCount } from './format'
 
 export interface ParentAccess {
   // canEdit is true for each signed in user. Each approved user can change
-  // each restaurant and recipe. See decision 00051.
+  // each restaurant and recipe. See decision 00006.
   canEdit: boolean
   // isCreator is true if the user can delete the parent.
   isCreator: boolean
@@ -12,10 +12,10 @@ export interface ParentAccess {
   hasOtherReviews: boolean
 }
 
-// parentAccess follows the rules of decisions 00016 and 00051 for a
+// parentAccess follows the rules of decision 00006 for a
 // restaurant or a recipe. A parent without a creator belongs to each user who
 // has a review of it. ownReviewCount is the count of the user of the token.
-// See decision 00050.
+// See decision 00007.
 export function parentAccess(parent: Pick<Parent, 'creator' | 'reviewCount' | 'ownReviewCount'>, userId: string | undefined): ParentAccess {
   const own = userId ? parent.ownReviewCount : 0
   const isCreator = !!userId && (parent.creator ? parent.creator.id === userId : own > 0)

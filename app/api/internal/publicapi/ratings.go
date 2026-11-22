@@ -11,7 +11,7 @@ import (
 
 // overallColumn is NULL for a parent without reviews. It needs joinOverall.
 // SQLite triggers keep the overall table equal to the records. See decision
-// 00012.
+// 00007.
 func (sub subject) overallColumn() string {
 	return column(sub.Overall, "overall")
 }
@@ -62,7 +62,7 @@ func ratingsOf[R any](s *Server, sub subject, parents []*core.Record, parentOf f
 	return out, nil
 }
 
-// ratingsQuery reads the values that the triggers of decision 00054 store.
+// ratingsQuery reads the values that the triggers of decision 00007 store.
 func (s *Server) ratingsQuery(sub subject, ids []any) *dbx.Query {
 	columns := []string{column(sub.Overall, sub.Parent), column(sub.Overall, "review_count") + " AS [[count]]", sub.overallColumn()}
 	for _, name := range sub.Scores {
@@ -84,7 +84,7 @@ func (r restaurantRating) toAPI() reviewsapi.RestaurantRating {
 }
 
 // overallSort puts parents without reviews last in both directions. Its
-// keys are the columns of one index with one direction. See decision 00054.
+// keys are the columns of one index with one direction. See decision 00007.
 func (sub subject) overallSort(desc bool) []sortKey {
 	missing := column(sub.Overall, "unrated")
 	if desc {
@@ -99,7 +99,7 @@ func (sub subject) overallSort(desc bool) []sortKey {
 }
 
 // overallSortVersion is in the fingerprint of each overall sort. The keys
-// changed in decisions 00012, 00029, and 00054. The version rejects the
+// changed three times. Decision 00007 has them. The version rejects the
 // cursors of the old keys.
 const overallSortVersion = 4
 

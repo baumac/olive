@@ -31,7 +31,7 @@ type email struct {
 	paragraphs []string
 }
 
-// postman sends the emails of the Public API. See decision 00037.
+// postman sends the emails of the Public API. See decision 00003.
 type postman struct {
 	app core.App
 	// limiter counts the emails of each kind and address. A request without

@@ -15,7 +15,7 @@ import type {
 import { listsApi, recipesApi, restaurantsApi, reviewersApi } from './api'
 import { type ScoreField, recipeScoreFields, scoreFields } from './reviews'
 
-// A review kind is a kind of thing that users review. See decision 00047.
+// A review kind is a kind of thing that users review. See decision 00005.
 export type ReviewKind = 'restaurant' | 'recipe'
 export type AnyReview = RestaurantReview | RecipeReview
 export type Parent = Restaurant | Recipe
@@ -45,7 +45,7 @@ export interface KindInfo {
   plural: string
   // path is the path of the list page, such as /restaurants.
   path: string
-  // dateLabel names the date of a review. See decision 00050.
+  // dateLabel names the date of a review. See decision 00007.
   dateLabel: string
   // occasion is the noun of one visit or one cook.
   occasion: string
@@ -67,7 +67,7 @@ export interface KindInfo {
   listPhotos(parentId: string, params: { limit?: number; cursor?: string }): Promise<Page<ParentPhoto>>
   addToList(listRef: string, id: string): Promise<void>
   removeFromList(listRef: string, id: string): Promise<void>
-  // listVersions lists the history, the newest first. See decision 00055.
+  // listVersions lists the history, the newest first. See decision 00006.
   listVersions(parentId: string, params: { limit?: number; cursor?: string }): Promise<Page<RestaurantVersion | RecipeVersion>>
 }
 

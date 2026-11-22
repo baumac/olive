@@ -304,7 +304,7 @@ func stateFrom(ctx context.Context) *state {
 }
 
 // prepare does the checks that come before the operation handler. Decision
-// 00004 lists them in order. It also checks each response against the spec.
+// 00002 lists them in order. It also checks each response against the spec.
 func (s *Server) prepare(mux *http.ServeMux) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// A panic gets Problem Details. The PocketBase recovery would answer

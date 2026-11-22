@@ -37,7 +37,7 @@ const failureText: Record<Failure, { title: string; description: string }> = {
 }
 
 // The link alone does not confirm the account. Another person can sign up
-// with this email address and set the password. See decision 00039.
+// with this email address and set the password. See decision 00003.
 async function confirm() {
   passwordError.value = password.value === '' ? 'Enter your password.' : ''
   if (passwordError.value) {

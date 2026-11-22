@@ -4,7 +4,7 @@ import { priceLevels } from './restaurantDetails'
 import { type ReviewKind, kinds } from './reviewKinds'
 import { tagList } from './reviews'
 
-// The history of restaurants and recipes. See decision 00055.
+// The history of restaurants and recipes. See decision 00006.
 export type AnyVersion = RestaurantVersion | RecipeVersion
 
 // The properties have the camel case names of the SDK.

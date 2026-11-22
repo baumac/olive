@@ -2,7 +2,7 @@
 
 Shows the cover photo of a restaurant in a box with a fixed aspect ratio. Project component, not part of shadcn-vue.
 
-Lives in `@/components/ui/cover-photo`. Props: `photo` (the `cover` of a `Restaurant`, or `null`), `size` (`card` or `hero`), `alt`. Decision 00030 selects the cover.
+Lives in `@/components/ui/cover-photo`. Props: `photo` (the `cover` of a `Restaurant`, or `null`), `size` (`card` or `hero`), `alt`. Decision 00009 selects the cover.
 
 - `card` shows the `thumb` image in a 16:9 box. It loads lazily. It is the first part of the restaurant `Card`, flush with its top and sides.
 - `hero` shows the `full` image in a 16:9 box, 21:9 from `sm`. It is the first part of the restaurant page, with `radius-xl`. Its `srcset` lets a narrow screen load the `thumb`.

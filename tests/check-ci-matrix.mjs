@@ -1,6 +1,6 @@
 // check-ci-matrix fails when the e2e matrix of the CI workflow and the
 // projects of playwright.config.ts differ. A project that is not in the
-// matrix does not run in CI. See decision 00010.
+// matrix does not run in CI. See decision 00015.
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 

@@ -104,7 +104,7 @@ onMounted(async () => {
       for (const s of scoreFields) {
         scores[s.name] = draft.scores?.[s.name] ?? scores[s.name] ?? null
       }
-      // A draft from before decision 00050 has no date.
+      // A draft of an older version has no date.
       fields.value = { date: draft.date ?? fields.value.date, title: draft.title, feedback: draft.feedback, scores }
     }
   } catch (error) {

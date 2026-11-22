@@ -9,7 +9,7 @@ Project component built from `Card`, `Form`, `Input`, `Button` and `Alert`, like
   - "Name": `autocomplete="nickname"`, 1 to 255 characters, not only spaces. Help text: "Other people see this name on your restaurants and reviews." Required.
   - "Email": `type="email"`, `autocomplete="email"`, at most 255 characters. Required.
   - "Password": `autocomplete="new-password"`, 8 to 71 characters and at most 72 bytes in UTF-8. Help text: "8 to 71 characters." Required. Has the show/hide toggle from `SignInForm`.
-  - "Confirm password": `autocomplete="new-password"`. Required. Has the show/hide toggle. The UI checks it. The API does not get it. See decision 00028.
+  - "Confirm password": `autocomplete="new-password"`. Required. Has the show/hide toggle. The UI checks it. The API does not get it. See decision 00003.
 - Check the fields when the person leaves each one and on submit, with the same rules as the API. Show the first error next to its field and move focus to the first invalid field.
 - One `default` button "Create account", full width. While the request runs, disable it and show "Creating account…".
 - Below the button: "Already have an account? Sign in", linking to the sign in page with the same `redirect` query.

@@ -1,5 +1,5 @@
 // Package history keeps a version of each create and each change of a
-// restaurant or a recipe. See decision 00055.
+// restaurant or a recipe. See decision 00006.
 package history
 
 import (

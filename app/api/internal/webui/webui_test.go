@@ -166,7 +166,7 @@ func TestRoutes(t *testing.T) {
 			t.Errorf("%s: Content-Security-Policy %q", tc.path, w.Header().Get("Content-Security-Policy"))
 		}
 		// The tile server of the maps needs the Referer header. See decision
-		// 00018.
+		// 00010.
 		if got := w.Header().Get("Referrer-Policy"); strings.Contains(got, "no-referrer") && got != "no-referrer-when-downgrade" {
 			t.Errorf("%s: Referrer-Policy %q", tc.path, got)
 		}

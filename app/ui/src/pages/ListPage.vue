@@ -40,7 +40,7 @@ const recipes = usePagedList<RecipeSummary>(async (cursor) => {
 })
 
 // kind selects the restaurants or the recipes of the list. See decision
-// 00047.
+// 00005.
 const kind = useKindQuery()
 
 watch(() => props.listId, () => void list.load(), { immediate: true })

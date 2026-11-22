@@ -6,7 +6,7 @@ import (
 )
 
 // The Public API has no profile pictures. PocketBase serves uploads from the
-// origin of the UI. The CSP of decision 00005 trusts this origin.
+// origin of the UI. The CSP of decision 00002 trusts this origin.
 func init() {
 	m.Register(func(app core.App) error {
 		users, err := app.FindCollectionByNameOrId("users")

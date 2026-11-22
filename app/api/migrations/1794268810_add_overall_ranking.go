@@ -9,7 +9,7 @@ import (
 )
 
 // The overall sort uses the ranking column. The overall column stays the
-// value of the responses. See decision 00029.
+// value of the responses. See decision 00007.
 func init() {
 	m.Register(func(app core.App) error {
 		return execAll(app, slices.Concat(

@@ -15,7 +15,7 @@ import (
 )
 
 // makeGalleryKeys puts the photos of the best review first. The first photo
-// of a parent is its cover. See decision 00030.
+// of a parent is its cover. See decision 00009.
 func makeGalleryKeys(sub subject) []sortKey {
 	return []sortKey{
 		{expr: sub.reviewOverall(), desc: true},

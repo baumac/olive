@@ -10,7 +10,7 @@ import (
 
 // The rating of a restaurant or a recipe is the average of its reviewers.
 // The overall sort uses this value and then the number of reviewers. See
-// decision 00054.
+// decision 00007.
 func init() {
 	kinds := []overallKind{restaurantOverall, recipeOverall}
 	m.Register(func(app core.App) error {
@@ -65,7 +65,7 @@ type overallKind struct {
 	reviewTriggers string
 	scores         reviewScores
 	insertTags     func(row string) string
-	// ranking and makeRankingSort make the table of decision 00029 again.
+	// ranking and makeRankingSort make the table of decision 00007 again.
 	ranking         func(parent string) string
 	makeRankingSort func() []string
 }

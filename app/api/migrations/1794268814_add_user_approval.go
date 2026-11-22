@@ -6,7 +6,7 @@ import (
 )
 
 // The users that exist before this migration are approved. A superuser
-// approves each later user in the dashboard. See decision 00034.
+// approves each later user in the dashboard. See decision 00003.
 func init() {
 	m.Register(func(app core.App) error {
 		users, err := app.FindCollectionByNameOrId("users")

@@ -1,7 +1,7 @@
 import type { FilterDef, FilterValue, Option } from '@/components/ui/filter-bar'
 import { formatMinutes } from '@/lib/format'
 
-// The filters and the sorts of the recipes page. See decision 00047.
+// The filters and the sorts of the recipes page. See decision 00005.
 
 const totalTimes = [15, 30, 45, 60, 120]
 
