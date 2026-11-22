@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/baumac/reviews-app/app/api/internal/history"
 	"github.com/baumac/reviews-app/app/api/internal/photocleanup"
 	"github.com/baumac/reviews-app/app/api/internal/publicapi"
 	"github.com/baumac/reviews-app/app/api/internal/searchindex"
@@ -41,6 +42,7 @@ func setup(app *pocketbase.PocketBase, getenv func(string) string) error {
 	}
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{TemplateLang: migratecmd.TemplateLangGo})
 	searchindex.Register(app)
+	history.Register(app)
 	publicapi.Register(app, opts)
 	photocleanup.Register(app)
 	usercleanup.Register(app)

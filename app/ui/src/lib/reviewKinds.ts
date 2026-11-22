@@ -5,10 +5,12 @@ import type {
   RecipeReview,
   RecipeReviewCreate,
   RecipeSummary,
+  RecipeVersion,
   Restaurant,
   RestaurantPhoto,
   RestaurantReview,
   RestaurantReviewCreate,
+  RestaurantVersion,
 } from '@reviews/sdk'
 import { listsApi, recipesApi, restaurantsApi, reviewersApi } from './api'
 import { type ScoreField, recipeScoreFields, scoreFields } from './reviews'
@@ -65,6 +67,8 @@ export interface KindInfo {
   listPhotos(parentId: string, params: { limit?: number; cursor?: string }): Promise<Page<ParentPhoto>>
   addToList(listRef: string, id: string): Promise<void>
   removeFromList(listRef: string, id: string): Promise<void>
+  // listVersions lists the history, the newest first. See decision 00055.
+  listVersions(parentId: string, params: { limit?: number; cursor?: string }): Promise<Page<RestaurantVersion | RecipeVersion>>
 }
 
 // The score fields of the SDK have the type any. These builders name each
@@ -109,6 +113,7 @@ const restaurant: KindInfo = {
   listPhotos: (restaurantId, params) => restaurantsApi.listRestaurantPhotos({ restaurantId, ...params }),
   addToList: (listRef, restaurantId) => listsApi.addListRestaurant({ listRef, restaurantId }),
   removeFromList: (listRef, restaurantId) => listsApi.removeListRestaurant({ listRef, restaurantId }),
+  listVersions: (restaurantId, params) => restaurantsApi.listRestaurantVersions({ restaurantId, ...params }),
 }
 
 const recipe: KindInfo = {
@@ -136,6 +141,7 @@ const recipe: KindInfo = {
   listPhotos: (recipeId, params) => recipesApi.listRecipePhotos({ recipeId, ...params }),
   addToList: (listRef, recipeId) => listsApi.addListRecipe({ listRef, recipeId }),
   removeFromList: (listRef, recipeId) => listsApi.removeListRecipe({ listRef, recipeId }),
+  listVersions: (recipeId, params) => recipesApi.listRecipeVersions({ recipeId, ...params }),
 }
 
 export const kinds: Record<ReviewKind, KindInfo> = { restaurant, recipe }

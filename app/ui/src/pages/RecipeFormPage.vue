@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import type { Recipe } from '@reviews/sdk'
 import { ArrowDownIcon, ArrowUpIcon, CircleAlertIcon, PlusIcon, XIcon } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import ErrorPage from '@/components/app/ErrorPage.vue'
+import UndoAlert from '@/components/app/UndoAlert.vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FormControl, FormDescription, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -14,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, notApprovedText, recipesApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
+import { type Undo, findUndo, undoNumber } from '@/lib/history'
 import { normalizeWebsite } from '@/lib/restaurantDetails'
 import { changedPatch, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
@@ -31,6 +34,7 @@ import {
 
 const props = defineProps<{ recipeId?: string }>()
 const router = useRouter()
+const route = useRoute()
 
 const editing = computed(() => props.recipeId !== undefined)
 usePageTitle(() => (editing.value ? 'Edit recipe' : 'Add a recipe'))
@@ -72,11 +76,27 @@ const deleteBlocked = ref(false)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `recipe:${props.recipeId ?? 'new'}`)
+// undo is the change that ?undo of the history page undoes. See decision
+// 00055.
+const undo = ref<Undo | null | undefined>(undefined)
 const cancelPath = computed(() => (props.recipeId ? `/recipes/${props.recipeId}` : '/recipes'))
 
 function setSteps(steps: string[]) {
   fields.value.steps = steps.length ? steps : ['']
   stepKeys.value = fields.value.steps.map(() => nextKey++)
+}
+
+function fieldsOf(r: Recipe): Fields {
+  return {
+    name: r.name,
+    description: r.description ?? '',
+    tags: tagList(r.tags),
+    ingredients: r.ingredients.join('\n'),
+    steps: [...r.steps],
+    source: r.source ?? '',
+    totalTime: r.totalTime ? String(r.totalTime) : '',
+    servings: r.servings ? String(r.servings) : '',
+  }
 }
 
 onMounted(async () => {
@@ -85,18 +105,17 @@ onMounted(async () => {
       const r = await recipesApi.getRecipe({ recipeId: props.recipeId })
       const access = parentAccess(r, currentUser.value?.id)
       deleteBlocked.value = access.isCreator && access.hasOtherReviews
-      loaded.value = {
-        name: r.name,
-        description: r.description ?? '',
-        tags: tagList(r.tags),
-        ingredients: r.ingredients.join('\n'),
-        steps: [...r.steps],
-        source: r.source ?? '',
-        totalTime: r.totalTime ? String(r.totalTime) : '',
-        servings: r.servings ? String(r.servings) : '',
-      }
+      loaded.value = fieldsOf(r)
       fields.value = { ...loaded.value, tags: [...loaded.value.tags] }
       setSteps([...r.steps])
+      const number = undoNumber(route.query.undo)
+      if (number) {
+        undo.value = await findUndo('recipe', r.id, number).catch(() => null)
+        if (undo.value) {
+          fields.value = fieldsOf({ ...r, ...undo.value.values })
+          setSteps([...fields.value.steps])
+        }
+      }
     } catch (error) {
       failed.value = { status: (await apiFailure(error)).status }
       return
@@ -264,6 +283,7 @@ async function submit() {
       <Skeleton class="h-9" /><Skeleton class="h-24" /><Skeleton class="h-9" />
     </div>
     <form v-else class="grid gap-6" novalidate @submit.prevent="submit">
+      <UndoAlert v-if="undo !== undefined" kind="recipe" :undo="undo" />
       <Alert v-if="alert" variant="destructive">
         <CircleAlertIcon aria-hidden="true" />
         <AlertTitle>{{ alert.title }}</AlertTitle>

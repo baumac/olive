@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Recipe } from '@reviews/sdk'
-import { PencilIcon } from 'lucide-vue-next'
+import { HistoryIcon, PencilIcon } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -105,6 +105,9 @@ async function remove() {
             <template v-if="access?.canEdit">
               <Button variant="outline" as-child>
                 <RouterLink :to="`/recipes/${recipeId}/edit`"><PencilIcon aria-hidden="true" />Edit recipe</RouterLink>
+              </Button>
+              <Button variant="outline" as-child>
+                <RouterLink :to="`/recipes/${recipeId}/history`"><HistoryIcon aria-hidden="true" />History</RouterLink>
               </Button>
               <ConfirmDelete
                 v-if="access.isCreator && !access.hasOtherReviews"

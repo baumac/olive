@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Restaurant } from '@reviews/sdk'
-import { MapPinIcon, PencilIcon } from 'lucide-vue-next'
+import { HistoryIcon, MapPinIcon, PencilIcon } from 'lucide-vue-next'
 import { useMediaQuery } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -125,6 +125,9 @@ async function remove() {
               <template v-if="access?.canEdit">
                 <Button variant="outline" as-child>
                   <RouterLink :to="`/restaurants/${restaurantId}/edit`"><PencilIcon aria-hidden="true" />Edit restaurant</RouterLink>
+                </Button>
+                <Button variant="outline" as-child>
+                  <RouterLink :to="`/restaurants/${restaurantId}/history`"><HistoryIcon aria-hidden="true" />History</RouterLink>
                 </Button>
                 <ConfirmDelete
                   v-if="access.isCreator && !access.hasOtherReviews"

@@ -474,9 +474,14 @@ func (s *Server) recordsInOrder(collection string, ids []string) ([]*core.Record
 }
 
 func (s *Server) creators(records ...*core.Record) (map[string]*core.Record, error) {
+	return s.usersOf("creator", records)
+}
+
+// usersOf gets the users of a relation field of records by their IDs.
+func (s *Server) usersOf(field string, records []*core.Record) (map[string]*core.Record, error) {
 	ids := map[string]bool{}
 	for _, r := range records {
-		if id := r.GetString("creator"); id != "" {
+		if id := r.GetString(field); id != "" {
 			ids[id] = true
 		}
 	}

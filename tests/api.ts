@@ -4,6 +4,7 @@ import type {
   Photo,
   Recipe,
   RecipeCreate,
+  RecipePatch,
   RecipeReview,
   RecipeReviewCreate,
   Restaurant,
@@ -182,6 +183,10 @@ export class TestApi {
     return new RecipesApi(this.config(user.token)).createRecipe({
       recipeCreate: { ...rest, tags: tags ? new Set(tags) : undefined, ingredients: ingredients ?? ['1 egg'], steps: steps ?? ['Cook it.'] },
     })
+  }
+
+  updateRecipe(user: TestUser, recipeId: string, recipePatch: RecipePatch): Promise<Recipe> {
+    return new RecipesApi(this.config(user.token)).updateRecipe({ recipeId, recipePatch })
   }
 
   createRecipeReview(user: TestUser, recipeId: string, review: WithOptionalDate<RecipeReviewCreate>): Promise<RecipeReview> {

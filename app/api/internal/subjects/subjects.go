@@ -8,10 +8,12 @@ type Tables struct {
 	// problem details.
 	Table string
 	// Parent is the relation field of a review and of a list item.
-	Parent     string
-	Reviews    string
-	Photos     string
-	ListItems  string
+	Parent    string
+	Reviews   string
+	Photos    string
+	ListItems string
+	// Versions has the history of each record of Table. See decision 00055.
+	Versions   string
 	Overall    string
 	Tags       string
 	FTS        string
@@ -32,6 +34,7 @@ var Restaurants = Tables{
 	Reviews:       "reviews",
 	Photos:        "review_photos",
 	ListItems:     "list_items",
+	Versions:      "restaurant_versions",
 	Overall:       "restaurant_overall",
 	Tags:          "restaurant_tags",
 	FTS:           "restaurants_fts",
@@ -46,6 +49,7 @@ var Recipes = Tables{
 	Reviews:       "recipe_reviews",
 	Photos:        "recipe_review_photos",
 	ListItems:     "list_recipes",
+	Versions:      "recipe_versions",
 	Overall:       "recipe_overall",
 	Tags:          "recipe_tags",
 	FTS:           "recipes_fts",

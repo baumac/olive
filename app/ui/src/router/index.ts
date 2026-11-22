@@ -35,6 +35,12 @@ export const router = createRouter({
     },
     { path: '/restaurants/:restaurantId', component: () => import('@/pages/RestaurantPage.vue'), props: true },
     {
+      path: '/restaurants/:restaurantId/history',
+      component: () => import('@/pages/HistoryPage.vue'),
+      props: (route) => ({ kind: 'restaurant', parentId: route.params.restaurantId }),
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    {
       path: '/restaurants/:restaurantId/edit',
       component: () => import('@/pages/RestaurantFormPage.vue'),
       props: true,
@@ -63,6 +69,12 @@ export const router = createRouter({
       meta: { requiresAuth: true, requiresApproval: true },
     },
     { path: '/recipes/:recipeId', component: () => import('@/pages/RecipePage.vue'), props: true },
+    {
+      path: '/recipes/:recipeId/history',
+      component: () => import('@/pages/HistoryPage.vue'),
+      props: (route) => ({ kind: 'recipe', parentId: route.params.recipeId }),
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
     {
       path: '/recipes/:recipeId/edit',
       component: () => import('@/pages/RecipeFormPage.vue'),

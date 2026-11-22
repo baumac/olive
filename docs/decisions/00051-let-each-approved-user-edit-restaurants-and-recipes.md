@@ -44,7 +44,7 @@ In scope:
 Out of scope:
 - the rules of `deleteRestaurant` and `deleteRecipe`. Only the creator can delete, as before.
   The reviews of other users still block the delete. A delete also deletes the reviews of the user.
-- an edit history, or a "Changed by" line on the page
+- an edit history, or a "Changed by" line on the page. Decision 00055 adds the history.
 - a report flow. The backlog has reports under "Won't do".
 - a check of the `updated` value before a save. Two changes of the same field keep the last one.
 - the rules of reviews, photos, and lists
@@ -108,6 +108,7 @@ A user can change or clear each restaurant and recipe. The group accepts this ri
 - Only approved users can change a restaurant or a recipe. A superuser takes the approval back, as decision 00034 says.
 - The PocketBase request logs name the user of each `PATCH`. A superuser finds the user there.
 - The backups of decision 00022 have the old values. A superuser types them in the dashboard.
+- Decision 00055 adds a history of each change. Each approved user can undo a change in the UI.
 - Another approved user can also fix a wrong value in the UI.
 - The edit limit of decision 00036 is 300 changes of each operation per user and hour.
 

@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.   `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.   The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.   `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.   A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.   The `source` of a recipe with reviews of other users cannot change. - Version 7.0.0 allows many reviews of one user for one restaurant or recipe. A review is one visit or one cook.   Each review has a required `date`. The review lists sort by `-date` by default.   The `review_exists` code is gone.   Restaurants and recipes have the `own_review_count` of the user of the token. - Version 7.1.0 lets each approved user change each property of each restaurant and recipe.   The reviews of other users do not lock the `name`, the `location`, the `source`, the `ingredients`, or the `steps` any more. - Version 8.0.0 removes the `cleanliness` score of restaurant reviews, its filter, and its sort.   The `overall` of a restaurant review is now the average of four scores. It can have two decimals. - Version 8.1.0 counts each reviewer one time in `rating`. A reviewer counts with the average of the own reviews.   The `overall` sort uses `rating.overall`, then the number of reviewers. It does not use a Bayesian average any more.   A cursor of the `overall` sort from an older version gets `400 Bad Request`. 
+ * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants and recipes are the exception. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`. - Version 2.1.0 adds the `reviews_session` cookie. - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation. - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.   It adds the password reset and the operations of `/users/me`.   It also adds the lists of restaurants, the approval of new users, and the limits of the write operations. - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.   It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.   It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts. - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.   A client that checks the responses against the old `Tag` pattern refuses these tags.   The API changes tags to Unicode normalization form C. - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token. - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`. - Version 5.3.0 adds the `price_level` filter of `listRestaurants`. - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews. - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists. - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.   `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.   The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.   `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.   A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.   The `source` of a recipe with reviews of other users cannot change. - Version 7.0.0 allows many reviews of one user for one restaurant or recipe. A review is one visit or one cook.   Each review has a required `date`. The review lists sort by `-date` by default.   The `review_exists` code is gone.   Restaurants and recipes have the `own_review_count` of the user of the token. - Version 7.1.0 lets each approved user change each property of each restaurant and recipe.   The reviews of other users do not lock the `name`, the `location`, the `source`, the `ingredients`, or the `steps` any more. - Version 8.0.0 removes the `cleanliness` score of restaurant reviews, its filter, and its sort.   The `overall` of a restaurant review is now the average of four scores. It can have two decimals. - Version 8.1.0 counts each reviewer one time in `rating`. A reviewer counts with the average of the own reviews.   The `overall` sort uses `rating.overall`, then the number of reviewers. It does not use a Bayesian average any more.   A cursor of the `overall` sort from an older version gets `400 Bad Request`. - Version 8.2.0 adds `listRestaurantVersions` and `listRecipeVersions`. Each change of a restaurant or a recipe makes a version. 
  *
- * The version of the OpenAPI document: 8.1.0
+ * The version of the OpenAPI document: 8.2.0
  * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
@@ -93,6 +93,11 @@ import {
     RestaurantReviewPatchFromJSON,
     RestaurantReviewPatchToJSON,
 } from '../models/RestaurantReviewPatch.js';
+import {
+    type RestaurantVersionList,
+    RestaurantVersionListFromJSON,
+    RestaurantVersionListToJSON,
+} from '../models/RestaurantVersionList.js';
 import {
     type ScoreRange,
     ScoreRangeFromJSON,
@@ -383,6 +388,24 @@ export interface ListRestaurantReviewsRequest {
      * The `creator.id` is equal to any of the values.
      */
     creatorIn?: Array<string>;
+}
+
+export interface ListRestaurantVersionsRequest {
+    /**
+     * The ID of the restaurant.
+     */
+    restaurantId: string;
+    /**
+     * The page size.
+     */
+    limit?: number;
+    /**
+     * The `next_cursor` value of the previous page.
+     * Clients must not parse or build cursor values.
+     * A cursor is valid only with the same filters and sort that made it.
+     * 
+     */
+    cursor?: string;
 }
 
 export interface ListRestaurantsRequest {
@@ -906,6 +929,34 @@ export interface RestaurantsApiInterface {
      * List the reviews of a restaurant
      */
     listRestaurantReviews(requestParameters: ListRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReviewList>;
+
+    /**
+     * Creates request options for listRestaurantVersions without sending the request
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    listRestaurantVersionsRequestOpts(requestParameters: ListRestaurantVersionsRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * Each create and each change of a restaurant makes a version. The newest version comes first. A version has only the properties that changed. `before` has their old values. `after` has their new values. The history has no versions from before version 8.2.0 of this document. An undo is a normal update. It makes a new version. 
+     * @summary List the versions of a restaurant
+     * @param {string} restaurantId The ID of the restaurant.
+     * @param {number} [limit] The page size.
+     * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof RestaurantsApiInterface
+     */
+    listRestaurantVersionsRaw(requestParameters: ListRestaurantVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantVersionList>>;
+
+    /**
+     * Each create and each change of a restaurant makes a version. The newest version comes first. A version has only the properties that changed. `before` has their old values. `after` has their new values. The history has no versions from before version 8.2.0 of this document. An undo is a normal update. It makes a new version. 
+     * List the versions of a restaurant
+     */
+    listRestaurantVersions(requestParameters: ListRestaurantVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantVersionList>;
 
     /**
      * Creates request options for listRestaurants without sending the request
@@ -1897,6 +1948,69 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
      */
     async listRestaurantReviews(requestParameters: ListRestaurantReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantReviewList> {
         const response = await this.listRestaurantReviewsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listRestaurantVersions without sending the request
+     */
+    async listRestaurantVersionsRequestOpts(requestParameters: ListRestaurantVersionsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['restaurantId'] == null) {
+            throw new runtime.RequiredError(
+                'restaurantId',
+                'Required parameter "restaurantId" was null or undefined when calling listRestaurantVersions().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/restaurants/{restaurantId}/versions`;
+        urlPath = urlPath.replace('{restaurantId}', encodeURIComponent(String(requestParameters['restaurantId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Each create and each change of a restaurant makes a version. The newest version comes first. A version has only the properties that changed. `before` has their old values. `after` has their new values. The history has no versions from before version 8.2.0 of this document. An undo is a normal update. It makes a new version. 
+     * List the versions of a restaurant
+     */
+    async listRestaurantVersionsRaw(requestParameters: ListRestaurantVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RestaurantVersionList>> {
+        const requestOptions = await this.listRestaurantVersionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RestaurantVersionListFromJSON(jsonValue));
+    }
+
+    /**
+     * Each create and each change of a restaurant makes a version. The newest version comes first. A version has only the properties that changed. `before` has their old values. `after` has their new values. The history has no versions from before version 8.2.0 of this document. An undo is a normal update. It makes a new version. 
+     * List the versions of a restaurant
+     */
+    async listRestaurantVersions(requestParameters: ListRestaurantVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RestaurantVersionList> {
+        const response = await this.listRestaurantVersionsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -104,12 +104,14 @@ func TestRecipeTriggers(t *testing.T) {
 func TestRecipesMigrationDown(t *testing.T) {
 	t.Parallel()
 	app := newIndexApp(t)
-	items, err := app.FindCollectionByNameOrId("list_recipes")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.Delete(items); err != nil {
-		t.Fatal(err)
+	for _, name := range []string{"list_recipes", "recipe_versions"} {
+		c, err := app.FindCollectionByNameOrId(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := app.Delete(c); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := dropRecipes(app); err != nil {
 		t.Fatal(err)

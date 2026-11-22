@@ -35,7 +35,7 @@ Out of scope:
   Changes by all users need an edit history and a report flow to undo vandalism. The app has neither, and sign up has no email verification.
   Decision 00051 changes this. Each approved user can change each restaurant at any time. The delete rules stay.
 - a moderator role. A moderator needs reports from users, and the backlog has reports under "Won't Do".
-- an edit history of restaurants
+- an edit history of restaurants. Decision 00055 adds it.
 - a rename after other users wrote reviews. Only a superuser can do it in the dashboard.
 - the rules of reviews and photos
 

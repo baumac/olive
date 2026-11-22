@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/baumac/reviews-app/app/api/internal/history"
+	"github.com/baumac/reviews-app/app/api/internal/recordvalues"
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
@@ -141,7 +143,7 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 		if duplicate, err = restaurantWithPlace(tx, r); err != nil || duplicate != "" {
 			return err
 		}
-		return tx.Save(r)
+		return tx.SaveWithContext(history.WithEditor(ctx, user.Id), r)
 	})
 	if err != nil {
 		return nil, err
@@ -218,7 +220,7 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 		if !ch.changed {
 			return nil
 		}
-		return tx.Save(r)
+		return tx.SaveWithContext(history.WithEditor(ctx, user.Id), r)
 	})
 	if err != nil {
 		return nil, err
@@ -337,13 +339,13 @@ func restaurantWithPlace(app core.App, r *core.Record) (string, error) {
 // locationOf returns null for a restaurant without an address. Such a
 // restaurant is from before decision 00017.
 func locationOf(r *core.Record) nullable.Nullable[reviewsapi.Location] {
-	address := r.GetString("address")
-	if address == "" {
+	stored := recordvalues.LocationOf(r)
+	if stored == nil {
 		return nullable.NewNullNullable[reviewsapi.Location]()
 	}
-	l := reviewsapi.Location{Latitude: r.GetFloat("latitude"), Longitude: r.GetFloat("longitude"), Address: address}
-	if id := r.GetString("place_id"); id != "" {
-		l.PlaceId = &id
+	l := reviewsapi.Location{Latitude: stored.Latitude, Longitude: stored.Longitude, Address: stored.Address}
+	if stored.PlaceID != "" {
+		l.PlaceId = &stored.PlaceID
 	}
 	return nullable.NewNullableWithValue(l)
 }
@@ -450,10 +452,7 @@ func toCreator(user *core.Record) reviewsapi.Creator {
 // optionalText returns nil for an empty text. PocketBase stores an empty
 // string for a text that is not set.
 func optionalText(r *core.Record, field string) *string {
-	if v := r.GetString(field); v != "" {
-		return &v
-	}
-	return nil
+	return recordvalues.OptionalText(r, field)
 }
 
 func setOptionalText(r *core.Record, field string, v *string) {
@@ -465,18 +464,11 @@ func setOptionalText(r *core.Record, field string, v *string) {
 // priceLevelOf returns nil for the stored 0 of a restaurant without a price
 // level.
 func priceLevelOf(r *core.Record) *reviewsapi.PriceLevel {
-	if v := r.GetInt("price_level"); v != 0 {
-		return &v
-	}
-	return nil
+	return recordvalues.OptionalNumber(r, "price_level")
 }
 
 func tagsOf(r *core.Record) *reviewsapi.Tags {
-	var tags []string
-	if err := r.UnmarshalJSONField("tags", &tags); err != nil || tags == nil {
-		return nil
-	}
-	return &tags
+	return recordvalues.OptionalList(r, "tags")
 }
 
 // changes sets only the fields that get a different value. A merge patch

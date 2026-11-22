@@ -1,14 +1,14 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 8.1.0
+  version: 8.2.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants and recipes.
 
     Sign up and sign in do not require authentication.
     Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token.
     Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter.
-    Read operations do not require authentication.
+    Read operations do not require authentication. The version lists of restaurants and recipes are the exception.
     Create, update, and delete operations of restaurants, recipes, and reviews require an auth token.
     The place search also requires an auth token.
     A request with an invalid token gets `401 Unauthorized`, also on read operations.
@@ -56,6 +56,7 @@ info:
     - Version 8.1.0 counts each reviewer one time in `rating`. A reviewer counts with the average of the own reviews.
       The `overall` sort uses `rating.overall`, then the number of reviewers. It does not use a Bayesian average any more.
       A cursor of the `overall` sort from an older version gets `400 Bad Request`.
+    - Version 8.2.0 adds `listRestaurantVersions` and `listRecipeVersions`. Each change of a restaurant or a recipe makes a version.
 
 servers:
   - url: /v1
@@ -815,6 +816,42 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/versions:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    get:
+      operationId: listRestaurantVersions
+      summary: List the versions of a restaurant
+      description: |
+        Each create and each change of a restaurant makes a version. The newest version comes first.
+        A version has only the properties that changed. `before` has their old values. `after` has their new values.
+        The history has no versions from before version 8.2.0 of this document.
+        An undo is a normal update. It makes a new version.
+      tags: [restaurants]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of versions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantVersionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -1621,6 +1658,42 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /recipes/{recipeId}/versions:
+    parameters:
+      - $ref: '#/components/parameters/RecipeId'
+    get:
+      operationId: listRecipeVersions
+      summary: List the versions of a recipe
+      description: |
+        Each create and each change of a recipe makes a version. The newest version comes first.
+        A version has only the properties that changed. `before` has their old values. `after` has their new values.
+        The history has no versions from before version 8.2.0 of this document.
+        An undo is a normal update. It makes a new version.
+      tags: [recipes]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of versions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeVersionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -3593,6 +3666,116 @@ components:
       examples:
         - servings: 4
           source: null
+    VersionAction:
+      description: |
+        `create` is the version of a new subject. Its `before` is empty.
+        `update` is a change.
+      type: string
+      enum: [create, update]
+    VersionSource:
+      description: |
+        `user` is a change through the Public API. `editor` then names the user.
+        `admin` is a change in the dashboard or by a migration. Its `editor` is `null`.
+      type: string
+      enum: [user, admin]
+    RecipeVersionValues:
+      description: |
+        The properties of a recipe that a version changed. `null` is a property without a value.
+        The other properties are not in the object.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+        description:
+          oneOf:
+            - $ref: '#/components/schemas/LongText'
+            - type: 'null'
+        tags:
+          oneOf:
+            - $ref: '#/components/schemas/Tags'
+            - type: 'null'
+        ingredients:
+          $ref: '#/components/schemas/Ingredients'
+        steps:
+          $ref: '#/components/schemas/Steps'
+        source:
+          oneOf:
+            - $ref: '#/components/schemas/Website'
+            - type: 'null'
+        total_time:
+          oneOf:
+            - $ref: '#/components/schemas/TotalTime'
+            - type: 'null'
+        servings:
+          oneOf:
+            - $ref: '#/components/schemas/Servings'
+            - type: 'null'
+    RecipeVersion:
+      description: One create or one change of a recipe.
+      type: object
+      required: [id, number, action, source, editor, before, after, created]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        number:
+          description: The number of the version. Each recipe counts from 1. A bigger number is newer.
+          type: integer
+          minimum: 1
+        action:
+          $ref: '#/components/schemas/VersionAction'
+        source:
+          $ref: '#/components/schemas/VersionSource'
+        editor:
+          description: The user of the change. It is `null` for the source `admin` and after that user is deleted.
+          oneOf:
+            - $ref: '#/components/schemas/Creator'
+            - type: 'null'
+        before:
+          $ref: '#/components/schemas/RecipeVersionValues'
+        after:
+          $ref: '#/components/schemas/RecipeVersionValues'
+        created:
+          $ref: '#/components/schemas/Timestamp'
+      examples:
+        - id: v7e2r9s4i1o6n3a
+          number: 2
+          action: update
+          source: user
+          editor:
+            id: u5n1c8r3t6y0b2e
+            name: Joe
+          before:
+            servings: 2
+          after:
+            servings: 4
+          created: '2024-11-05T10:12:40.120Z'
+    RecipeVersionList:
+      description: A page of the versions of a recipe. The newest version comes first.
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipeVersion'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: v7e2r9s4i1o6n3a
+              number: 2
+              action: update
+              source: user
+              editor:
+                id: u5n1c8r3t6y0b2e
+                name: Joe
+              before:
+                servings: 2
+              after:
+                servings: 4
+              created: '2024-11-05T10:12:40.120Z'
+          next_cursor: null
     RecipeList:
       description: A page of recipes.
       type: object
@@ -3942,6 +4125,110 @@ components:
       examples:
         - description: A family-run Italian restaurant since 1987
           tags: null
+    RestaurantVersionValues:
+      description: |
+        The properties of a restaurant that a version changed. `null` is a property without a value.
+        The other properties are not in the object.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+        description:
+          oneOf:
+            - $ref: '#/components/schemas/LongText'
+            - type: 'null'
+        tags:
+          oneOf:
+            - $ref: '#/components/schemas/Tags'
+            - type: 'null'
+        location:
+          oneOf:
+            - $ref: '#/components/schemas/Location'
+            - type: 'null'
+        website:
+          oneOf:
+            - $ref: '#/components/schemas/Website'
+            - type: 'null'
+        phone:
+          oneOf:
+            - $ref: '#/components/schemas/Phone'
+            - type: 'null'
+        opening_hours:
+          oneOf:
+            - $ref: '#/components/schemas/OpeningHours'
+            - type: 'null'
+        price_level:
+          oneOf:
+            - $ref: '#/components/schemas/PriceLevel'
+            - type: 'null'
+    RestaurantVersion:
+      description: One create or one change of a restaurant.
+      type: object
+      required: [id, number, action, source, editor, before, after, created]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        number:
+          description: The number of the version. Each restaurant counts from 1. A bigger number is newer.
+          type: integer
+          minimum: 1
+        action:
+          $ref: '#/components/schemas/VersionAction'
+        source:
+          $ref: '#/components/schemas/VersionSource'
+        editor:
+          description: The user of the change. It is `null` for the source `admin` and after that user is deleted.
+          oneOf:
+            - $ref: '#/components/schemas/Creator'
+            - type: 'null'
+        before:
+          $ref: '#/components/schemas/RestaurantVersionValues'
+        after:
+          $ref: '#/components/schemas/RestaurantVersionValues'
+        created:
+          $ref: '#/components/schemas/Timestamp'
+      examples:
+        - id: v7e2r9s4i1o6n3a
+          number: 2
+          action: update
+          source: user
+          editor:
+            id: u5n1c8r3t6y0b2e
+            name: Joe
+          before:
+            phone: 931 000 000
+            description: Small tapas bar
+          after:
+            phone: 931 111 111
+            description: null
+          created: '2024-11-05T10:12:40.120Z'
+    RestaurantVersionList:
+      description: A page of the versions of a restaurant. The newest version comes first.
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestaurantVersion'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: v7e2r9s4i1o6n3a
+              number: 2
+              action: update
+              source: user
+              editor:
+                id: u5n1c8r3t6y0b2e
+                name: Joe
+              before:
+                phone: 931 000 000
+              after:
+                phone: 931 111 111
+              created: '2024-11-05T10:12:40.120Z'
+          next_cursor: null
     RestaurantList:
       description: A page of restaurants.
       type: object

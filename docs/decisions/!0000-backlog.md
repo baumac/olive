@@ -8,8 +8,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For claude
 
-- Restaurants and recipes should have a versioned history so that edits can be reverted
-
 ## For Me
 
 - review all decisions against decision 00000-create-reviews-app.md

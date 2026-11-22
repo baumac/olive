@@ -2,10 +2,11 @@
 import type { Location, Place, Restaurant } from '@reviews/sdk'
 import { CircleAlertIcon, MapPinIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import LocationField from '@/components/app/LocationField.vue'
+import UndoAlert from '@/components/app/UndoAlert.vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FormControl, FormDescription, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -17,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, notApprovedText, restaurantsApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
+import { type Undo, findUndo, undoNumber } from '@/lib/history'
 import { nearbyRadius, sameLocation } from '@/lib/places'
 import { normalizeWebsite, priceLevels } from '@/lib/restaurantDetails'
 import { changedPatch, parentAccess } from '@/lib/parents'
@@ -26,6 +28,7 @@ import { checkLongText, checkName, checkOpeningHours, checkPhone, checkWebsite }
 
 const props = defineProps<{ restaurantId?: string }>()
 const router = useRouter()
+const route = useRoute()
 
 const editing = computed(() => props.restaurantId !== undefined)
 usePageTitle(() => (editing.value ? 'Edit restaurant' : 'Add a restaurant'))
@@ -55,7 +58,23 @@ const deleteBlocked = ref(false)
 const loading = ref(editing.value)
 const failed = ref<{ status: number | null } | null>(null)
 const draftKey = computed(() => `restaurant:${props.restaurantId ?? 'new'}`)
+// undo is the change that ?undo of the history page undoes. See decision
+// 00055.
+const undo = ref<Undo | null | undefined>(undefined)
 const cancelPath = computed(() => (props.restaurantId ? `/restaurants/${props.restaurantId}` : '/restaurants'))
+
+function fieldsOf(r: Restaurant): Fields {
+  return {
+    name: r.name,
+    description: r.description ?? '',
+    tags: tagList(r.tags),
+    location: r.location,
+    website: r.website ?? '',
+    phone: r.phone ?? '',
+    openingHours: r.openingHours ?? '',
+    priceLevel: r.priceLevel ?? null,
+  }
+}
 
 onMounted(async () => {
   if (props.restaurantId) {
@@ -63,17 +82,15 @@ onMounted(async () => {
       const r = await restaurantsApi.getRestaurant({ restaurantId: props.restaurantId })
       const access = parentAccess(r, currentUser.value?.id)
       deleteBlocked.value = access.isCreator && access.hasOtherReviews
-      loaded.value = {
-        name: r.name,
-        description: r.description ?? '',
-        tags: tagList(r.tags),
-        location: r.location,
-        website: r.website ?? '',
-        phone: r.phone ?? '',
-        openingHours: r.openingHours ?? '',
-        priceLevel: r.priceLevel ?? null,
-      }
+      loaded.value = fieldsOf(r)
       fields.value = { ...loaded.value, tags: [...loaded.value.tags] }
+      const number = undoNumber(route.query.undo)
+      if (number) {
+        undo.value = await findUndo('restaurant', r.id, number).catch(() => null)
+        if (undo.value) {
+          fields.value = fieldsOf({ ...r, ...undo.value.values })
+        }
+      }
     } catch (error) {
       failed.value = { status: (await apiFailure(error)).status }
       return
@@ -256,6 +273,7 @@ async function submit() {
       <Skeleton class="h-9" /><Skeleton class="h-24" /><Skeleton class="h-9" />
     </div>
     <form v-else class="grid gap-6" novalidate @submit.prevent="submit">
+      <UndoAlert v-if="undo !== undefined" kind="restaurant" :undo="undo" />
       <Alert v-if="alert" variant="destructive">
         <CircleAlertIcon aria-hidden="true" />
         <AlertTitle>{{ alert.title }}</AlertTitle>

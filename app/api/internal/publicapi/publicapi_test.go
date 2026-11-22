@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/baumac/reviews-app/app/api/internal/history"
 	"github.com/baumac/reviews-app/app/api/internal/publicapi"
 	"github.com/baumac/reviews-app/app/api/internal/searchindex"
 	"github.com/baumac/reviews-app/app/api/internal/testapp"
@@ -51,6 +52,7 @@ func newEnv(t *testing.T, opts publicapi.Options) *env {
 		opts.EmailLimit = 1000
 	}
 	searchindex.Register(app)
+	history.Register(app)
 	publicapi.Register(app, opts)
 	router, err := apis.NewRouter(app)
 	if err != nil {

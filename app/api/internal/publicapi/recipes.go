@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/baumac/reviews-app/app/api/internal/history"
+	"github.com/baumac/reviews-app/app/api/internal/recordvalues"
 	"github.com/baumac/reviews-app/app/api/internal/subjects"
 	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/oapi-codegen/nullable"
@@ -143,7 +145,7 @@ func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRe
 	setOptionalNumber(r, "servings", b.Servings)
 	r.Set("creator", user.Id)
 
-	conflict, err := s.saveRecipe(r)
+	conflict, err := s.saveRecipe(history.WithEditor(ctx, user.Id), r)
 	if err != nil {
 		return nil, err
 	}
@@ -160,13 +162,13 @@ func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRe
 // saveRecipe returns the conflict of a source that another recipe has. It
 // then does not save r. The unique index also blocks a second recipe with
 // the source.
-func (s *Server) saveRecipe(r *core.Record) (*reviewsapi.ConflictApplicationProblemPlusJSONResponse, error) {
+func (s *Server) saveRecipe(ctx context.Context, r *core.Record) (*reviewsapi.ConflictApplicationProblemPlusJSONResponse, error) {
 	var duplicate string
 	err := s.app.RunInTransaction(func(tx core.App) (err error) {
 		if duplicate, err = recipeWithSource(tx, r); err != nil || duplicate != "" {
 			return err
 		}
-		return tx.Save(r)
+		return tx.SaveWithContext(ctx, r)
 	})
 	taken := isSourceTaken(err)
 	if taken {
@@ -331,7 +333,7 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 		if !ch.changed {
 			return nil
 		}
-		return tx.Save(r)
+		return tx.SaveWithContext(history.WithEditor(ctx, user.Id), r)
 	})
 	if isSourceTaken(err) {
 		return reviewsapi.UpdateRecipe409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: sourceConflict(takenSource(s.app, current))}, nil
@@ -473,19 +475,12 @@ func toRecipeSummary(r *core.Record, users map[string]*core.Record, ratings map[
 // listOf returns an empty array for a field that is not a JSON array of
 // strings. The spec requires the array.
 func listOf(r *core.Record, field string) []string {
-	var items []string
-	if err := r.UnmarshalJSONField(field, &items); err != nil || items == nil {
-		return []string{}
-	}
-	return items
+	return recordvalues.List(r, field)
 }
 
 // optionalNumber returns nil for the stored 0 of a number that is not set.
 func optionalNumber(r *core.Record, field string) *int {
-	if v := r.GetInt(field); v != 0 {
-		return &v
-	}
-	return nil
+	return recordvalues.OptionalNumber(r, field)
 }
 
 func setOptionalNumber(r *core.Record, field string, v *int) {

@@ -141,6 +141,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - a `Tag` has the lowercase letters and digits of all scripts. A schema with `x-nfc: true` gets Unicode normalization form C before the validation, in the body and in the query. See decision 00041.
     - each approved user can change each property of each restaurant and recipe. The reviews of other users do not lock a property. See decision 00051.
     - only the creator can delete a restaurant or a recipe. The reviews of other users block the delete. See decision 00016.
+    - `listRestaurantVersions` and `listRecipeVersions` list the history of each change. Only approved users can read them. An undo is a normal update. See decision 00055.
     - each operation that needs a token also needs an approved user. It must have a `403` response. `x-allow-unapproved: true` is the exception for sign out, token refresh, and the operations of `/users/me`. See decision 00034.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00027.
     - the `reviewers` tag has the public profile of a user and the lists of the restaurant reviews and the recipe reviews of a user
@@ -159,7 +160,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00004.
   - **`app/api/main.go`** - the PocketBase app
-  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, and `list_recipes` collections
+  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, `list_recipes`, `restaurant_versions`, and `recipe_versions` collections
+    - A migration that drops or renames a property of `restaurants` or `recipes` also changes the `snapshot` of their versions. See decision 00055.
     - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decision 00012.
     - `restaurant_overall` and `recipe_overall` have the rating of each restaurant or recipe. Each reviewer counts one time. The `overall` sort uses the overall and the number of reviewers. See decision 00054.
     - A migration that drops a score column of `reviews` or `recipe_reviews` also drops its column of the overall table.
@@ -178,6 +180,9 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - A record hook sets the `source_key` of each recipe save. Its unique index stops two recipes with one source. See decision 00047.
     - `mail.go` sends the emails of the sign up, the password reset, and the approval. See decision 00037.
   - **`app/api/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00004.
+  - **`app/api/internal/history`** - the record hooks that write a version of each save of a restaurant or a recipe. See decision 00055.
+    - A Public API save of a restaurant or a recipe calls `SaveWithContext` with `history.WithEditor`. A save without it gets the source `admin`.
+  - **`app/api/internal/recordvalues`** - the API values of the fields of restaurants and recipes. The Public API and the history use them. See decision 00055.
   - **`app/api/internal/subjects`** - the table names of each kind of thing that users review. The Public API and the search index use them. See decision 00047.
   - **`app/api/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00009.
   - **`app/api/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00034.
@@ -198,6 +203,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - `app/ui/src/lib/reviewKinds.ts` has the score fields, the paths, and the API calls of restaurants and recipes. The review form, the review page, the review list, and the gallery work for both. See decision 00047.
   - The UI shows the `date` of a review as "Visited on" or "Cooked on". `parseDay` of `format.ts` reads it as a local date. `new Date()` would read it as UTC. See decision 00050.
   - `?kind=recipes` selects the recipes on "My reviews", a reviewer page, and a list page. `KindSwitch` sets it.
+  - `HistoryPage.vue` shows the versions. `?undo=NUMBER` of the edit form undoes one version. `lib/history.ts` has the undo. See decision 00055.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00006.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name
