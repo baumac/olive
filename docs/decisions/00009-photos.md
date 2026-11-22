@@ -107,7 +107,7 @@ The app turned the pixels, so `width` and `height` show the photo upright. It ma
 
 | Limit | Value | Status |
 |---|---|---|
-| upload size | 10 MB | `413` |
+| upload size | 10 MiB | `413` |
 | upload types | `image/jpeg`, `image/png`, `image/webp` | `415` |
 | pixels of the upload | at most 25 megapixels, at most 8192 on each side | `422` |
 | photos of a review | 5 | `409` with `photo_limit` |
@@ -177,18 +177,18 @@ The gallery order:
 | 2 | the upload limit of the user | `429` |
 | 3 | the path parameters | `400` |
 | 4 | the content type | `415` |
-| 5 | `Content-Length` is at most 10 MB | `413` |
+| 5 | `Content-Length` is at most 10 MiB | `413` |
 | 6 | the subject and the review exist | `404` |
 | 7 | the user is the creator of the review | `403` |
 | 8 | the review has fewer than 5 photos | `409` |
-| 9 | the body is at most 10 MB. `http.MaxBytesReader` stops the read. | `413` |
+| 9 | the body is at most 10 MiB. `http.MaxBytesReader` stops the read. | `413` |
 | 10 | the memory limit has space for the body, at each step of the read | `429` |
 | 11 | the first bytes match the content type | `422` |
 | 12 | `image.DecodeConfig` gives a size inside the pixel limits | `422` |
 | 13 | the image decodes | `422` |
 | 14 | in one transaction: the review, its creator, the count, and the save | `404`, `403`, `409` |
 
-- checks 6 to 8 run before the app reads the body. A client that cannot add a photo then does not send 10 MB for nothing.
+- checks 6 to 8 run before the app reads the body. A client that cannot add a photo then does not send 10 MiB for nothing.
 - check 12 reads only the header. A small file that claims 50,000 by 50,000 pixels never decodes.
 - check 14 repeats checks 6 to 8. PocketBase has one SQLite writer, so two parallel uploads cannot both pass the count.
 - the decode and the encode run before the transaction. They are slow, and the transaction blocks other writes.

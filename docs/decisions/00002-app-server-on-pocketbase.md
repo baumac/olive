@@ -134,7 +134,7 @@ A change that breaks one of these rules fails the end-to-end tests with the text
 
 - `limitBody` of the `/v1` route replaces the body limit of PocketBase. It has the same ID, `pbBodyLimit`.
 - the PocketBase limit is 32 MB, and its `413` is not Problem Details
-- `limitBody` limits each body under `/v1` to 10 MB, the largest photo upload of decision 00009. A larger `Content-Length` gets `413` before the handler.
+- `limitBody` limits each body under `/v1` to 10 MiB, the largest photo upload of decision 00009. A larger `Content-Length` gets `413` before the handler.
 - `readBody` limits each JSON body to 256 KB. A body without `Content-Length` fails at the first read over 256 KB with the same `413`.
 - the largest valid JSON body is about 100 KB. `TestBodyLimit` sends bodies of 33 MB with and without `Content-Length`.
 

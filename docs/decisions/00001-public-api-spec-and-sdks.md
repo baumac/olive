@@ -186,7 +186,7 @@ An array item has a zero-based index, such as `tags[2]`.
 | `403` | a user without approval, a sign in before the email confirmation, or a change that only the creator can do |
 | `404` | the resource or the parent in the path does not exist |
 | `409` | a conflict with stored data, such as a place or a source that another record has, or a full list |
-| `413` | a body over the size limit, such as a photo over 10 MB |
+| `413` | a body over the size limit, such as a photo over 10 MiB |
 | `415` | a wrong content type |
 | `422` | an invalid value in the body |
 | `429` | a rate limit. The response has a `Retry-After` header. Decision 00004 has the limits. |
