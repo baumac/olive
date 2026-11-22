@@ -145,7 +145,7 @@ In the UI:
 The UI sends `cookie=true` with `signIn`, `confirmEmail`, `refreshToken`, and `changePassword`. The response then has this header and no `token`:
 
 ```
-Set-Cookie: reviews_session=eyJhbGciOi...; Path=/v1; Max-Age=604800; HttpOnly; Secure; SameSite=Strict
+Set-Cookie: reviews_session=eyJhbGciOi...; Path=/v1; Max-Age=432000; HttpOnly; Secure; SameSite=Strict
 ```
 
 - the browser sends the cookie with each request to `/v1`. The API uses its token as the bearer token.
@@ -170,7 +170,7 @@ Sign out ends all sessions of the user. A sign out on one device also signs out 
 - all tabs of one browser have the same session. A sign out in one tab signs out the other tabs. A sign in in one tab signs in the other tabs.
 - a token refresh in one tab gives the new `expires` to the other tabs
 - at start, the UI calls `getCurrentUser`. It refreshes the token only after half of the token time.
-- the token duration is 7 days. A person who visits at least one time in 3.5 days stays signed in.
+- the token duration is 5 days, the PocketBase default of the `users` collection. A person who visits at least one time in 2.5 days stays signed in.
 
 ## Delete of an account
 
