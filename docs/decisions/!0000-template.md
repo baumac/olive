@@ -1,7 +1,11 @@
 ---
 description: The description of the decision.
-status: The status of the decision.
+status: The status of the decision, such as proposed, in progress, or implemented.
 ---
+
+A decision covers one topic. It describes the current design of the topic.
+A change of a requirement updates the decision of its topic. A new topic gets a new decision.
+Git keeps the old texts. The decision does not tell its own history.
 
 # Motivation
 [motivation]: #motivation
@@ -33,6 +37,12 @@ This is the technical portion of the RFC. Explain the design in sufficient detai
 - Include examples that dissect corner cases.
 
 The section should return to the examples given in the guide-level-explanation section and explain more fully how the detailed proposal makes those examples work.
+
+# Alternatives
+[alternatives]: #alternatives
+
+List each design that was rejected or removed. Give one line for each, with the reason.
+A removed design keeps its reason here, so that nobody brings it back without that reason.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

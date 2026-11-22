@@ -282,4 +282,8 @@ comments you write or edit. Commit messages are always necessary.
 
 - Substantive design decisions are recorded as decisions under `docs/decisions/`
   Start from `docs/decisions/!0000-template.md`.
+- Each decision covers one topic and describes its current design.
+  A change of a requirement updates the decision of its topic.
+  Make a new decision only for a new topic.
+- A rejected or removed design gets one line with its reason in the Alternatives section of its decision.
 - Backlog items for a future date are in `docs/decisions/!0000-backlog.md`
