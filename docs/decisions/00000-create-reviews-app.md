@@ -35,6 +35,7 @@ In scope:
 Out of scope:
 - The choice of technology. Later decisions cover it. See [Implementation Details](#implementation-details).
 - Specifying the exact things that can be reviewed
+- Wines and cheeses in the first release. The first release has restaurants and recipes. A later decision can add them. The backlog has them under "For the Future".
 - Social features, such as comments, likes, follows, and messages. The users are few and talk to each other in other ways.
 - Ads or other income
 
@@ -51,7 +52,7 @@ The app runs on our home server.
 It is reachable via the public internet at reviews.sponga47.com.
 
 New concepts:
-- **Subjects**: a thing that users review. The app has restaurants and recipes.
+- **Subjects**: a thing that users review. The first release has restaurants and recipes. Decision 00047 gives the pattern for more kinds, such as wines and cheeses.
 - **Review**: the scores, the text, and the photos of one user for one subject.
 - **Reviewer**: a user who writes reviews. Each reviewer has a public profile page.
 - **List**: a named group of subjects. Each user has a favorites list.
