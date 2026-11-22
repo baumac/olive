@@ -9,32 +9,17 @@ Each sub-bullet point contains notes about the incomplete decision.
 ## For claude
 
 ## For Me
-
-- review all decisions against decision 00000-create-reviews-app.md
-  - Useful prompt: `"00000-create-reviews-app.md" contains the original motivations for the creating the app. Can you review all decisions in doc/decisions against "00000-create-reviews-app.md" and create a list of any decisions that are not aligned with the original motivations?`
-  - generate a list of all potential decisions that go against it
-  - decide if we want to revert those decisions
-  - Findings of the review on 2026-11-22:
-    - Not aligned at first, fixed by a later decision:
-      - 00001: only restaurants, no text search, and one review per user and restaurant. Fixed by 00047, the search index, and 00050.
-      - 00013: canonical links for search engines. Fixed by 00053.
-      - 00016: only the creator can edit, for "an open public site". Fixed by 00051 and 00055.
-      - 00021: structured data and a sitemap for search engines. Fixed by 00049 and 00053.
-      - 00029: a ranking for about 200 reviews per restaurant. Fixed by 00054.
-      - 00038: structured data for search engines in the expected outcome. Fixed by 00049.
-    - Resolved:
-      - 00047: wines and cheeses are out of scope. 00000 now puts them out of scope for the first release.
-      - 00017 and 00018: the maps and the place search use public servers. 00000 now puts self-hosted options out of scope for the first release.
-      - 00053: robots.txt keeps all crawlers out. The bots of the usual chat apps do not obey it or have no documentation. Only X and LinkedIn surely lose the preview. See the "Link previews" table of 00053.
-      - 00036 and 00047: the app has no bulk import. A superuser imports old data in the dashboard or with the PocketBase API. See "Won't do".
-      - 00033 and 00034: all reviews, reviewer names, and lists are public without an account. 00000 now makes this the intended way to share with friends without an account.
-      - 00006, 00024, 00026, 00036, and 00055: the rate limits, the version history, the end-to-end tests in many browsers, Renovate, and the coverage checks are heavier than a small group needs. 00000 now makes this the intended quality bar.
-- consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
+- Can you make a plan to consolidate decision docs into far fewer decision docs? For context, decisions are meant to be living documents that evolve as requirements change. Today, there are many decisions that were initially made and then either superseded, fixed, or replaced by a future decision. This results in duplicate information and makes the duplicates hard to follow.
+  - Some examples are:
+    - 00001: only restaurants, no text search, and one review per user and restaurant. Fixed by 00047, the search index, and 00050.
+    - 00013: canonical links for search engines. Fixed by 00053.
+    - 00016: only the creator can edit, for "an open public site". Fixed by 00051 and 00055.
+    - 00021: structured data and a sitemap for search engines. Fixed by 00049 and 00053.
+    - 00029: a ranking for about 200 reviews per restaurant. Fixed by 00054.
+    - 00038: structured data for search engines in the expected outcome. Fixed by 00049.
+- add note in agents.md decisions are meant to be living documents that evolve as requirements change
 - verify app implementation against consolidated decisions
 - deploy to prod
-- check the link previews on the deployed site
-  - share a restaurant, a recipe, and a review in each chat app that we use, such as WhatsApp, Signal, iMessage, Telegram, and Discord
-  - if an app shows no preview because of robots.txt, a new decision adds an `Allow` group for its bot. 00053 leaves this group to a later decision.
 
 ## For the Future
 
