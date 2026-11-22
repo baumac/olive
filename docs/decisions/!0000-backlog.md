@@ -15,9 +15,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - generate a list of all potential decisions that go against it
   - decide if we want to revert those decisions
   - Findings of the review on 2026-11-22:
-    - Partly aligned:
-      - 00053: robots.txt keeps all crawlers out. Link preview bots that obey it show no preview of a shared link. The share example of 00000 then loses the preview of 00013.
-      - 00036 and 00047: the app has no bulk import and no recipe import from a URL. The default create limit is 30 per hour. A user must type each past experience by hand.
     - Not aligned at first, fixed by a later decision:
       - 00001: only restaurants, no text search, and one review per user and restaurant. Fixed by 00047, the search index, and 00050.
       - 00013: canonical links for search engines. Fixed by 00053.
@@ -31,9 +28,14 @@ Each sub-bullet point contains notes about the incomplete decision.
     - Resolved:
       - 00047: wines and cheeses are out of scope. 00000 now puts them out of scope for the first release.
       - 00017 and 00018: the maps and the place search use public servers. 00000 now puts self-hosted options out of scope for the first release.
+      - 00053: robots.txt keeps all crawlers out. The bots of the usual chat apps do not obey it or have no documentation. Only X and LinkedIn surely lose the preview. See the "Link previews" table of 00053.
+      - 00036 and 00047: the app has no bulk import. A superuser imports old data in the dashboard or with the PocketBase API. See "Won't do".
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
 - verify app implementation against consolidated decisions
 - deploy to prod
+- check the link previews on the deployed site
+  - share a restaurant, a recipe, and a review in each chat app that we use, such as WhatsApp, Signal, iMessage, Telegram, and Discord
+  - if an app shows no preview because of robots.txt, a new decision adds an `Allow` group for its bot. 00053 leaves this group to a later decision.
 
 ## For the Future
 
@@ -48,6 +50,8 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Allow directly uploading photos to restaurants or recipes: all photos must be uploaded via a review to force photos being associated to a review
 - Expose operations that can be worked around by having an admin use the PocketBase dashboard
   - No email change. UserPatch has only name; a new address needs the dashboard.
+  - No bulk import and no recipe import from a URL. A superuser adds old restaurants, recipes, and reviews in the dashboard or with the PocketBase API. The create limit of decision 00036 is only on the Public API.
+    - Add photos only through the Public API. A photo from the dashboard keeps its metadata, such as the GPS position.
 - Add IOS app: won't do for now as this requires a mac laptop and side-loading the app from that device, or a 99$ per year subscription to host the app in the app store
 - Add load tests: not needed as the number of users are quite low
 - Support oauth2 logins: not needed since email/password based authentication is sufficient

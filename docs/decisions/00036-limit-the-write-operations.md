@@ -31,7 +31,7 @@ Out of scope:
 - a limit for all write operations of a user together. Each operation keeps its own count, the same as the other limits.
 - a limit that stays after a restart. The counts are in the memory of the process. See decision 00022.
 - the read operations.
-- supporting large bulk imports. Adding a rate limit works against this.
+- supporting large bulk imports. Adding a rate limit works against this. A superuser imports old data in the dashboard or with the PocketBase API.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
