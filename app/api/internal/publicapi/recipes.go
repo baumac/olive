@@ -74,7 +74,11 @@ func (s *Server) ListRecipes(ctx context.Context, req reviewsapi.ListRecipesRequ
 		return bad(detail)
 	}
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
-	query, err := fingerprint("recipes", p)
+	parts := []any{"recipes", p}
+	if sortsBy(sort, "overall") {
+		parts = append(parts, overallSortVersion)
+	}
+	query, err := fingerprint(parts...)
 	if err != nil {
 		return nil, err
 	}

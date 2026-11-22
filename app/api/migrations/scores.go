@@ -7,12 +7,13 @@ type reviewScores struct {
 	// triggerColumns are the parent column and the score columns. SQLite
 	// refuses to drop them while the triggers of decision 00012 exist.
 	triggerColumns []string
+	names          []string
 	sum            string
 	count          string
 }
 
 func newReviewScores(parent string, scores ...string) reviewScores {
-	s := reviewScores{triggerColumns: []string{"[[" + parent + "]]"}, count: strconv.Itoa(len(scores))}
+	s := reviewScores{triggerColumns: []string{"[[" + parent + "]]"}, names: scores, count: strconv.Itoa(len(scores))}
 	for i, name := range scores {
 		if i > 0 {
 			s.sum += " + "

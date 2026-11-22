@@ -271,24 +271,31 @@ test('restaurants show the average scores of their reviews', async ({ page, api 
 
 test('restaurants filter and sort by the overall rating', async ({ page, api }) => {
   const owner = await api.signUp('Joe')
+  const ana = await api.signUp('Ana')
   const tag = uniqueTag('overall')
   const top = await api.createRestaurant(owner, { name: 'Top Place', tags: [tag] })
+  const often = await api.createRestaurant(owner, { name: 'Often Place', tags: [tag] })
   const fine = await api.createRestaurant(owner, { name: 'Fine Place', tags: [tag] })
   await api.createRestaurant(owner, { name: 'Unrated Place', tags: [tag] })
   await api.createReview(owner, top.id, { space: 9, service: 9, food: 9, price: 9, title: 'Top' })
+  for (const title of ['First', 'Second', 'Third']) {
+    await api.createReview(owner, often.id, { space: 10, service: 10, food: 10, price: 10, title })
+  }
+  await api.createReview(ana, often.id, { space: 4, service: 4, food: 4, price: 4, title: 'Meh' })
   await api.createReview(owner, fine.id, { space: 6, service: 6, food: 6, price: 6, title: 'Fine' })
   const names = page.getByRole('heading', { level: 2, name: / Place$/ })
 
   // The highest rated restaurants are first without a sort in the link.
+  // Joe counts one time at Often Place. Its overall is 7, not 8.5.
   await page.goto(`/restaurants?tags=${tag}`)
   await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Highest rated')
-  await expect(names).toHaveText(['Top Place', 'Fine Place', 'Unrated Place'])
+  await expect(names).toHaveText(['Top Place', 'Often Place', 'Fine Place', 'Unrated Place'])
 
   await page.goto(`/restaurants?tags=${tag}&overall=8`)
   await expect(names).toHaveText(['Top Place'])
   await expect(page.getByText('Overall: 8 or more')).toBeVisible()
   await page.getByRole('button', { name: 'Remove filter overall 8 or more' }).click()
-  await expect(names).toHaveCount(3)
+  await expect(names).toHaveCount(4)
 })
 
 test('restaurants filter by the price level', async ({ page, api }) => {

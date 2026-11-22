@@ -97,6 +97,18 @@ func wantNoRanking(t *testing.T, app core.App, restaurant, when string) {
 	}
 }
 
+func wantReviewers(t *testing.T, app core.App, restaurant string, want int) {
+	t.Helper()
+	var got int
+	err := app.DB().Select("reviewers").From("restaurant_overall").Where(dbx.HashExp{"restaurant": restaurant}).Row(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Errorf("reviewers of %s: %d, want %d", restaurant, got, want)
+	}
+}
+
 func storedTags(t *testing.T, app core.App, restaurant string) []string {
 	t.Helper()
 	var tags []string
@@ -115,12 +127,12 @@ func TestOverallTriggers(t *testing.T) {
 	a := newRecord(t, app, "restaurants", map[string]any{"name": "A"})
 	b := newRecord(t, app, "restaurants", map[string]any{"name": "B"})
 	wantNoOverall(t, app, a.Id, "new restaurant")
-	wantNoRanking(t, app, a.Id, "new restaurant")
+	wantReviewers(t, app, a.Id, 0)
 
 	first := newRecord(t, app, "reviews", review(ana, a, scores(8)))
 	newRecord(t, app, "reviews", review(joe, a, map[string]any{"space": 7, "service": 7, "food": 7, "price": 3}))
 	wantOverall(t, app, a.Id, 7)
-	wantRanking(t, app, a.Id, (5*5.5+8+6)/7)
+	wantReviewers(t, app, a.Id, 2)
 
 	first.Set("food", 4)
 	if err := app.Save(first); err != nil {
@@ -134,14 +146,14 @@ func TestOverallTriggers(t *testing.T) {
 	}
 	wantOverall(t, app, a.Id, 6)
 	wantOverall(t, app, b.Id, 7)
-	wantRanking(t, app, a.Id, (5*5.5+6)/6)
-	wantRanking(t, app, b.Id, (5*5.5+7)/6)
+	wantReviewers(t, app, a.Id, 1)
+	wantReviewers(t, app, b.Id, 1)
 
 	if err := app.Delete(first); err != nil {
 		t.Fatal(err)
 	}
 	wantNoOverall(t, app, b.Id, "last review deleted")
-	wantNoRanking(t, app, b.Id, "last review deleted")
+	wantReviewers(t, app, b.Id, 0)
 
 	// The reviews of a user go with a cascade delete.
 	if err := app.Delete(joe); err != nil {
@@ -155,6 +167,41 @@ func TestOverallTriggers(t *testing.T) {
 	if _, ok := storedOverall(t, app, a.Id); ok {
 		t.Error("deleted restaurant still has a row")
 	}
+}
+
+func TestOverallCountsEachReviewerOnce(t *testing.T) {
+	t.Parallel()
+	app := newIndexApp(t)
+	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
+	ben := newRecord(t, app, "users", map[string]any{"email": "ben@example.com", "password": "correct-horse", "name": "Ben"})
+	a := newRecord(t, app, "restaurants", map[string]any{"name": "A"})
+	var visits []*core.Record
+	for range 4 {
+		visits = append(visits, newRecord(t, app, "reviews", review(ana, a, scores(10))))
+	}
+	newRecord(t, app, "reviews", review(ben, a, map[string]any{"space": 6, "service": 6, "food": 2, "price": 10}))
+	wantOverall(t, app, a.Id, 8)
+	wantReviewers(t, app, a.Id, 2)
+	var count int
+	var space, food, price float64
+	err := app.DB().Select("review_count", "space", "food", "price").From("restaurant_overall").Where(dbx.HashExp{"restaurant": a.Id}).Row(&count, &space, &food, &price)
+	if err != nil || count != 5 || space != 8 || food != 6 || price != 10 {
+		t.Errorf("review_count %d, space %v, food %v, price %v, error %v", count, space, food, price, err)
+	}
+
+	// Ana has 10, 10, and 10. Ben has 10 and 6.
+	visits[0].Set("creator", ben.Id)
+	if err := app.Save(visits[0]); err != nil {
+		t.Fatal(err)
+	}
+	wantOverall(t, app, a.Id, 9)
+	wantReviewers(t, app, a.Id, 2)
+
+	if err := app.Delete(ben); err != nil {
+		t.Fatal(err)
+	}
+	wantOverall(t, app, a.Id, 10)
+	wantReviewers(t, app, a.Id, 1)
 }
 
 func TestFailedSaveKeepsOverall(t *testing.T) {
@@ -190,7 +237,7 @@ func TestRawInsertGetsOverallRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantNoOverall(t, app, "rawrestaurant01", "raw insert")
-	wantNoRanking(t, app, "rawrestaurant01", "raw insert")
+	wantReviewers(t, app, "rawrestaurant01", 0)
 	if got := storedTags(t, app, "rawrestaurant01"); !slices.Equal(got, []string{"cheap"}) {
 		t.Errorf("raw insert tags: %v", got)
 	}

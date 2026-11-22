@@ -3,6 +3,8 @@ description: Store the overall average and the tags of each restaurant in indexe
 status: implemented
 ---
 
+Decision 00054 replaces the `ranking` of decision 00029 with `overall_or_0` and `reviewers`. It has the current schema.
+
 # Motivation
 [motivation]: #motivation
 

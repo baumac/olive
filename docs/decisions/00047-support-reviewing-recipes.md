@@ -3,6 +3,8 @@ description: Let users add recipes with ingredients and steps, review them with 
 status: implemented
 ---
 
+Decision 00054 replaces the Bayesian average of the recipe sort. Each reviewer counts one time in `rating`.
+
 # Motivation
 [motivation]: #motivation
 

@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -134,20 +135,7 @@ func newRecipeReviewPhotos(reviews *core.Collection) *core.Collection {
 // recipeTables makes the generated overall column of decision 00031, the
 // tables of decision 00012, and the FTS5 tables of decision 00004.
 func recipeTables() []string {
-	recipeValues := recipeScores.overall() + ", " + recipeScores.ranking()
-	ofReviews := func(values, recipe string) string {
-		return "SELECT " + values + " FROM {{recipe_reviews}} WHERE [[recipe_reviews.recipe]] = " + recipe
-	}
-	update := func(row string) string {
-		recipe := row + ".[[recipe]]"
-		return "UPDATE {{recipe_overall}} SET ([[overall]], [[ranking]]) = (" + ofReviews(recipeValues, recipe) +
-			") WHERE [[recipe]] = " + recipe + ";"
-	}
-	insertTags := func(row string) string {
-		return "INSERT OR IGNORE INTO {{recipe_tags}} ([[tag]], [[recipe]]) SELECT [[value]], " + row + ".[[id]] FROM " +
-			stringTags(row+".[[tags]]") + ";"
-	}
-	return []string{
+	return slices.Concat([]string{
 		"ALTER TABLE {{recipe_reviews}} ADD COLUMN [[overall]] REAL AS " + recipeScores.column(),
 		"CREATE INDEX {{idx_recipe_reviews_recipe_overall}} ON {{recipe_reviews}} ([[recipe]], [[overall]], [[id]])",
 		"CREATE INDEX {{idx_recipe_reviews_creator_overall}} ON {{recipe_reviews}} ([[creator]], [[overall]], [[id]])",
@@ -156,30 +144,54 @@ func recipeTables() []string {
 		"CREATE TABLE {{recipe_overall}} ([[recipe]] TEXT PRIMARY KEY NOT NULL, [[overall]] REAL, " +
 			"[[unrated]] INTEGER AS ([[overall]] IS NULL), [[rated]] INTEGER AS ([[overall]] IS NOT NULL), " +
 			"[[ranking]] REAL, [[ranking_or_0]] REAL AS (COALESCE([[ranking]], 0))) WITHOUT ROWID",
-		"CREATE INDEX {{idx_recipe_overall_asc}} ON {{recipe_overall}} ([[unrated]], [[ranking_or_0]], [[recipe]])",
-		"CREATE INDEX {{idx_recipe_overall_desc}} ON {{recipe_overall}} ([[rated]], [[ranking_or_0]], [[recipe]])",
 		"CREATE INDEX {{idx_recipe_overall_value}} ON {{recipe_overall}} ([[overall]])",
 		"CREATE TABLE {{recipe_tags}} ([[tag]] TEXT NOT NULL, [[recipe]] TEXT NOT NULL, PRIMARY KEY ([[tag]], [[recipe]])) WITHOUT ROWID",
 		"CREATE INDEX {{idx_recipe_tags_recipe}} ON {{recipe_tags}} ([[recipe]])",
-
-		"CREATE TRIGGER {{recipe_index_insert}} AFTER INSERT ON {{recipes}} BEGIN " +
-			"INSERT INTO {{recipe_overall}} ([[recipe]], [[overall]], [[ranking]]) " +
-			ofReviews("NEW.[[id]], "+recipeValues, "NEW.[[id]]") + "; " +
-			insertTags("NEW") + " END",
+	}, makeRecipeRankingSort(), []string{
 		"CREATE TRIGGER {{recipe_index_update}} AFTER UPDATE OF [[tags]] ON {{recipes}} WHEN OLD.[[tags]] IS NOT NEW.[[tags]] BEGIN " +
 			"DELETE FROM {{recipe_tags}} WHERE [[recipe]] = OLD.[[id]]; " +
-			insertTags("NEW") + " END",
+			insertRecipeTags("NEW") + " END",
 		"CREATE TRIGGER {{recipe_index_delete}} AFTER DELETE ON {{recipes}} BEGIN " +
 			"DELETE FROM {{recipe_overall}} WHERE [[recipe]] = OLD.[[id]]; " +
 			"DELETE FROM {{recipe_tags}} WHERE [[recipe]] = OLD.[[id]]; END",
-		"CREATE TRIGGER {{recipe_review_overall_insert}} AFTER INSERT ON {{recipe_reviews}} BEGIN " + update("NEW") + " END",
-		"CREATE TRIGGER {{recipe_review_overall_update}} AFTER UPDATE OF " + strings.Join(recipeScores.triggerColumns, ", ") +
-			" ON {{recipe_reviews}} WHEN " + anyChanged(recipeScores.triggerColumns) + " BEGIN " + update("NEW") + " " + update("OLD") + " END",
-		"CREATE TRIGGER {{recipe_review_overall_delete}} AFTER DELETE ON {{recipe_reviews}} BEGIN " + update("OLD") + " END",
 
 		"CREATE VIRTUAL TABLE {{recipes_fts}} USING fts5(id UNINDEXED, name, description, tags, ingredients, " +
 			"tokenize = 'unicode61 remove_diacritics 2', prefix = '2 3')",
 		"CREATE VIRTUAL TABLE {{recipe_reviews_fts}} USING fts5(id UNINDEXED, title, feedback, recipe_name, " +
 			"tokenize = 'unicode61 remove_diacritics 2', prefix = '2 3')",
+	})
+}
+
+// recipeRankingValues are the overall and the ranking of decision 00029.
+var recipeRankingValues = recipeScores.overall() + ", " + recipeScores.ranking()
+
+func selectOfRecipeReviews(values, recipe string) string {
+	return "SELECT " + values + " FROM {{recipe_reviews}} WHERE [[recipe_reviews.recipe]] = " + recipe
+}
+
+// makeRecipeRankingSort makes the sort indexes and the triggers of the
+// ranking of decision 00029.
+func makeRecipeRankingSort() []string {
+	update := func(row string) string {
+		recipe := row + ".[[recipe]]"
+		return "UPDATE {{recipe_overall}} SET ([[overall]], [[ranking]]) = (" + selectOfRecipeReviews(recipeRankingValues, recipe) +
+			") WHERE [[recipe]] = " + recipe + ";"
 	}
+	return []string{
+		"CREATE INDEX {{idx_recipe_overall_asc}} ON {{recipe_overall}} ([[unrated]], [[ranking_or_0]], [[recipe]])",
+		"CREATE INDEX {{idx_recipe_overall_desc}} ON {{recipe_overall}} ([[rated]], [[ranking_or_0]], [[recipe]])",
+		"CREATE TRIGGER {{recipe_index_insert}} AFTER INSERT ON {{recipes}} BEGIN " +
+			"INSERT INTO {{recipe_overall}} ([[recipe]], [[overall]], [[ranking]]) " +
+			selectOfRecipeReviews("NEW.[[id]], "+recipeRankingValues, "NEW.[[id]]") + "; " +
+			insertRecipeTags("NEW") + " END",
+		"CREATE TRIGGER {{recipe_review_overall_insert}} AFTER INSERT ON {{recipe_reviews}} BEGIN " + update("NEW") + " END",
+		"CREATE TRIGGER {{recipe_review_overall_update}} AFTER UPDATE OF " + strings.Join(recipeScores.triggerColumns, ", ") +
+			" ON {{recipe_reviews}} WHEN " + anyChanged(recipeScores.triggerColumns) + " BEGIN " + update("NEW") + " " + update("OLD") + " END",
+		"CREATE TRIGGER {{recipe_review_overall_delete}} AFTER DELETE ON {{recipe_reviews}} BEGIN " + update("OLD") + " END",
+	}
+}
+
+func insertRecipeTags(row string) string {
+	return "INSERT OR IGNORE INTO {{recipe_tags}} ([[tag]], [[recipe]]) SELECT [[value]], " + row + ".[[id]] FROM " +
+		stringTags(row+".[[tags]]") + ";"
 }

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 8.0.0
+  version: 8.1.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants and recipes.
 
@@ -53,6 +53,9 @@ info:
       The reviews of other users do not lock the `name`, the `location`, the `source`, the `ingredients`, or the `steps` any more.
     - Version 8.0.0 removes the `cleanliness` score of restaurant reviews, its filter, and its sort.
       The `overall` of a restaurant review is now the average of four scores. It can have two decimals.
+    - Version 8.1.0 counts each reviewer one time in `rating`. A reviewer counts with the average of the own reviews.
+      The `overall` sort uses `rating.overall`, then the number of reviewers. It does not use a Bayesian average any more.
+      A cursor of the `overall` sort from an older version gets `400 Bad Request`.
 
 servers:
   - url: /v1
@@ -2520,8 +2523,8 @@ components:
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `name` sort ignores case only for the ASCII letters `A` to `Z`.
-        The `overall` sort uses a Bayesian average of the `overall` values of the reviews, not `rating.overall`.
-        This average starts at 5.5, the middle of the score range. Each review moves it nearer to `rating.overall`.
+        The `overall` sort uses `rating.overall`. Equal values sort by the number of reviewers.
+        `-overall` puts more reviewers first. `overall` puts fewer reviewers first.
         Sort properties after `overall` do not change the order.
         It puts restaurants without reviews last in both directions.
         The `relevance` sort puts the best matches of `search` first. It needs `search`.
@@ -2562,8 +2565,8 @@ components:
         A `-` prefix sorts a property in descending order.
         Each property can occur only one time. A repeated property causes `400 Bad Request`.
         The `name` sort ignores case only for the ASCII letters `A` to `Z`.
-        The `overall` sort uses a Bayesian average of the `overall` values of the reviews, not `rating.overall`.
-        This average starts at 5.5, the middle of the score range. Each review moves it nearer to `rating.overall`.
+        The `overall` sort uses `rating.overall`. Equal values sort by the number of reviewers.
+        `-overall` puts more reviewers first. `overall` puts fewer reviewers first.
         Sort properties after `overall` do not change the order.
         It puts recipes without reviews last in both directions.
         The `relevance` sort puts the best matches of `search` first. It needs `search`.
@@ -3509,7 +3512,8 @@ components:
           updated: '2024-11-04T01:26:55.002Z'
     RecipeRating:
       description: |
-        The average of each score over the reviews of a recipe.
+        The average of each score over the reviewers of a recipe.
+        Each reviewer counts one time with the average of the own reviews.
         `overall` is the average of the four averages.
         The API rounds each value to one decimal.
       type: object
@@ -3846,7 +3850,8 @@ components:
           updated: '2024-11-04T01:26:55.002Z'
     RestaurantRating:
       description: |
-        The average of each score over the reviews of a restaurant.
+        The average of each score over the reviewers of a restaurant.
+        Each reviewer counts one time with the average of the own reviews.
         `overall` is the average of the four averages.
         The API rounds each value to one decimal.
       type: object

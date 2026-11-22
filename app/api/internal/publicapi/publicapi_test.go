@@ -1497,10 +1497,10 @@ func TestListRestaurantsByOverall(t *testing.T) {
 	lowPath := "/v1/restaurants/" + low + "/reviews/" + lowReview
 	e.expect(request{method: "PATCH", path: lowPath, body: scores(10), token: ana.Token}, http.StatusOK)
 	// Low has one review of 10. High has two reviews with an average of 8.5.
-	if got := names("sort=-overall"); got != "High,Low,Mid,None" {
+	if got := names("sort=-overall"); got != "Low,High,Mid,None" {
 		t.Errorf("after update: %s", got)
 	}
-	if got := names("sort=overall&limit=1"); got != "Mid,Low,High,None" {
+	if got := names("sort=overall&limit=1"); got != "Mid,High,Low,None" {
 		t.Errorf("ascending after update: %s", got)
 	}
 	if got := names("sort=name&overall[eq]=10"); got != "Low" {
@@ -1518,6 +1518,64 @@ func TestListRestaurantsByOverall(t *testing.T) {
 		e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusBadRequest)
 	}
 	e.expect(request{method: "GET", path: "/v1/restaurant-reviews?overall[gte]=0"}, http.StatusBadRequest)
+}
+
+func TestOverallCountsEachReviewerOnce(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+	ben := e.signUp("ben@example.com", "Ben")
+	scores := func(n int) string {
+		return fmt.Sprintf(`{"date":"2024-11-06","space":%d,"service":%d,"food":%d,"price":%d,"title":"T"}`, n, n, n, n)
+	}
+	often := e.createRestaurant(ana.Token, `{"name":"Often"}`)["id"].(string)
+	pair := e.createRestaurant(ana.Token, `{"name":"Pair"}`)["id"].(string)
+	single := e.createRestaurant(ana.Token, `{"name":"Single"}`)["id"].(string)
+	for range 3 {
+		e.createReview(ana.Token, often, scores(10))
+	}
+	e.createReview(joe.Token, often, scores(6))
+	e.createReview(ben.Token, often, scores(8))
+	e.createReview(ana.Token, pair, scores(8))
+	e.createReview(joe.Token, pair, scores(8))
+	e.createReview(ana.Token, single, scores(8))
+
+	got := e.expect(request{method: "GET", path: "/v1/restaurants/" + often}, http.StatusOK).object(t)
+	rating := got["rating"].(map[string]any)
+	if rating["overall"] != 8.0 || rating["food"] != 8.0 || got["review_count"] != 5.0 {
+		t.Errorf("often: rating %v, review_count %v, want 8 and 5", rating, got["review_count"])
+	}
+
+	names := func(query string) string {
+		t.Helper()
+		var out []string
+		for range 5 {
+			var page struct {
+				Items      []map[string]any `json:"items"`
+				NextCursor *string          `json:"next_cursor"`
+			}
+			e.expect(request{method: "GET", path: "/v1/restaurants?limit=1&" + query}, http.StatusOK).decode(t, &page)
+			for _, it := range page.Items {
+				out = append(out, it["name"].(string))
+			}
+			if page.NextCursor == nil {
+				break
+			}
+			query = strings.Split(query, "&cursor=")[0] + "&cursor=" + url.QueryEscape(*page.NextCursor)
+		}
+		return strings.Join(out, ",")
+	}
+	for query, want := range map[string]string{
+		"sort=-overall":               "Often,Pair,Single",
+		"sort=overall":                "Single,Pair,Often",
+		"sort=name&overall[eq]=8":     "Often,Pair,Single",
+		"sort=-overall&overall[gt]=8": "",
+	} {
+		if got := names(query); got != want {
+			t.Errorf("%s: %s, want %s", query, got, want)
+		}
+	}
 }
 
 func TestSearch(t *testing.T) {

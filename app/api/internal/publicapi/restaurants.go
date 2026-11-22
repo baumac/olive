@@ -66,10 +66,8 @@ func (s *Server) ListRestaurants(ctx context.Context, req reviewsapi.ListRestaur
 	}
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
 	parts := []any{"restaurants", p}
-	// The overall sort keys changed in decisions 00012 and 00029. The version
-	// rejects the cursors of the old keys.
 	if sortsBy(sort, "overall") {
-		parts = append(parts, 3)
+		parts = append(parts, overallSortVersion)
 	}
 	query, err := fingerprint(parts...)
 	if err != nil {

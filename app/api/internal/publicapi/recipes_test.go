@@ -444,6 +444,50 @@ func TestRecipeReviews(t *testing.T) {
 	})
 }
 
+func TestRecipeOverallCountsEachReviewerOnce(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	joe := e.signUp("joe@example.com", "Joe")
+	ben := e.signUp("ben@example.com", "Ben")
+	scores := func(n int) string {
+		return fmt.Sprintf(`{"date":"2024-11-06","taste":%d,"ease":%d,"instructions":%d,"value":%d,"title":"T"}`, n, n, n, n)
+	}
+	often := e.createRecipe(ana.Token, `{"name":"Often"}`)["id"].(string)
+	pair := e.createRecipe(ana.Token, `{"name":"Pair"}`)["id"].(string)
+	single := e.createRecipe(ana.Token, `{"name":"Single"}`)["id"].(string)
+	for range 3 {
+		e.createRecipeReview(ana.Token, often, scores(10))
+	}
+	e.createRecipeReview(joe.Token, often, scores(6))
+	e.createRecipeReview(ben.Token, often, scores(8))
+	e.createRecipeReview(ana.Token, pair, scores(8))
+	e.createRecipeReview(joe.Token, pair, scores(8))
+	e.createRecipeReview(ana.Token, single, scores(8))
+
+	got := e.expect(request{method: "GET", path: "/v1/recipes/" + often}, http.StatusOK).object(t)
+	rating := got["rating"].(map[string]any)
+	if rating["overall"] != 8.0 || rating["taste"] != 8.0 || got["review_count"] != 5.0 {
+		t.Errorf("often: rating %v, review_count %v, want 8 and 5", rating, got["review_count"])
+	}
+
+	for sort, want := range map[string]string{"-overall": "Often,Pair,Single", "overall": "Single,Pair,Often"} {
+		var pages []string
+		path := "/v1/recipes?limit=1&sort=" + sort
+		for range 4 {
+			names, next := e.names(path)
+			pages = append(pages, names)
+			if next == nil {
+				break
+			}
+			path = "/v1/recipes?limit=1&sort=" + sort + "&cursor=" + url.QueryEscape(*next)
+		}
+		if strings.Join(pages, ",") != want {
+			t.Errorf("%s pages %v, want %s", sort, pages, want)
+		}
+	}
+}
+
 func TestRecipeOverallColumnEqualsResponse(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t, testOptions)

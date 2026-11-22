@@ -3,6 +3,8 @@ description: A review is one visit to a restaurant or one cook of a recipe. A us
 status: implemented
 ---
 
+Decision 00054 counts each reviewer one time in `rating` and in the `overall` sort. `review_count` still counts each review.
+
 # Motivation
 [motivation]: #motivation
 

@@ -8,19 +8,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For claude
 
-### 3. The Bayesian ranking fits a large site
-00029 gives each restaurant 5 imaginary reviews of 5.5. Its examples have 200 reviews. In a group of friends, a restaurant has 1 to 5 reviews. The ranking then mostly counts how many of us went there:
-
-Reviews	rating.overall	Ranking
-2 reviews of 10	10	6.79
-3 reviews of 9	9	6.81
-00035 makes "Highest rated" the default sort. The UI does not tell the user that the order also uses the number of reviews. A user then sees a 9.0 above a 10.0 and does not know why.
-
-Decide if a smaller prior, such as 1 review, or the plain average with a minimum review count, fits the group better. 
-
-Decision 00050 allows a review for each visit or cook. The count of reviews then also counts the visits of one user. A user who visits a restaurant often then moves its ranking more.
-
-
 ## For Me
 
 - review and confirm that users cannot edit other users reviews, lists, or user details.

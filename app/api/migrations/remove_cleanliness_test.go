@@ -48,7 +48,7 @@ func TestRemoveCleanlinessComputesTheOverallAgain(t *testing.T) {
 		t.Errorf("overall of the review is %v, want 6.5", got)
 	}
 	wantOverall(t, app, rated.Id, 8)
-	wantRanking(t, app, rated.Id, (5*5.5+6.5+9.5)/7)
+	wantReviewers(t, app, rated.Id, 2)
 	wantNoOverall(t, app, unrated.Id, "up")
 
 	first, err = app.FindRecordById("reviews", first.Id)
@@ -64,7 +64,7 @@ func TestRemoveCleanlinessComputesTheOverallAgain(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantOverall(t, app, rated.Id, 9.5)
-	wantRanking(t, app, rated.Id, (5*5.5+9.5)/6)
+	wantReviewers(t, app, rated.Id, 1)
 	added := newRecord(t, app, "restaurants", map[string]any{"name": "Added"})
 	wantNoOverall(t, app, added.Id, "new restaurant")
 }

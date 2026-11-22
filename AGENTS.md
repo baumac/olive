@@ -128,6 +128,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `recipes` tag has the recipe and recipe review operations. Recipes have ingredients, steps, and four scores. See decision 00047.
     - a review is one visit or one cook. A user can write many reviews of one restaurant or recipe. See decision 00050.
     - each review has a `date` without a time. The `review-date` format allows the dates from 1900-01-01 to today in UTC+14. The review lists sort by `-date` by default.
+    - `rating` counts each reviewer one time with the average of the own reviews. `review_count` counts each review. See decision 00054.
     - `own_review_count` of a restaurant or a recipe counts the reviews of the user of the token, like `favorite`. The UI uses it for the delete rules of decision 00016.
     - a list of recipes has `RecipeSummary` items without the ingredients and the steps. `getRecipe` has them. See decision 00048.
     - the `users` tag has the sign up, email confirmation, sign in, sign out, token refresh, and password reset operations
@@ -160,7 +161,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/api/main.go`** - the PocketBase app
   - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, and `list_recipes` collections
     - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decision 00012.
-    - `restaurant_overall` has the plain average for the responses and a Bayesian average for the `overall` sort. See decision 00029.
+    - `restaurant_overall` and `recipe_overall` have the rating of each restaurant or recipe. Each reviewer counts one time. The `overall` sort uses the overall and the number of reviewers. See decision 00054.
+    - A migration that drops a score column of `reviews` or `recipe_reviews` also drops its column of the overall table.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.
     - The `overall` column of `reviews` and `recipe_reviews` is a generated column with indexes. It is not a field of the collection. See decision 00031.
     - Drop it and its indexes before a migration drops a score column of `reviews` or `recipe_reviews`. SQLite refuses the drop.

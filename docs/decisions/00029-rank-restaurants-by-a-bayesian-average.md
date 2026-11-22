@@ -1,7 +1,9 @@
 ---
 description: Sort restaurants by a Bayesian average of their reviews. A restaurant with few reviews no longer beats a restaurant with many good reviews. The responses still show the plain average.
-status: implemented
+status: replaced by decision 00054
 ---
+
+Decision 00054 sorts by `rating.overall`, then by the number of reviewers. It removes the `ranking` column.
 
 # Motivation
 [motivation]: #motivation

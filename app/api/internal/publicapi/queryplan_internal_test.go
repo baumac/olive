@@ -80,14 +80,14 @@ func TestOldOverallCursorIsRejected(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
 	sort := "-overall"
-	for name, version := range map[string][]any{"no version": nil, "version 2": {2}} {
+	for name, version := range map[string][]any{"no version": nil, "version 2": {2}, "version 3": {3}} {
 		t.Run(name, func(t *testing.T) {
 			parts := append([]any{"restaurants", reviewsapi.ListRestaurantsParams{Sort: &sort}}, version...)
 			old, err := fingerprint(parts...)
 			if err != nil {
 				t.Fatal(err)
 			}
-			cursor, err := encodeCursor(old, []any{0.0, 7.4, "abc"})
+			cursor, err := encodeCursor(old, []any{0.0, 7.4, 2, "abc"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -101,6 +101,47 @@ func TestOldOverallCursorIsRejected(t *testing.T) {
 				t.Errorf("response %T, want 400", res)
 			}
 		})
+	}
+}
+
+func TestOldRecipeOverallCursorIsRejected(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t)
+	sort := "-overall"
+	old, err := fingerprint("recipes", reviewsapi.ListRecipesParams{Sort: &sort})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := encodeCursor(old, []any{0.0, 7.4, 2, "abc"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := s.ListRecipes(context.Background(), reviewsapi.ListRecipesRequestObject{
+		Params: reviewsapi.ListRecipesParams{Sort: &sort, Cursor: &cursor},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := res.(reviewsapi.ListRecipes400ApplicationProblemPlusJSONResponse); !ok {
+		t.Errorf("response %T, want 400", res)
+	}
+}
+
+func TestRatingsUseIndexes(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t)
+	ids := []any{"k3x9m2p7q1w8z4a", "u5n1c8r3t6y0b2e"}
+	for _, c := range []struct {
+		sub  subject
+		want string
+	}{
+		{restaurantSubject, "SEARCH restaurant_overall USING PRIMARY KEY (restaurant=?)"},
+		{recipeSubject, "SEARCH recipe_overall USING PRIMARY KEY (recipe=?)"},
+	} {
+		p := queryPlan(t, s, s.ratingsQuery(c.sub, ids))
+		if !strings.Contains(p, c.want) {
+			t.Errorf("%s plan has no %q:\n%s", c.sub.Parent, c.want, p)
+		}
 	}
 }
 

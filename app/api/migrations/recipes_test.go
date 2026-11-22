@@ -3,7 +3,6 @@ package migrations
 import (
 	"database/sql"
 	"errors"
-	"math"
 	"slices"
 	"testing"
 
@@ -18,17 +17,17 @@ func recipeReview(user, recipe *core.Record, taste int) map[string]any {
 }
 
 // storedRecipeOverall returns false when the recipe has no row.
-func storedRecipeOverall(t *testing.T, app core.App, recipe string) (overall, ranking sql.NullFloat64, ok bool) {
+func storedRecipeOverall(t *testing.T, app core.App, recipe string) (overall sql.NullFloat64, reviewers int, ok bool) {
 	t.Helper()
-	err := app.DB().NewQuery("SELECT [[overall]], [[ranking]] FROM {{recipe_overall}} WHERE [[recipe]] = {:id}").
-		Bind(dbx.Params{"id": recipe}).Row(&overall, &ranking)
+	err := app.DB().NewQuery("SELECT [[overall]], [[reviewers]] FROM {{recipe_overall}} WHERE [[recipe]] = {:id}").
+		Bind(dbx.Params{"id": recipe}).Row(&overall, &reviewers)
 	if errors.Is(err, sql.ErrNoRows) {
-		return overall, ranking, false
+		return overall, reviewers, false
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
-	return overall, ranking, true
+	return overall, reviewers, true
 }
 
 func TestRecipeTriggers(t *testing.T) {
@@ -38,16 +37,23 @@ func TestRecipeTriggers(t *testing.T) {
 	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
 	dal := newRecord(t, app, "recipes", map[string]any{"name": "Dal", "ingredients": []string{"lentils"}, "steps": []string{"Boil."}, "tags": []string{"dal", "dal", "vegan"}})
 
-	if overall, ranking, ok := storedRecipeOverall(t, app, dal.Id); !ok || overall.Valid || ranking.Valid {
-		t.Errorf("new recipe: overall %v, ranking %v, row %v", overall, ranking, ok)
+	if overall, reviewers, ok := storedRecipeOverall(t, app, dal.Id); !ok || overall.Valid || reviewers != 0 {
+		t.Errorf("new recipe: overall %v, reviewers %d, row %v", overall, reviewers, ok)
 	}
 
 	first := newRecord(t, app, "recipe_reviews", recipeReview(ana, dal, 9))
 	newRecord(t, app, "recipe_reviews", recipeReview(joe, dal, 6))
 	// The overall values are 8.25 and 7.5.
-	overall, ranking, _ := storedRecipeOverall(t, app, dal.Id)
-	if overall.Float64 != 7.9 || math.Abs(ranking.Float64-(5*5.5+8.25+7.5)/7) > 1e-9 {
-		t.Errorf("two reviews: overall %v, ranking %v", overall, ranking)
+	if overall, reviewers, _ := storedRecipeOverall(t, app, dal.Id); overall.Float64 != 7.9 || reviewers != 2 {
+		t.Errorf("two reviews: overall %v, reviewers %d", overall, reviewers)
+	}
+	// Ana has 8.25 and 6.25. Joe has 7.5.
+	again := newRecord(t, app, "recipe_reviews", recipeReview(ana, dal, 1))
+	if overall, reviewers, _ := storedRecipeOverall(t, app, dal.Id); overall.Float64 != 7.4 || reviewers != 2 {
+		t.Errorf("second review of Ana: overall %v, reviewers %d", overall, reviewers)
+	}
+	if err := app.Delete(again); err != nil {
+		t.Fatal(err)
 	}
 	var column float64
 	if err := app.DB().Select("overall").From("recipe_reviews").Where(dbx.HashExp{"id": first.Id}).Row(&column); err != nil || column != 8.25 {
@@ -84,8 +90,8 @@ func TestRecipeTriggers(t *testing.T) {
 	if err := app.Delete(first); err != nil {
 		t.Fatal(err)
 	}
-	if overall, ranking, ok := storedRecipeOverall(t, app, dal.Id); !ok || overall.Valid || ranking.Valid {
-		t.Errorf("no reviews: overall %v, ranking %v, row %v", overall, ranking, ok)
+	if overall, reviewers, ok := storedRecipeOverall(t, app, dal.Id); !ok || overall.Valid || reviewers != 0 {
+		t.Errorf("no reviews: overall %v, reviewers %d, row %v", overall, reviewers, ok)
 	}
 	if err := app.Delete(dal); err != nil {
 		t.Fatal(err)
