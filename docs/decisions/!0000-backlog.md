@@ -30,6 +30,7 @@ Decision 00050 allows a review for each visit or cook. The count of reviews then
   - generate a list of all potential decisions that go against it
   - decide if we want to revert those decisions
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
+- verify app implementation against consolidated decisions
 - deploy to prod
 
 ## For the Future
