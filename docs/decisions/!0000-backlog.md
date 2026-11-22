@@ -22,14 +22,13 @@ Each sub-bullet point contains notes about the incomplete decision.
       - 00021: structured data and a sitemap for search engines. Fixed by 00049 and 00053.
       - 00029: a ranking for about 200 reviews per restaurant. Fixed by 00054.
       - 00038: structured data for search engines in the expected outcome. Fixed by 00049.
-    - Judgement calls:
-      - All reviews, reviewer names, and lists are public without an account. See 00033 and 00034. A private or unlisted option is not in the backlog.
-      - Some decisions are heavier than a small group of trusted users needs: the rate limits of each operation, the version history, the end-to-end tests in many browsers, Renovate, and the coverage checks.
     - Resolved:
       - 00047: wines and cheeses are out of scope. 00000 now puts them out of scope for the first release.
       - 00017 and 00018: the maps and the place search use public servers. 00000 now puts self-hosted options out of scope for the first release.
       - 00053: robots.txt keeps all crawlers out. The bots of the usual chat apps do not obey it or have no documentation. Only X and LinkedIn surely lose the preview. See the "Link previews" table of 00053.
       - 00036 and 00047: the app has no bulk import. A superuser imports old data in the dashboard or with the PocketBase API. See "Won't do".
+      - 00033 and 00034: all reviews, reviewer names, and lists are public without an account. 00000 now makes this the intended way to share with friends without an account.
+      - 00006, 00024, 00026, 00036, and 00055: the rate limits, the version history, the end-to-end tests in many browsers, Renovate, and the coverage checks are heavier than a small group needs. 00000 now makes this the intended quality bar.
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
 - verify app implementation against consolidated decisions
 - deploy to prod

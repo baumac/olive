@@ -37,6 +37,7 @@ Out of scope:
 - Specifying the exact things that can be reviewed
 - Wines and cheeses in the first release. The first release has restaurants and recipes. A later decision can add them. The backlog has them under "For the Future".
 - Self-hosted maps and place search in the first release. The first release uses the free public Photon server of Komoot and the tile server of OpenStreetMap. These servers get the search text and the IP address of users. A later decision can move them to our home server. The backlog has this under "For the Future".
+- Private or unlisted reviews and lists. All data is public, so a shared link works for each person. A user who wants less exposure can use a nickname as the name.
 - Social features, such as comments, likes, follows, and messages. The users are few and talk to each other in other ways.
 - Ads or other income
 
@@ -47,10 +48,24 @@ We make the app with AI coding tools.
 The agents follow `AGENTS.md`.
 Each design choice is recorded as a decision in `docs/decisions`.
 
+The users are few, but the app has the checks of a larger app.
+Each write operation has a rate limit.
+Each change of a restaurant or a recipe has a version.
+The tests run in many browsers and have a coverage minimum.
+Renovate updates the dependencies each month.
+These checks keep the app robust on the public internet.
+They also find the errors of the AI coding tools early.
+
 The app has an API and a UI that users use.
 It also has an admin dashboard for admins.
 The app runs on our home server.
 It is reachable via the public internet at reviews.sponga47.com.
+
+Each page of the app is public.
+A person without an account can read each review, reviewer page, and list.
+A shared link then works for each friend.
+Only approved users can write.
+Search engines and AI crawlers that obey robots.txt do not get the pages. See decision 00053.
 
 New concepts:
 - **Subjects**: a thing that users review. The first release has restaurants and recipes. Decision 00047 gives the pattern for more kinds, such as wines and cheeses.
@@ -63,7 +78,7 @@ Examples:
   I write a review with scores and a photo.
   I add the restaurant to my favorites list.
   I send the link of my review to a friend.
-  The friend opens the link and reads my review.
+  The friend opens the link and reads my review without an account.
 - My wife cooks a new recipe.
   She adds the recipe with its ingredients and steps, then reviews it.
   Later, I search for the recipe by name and cook it again.
