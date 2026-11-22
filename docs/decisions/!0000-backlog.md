@@ -8,10 +8,10 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For claude
 
+- Restaurants and recipes should have a versioned history so that edits can be reverted
+
 ## For Me
 
-- review and confirm that users cannot edit other users reviews, lists, or user details.
--  Restaurants and reviews should have a versioned history so that edits can be reverted
 - review all decisions against decision 00000-create-reviews-app.md
   - Useful prompt: `"00000-create-reviews-app.md" contains the original motivations for the creating the app. Can you review all decisions in doc/decisions against "00000-create-reviews-app.md" and create a list of any decisions that are not aligned with the original motivations?`
   - generate a list of all potential decisions that go against it
