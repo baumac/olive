@@ -79,7 +79,7 @@ func TestRecipeMeta(t *testing.T) {
 		save(t, app, "list_recipes", map[string]any{"list": recipes.Id, "recipe": plain.Id})
 		mixed := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Mixed", "kind": "custom"})
 		save(t, app, "list_recipes", map[string]any{"list": mixed.Id, "recipe": recipe.Id})
-		restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": user.Id})
+		restaurant := save(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Luigi's", "creator": user.Id})
 		save(t, app, "list_items", map[string]any{"list": mixed.Id, "restaurant": restaurant.Id})
 
 		for path, want := range map[string][]string{

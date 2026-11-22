@@ -8,12 +8,10 @@ const storageKey = 'reviews-session'
 // 00003.
 export interface Session {
   expires: string
-  // issued is the browser time when the UI got the token. A session from
-  // an older version has no issued value.
+  // issued is the browser time when the UI got the token. A session of an
+  // older build can miss it.
   issued?: string
   user: User
-  // token is only in a session that an older version stored.
-  token?: string
 }
 
 function load(): Session | null {
@@ -29,15 +27,7 @@ const session = ref<Session | null>(load())
 
 export const currentUser = computed(() => session.value?.user ?? null)
 export const signedIn = computed(() => session.value !== null)
-// A session of an older version has no approved value. Its user was
-// approved by the migration.
 export const pendingApproval = computed(() => session.value?.user.approved === false)
-
-// legacyToken returns the token of a session from an older version. The
-// first refresh moves it into the cookie.
-export function legacyToken(): string | undefined {
-  return session.value?.token
-}
 
 export function sessionExpires(): string | null {
   return session.value?.expires ?? null

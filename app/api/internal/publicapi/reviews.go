@@ -42,25 +42,6 @@ func (sub subject) overallFilter(sort string) string {
 // reviewDefaultSort puts the newest visit or cook first. See decision 00005.
 const reviewDefaultSort = "-date"
 
-// legacyReviewSort is the default sort before the review dates.
-const legacyReviewSort = "-created"
-
-// defaultReviewSort keeps the legacy sort for a cursor that the legacy
-// default made. An open page can then load more after the deploy.
-func defaultReviewSort(cursor *string, fingerprintOf func(sort string) []any) string {
-	if cursor == nil {
-		return reviewDefaultSort
-	}
-	query, err := fingerprint(fingerprintOf(legacyReviewSort)...)
-	if err != nil {
-		return reviewDefaultSort
-	}
-	if _, detail := decodeCursor(cursor, query, 2); detail == "" {
-		return legacyReviewSort
-	}
-	return reviewDefaultSort
-}
-
 func makeReviewSorts(sub subject) map[string]sortField {
 	sorts := map[string]sortField{
 		"overall":   func(desc bool) []sortKey { return []sortKey{{expr: sub.reviewOverall(), desc: desc}} },
@@ -212,7 +193,7 @@ func (s *Server) reviewsOf(
 		return reviewRecords{bad: detail}, nil
 	}
 	if sortSpec == nil {
-		sortSpec = new(defaultReviewSort(q.cursor, fingerprintOf))
+		sortSpec = new(reviewDefaultSort)
 	}
 	keys, sort, detail := parseSort(sortSpec, sub.Reviews, sub.reviewSorts)
 	if detail != "" {

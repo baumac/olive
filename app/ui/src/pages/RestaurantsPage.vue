@@ -204,7 +204,7 @@ async function frameList() {
   }
   try {
     const page = await restaurantsApi.listRestaurants({ limit: mapLimit, listEq: id })
-    const points = page.items.flatMap((r) => (r.location ? [r.location] : []))
+    const points = page.items.map((r) => r.location)
     if (listId.value !== id || points.length === 0) {
       return
     }
@@ -259,7 +259,7 @@ function anyDistance() {
 }
 
 const markers = computed(() =>
-  onMap.value.flatMap((r) => (r.location ? [{ id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name }] : [])),
+  onMap.value.map((r) => ({ id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name })),
 )
 
 function clusterLabel(count: number): string {
@@ -344,8 +344,7 @@ let lastView: { center: MapPoint; zoom: number } | undefined
         The map shows only {{ mapLimit }} restaurants of this area. Zoom in to see the others.
       </p>
       <p class="text-muted-foreground text-sm">
-        Select a pin to see the restaurant. A pin with a number has more than one restaurant. Restaurants without a
-        location are only in the list.
+        Select a pin to see the restaurant. A pin with a number has more than one restaurant.
         <template v-if="preferredLocation">The blue dot is your location.</template>
       </p>
       <div class="max-w-md" aria-live="polite">

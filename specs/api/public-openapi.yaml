@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 8.2.0
+  version: 1.0.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants and recipes.
 
@@ -22,41 +22,7 @@ info:
     The `/v1` of the path is the name of the API. It does not change with the version of this document.
     The first number of the version changes when a change can break a client.
 
-    - Version 2.0.0 changes the timestamps. Version 1.0.0 had a space in the place of the `T`.
-    - Version 2.1.0 adds the `reviews_session` cookie.
-    - Version 2.2.0 adds the `cover` of restaurants and the `listRestaurantPhotos` operation.
-    - Version 3.0.0 changes `signUp`. It returns `202` without a token, and the user confirms the email address.
-      It adds the password reset and the operations of `/users/me`.
-      It also adds the lists of restaurants, the approval of new users, and the limits of the write operations.
-    - Version 4.0.0 changes `confirmEmail`. It needs the `password` of the sign up.
-      It adds the `website`, `phone`, `opening_hours`, and `price_level` of restaurants.
-      It also adds a `code` to each `403` and `409` problem. The API now removes the ASCII spaces around names, titles, addresses, and alt texts.
-    - Version 5.0.0 allows tags with the letters and digits of all scripts, such as `café`.
-      A client that checks the responses against the old `Tag` pattern refuses these tags.
-      The API changes tags to Unicode normalization form C.
-    - Version 5.1.0 adds `getCurrentUser`. Clients get the signed in user without a new token.
-    - Version 5.2.0 adds the `list[eq]` filter of `listRestaurants`.
-    - Version 5.3.0 adds the `price_level` filter of `listRestaurants`.
-    - Version 5.4.0 adds the recipes, their reviews, and their photos. `Reviewer` gets the counts and the average of the recipe reviews.
-    - Version 5.5.0 adds the recipes of lists, `favorite` of recipes, and `recipe_count` and `has_recipe` of lists.
-    - Version 6.0.0 puts `restaurant` in the names of the restaurant reviews, so they match the recipe reviews.
-      `/reviews` is now `/restaurant-reviews`, and `createReview` is now `createRestaurantReview`.
-      The reviews of a user are at `/reviewers/{reviewerId}/restaurant-reviews`.
-      `review_count` and `average_overall` of `Reviewer` and `item_count` of lists also get `restaurant` in their names.
-      A list of recipes has no `ingredients` and no `steps`. `getRecipe` has them.
-      The `source` of a recipe with reviews of other users cannot change.
-    - Version 7.0.0 allows many reviews of one user for one restaurant or recipe. A review is one visit or one cook.
-      Each review has a required `date`. The review lists sort by `-date` by default.
-      The `review_exists` code is gone.
-      Restaurants and recipes have the `own_review_count` of the user of the token.
-    - Version 7.1.0 lets each approved user change each property of each restaurant and recipe.
-      The reviews of other users do not lock the `name`, the `location`, the `source`, the `ingredients`, or the `steps` any more.
-    - Version 8.0.0 removes the `cleanliness` score of restaurant reviews, its filter, and its sort.
-      The `overall` of a restaurant review is now the average of four scores. It can have two decimals.
-    - Version 8.1.0 counts each reviewer one time in `rating`. A reviewer counts with the average of the own reviews.
-      The `overall` sort uses `rating.overall`, then the number of reviewers. It does not use a Bayesian average any more.
-      A cursor of the `overall` sort from an older version gets `400 Bad Request`.
-    - Version 8.2.0 adds `listRestaurantVersions` and `listRecipeVersions`. Each change of a restaurant or a recipe makes a version.
+    - Version 1.0.0 is the first release.
 
 servers:
   - url: /v1
@@ -828,7 +794,6 @@ paths:
       description: |
         Each create and each change of a restaurant makes a version. The newest version comes first.
         A version has only the properties that changed. `before` has their old values. `after` has their new values.
-        The history has no versions from before version 8.2.0 of this document.
         An undo is a normal update. It makes a new version.
       tags: [restaurants]
       security:
@@ -1670,7 +1635,6 @@ paths:
       description: |
         Each create and each change of a recipe makes a version. The newest version comes first.
         A version has only the properties that changed. `before` has their old values. `after` has their new values.
-        The history has no versions from before version 8.2.0 of this document.
         An undo is a normal update. It makes a new version.
       tags: [recipes]
       security:
@@ -2604,7 +2568,6 @@ components:
         With `search`, the default sort is `relevance`.
         The `distance` sort puts the restaurants nearest to the point of `near` first. It needs `near`.
         It uses the same approximation of the distance as `near`.
-        It puts restaurants without a location last in both directions.
         The API always adds `id` as the last sort key.
       schema:
         type: string
@@ -2884,7 +2847,6 @@ components:
         Each key is a property, for example `near[latitude]=41.3874&near[longitude]=2.1686&near[radius]=75`.
         `latitude` and `longitude` are required.
         Without `radius`, `near` selects all restaurants. It then only gives the point of the `distance` sort.
-        A restaurant without a location matches no `near` filter with a `radius`.
         The distance is an approximation on a flat surface. Its error is small for the radii that the API allows.
       style: deepObject
       explode: true
@@ -2900,7 +2862,6 @@ components:
         Each key is a side, for example `within[west]=2.1&within[south]=41.3&within[east]=2.2&within[north]=41.4`.
         All four sides are required. `south` must not be more than `north`.
         A box with `west` more than `east` goes across the 180th meridian.
-        A restaurant without a location matches no `within` filter.
       style: deepObject
       explode: true
       schema:
@@ -3945,10 +3906,7 @@ components:
         tags:
           $ref: '#/components/schemas/Tags'
         location:
-          description: The place of the restaurant. It is `null` for a restaurant from before locations.
-          oneOf:
-            - $ref: '#/components/schemas/Location'
-            - type: 'null'
+          $ref: '#/components/schemas/Location'
         website:
           $ref: '#/components/schemas/Website'
         phone:
@@ -4143,9 +4101,7 @@ components:
             - $ref: '#/components/schemas/Tags'
             - type: 'null'
         location:
-          oneOf:
-            - $ref: '#/components/schemas/Location'
-            - type: 'null'
+          $ref: '#/components/schemas/Location'
         website:
           oneOf:
             - $ref: '#/components/schemas/Website'

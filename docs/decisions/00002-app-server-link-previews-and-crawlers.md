@@ -35,6 +35,9 @@ Expected outcome:
 - the UI and the Public API have one origin. The API needs no CORS settings.
 - the Public API implements `reviewsapi.StrictServerInterface` of decision 00001
 - the server applies the migrations when it starts
+- `migrations/1794096000_init.go` makes all collections and tables. It has all changes from before the first deploy.
+- a data folder from the migrations before it has the collections already. The init migration then stops the start with an error. Delete the folder.
+- a change of the schema after the first deploy needs a new migration. Do not change the init migration.
 - developers run the UI with the Vite dev server and hot reload
 - each response of the UI route has a Content Security Policy that allows scripts and styles only from the same origin
 - a shared subject link shows the name and the description of the subject
@@ -340,7 +343,7 @@ The `prepare` middleware runs before the generated strict handler. The spec give
 
 Uploads:
 - PocketBase serves uploaded files under `/api/files` on the origin of the UI, which `'self'` trusts
-- a migration removed the `avatar` file field of `users`. Only the photo collections of decision 00007 have file fields.
+- the migrations remove the `avatar` file field of `users`. Only the photo collections of decision 00007 have file fields.
 - their files are protected, so `/api/files` does not send them to clients. The Public API sends only the JPEG files that it encoded, with `nosniff` and a `sandbox` policy.
 - a new file field needs a check of this risk
 

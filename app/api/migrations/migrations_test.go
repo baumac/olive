@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/baumac/reviews-app/app/api/internal/testapp"
@@ -12,169 +11,14 @@ import (
 	"github.com/pocketbase/pocketbase/tools/dbutils"
 )
 
-func TestDownRestoresUsers(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-
-	users, err := app.FindCollectionByNameOrId("users")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if idx, ok := dbutils.FindSingleColumnUniqueIndex(users.Indexes, "email"); !ok || idx.Columns[0].Collate != "NOCASE" {
-		t.Errorf("up: email index %+v", idx)
-	}
-
-	downTo(t, app, "1794096000_create_collections.go")
-	if _, err := app.FindCollectionByNameOrId("restaurants"); err == nil {
-		t.Error("restaurants still exists")
-	}
-	users, err = app.FindCollectionByNameOrId("users")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if users.AuthRule == nil || users.ListRule == nil {
-		t.Errorf("rules are not restored: auth %v, list %v", users.AuthRule, users.ListRule)
-	}
-	if idx, ok := dbutils.FindSingleColumnUniqueIndex(users.Indexes, "email"); !ok || idx.Columns[0].Collate != "" {
-		t.Errorf("down: email index %+v", idx)
-	}
-}
-
-func TestRateLimitsAreOn(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	if !app.Settings().RateLimits.Enabled {
-		t.Error("the PocketBase rate limits are off")
-	}
-	if _, ok := app.Settings().RateLimits.FindRateLimitRule([]string{"POST /csp-report"}); !ok {
-		t.Error("no rate limit rule for the CSP reports")
-	}
-}
-
-func TestUsersHaveNoFileFields(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	users, err := app.FindCollectionByNameOrId("users")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, f := range users.Fields {
-		if f.Type() == core.FieldTypeFile {
-			t.Errorf("users has the file field %s", f.GetName())
-		}
-	}
-}
-
-func TestSingleReviewKindKeepsBasicReviews(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	downTo(t, app, "1794268803_single_review_kind.go")
-
-	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
-	review := newRecord(t, app, "reviews", map[string]any{
-		"restaurant": restaurant.Id, "creator": user.Id, "kind": "basic", "rating": 4, "title": "Good",
-	})
-
-	upTo(t, app, "1794268803_single_review_kind.go", removeCleanlinessFile)
-	got, err := app.FindRecordById("reviews", review.Id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range []string{"space", "service", "food", "price", "cleanliness"} {
-		if v := got.GetInt(name); v != 8 {
-			t.Errorf("%s is %d, want 8", name, v)
-		}
-	}
-	reviews, err := app.FindCollectionByNameOrId("reviews")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reviews.Fields.GetByName("kind") != nil || reviews.Fields.GetByName("rating") != nil {
-		t.Error("reviews still has kind or rating")
-	}
-}
-
-func TestCleanlinessCopiesSpace(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	downTo(t, app, "1794268804_add_review_cleanliness.go")
-
-	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
-	review := newRecord(t, app, "reviews", map[string]any{
-		"restaurant": restaurant.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "title": "Good",
-	})
-
-	upTo(t, app, "1794268804_add_review_cleanliness.go", removeCleanlinessFile)
-	got, err := app.FindRecordById("reviews", review.Id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v := got.GetInt("cleanliness"); v != 3 {
-		t.Errorf("cleanliness is %d, want 3", v)
-	}
-}
-
-// downTo reverts the app migrations from the last one back to file. The
-// returned function applies them again in order.
-func downTo(t *testing.T, app core.App, file string) func() {
+func newApp(t *testing.T) *tests.TestApp {
 	t.Helper()
-	items := core.AppMigrations.Items()
-	i := migrationIndex(t, file)
-	for j := len(items) - 1; j >= i; j-- {
-		if err := items[j].Down(app); err != nil {
-			t.Fatalf("down %s: %v", items[j].File, err)
-		}
+	app, err := tests.NewTestApp(testapp.Dir(t))
+	if err != nil {
+		t.Fatal(err)
 	}
-	return func() {
-		t.Helper()
-		applyUp(t, app, items[i:])
-	}
-}
-
-// upTo does not apply the migration of the file to.
-func upTo(t *testing.T, app core.App, from, to string) {
-	t.Helper()
-	applyUp(t, app, core.AppMigrations.Items()[migrationIndex(t, from):migrationIndex(t, to)])
-}
-
-func migrationIndex(t *testing.T, file string) int {
-	t.Helper()
-	i := slices.IndexFunc(core.AppMigrations.Items(), func(m *core.Migration) bool { return m.File == file })
-	if i < 0 {
-		t.Fatalf("no migration %s", file)
-	}
-	return i
-}
-
-func applyUp(t *testing.T, app core.App, items []*core.Migration) {
-	t.Helper()
-	for _, m := range items {
-		if err := m.Up(app); err != nil {
-			t.Fatalf("up %s: %v", m.File, err)
-		}
-	}
+	t.Cleanup(app.Cleanup)
+	return app
 }
 
 func newRecord(t *testing.T, app core.App, collection string, data map[string]any) *core.Record {
@@ -191,204 +35,130 @@ func newRecord(t *testing.T, app core.App, collection string, data map[string]an
 	return r
 }
 
-func TestSearchIndexFillsExistingRecords(t *testing.T) {
+func newUser(t *testing.T, app core.App, name string) *core.Record {
+	t.Helper()
+	return newRecord(t, app, "users", map[string]any{"email": name + "@example.com", "password": "correct-horse", "name": name})
+}
+
+func TestDownRestoresTheDefaults(t *testing.T) {
 	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
+	app := newApp(t)
+	users, err := app.FindCollectionByNameOrId("users")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268805_add_search_index.go")
+	if idx, ok := dbutils.FindSingleColumnUniqueIndex(users.Indexes, "email"); !ok || idx.Columns[0].Collate != "NOCASE" {
+		t.Errorf("up: email index %+v", idx)
+	}
 
-	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "tags": []string{"date-night"}})
-	newRecord(t, app, "reviews", map[string]any{
-		"restaurant": restaurant.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "cleanliness": 4,
-		"title": "Good", "feedback": "Creamy carbonara",
-	})
+	if err := down(app); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{
+		"restaurants", "reviews", "review_photos", "lists", "list_items", "restaurant_versions", "restaurant_overall", "restaurant_tags",
+		"restaurants_fts", "reviews_fts", "recipes", "recipe_reviews", "recipe_review_photos", "list_recipes", "recipe_versions",
+		"recipe_overall", "recipe_tags", "recipes_fts", "recipe_reviews_fts",
+	} {
+		if app.HasTable(name) {
+			t.Errorf("table %s stays", name)
+		}
+	}
+	users, err = app.FindCollectionByNameOrId("users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if users.AuthRule == nil || users.ListRule == nil {
+		t.Errorf("rules are not restored: auth %v, list %v", users.AuthRule, users.ListRule)
+	}
+	if idx, ok := dbutils.FindSingleColumnUniqueIndex(users.Indexes, "email"); !ok || idx.Columns[0].Collate != "" {
+		t.Errorf("down: email index %+v", idx)
+	}
+	if users.Fields.GetByName("avatar") == nil || users.Fields.GetByName("approved") != nil {
+		t.Error("down: users has no avatar or still has approved")
+	}
+	if app.Settings().RateLimits.Enabled {
+		t.Error("down: the PocketBase rate limits are on")
+	}
+	if _, ok := app.Settings().RateLimits.FindRateLimitRule([]string{cspReportRule.Label}); ok {
+		t.Error("down: the rate limit rule of the CSP reports stays")
+	}
 
-	redo()
-	for table, match := range map[string]string{"restaurants_fts": "ole night", "reviews_fts": "carbonara ole"} {
-		var n int
-		if err := app.DB().NewQuery("SELECT COUNT(*) FROM " + table + " WHERE " + table + " MATCH {:q}").Bind(map[string]any{"q": match}).Row(&n); err != nil {
-			t.Fatal(err)
-		}
-		if n != 1 {
-			t.Errorf("%s MATCH %q: %d rows, want 1", table, match, n)
-		}
+	if err := up(app); err != nil {
+		t.Fatalf("up after down: %v", err)
 	}
 }
 
-func TestRemoveReviewTags(t *testing.T) {
+func TestUpRefusesAnOldDataFolder(t *testing.T) {
 	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
+	if err := up(newApp(t)); err == nil {
+		t.Error("up ran on a data folder that has the collections")
+	}
+}
+
+func TestRateLimitsAreOn(t *testing.T) {
+	t.Parallel()
+	app := newApp(t)
+	if !app.Settings().RateLimits.Enabled {
+		t.Error("the PocketBase rate limits are off")
+	}
+	if _, ok := app.Settings().RateLimits.FindRateLimitRule([]string{"POST /csp-report"}); !ok {
+		t.Error("no rate limit rule for the CSP reports")
+	}
+}
+
+func TestUsersHaveNoFileFields(t *testing.T) {
+	t.Parallel()
+	app := newApp(t)
+	users, err := app.FindCollectionByNameOrId("users")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268807_remove_review_tags.go")
-
-	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "tags": []string{"italian"}})
-	newRecord(t, app, "reviews", map[string]any{
-		"restaurant": restaurant.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "cleanliness": 4,
-		"title": "Good", "feedback": "Creamy carbonara", "tags": []string{"date-night"},
-	})
-
-	redo()
-	reviews, err := app.FindCollectionByNameOrId("reviews")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reviews.Fields.GetByName("tags") != nil {
-		t.Error("reviews still has tags")
-	}
-	count := func(table, match string) int {
-		t.Helper()
-		var n int
-		if err := app.DB().NewQuery("SELECT COUNT(*) FROM " + table + " WHERE " + table + " MATCH {:q}").Bind(map[string]any{"q": match}).Row(&n); err != nil {
-			t.Fatal(err)
-		}
-		return n
-	}
-	for match, want := range map[string]int{"carbonara ole": 1, "good": 1, "night": 0} {
-		if n := count("reviews_fts", match); n != want {
-			t.Errorf("reviews_fts MATCH %q: %d rows, want %d", match, n, want)
+	for _, f := range users.Fields {
+		if f.Type() == core.FieldTypeFile {
+			t.Errorf("users has the file field %s", f.GetName())
 		}
 	}
-	downTo(t, app, "1794268807_remove_review_tags.go")
-	if reviews, err = app.FindCollectionByNameOrId("reviews"); err != nil {
-		t.Fatal(err)
-	}
-	if reviews.Fields.GetByName("tags") == nil {
-		t.Error("down did not add tags")
-	}
-	if n := count("reviews_fts", "carbonara"); n != 1 {
-		t.Errorf("down: reviews_fts MATCH carbonara: %d rows, want 1", n)
+	if newUser(t, app, "ana").GetBool("approved") {
+		t.Error("a new user is approved")
 	}
 }
 
 func TestReviewPhotos(t *testing.T) {
 	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	photos, err := app.FindCollectionByNameOrId("review_photos")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if photos.ListRule != nil || photos.ViewRule != nil || photos.CreateRule != nil || photos.UpdateRule != nil || photos.DeleteRule != nil {
-		t.Error("review_photos has API rules")
-	}
-	for _, name := range []string{"full", "thumb"} {
-		f, ok := photos.Fields.GetByName(name).(*core.FileField)
-		if !ok || !f.Protected || f.MaxSelect != 1 || !slices.Equal(f.MimeTypes, []string{"image/jpeg"}) {
-			t.Errorf("%s: %+v", name, f)
-		}
-	}
-	if review, ok := photos.Fields.GetByName("review").(*core.RelationField); !ok || !review.Required || !review.CascadeDelete {
-		t.Errorf("review: %+v", review)
-	}
-
-	redo := downTo(t, app, "1794268806_add_review_photos.go")
-	if _, err := app.FindCollectionByNameOrId("review_photos"); err == nil {
-		t.Error("down kept review_photos")
-	}
-	redo()
-}
-
-func TestRestaurantIndexFillsExistingRecords(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268808_add_restaurant_index.go")
-
-	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	rated := newRecord(t, app, "restaurants", map[string]any{"name": "Rated", "tags": []any{"italian", "italian", 3, "pasta"}})
-	unrated := newRecord(t, app, "restaurants", map[string]any{"name": "Unrated", "tags": "italian"})
-	newRecord(t, app, "reviews", map[string]any{
-		"restaurant": rated.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "cleanliness": 4, "title": "Good",
-	})
-
-	redo()
-	var overall []struct {
-		Restaurant string   `db:"restaurant"`
-		Overall    *float64 `db:"overall"`
-	}
-	if err := app.DB().NewQuery("SELECT restaurant, overall FROM restaurant_overall").All(&overall); err != nil {
-		t.Fatal(err)
-	}
-	got := map[string]*float64{}
-	for _, row := range overall {
-		got[row.Restaurant] = row.Overall
-	}
-	if len(got) != 2 || got[rated.Id] == nil || *got[rated.Id] != 6.5 || got[unrated.Id] != nil {
-		t.Errorf("restaurant_overall: %v", overall)
-	}
-	var tags []string
-	if err := app.DB().NewQuery("SELECT tag || ' ' || (restaurant = {:id}) FROM restaurant_tags ORDER BY tag").Bind(map[string]any{"id": rated.Id}).Column(&tags); err != nil {
-		t.Fatal(err)
-	}
-	if strings.Join(tags, ",") != "italian 1,pasta 1" {
-		t.Errorf("restaurant_tags: %v", tags)
-	}
-}
-
-func TestRestaurantLocation(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268809_add_restaurant_location.go")
-
-	restaurants, err := app.FindCollectionByNameOrId("restaurants")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if restaurants.Fields.GetByName("address") != nil {
-		t.Fatal("down keeps the address field")
-	}
-	old := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "tags": []string{"date-night"}})
-	if _, err := app.DB().Insert("restaurants_fts", map[string]any{"id": old.Id, "name": "Café Olé", "description": "", "tags": "date-night"}).Execute(); err != nil {
-		t.Fatal(err)
-	}
-
-	redo()
-	old, err = app.FindRecordById("restaurants", old.Id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if old.GetString("address") != "" || old.GetString("place_id") != "" {
-		t.Errorf("the old restaurant has a location: %v", old.FieldsData())
-	}
-	count := func(match string) int {
-		t.Helper()
-		var n int
-		if err := app.DB().NewQuery("SELECT COUNT(*) FROM restaurants_fts WHERE restaurants_fts MATCH {:q}").Bind(map[string]any{"q": match}).Row(&n); err != nil {
+	app := newApp(t)
+	for _, k := range subjectKinds {
+		photos, err := app.FindCollectionByNameOrId(k.photos)
+		if err != nil {
 			t.Fatal(err)
 		}
-		return n
+		if photos.ListRule != nil || photos.ViewRule != nil || photos.CreateRule != nil || photos.UpdateRule != nil || photos.DeleteRule != nil {
+			t.Errorf("%s has API rules", k.photos)
+		}
+		for _, name := range []string{"full", "thumb"} {
+			f, ok := photos.Fields.GetByName(name).(*core.FileField)
+			if !ok || !f.Protected || f.MaxSelect != 1 || !slices.Equal(f.MimeTypes, []string{"image/jpeg"}) {
+				t.Errorf("%s %s: %+v", k.photos, name, f)
+			}
+		}
+		if review, ok := photos.Fields.GetByName("review").(*core.RelationField); !ok || !review.Required || !review.CascadeDelete {
+			t.Errorf("%s review: %+v", k.photos, review)
+		}
 	}
-	if n := count("ole night"); n != 1 {
-		t.Errorf("the old restaurant has %d index rows", n)
-	}
+}
 
+func TestPlaceIDIsUnique(t *testing.T) {
+	t.Parallel()
+	app := newApp(t)
 	// Two restaurants without a place ID do not break the unique index.
 	newRecord(t, app, "restaurants", map[string]any{"name": "A", "latitude": 41.3766, "longitude": 2.1893, "address": "Carrer Nou 1", "place_id": "osm:N1"})
 	newRecord(t, app, "restaurants", map[string]any{"name": "B", "address": "Carrer Nou 2"})
+	newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "C"})
 	c, err := app.FindCollectionByNameOrId("restaurants")
 	if err != nil {
 		t.Fatal(err)
 	}
 	same := core.NewRecord(c)
-	same.Load(map[string]any{"name": "C", "address": "Carrer Nou 3", "place_id": "osm:N1"})
+	same.Load(map[string]any{"name": "D", "address": "Carrer Nou 3", "place_id": "osm:N1"})
 	if err := app.Save(same); err == nil {
 		t.Error("two restaurants have one place ID")
 	}
@@ -405,46 +175,17 @@ func reviewOverall(t *testing.T, app core.App, id string) float64 {
 
 func TestReviewOverallColumn(t *testing.T) {
 	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268811_add_review_overall.go")
-
-	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
-	review := newRecord(t, app, "reviews", map[string]any{
-		"restaurant": restaurant.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "cleanliness": 7, "title": "Good",
-	})
-
-	hasCreatorIndex := func() bool {
-		reviews, err := app.FindCollectionByNameOrId("reviews")
-		if err != nil {
-			t.Fatal(err)
-		}
-		return reviews.GetIndex("idx_reviews_creator") != ""
-	}
-	if !hasCreatorIndex() {
-		t.Error("down: reviews has no idx_reviews_creator")
-	}
-
-	redo()
-	if hasCreatorIndex() {
-		t.Error("up: reviews still has idx_reviews_creator")
-	}
-	if got := reviewOverall(t, app, review.Id); got != 6.5 {
+	app := newApp(t)
+	restaurant := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Luigi's"})
+	r := newRecord(t, app, "reviews", review(newUser(t, app, "ana"), restaurant, map[string]any{"space": 3, "service": 9, "food": 8, "price": 6}))
+	if got := reviewOverall(t, app, r.Id); got != 6.5 {
 		t.Errorf("overall is %v, want 6.5", got)
 	}
-	review, err = app.FindRecordById("reviews", review.Id)
-	if err != nil {
+	r.Set("food", 10)
+	if err := app.Save(r); err != nil {
 		t.Fatal(err)
 	}
-	review.Set("food", 10)
-	if err := app.Save(review); err != nil {
-		t.Fatal(err)
-	}
-	if got := reviewOverall(t, app, review.Id); got != 7 {
+	if got := reviewOverall(t, app, r.Id); got != 7 {
 		t.Errorf("overall after an update is %v, want 7", got)
 	}
 
@@ -461,36 +202,53 @@ func TestReviewOverallColumn(t *testing.T) {
 	if err := app.Save(reviews); err != nil {
 		t.Fatal(err)
 	}
-	if got := reviewOverall(t, app, review.Id); got != 7 {
+	if got := reviewOverall(t, app, r.Id); got != 7 {
 		t.Errorf("overall after a field change is %v, want 7", got)
 	}
 }
 
-func TestListsMigration(t *testing.T) {
+func TestReviewDate(t *testing.T) {
 	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
+	app := newApp(t)
+	ana := newUser(t, app, "ana")
+	luigi := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Luigi's"})
+	dal := newRecord(t, app, "recipes", map[string]any{"name": "Dal", "ingredients": []string{"lentils"}, "steps": []string{"Boil."}})
+	for range 2 {
+		newRecord(t, app, "reviews", review(ana, luigi, scores(6)))
+		newRecord(t, app, "recipe_reviews", recipeReview(ana, dal, 6))
+	}
+
+	for collection, data := range map[string]map[string]any{
+		"reviews":        review(ana, luigi, scores(6)),
+		"recipe_reviews": recipeReview(ana, dal, 6),
+	} {
+		c, err := app.FindCollectionByNameOrId(collection)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data["date"] = "6 Nov 2024"
+		r := core.NewRecord(c)
+		r.Load(data)
+		if err := app.Save(r); err == nil {
+			t.Errorf("%s: a date that does not match the pattern was saved", collection)
+		}
+	}
+}
+
+func TestLists(t *testing.T) {
+	t.Parallel()
+	app := newApp(t)
+	ana := newUser(t, app, "ana")
+	restaurant := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Luigi's"})
+	recipe := newRecord(t, app, "recipes", map[string]any{"name": "Dal", "ingredients": []string{"lentils"}, "steps": []string{"Boil."}})
+	favorites := newRecord(t, app, "lists", map[string]any{"creator": ana.Id, "name": "Favorites", "kind": "favorites"})
+
+	lists, err := app.FindCollectionByNameOrId("lists")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268813_add_lists.go")
-	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
-	redo()
-
-	favorites, err := app.FindAllRecords("lists", dbx.HashExp{"creator": ana.Id})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(favorites) != 1 || favorites[0].GetString("kind") != "favorites" || favorites[0].GetString("name") != "Favorites" ||
-		len(favorites[0].Id) != 15 || favorites[0].GetDateTime("created").IsZero() {
-		t.Fatalf("lists of an existing user: %v", favorites)
-	}
-
-	second := map[string]any{"creator": ana.Id, "name": "Other", "kind": "favorites"}
-	lists, _ := app.FindCollectionByNameOrId("lists")
 	r := core.NewRecord(lists)
-	r.Load(second)
+	r.Load(map[string]any{"creator": ana.Id, "name": "Other", "kind": "favorites"})
 	if err := app.Save(r); err == nil {
 		t.Error("a second favorites list was saved")
 	}
@@ -501,8 +259,10 @@ func TestListsMigration(t *testing.T) {
 	}
 
 	custom := newRecord(t, app, "lists", map[string]any{"creator": ana.Id, "name": "Date night", "kind": "custom"})
-	newRecord(t, app, "list_items", map[string]any{"list": custom.Id, "restaurant": restaurant.Id})
-	newRecord(t, app, "list_items", map[string]any{"list": favorites[0].Id, "restaurant": restaurant.Id})
+	for _, list := range []*core.Record{custom, favorites} {
+		newRecord(t, app, "list_items", map[string]any{"list": list.Id, "restaurant": restaurant.Id})
+		newRecord(t, app, "list_recipes", map[string]any{"list": list.Id, "recipe": recipe.Id})
+	}
 	count := func(collection string) int64 {
 		t.Helper()
 		n, err := app.CountRecords(collection)
@@ -514,11 +274,16 @@ func TestListsMigration(t *testing.T) {
 	if err := app.Delete(restaurant); err != nil {
 		t.Fatal(err)
 	}
-	if n := count("list_items"); n != 0 {
-		t.Errorf("%d items after the restaurant delete, want 0", n)
+	if err := app.Delete(recipe); err != nil {
+		t.Fatal(err)
+	}
+	for _, collection := range []string{"list_items", "list_recipes"} {
+		if n := count(collection); n != 0 {
+			t.Errorf("%d %s after the delete of the subjects, want 0", n, collection)
+		}
 	}
 	if n := count("lists"); n != 2 {
-		t.Errorf("%d lists after the restaurant delete, want 2", n)
+		t.Errorf("%d lists after the delete of the subjects, want 2", n)
 	}
 	if err := app.Delete(ana); err != nil {
 		t.Fatal(err)
@@ -528,158 +293,32 @@ func TestListsMigration(t *testing.T) {
 	}
 }
 
-func TestUserApprovalMigration(t *testing.T) {
+func TestRestaurantDetails(t *testing.T) {
 	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268814_add_user_approval.go")
-	old := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	redo()
-
-	old, err = app.FindRecordById("users", old.Id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !old.GetBool("approved") {
-		t.Error("a user from before the migration is not approved")
-	}
-	later := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
-	if later.GetBool("approved") {
-		t.Error("a new user is approved")
-	}
-}
-
-func TestConfirmExistingUsersMigration(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268815_confirm_existing_users.go")
-	old := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	redo()
-
-	old, err = app.FindRecordById("users", old.Id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !old.Verified() {
-		t.Error("a user from before the migration is not confirmed")
-	}
-	later := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
-	if later.Verified() {
-		t.Error("a new user is confirmed")
-	}
-}
-
-func TestTrimStoredNamesMigration(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268817_trim_stored_names.go")
-	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": " Ana  "})
-	padded := newRecord(t, app, "restaurants", map[string]any{"name": "  Luigi's ", "address": " Carrer Nou 1 "})
-	// SQLite removes only the ASCII space. A no-break space stays.
-	plain := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé\u00a0", "address": "Carrer Nou 2"})
-	updated := padded.GetString("updated")
-	// The tests register no search index hooks. The rows come from SQL.
-	for _, q := range []string{
-		"INSERT INTO {{restaurants_fts}} (id, name, description, tags, address) VALUES ({:id}, '  Luigi''s ', '', '', ' Carrer Nou 1 ')",
-		"INSERT INTO {{reviews_fts}} (id, title, feedback, restaurant_name) VALUES ('review000000001', ' Good ', '', '  Luigi''s ')",
-	} {
-		if _, err := app.DB().NewQuery(q).Bind(dbx.Params{"id": padded.Id}).Execute(); err != nil {
-			t.Fatal(err)
-		}
-	}
-	redo()
-
-	for _, want := range []struct{ collection, id, field, value string }{
-		{"users", user.Id, "name", "Ana"},
-		{"restaurants", padded.Id, "name", "Luigi's"},
-		{"restaurants", padded.Id, "address", "Carrer Nou 1"},
-		{"restaurants", plain.Id, "name", "Café Olé\u00a0"},
-		{"restaurants", plain.Id, "address", "Carrer Nou 2"},
-	} {
-		r, err := app.FindRecordById(want.collection, want.id)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := r.GetString(want.field); got != want.value {
-			t.Errorf("%s %s: %q, want %q", want.collection, want.field, got, want.value)
-		}
-	}
-	if r, _ := app.FindRecordById("restaurants", padded.Id); r.GetString("updated") != updated {
-		t.Errorf("the migration changed updated: %s, want %s", r.GetString("updated"), updated)
-	}
-	var restaurant struct{ Name, Address string }
-	if err := app.DB().NewQuery("SELECT name, address FROM {{restaurants_fts}} WHERE id = {:id}").
-		Bind(dbx.Params{"id": padded.Id}).One(&restaurant); err != nil || restaurant.Name != "Luigi's" || restaurant.Address != "Carrer Nou 1" {
-		t.Errorf("restaurant index %+v, error %v", restaurant, err)
-	}
-	var review struct {
-		Title          string
-		RestaurantName string `db:"restaurant_name"`
-	}
-	if err := app.DB().NewQuery("SELECT title, restaurant_name FROM {{reviews_fts}} WHERE id = 'review000000001'").
-		One(&review); err != nil || review.Title != "Good" || review.RestaurantName != "Luigi's" {
-		t.Errorf("review index %+v, error %v", review, err)
-	}
-}
-
-func TestRestaurantDetailsMigration(t *testing.T) {
-	t.Parallel()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer app.Cleanup()
-	redo := downTo(t, app, "1794268816_add_restaurant_details.go")
-	restaurants, err := app.FindCollectionByNameOrId("restaurants")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if restaurants.Fields.GetByName("website") != nil {
-		t.Fatal("down keeps the website field")
-	}
-	old := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "address": "Carrer Nou 1"})
-	redo()
-
-	old, err = app.FindRecordById("restaurants", old.Id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if old.GetString("website") != "" || old.GetString("phone") != "" || old.GetString("opening_hours") != "" || old.GetInt("price_level") != 0 {
-		t.Errorf("the old restaurant has details: %v", old.FieldsData())
-	}
-	old.Set("price_level", 5)
-	if err := app.Save(old); err == nil {
+	app := newApp(t)
+	r := newRecord(t, app, "restaurants", map[string]any{"name": "Café Olé", "address": "Carrer Nou 1"})
+	r.Set("price_level", 5)
+	if err := app.Save(r); err == nil {
 		t.Error("a price level of 5 is saved")
 	}
-	old.Set("price_level", 4)
-	if err := app.Save(old); err != nil {
+	r.Set("price_level", 4)
+	if err := app.Save(r); err != nil {
 		t.Errorf("a price level of 4: %v", err)
 	}
 
 	for field, values := range map[string][2]string{
 		"website":       {"https://cansole.example/menu", "see menu"},
 		"phone":         {"+34 932 21 50 12", "call us"},
-		"opening_hours": {"Mo-Fr 12:00-15:00\nSa 12:00-23:00", "Mo\u200b"},
+		"opening_hours": {"Mo-Fr 12:00-15:00\nSa 12:00-23:00", "Mo​"},
 	} {
-		old.Set(field, values[0])
-		if err := app.Save(old); err != nil {
+		r.Set(field, values[0])
+		if err := app.Save(r); err != nil {
 			t.Errorf("%s %q: %v", field, values[0], err)
 		}
-		old.Set(field, values[1])
-		if err := app.Save(old); err == nil {
+		r.Set(field, values[1])
+		if err := app.Save(r); err == nil {
 			t.Errorf("%s %q is saved", field, values[1])
 		}
-		old.Set(field, "")
+		r.Set(field, "")
 	}
 }

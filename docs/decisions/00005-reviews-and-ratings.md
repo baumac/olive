@@ -255,7 +255,7 @@ FROM (
 - the triggers compute from the reviews. They do not add to or subtract from a stored value, so the value cannot drift.
 - the triggers run for all writes: the Public API, the dashboard, cascade deletes, and plain SQL
 - `ratingsQuery` reads the stored rating of each subject of a page by the primary key. It reads no reviews.
-- `overallKind` of the migrations has the names of each kind. One code makes the triggers of both tables.
+- `subjectKind` of the migrations has the names of each kind. One code makes the tables and the triggers of both kinds.
 
 ## The overall sort
 
@@ -264,7 +264,6 @@ FROM (
 - SQLite uses an index on columns for a row value range, not an index on expressions. The sort keys are then generated columns.
 - the subject key is unique, so `parseSort` adds no `id` key. SQLite sorts no rows.
 - the list joins the overall table with an inner join. SQLite then reads it first, in the order of the index.
-- `overallSortVersion` is in the cursor fingerprint. A cursor from an older sort gets `400`.
 - the sort key is the rounded value. Reviewer averages of 8.04 and 7.96 both give 8.0, and the number of reviewers decides.
 
 ## Migrations and the derived columns
@@ -273,7 +272,7 @@ FROM (
 - a migration that drops a score column must first drop the triggers, the sort indexes, the `overall` column, and its indexes. It makes them again afterwards.
 - it also drops the score column of the overall table
 - PocketBase drops and adds the column of a relation field when its maximum changes from one to more. This also applies to the parent relation of reviews.
-- `reviewScores` of `migrations/scores.go` makes the SQL of the overall column and the rating from a list of scores
+- `subjectKind` of `migrations/subjects.go` makes the SQL of the overall column and the rating from the list of scores
 
 # Alternatives
 [alternatives]: #alternatives

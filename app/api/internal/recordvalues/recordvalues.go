@@ -48,12 +48,7 @@ type Location struct {
 	PlaceID   string  `json:"place_id,omitempty"`
 }
 
-// LocationOf returns nil for a restaurant without an address. Such a
-// restaurant is from before the location field.
-func LocationOf(r *core.Record) *Location {
-	address := r.GetString("address")
-	if address == "" {
-		return nil
-	}
-	return &Location{Latitude: r.GetFloat("latitude"), Longitude: r.GetFloat("longitude"), Address: address, PlaceID: r.GetString("place_id")}
+// LocationOf gets the location of a restaurant.
+func LocationOf(r *core.Record) Location {
+	return Location{Latitude: r.GetFloat("latitude"), Longitude: r.GetFloat("longitude"), Address: r.GetString("address"), PlaceID: r.GetString("place_id")}
 }

@@ -107,29 +107,6 @@ func TestRestaurantLocation(t *testing.T) {
 			t.Errorf("location of another user %v", l)
 		}
 	})
-
-	t.Run("a restaurant from before locations can get one", func(t *testing.T) {
-		old := e.createRestaurant(ana.Token, `{"name":"Old"}`)["id"].(string)
-		rec, err := e.app.FindRecordById("restaurants", old)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, f := range []string{"latitude", "longitude"} {
-			rec.Set(f, 0)
-		}
-		rec.Set("address", "")
-		if err := e.app.Save(rec); err != nil {
-			t.Fatal(err)
-		}
-		got := e.expect(request{method: "GET", path: "/v1/restaurants/" + old}, http.StatusOK).object(t)
-		if l, ok := got["location"]; !ok || l != nil {
-			t.Errorf("location %v, want null", l)
-		}
-		e.createReview(joe.Token, old, review)
-		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + old, body: `{"location":` + testLocation + `}`, token: eva.Token}, http.StatusOK)
-		// A wrong location of one user can be fixed by another user.
-		e.expect(request{method: "PATCH", path: "/v1/restaurants/" + old, body: `{"location":` + locationJSON(1, 1, "Other", "") + `}`, token: joe.Token}, http.StatusOK)
-	})
 }
 
 func TestListRestaurantsNear(t *testing.T) {
@@ -144,12 +121,6 @@ func TestListRestaurantsNear(t *testing.T) {
 	} {
 		e.createRestaurant(ana.Token, fmt.Sprintf(`{"name":%q,"location":%s}`, name, locationJSON(l[0], l[1], "Qwx 1", "")))
 	}
-	none := e.createRestaurant(ana.Token, `{"name":"No location"}`)["id"].(string)
-	if _, err := e.app.DB().NewQuery("UPDATE restaurants SET address = '', latitude = 41.3766, longitude = 2.1893 WHERE id = {:id}").
-		Bind(map[string]any{"id": none}).Execute(); err != nil {
-		t.Fatal(err)
-	}
-
 	names := func(query string) string {
 		t.Helper()
 		var page struct {
@@ -213,12 +184,6 @@ func TestListRestaurantsByDistance(t *testing.T) {
 	// the order.
 	e.createRestaurant(ana.Token, `{"name":"Center","location":`+locationJSON(41.3766, 2.1893, "Qwx 2", "")+`}`)
 
-	none := e.createRestaurant(ana.Token, `{"name":"No location"}`)["id"].(string)
-	if _, err := e.app.DB().NewQuery("UPDATE restaurants SET address = '', latitude = 41.3766, longitude = 2.1893 WHERE id = {:id}").
-		Bind(map[string]any{"id": none}).Execute(); err != nil {
-		t.Fatal(err)
-	}
-
 	const point = "near[latitude]=41.3766&near[longitude]=2.1893"
 	const barceloneta = point + "&near[radius]=150"
 	names := func(query string, limit int) string {
@@ -247,8 +212,8 @@ func TestListRestaurantsByDistance(t *testing.T) {
 		"sort=distance&search=north&" + barceloneta:                           "North 56 m,North 110 m",
 		"sort=distance&near[latitude]=0&near[longitude]=180&near[radius]=100": "Date line east,Date line west",
 		// Without a radius, near is only the point of the sort.
-		"sort=distance&" + point:  "Center,Center,North 56 m,East 62 m,North 110 m,Madrid,Date line east,Date line west,No location",
-		"sort=-distance&" + point: "Date line west,Date line east,Madrid,North 110 m,East 62 m,North 56 m,Center,Center,No location",
+		"sort=distance&" + point:  "Center,Center,North 56 m,East 62 m,North 110 m,Madrid,Date line east,Date line west",
+		"sort=-distance&" + point: "Date line west,Date line east,Madrid,North 110 m,East 62 m,North 56 m,Center,Center",
 	} {
 		for _, limit := range []int{1, 2, 100} {
 			if got := names(query, limit); got != want {
@@ -423,12 +388,6 @@ func TestListRestaurantsWithin(t *testing.T) {
 	} {
 		e.createRestaurant(ana.Token, fmt.Sprintf(`{"name":%q,"location":%s}`, name, locationJSON(l[0], l[1], "Qwx 1", "")))
 	}
-	none := e.createRestaurant(ana.Token, `{"name":"No location"}`)["id"].(string)
-	if _, err := e.app.DB().NewQuery("UPDATE restaurants SET address = '', latitude = 41.35, longitude = 2.15 WHERE id = {:id}").
-		Bind(map[string]any{"id": none}).Execute(); err != nil {
-		t.Fatal(err)
-	}
-
 	box := func(west, south, east, north float64) string {
 		return fmt.Sprintf("within[west]=%v&within[south]=%v&within[east]=%v&within[north]=%v", west, south, east, north)
 	}

@@ -69,7 +69,7 @@ func TestRunDeletesOnlyOldFoldersWithoutARecord(t *testing.T) {
 	defer app.Cleanup()
 
 	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's"})
+	restaurant := save(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Luigi's"})
 	review := save(t, app, "reviews", map[string]any{
 		"restaurant": restaurant.Id, "creator": user.Id, "date": "2024-11-06", "space": 7, "service": 7, "food": 7, "price": 7, "title": "Good",
 	})

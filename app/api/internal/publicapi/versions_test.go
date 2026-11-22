@@ -118,7 +118,7 @@ func TestRestaurantVersionsStartAtTheBaseline(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	id := e.createRestaurant(ana.Token, `{"name":"Old","phone":"931 000 000"}`)["id"].(string)
-	// A restaurant from before the migration has only the baseline.
+	// A restaurant from before the history has only the baseline.
 	if _, err := e.app.DB().NewQuery("UPDATE {{restaurant_versions}} SET [[action]] = 'baseline', [[source]] = 'admin', [[editor]] = '', [[changed]] = '[]'").Execute(); err != nil {
 		t.Fatal(err)
 	}

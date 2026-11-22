@@ -9,7 +9,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 ## For claude
 
 ## For Me
-- reset api spec version to 1.0.0 and consolidate migrations
 - deploy to prod
 
 ## For the Future

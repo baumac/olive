@@ -67,11 +67,7 @@ func (s *Server) ListRestaurants(ctx context.Context, req reviewsapi.ListRestaur
 		return bad("The within[south] parameter must not be more than within[north].")
 	}
 	p.Limit, p.Cursor, p.Sort = nil, nil, &sort
-	parts := []any{"restaurants", p}
-	if sortsBy(sort, "overall") {
-		parts = append(parts, overallSortVersion)
-	}
-	query, err := fingerprint(parts...)
+	query, err := fingerprint("restaurants", p)
 	if err != nil {
 		return nil, err
 	}
@@ -336,18 +332,13 @@ func restaurantWithPlace(app core.App, r *core.Record) (string, error) {
 	return id, err
 }
 
-// locationOf returns null for a restaurant without an address. Such a
-// restaurant is from before the location field.
-func locationOf(r *core.Record) nullable.Nullable[reviewsapi.Location] {
+func locationOf(r *core.Record) reviewsapi.Location {
 	stored := recordvalues.LocationOf(r)
-	if stored == nil {
-		return nullable.NewNullNullable[reviewsapi.Location]()
-	}
 	l := reviewsapi.Location{Latitude: stored.Latitude, Longitude: stored.Longitude, Address: stored.Address}
 	if stored.PlaceID != "" {
 		l.PlaceId = &stored.PlaceID
 	}
-	return nullable.NewNullableWithValue(l)
+	return l
 }
 
 // deleteForbidden returns a detail for the 403 response if the user cannot

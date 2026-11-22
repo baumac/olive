@@ -29,7 +29,7 @@ const review: RestaurantReview = {
 const restaurant: Restaurant = {
   id: 'k3x9m2p7q1w8z4a',
   name: "Luigi's Trattoria",
-  location: null,
+  location: { latitude: 41.3766, longitude: 2.1893, address: 'Carrer de Sant Carles 4' },
   creator: { id: 'u2g6k0m4o8q1s5w', name: 'Joe' },
   reviewCount: 0,
   rating: null,

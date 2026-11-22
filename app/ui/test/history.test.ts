@@ -15,6 +15,7 @@ const joe = { id: 'u2g6k0m4o8q1s5w', name: 'Joe' }
 const eva = { id: 'u9e3v7a1b5c8d2f', name: 'Eva' }
 
 const location = { latitude: 41.4, longitude: 2.2, address: 'Carrer 1' }
+const oldLocation = { latitude: 41.39, longitude: 2.17, address: 'Carrer Vell 1' }
 
 const restaurant: Restaurant = {
   id: 'k3x9m2p7q1w8z4a',
@@ -52,7 +53,7 @@ function version(number: number, editor: typeof ana | null, before: Partial<Rest
 const versions: RestaurantVersion[] = [
   version(4, eva, { phone: '931 000 000' }, { phone: '931 111 111' }),
   version(3, joe, { description: 'Small tapas bar', tags: null, phone: '931 222 222' }, { description: null, tags: new Set(['tapas']), phone: '931 000 000' }),
-  version(2, null, { location: null }, { location }),
+  version(2, null, { location: oldLocation }, { location }),
   version(1, ana, {}, { name: 'Can Solé', phone: '931 222 222' }),
 ]
 
@@ -104,8 +105,8 @@ describe('history', () => {
     })
   })
 
-  it('does not clear a location or undo a create', () => {
-    expect(undoChange('restaurant', versions, 2)).toEqual({ number: 2, values: {}, kept: [] })
+  it('undoes a location but not a create', () => {
+    expect(undoChange('restaurant', versions, 2)).toEqual({ number: 2, values: { location: oldLocation }, kept: [] })
     expect(undoChange('restaurant', versions, 1)).toBeNull()
     expect(undoChange('restaurant', versions, 9)).toBeNull()
   })
@@ -189,7 +190,9 @@ describe('history', () => {
   it('tells when a version has nothing to undo', async () => {
     signIn()
     vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue(restaurant)
-    vi.spyOn(restaurantsApi, 'listRestaurantVersions').mockResolvedValue({ items: versions, nextCursor: null })
+    // Version 5 changed the location again. Version 2 then has nothing to undo.
+    const moved = version(5, eva, { location }, { location: oldLocation })
+    vi.spyOn(restaurantsApi, 'listRestaurantVersions').mockResolvedValue({ items: [moved, ...versions], nextCursor: null })
     const w = mount(RestaurantFormPage, {
       props: { restaurantId: restaurant.id },
       global: { plugins: [await routerAt(`/restaurants/${restaurant.id}/edit?undo=2`)] },

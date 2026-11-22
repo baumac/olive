@@ -1,11 +1,9 @@
 package publicapi
 
 import (
-	"context"
 	"strings"
 	"testing"
 
-	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -73,57 +71,6 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 				t.Errorf("plan sorts rows:\n%s", plan)
 			}
 		})
-	}
-}
-
-func TestOldOverallCursorIsRejected(t *testing.T) {
-	t.Parallel()
-	s := newTestServer(t)
-	sort := "-overall"
-	for name, version := range map[string][]any{"no version": nil, "version 2": {2}, "version 3": {3}} {
-		t.Run(name, func(t *testing.T) {
-			parts := append([]any{"restaurants", reviewsapi.ListRestaurantsParams{Sort: &sort}}, version...)
-			old, err := fingerprint(parts...)
-			if err != nil {
-				t.Fatal(err)
-			}
-			cursor, err := encodeCursor(old, []any{0.0, 7.4, 2, "abc"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			res, err := s.ListRestaurants(context.Background(), reviewsapi.ListRestaurantsRequestObject{
-				Params: reviewsapi.ListRestaurantsParams{Sort: &sort, Cursor: &cursor},
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, ok := res.(reviewsapi.ListRestaurants400ApplicationProblemPlusJSONResponse); !ok {
-				t.Errorf("response %T, want 400", res)
-			}
-		})
-	}
-}
-
-func TestOldRecipeOverallCursorIsRejected(t *testing.T) {
-	t.Parallel()
-	s := newTestServer(t)
-	sort := "-overall"
-	old, err := fingerprint("recipes", reviewsapi.ListRecipesParams{Sort: &sort})
-	if err != nil {
-		t.Fatal(err)
-	}
-	cursor, err := encodeCursor(old, []any{0.0, 7.4, 2, "abc"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := s.ListRecipes(context.Background(), reviewsapi.ListRecipesRequestObject{
-		Params: reviewsapi.ListRecipesParams{Sort: &sort, Cursor: &cursor},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := res.(reviewsapi.ListRecipes400ApplicationProblemPlusJSONResponse); !ok {
-		t.Errorf("response %T, want 400", res)
 	}
 }
 

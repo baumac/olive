@@ -46,7 +46,7 @@ const wide = useMediaQuery('(min-width: 1024px)')
 const mapOpen = ref(false)
 const marker = computed(() => {
   const r = restaurant.data.value
-  return r?.location ? { id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name } : null
+  return r ? { id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name } : null
 })
 
 const gallery = ref<InstanceType<typeof PhotoGallery> | null>(null)
@@ -142,7 +142,7 @@ async function remove() {
           <p v-if="restaurant.data.value.description" class="text-muted-foreground max-w-2xl text-xl whitespace-pre-line">
             {{ restaurant.data.value.description }}
           </p>
-          <p v-if="restaurant.data.value.location" class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <p class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <a
               :href="osmLink(restaurant.data.value.location)"
               target="_blank"
@@ -174,15 +174,6 @@ async function remove() {
             >
               {{ mapOpen ? 'Hide map' : 'Show map' }}
             </button>
-          </p>
-          <p v-else-if="access?.canEdit" class="text-muted-foreground flex items-start gap-2">
-            <MapPinIcon class="mt-1 size-4 shrink-0" aria-hidden="true" />
-            <span>
-              This restaurant has no location.
-              <RouterLink :to="`/restaurants/${restaurantId}/edit`" class="text-foreground font-medium underline underline-offset-4">
-                Add the location
-              </RouterLink>
-            </span>
           </p>
           <MapView
             v-if="marker && mapConfig && !wide && mapOpen"

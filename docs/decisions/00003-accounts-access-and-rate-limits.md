@@ -323,9 +323,8 @@ Cross-origin check:
 
 - `localStorage` keeps `expires`, `issued`, and `user` of the session. They are not secret. The token is only in the cookie.
 - `issued` is the browser time when the UI got the token
-- `checkSession` in `app/ui/src/composables/useAuth.ts` calls `refreshToken` when half of the time from `issued` to `expires` is over, or when the session has no `issued`. Otherwise it calls `getCurrentUser`.
+- `checkSession` in `app/ui/src/composables/useAuth.ts` calls `refreshToken` when half of the time from `issued` to `expires` is over. Otherwise it calls `getCurrentUser`.
 - `checkSession` shares one request between calls at the same time. The UI also checks the token each hour.
-- a stored session with a `token` is from an older version. The first refresh sends this token in the `Authorization` header with `cookie=true`.
 - a middleware sends requests with `credentials: 'omit'` while the UI has no session. A cookie that a failed sign out left then has no effect.
 - a `401` on a request with credentials ends the session. The middleware sends the request again without credentials. A read then works. A page that needs an account opens the sign in page with `reason=session-ended`.
 - the browser sends a `storage` event to the other tabs when the session changes. `watchOtherTabs` of `session.ts` loads it again.

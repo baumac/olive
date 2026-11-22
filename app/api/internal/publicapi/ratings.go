@@ -98,11 +98,6 @@ func (sub subject) overallSort(desc bool) []sortKey {
 	}
 }
 
-// overallSortVersion is in the fingerprint of each overall sort. The keys
-// changed three times. Decision 00005 has them. The version rejects the
-// cursors of the old keys.
-const overallSortVersion = 4
-
 // overallDetail returns the detail of a 400 for a NaN value. The spec
 // validation can be off. The fingerprint cannot marshal NaN.
 func overallDetail(r *reviewsapi.AverageRange) string {

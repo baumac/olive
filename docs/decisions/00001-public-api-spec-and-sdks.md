@@ -371,7 +371,7 @@ Switches:
 | A router of kin-openapi, such as `gorillamux` | Not selected. The ServeMux already found the operation. A second router could find a different one. |
 | Validation only in tests | Not selected. A response that breaks the spec in production would reach the client. |
 | A copy of the rules in Go | Removed. The two copies drifted, and a rule change needed two changes. |
-| The PocketBase timestamp format with a space | Removed in version 2.0.0. It is not RFC 3339, and each client needed its own parser. |
+| The PocketBase timestamp format with a space | It is not RFC 3339. Each client needed its own parser. |
 | `format: date-time` for `Timestamp` | Not selected. The generators would change the type to a date object in each SDK. |
 | Review kinds with a `kind` discriminator, such as `basic` with one rating | Removed. One kind is simpler for clients, filters, and sorts. |
 | A new path, such as `/v2`, for each breaking change | Not selected. The UI is the only known client, and a new path changes each route. |

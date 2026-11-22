@@ -190,7 +190,7 @@ func TestReviewers(t *testing.T) {
 		e.expect(request{method: "GET", path: unknown}, http.StatusNotFound)
 		e.expect(request{method: "GET", path: unknown + "/restaurant-reviews"}, http.StatusNotFound)
 		e.expect(request{method: "GET", path: unknown + "/restaurant-reviews?sort=bad"}, http.StatusBadRequest)
-		// Version 6.0.0 of the spec removed these paths. See decision 00001.
+		// The API keeps no aliases for old names. See decision 00001.
 		for _, path := range []string{"/v1/reviews", "/v1/reviewers/" + ana.User.ID + "/reviews"} {
 			if p := e.expect(request{method: "GET", path: path}, http.StatusNotFound).object(t); p["detail"] != "The path does not exist." {
 				t.Errorf("%s: problem %v, want a path that does not exist", path, p)

@@ -363,11 +363,7 @@ func TestListFilter(t *testing.T) {
 		return e.createRestaurant(ana.Token, body)["id"].(string)
 	}
 	far, near, other := place("Far", 41.5), place("Near", 41.1), place("Other", 41.0)
-	noLocation := e.createRestaurant(ana.Token, `{"name":"Nowhere","tags":["pizza"]}`)["id"].(string)
-	if _, err := e.app.DB().NewQuery("UPDATE restaurants SET address = '' WHERE id = {:id}").
-		Bind(map[string]any{"id": noLocation}).Execute(); err != nil {
-		t.Fatal(err)
-	}
+	noLocation := e.createRestaurant(ana.Token, `{"name":"Nowhere","tags":["pizza"],"location":{"latitude":60,"longitude":2,"address":"Street"}}`)["id"].(string)
 	favorites := e.lists(ana.User.ID, "").Items[0].ID
 	date := e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Date night"}`, token: ana.Token}, http.StatusCreated).object(t)["id"].(string)
 	for _, r := range []string{far, near, noLocation} {

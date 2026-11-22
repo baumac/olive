@@ -217,20 +217,18 @@ func (w *where) near(n *reviewsapi.NearFilter) {
 	lat := column("restaurants", "latitude")
 	radius := float64(*n.Radius)
 	reach := radius / metersPerDegree
-	w.add(column("restaurants", "address") + " != ''")
 	w.add(fmt.Sprintf("%s BETWEEN %s AND %s", lat, w.param(n.Latitude-reach), w.param(n.Latitude+reach)))
 	distance := squaredDistance(w.param(n.Latitude), w.param(n.Longitude), w.param(metersPerDegree), w.param(metersPerLongitude(n.Latitude)))
 	w.add(fmt.Sprintf("%s <= %s", distance, w.param(radius*radius)))
 }
 
-// distanceSort sorts by the squared distance from the point of n.
-// Restaurants without a location are last in both directions. The SQL text
-// has the numbers, not parameters.
+// distanceSort sorts by the squared distance from the point of n. The SQL
+// text has the numbers, not parameters.
 func distanceSort(n *reviewsapi.NearFilter) sortField {
 	sql := func(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
 	expr := squaredDistance(sql(n.Latitude), sql(n.Longitude), sql(metersPerDegree), sql(metersPerLongitude(n.Latitude)))
 	return func(desc bool) []sortKey {
-		return []sortKey{{expr: "(" + column("restaurants", "address") + " = '')"}, {expr: expr, desc: desc}}
+		return []sortKey{{expr: expr, desc: desc}}
 	}
 }
 
@@ -241,7 +239,6 @@ func (w *where) within(b *reviewsapi.WithinFilter) {
 		return
 	}
 	lat, lon := column("restaurants", "latitude"), column("restaurants", "longitude")
-	w.add(column("restaurants", "address") + " != ''")
 	w.add(fmt.Sprintf("%s BETWEEN %s AND %s", lat, w.param(b.South), w.param(b.North)))
 	if b.West <= b.East {
 		w.add(fmt.Sprintf("%s BETWEEN %s AND %s", lon, w.param(b.West), w.param(b.East)))

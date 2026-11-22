@@ -237,7 +237,7 @@ describe('RestaurantFormPage drafts', () => {
   const restaurant: Restaurant = {
     id: 'k3x9m2p7q1w8z4a',
     name: 'Old Place',
-    location: null,
+    location: { latitude: 41.39, longitude: 2.17, address: 'Carrer Vell 1' },
     creator: { id: user.id, name: 'Ana' },
     reviewCount: 2,
     rating: null,
@@ -253,24 +253,17 @@ describe('RestaurantFormPage drafts', () => {
     clearSession()
   })
 
-  async function mountWithDraft(stored: Location | null, creator = restaurant.creator) {
+  async function mountWithDraft(stored: Location, creator = restaurant.creator) {
     saveSession({ token: 't', expires: '2099-01-01T00:00:00.000Z', user })
     vi.spyOn(restaurantsApi, 'getRestaurant').mockResolvedValue({ ...restaurant, location: stored, creator })
     vi.spyOn(restaurantsApi, 'listRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
     vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
-    saveDraft(`restaurant:${restaurant.id}`, { name: 'Renamed', description: 'Draft', tags: [], location: canSole.location })
+    saveDraft(`restaurant:${restaurant.id}`, { name: 'Renamed', description: 'Draft', tags: [], location: canSole.location, website: '', phone: '', openingHours: '', priceLevel: null })
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { render: () => null } }] })
     const w = mount(RestaurantFormPage, { props: { restaurantId: restaurant.id }, global: { plugins: [router] }, attachTo: document.body })
     await flushPromises()
     return w
   }
-
-  it('keeps the drafted name and location of a restaurant without one', async () => {
-    const w = await mountWithDraft(null)
-    expect((w.get('input[name=name]').element as HTMLInputElement).value).toBe('Renamed')
-    expect(w.text()).toContain('Selected location: Carrer de Sant Carles 4, 08003 Barcelona')
-    w.unmount()
-  })
 
   it('takes the drafted location of a user who is not the creator', async () => {
     const w = await mountWithDraft(house.location, { id: 'u2g6k0m4o8q1s5w', name: 'Joe' })

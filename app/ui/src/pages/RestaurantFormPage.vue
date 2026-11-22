@@ -100,7 +100,7 @@ onMounted(async () => {
   }
   const draft = takeDraft<Fields>(draftKey.value)
   if (draft) {
-    // A draft of an older version has no details.
+    // A draft of an older build can miss a field.
     fields.value = { ...emptyFields, ...draft }
   }
 })
@@ -166,12 +166,9 @@ function validate(): boolean {
     name: checkName(fields.value.name, 'Enter a name with at least one character that is not a space.'),
     description: checkLongText(fields.value.description),
     tags: errors.value.tags ?? '',
-    // A restaurant from before locations can stay without one.
     location: fields.value.location
       ? checkName(fields.value.location.address, 'Enter the address.')
-      : editing.value && !loaded.value.location
-        ? ''
-        : 'Search for the place and select it, or enter the location by hand.',
+      : 'Search for the place and select it, or enter the location by hand.',
     website: checkWebsite(fields.value.website),
     phone: checkPhone(fields.value.phone),
     opening_hours: checkOpeningHours(fields.value.openingHours),
@@ -319,7 +316,7 @@ async function submit() {
           <ul class="list-disc pl-5">
             <li v-for="r in nearby" :key="r.id">
               <RouterLink :to="`/restaurants/${r.id}`" class="font-medium underline underline-offset-4">{{ r.name }}</RouterLink>
-              <template v-if="r.location">, {{ r.location.address }}</template>
+              , {{ r.location.address }}
             </li>
           </ul>
         </AlertDescription>

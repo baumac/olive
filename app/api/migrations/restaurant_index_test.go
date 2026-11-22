@@ -3,36 +3,16 @@ package migrations
 import (
 	"database/sql"
 	"errors"
-	"math"
 	"slices"
+	"strings"
 	"testing"
 
-	"github.com/baumac/reviews-app/app/api/internal/testapp"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tests"
 )
-
-func newIndexApp(t *testing.T) *tests.TestApp {
-	t.Helper()
-	app, err := tests.NewTestApp(testapp.Dir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(app.Cleanup)
-	return app
-}
 
 func scores(n int) map[string]any {
 	return map[string]any{"space": n, "service": n, "food": n, "price": n}
-}
-
-// oldScores has the scores of the migrations before
-// removeCleanlinessFile.
-func oldScores(n int) map[string]any {
-	s := scores(n)
-	s["cleanliness"] = n
-	return s
 }
 
 func review(user, restaurant *core.Record, s map[string]any) map[string]any {
@@ -72,31 +52,6 @@ func wantNoOverall(t *testing.T, app core.App, restaurant, when string) {
 	}
 }
 
-// wantRanking compares with a tolerance. The ranking is not rounded.
-func wantRanking(t *testing.T, app core.App, restaurant string, want float64) {
-	t.Helper()
-	var got sql.NullFloat64
-	err := app.DB().Select("ranking").From("restaurant_overall").Where(dbx.HashExp{"restaurant": restaurant}).Row(&got)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !got.Valid || math.Abs(got.Float64-want) > 1e-9 {
-		t.Errorf("ranking of %s is %v, want %v", restaurant, got, want)
-	}
-}
-
-func wantNoRanking(t *testing.T, app core.App, restaurant, when string) {
-	t.Helper()
-	var got sql.NullFloat64
-	err := app.DB().Select("ranking").From("restaurant_overall").Where(dbx.HashExp{"restaurant": restaurant}).Row(&got)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Valid {
-		t.Errorf("%s: ranking is %v, want NULL", when, got)
-	}
-}
-
 func wantReviewers(t *testing.T, app core.App, restaurant string, want int) {
 	t.Helper()
 	var got int
@@ -121,11 +76,11 @@ func storedTags(t *testing.T, app core.App, restaurant string) []string {
 
 func TestOverallTriggers(t *testing.T) {
 	t.Parallel()
-	app := newIndexApp(t)
-	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
-	a := newRecord(t, app, "restaurants", map[string]any{"name": "A"})
-	b := newRecord(t, app, "restaurants", map[string]any{"name": "B"})
+	app := newApp(t)
+	ana := newUser(t, app, "ana")
+	joe := newUser(t, app, "joe")
+	a := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "A"})
+	b := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "B"})
 	wantNoOverall(t, app, a.Id, "new restaurant")
 	wantReviewers(t, app, a.Id, 0)
 
@@ -171,10 +126,10 @@ func TestOverallTriggers(t *testing.T) {
 
 func TestOverallCountsEachReviewerOnce(t *testing.T) {
 	t.Parallel()
-	app := newIndexApp(t)
-	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	ben := newRecord(t, app, "users", map[string]any{"email": "ben@example.com", "password": "correct-horse", "name": "Ben"})
-	a := newRecord(t, app, "restaurants", map[string]any{"name": "A"})
+	app := newApp(t)
+	ana := newUser(t, app, "ana")
+	ben := newUser(t, app, "ben")
+	a := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "A"})
 	var visits []*core.Record
 	for range 4 {
 		visits = append(visits, newRecord(t, app, "reviews", review(ana, a, scores(10))))
@@ -206,10 +161,10 @@ func TestOverallCountsEachReviewerOnce(t *testing.T) {
 
 func TestFailedSaveKeepsOverall(t *testing.T) {
 	t.Parallel()
-	app := newIndexApp(t)
-	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
-	a := newRecord(t, app, "restaurants", map[string]any{"name": "A"})
+	app := newApp(t)
+	ana := newUser(t, app, "ana")
+	joe := newUser(t, app, "joe")
+	a := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "A"})
 	newRecord(t, app, "reviews", review(ana, a, scores(8)))
 
 	err := app.RunInTransaction(func(tx core.App) error {
@@ -232,7 +187,7 @@ func TestFailedSaveKeepsOverall(t *testing.T) {
 
 func TestRawInsertGetsOverallRow(t *testing.T) {
 	t.Parallel()
-	app := newIndexApp(t)
+	app := newApp(t)
 	if _, err := app.DB().Insert("restaurants", dbx.Params{"id": "rawrestaurant01", "name": "Raw", "tags": `["cheap"]`}).Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -245,8 +200,8 @@ func TestRawInsertGetsOverallRow(t *testing.T) {
 
 func TestTagTriggers(t *testing.T) {
 	t.Parallel()
-	app := newIndexApp(t)
-	a := newRecord(t, app, "restaurants", map[string]any{"name": "A", "tags": []string{"pasta", "italian", "pasta"}})
+	app := newApp(t)
+	a := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "A", "tags": []string{"pasta", "italian", "pasta"}})
 	if got := storedTags(t, app, a.Id); !slices.Equal(got, []string{"italian", "pasta"}) {
 		t.Errorf("create: %v", got)
 	}
@@ -287,36 +242,29 @@ func TestTagTriggers(t *testing.T) {
 	}
 }
 
-func TestOverallRankingFillsExistingRows(t *testing.T) {
+func TestRatingOfReviewersUsesTheCreatorIndex(t *testing.T) {
 	t.Parallel()
-	app := newIndexApp(t)
-	downTo(t, app, "1794268810_add_overall_ranking.go")
-
-	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
-	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
-	rated := newRecord(t, app, "restaurants", map[string]any{"name": "Rated"})
-	unrated := newRecord(t, app, "restaurants", map[string]any{"name": "Unrated"})
-	first := newRecord(t, app, "reviews", review(ana, rated, oldScores(8)))
-	newRecord(t, app, "reviews", review(joe, rated, oldScores(9)))
-	wantOverall(t, app, rated.Id, 8.5)
-	first.Set("food", 3)
-	if err := app.Save(first); err != nil {
-		t.Fatal(err)
+	app := newApp(t)
+	for _, c := range []struct {
+		kind subjectKind
+		want string
+	}{
+		{restaurantKind, "SEARCH reviews USING INDEX idx_reviews_restaurant_creator (restaurant=?)"},
+		{recipeKind, "SEARCH recipe_reviews USING INDEX idx_recipe_reviews_recipe_creator (recipe=?)"},
+	} {
+		var rows []struct {
+			Detail string `db:"detail"`
+		}
+		q := app.DB().NewQuery("EXPLAIN QUERY PLAN " + c.kind.byReviewer("", "{:id}")).Bind(dbx.Params{"id": "k3x9m2p7q1w8z4a"})
+		if err := q.All(&rows); err != nil {
+			t.Fatal(err)
+		}
+		var plan []string
+		for _, r := range rows {
+			plan = append(plan, r.Detail)
+		}
+		if got := strings.Join(plan, "\n"); !strings.Contains(got, c.want) {
+			t.Errorf("%s plan has no %q:\n%s", c.kind.reviews, c.want, got)
+		}
 	}
-	wantOverall(t, app, rated.Id, 8)
-	wantNoOverall(t, app, unrated.Id, "down")
-	var sortKey float64
-	if err := app.DB().Select("overall_or_0").From("restaurant_overall").Where(dbx.HashExp{"restaurant": rated.Id}).Row(&sortKey); err != nil || sortKey != 8 {
-		t.Errorf("down sort key is %v (%v), want 8", sortKey, err)
-	}
-
-	upTo(t, app, "1794268810_add_overall_ranking.go", removeCleanlinessFile)
-	wantOverall(t, app, rated.Id, 8)
-	wantRanking(t, app, rated.Id, (5*5.5+7+9)/7)
-	wantNoRanking(t, app, unrated.Id, "up")
-	if err := app.Delete(first); err != nil {
-		t.Fatal(err)
-	}
-	wantOverall(t, app, rated.Id, 9)
-	wantRanking(t, app, rated.Id, (5*5.5+9)/6)
 }

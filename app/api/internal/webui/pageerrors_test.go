@@ -49,7 +49,7 @@ func TestReviewPhotoWithoutAlt(t *testing.T) {
 	t.Parallel()
 	app := newTestApp(t)
 	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana", "approved": true})
-	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": user.Id})
+	restaurant := save(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Luigi's", "creator": user.Id})
 	review := save(t, app, "reviews", map[string]any{
 		"restaurant": restaurant.Id, "creator": user.Id, "date": "2024-11-06", "title": "Good",
 		"space": 7, "service": 7, "food": 7, "price": 7,
@@ -73,7 +73,7 @@ func TestPageMetaDatabaseError(t *testing.T) {
 	t.Parallel()
 	app := newTestApp(t)
 	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana", "approved": true})
-	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": user.Id})
+	restaurant := save(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Luigi's", "creator": user.Id})
 	list := save(t, app, "lists", map[string]any{"creator": user.Id, "name": "Date night", "kind": "custom"})
 	h := newHandler(t, app, fstest.MapFS{"index.html": {Data: []byte(testIndex)}})
 	for _, table := range []string{"list_items", "reviews"} {

@@ -52,6 +52,7 @@ make renovate         # Open or update the Renovate pull request on GitHub. Need
 ```
 
 The app server applies the migrations when it starts.
+A `pb_data` folder from before `1794096000_init.go` does not start. Delete `app/api/pb_data`, then run `make run-app` again.
 The PocketBase dashboard is at `http://127.0.0.1:8090/_/`.
 To make the first superuser, run `go run ./app/api superuser create EMAIL PASSWORD --dir app/api/pb_data`.
 
@@ -170,6 +171,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - Drop it and its indexes before a migration drops a score column of `reviews` or `recipe_reviews`. SQLite refuses the drop.
     - A hook of `app/api/internal/publicapi` rejects this change from the dashboard with a message.
     - They also make the indexes, the FTS5 search tables, and the rate limit rules
+    - `1794096000_init.go` has all changes from before the first deploy. A later change of the schema needs a new migration. See decision 00002.
   - **`app/api/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
     - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00001.
     - It checks, changes, and serves the photos of reviews. See decision 00007.

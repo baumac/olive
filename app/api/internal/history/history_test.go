@@ -14,8 +14,6 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 )
 
-const versionsMigration = "1794268824_add_versions.go"
-
 func newApp(t *testing.T) *tests.TestApp {
 	t.Helper()
 	app, err := tests.NewTestApp(testapp.Dir(t))
@@ -208,7 +206,7 @@ func TestVersionsOfRecipes(t *testing.T) {
 func TestParentWithoutVersionGetsBaseline(t *testing.T) {
 	t.Parallel()
 	app := newApp(t)
-	r := newRecord(t, app, "restaurants", map[string]any{"name": "Old", "description": "Before the history"})
+	r := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Old", "description": "Before the history"})
 	history.Register(app)
 	r.Set("description", "After")
 	if err := app.Save(r); err != nil {
@@ -222,59 +220,5 @@ func TestParentWithoutVersionGetsBaseline(t *testing.T) {
 	wantVersion(t, vs[1], 2, history.ActionUpdate, history.SourceAdmin, "", "description")
 	if got := snapshotOf(t, vs[0])["description"]; got != "Before the history" {
 		t.Errorf("baseline description %v, want the old value", got)
-	}
-}
-
-// TestMigrationBaselineIsTheSnapshot compares the SQL of the migration with
-// Kind.Snapshot. A difference makes a version without a change.
-func TestMigrationBaselineIsTheSnapshot(t *testing.T) {
-	t.Parallel()
-	app := newApp(t)
-	items := core.AppMigrations.Items()
-	i := slices.IndexFunc(items, func(m *core.Migration) bool { return m.File == versionsMigration })
-	if i < 0 {
-		t.Fatalf("no migration %s", versionsMigration)
-	}
-	for j := len(items) - 1; j >= i; j-- {
-		if err := items[j].Down(app); err != nil {
-			t.Fatalf("down %s: %v", items[j].File, err)
-		}
-	}
-
-	full := newRecord(t, app, "restaurants", map[string]any{
-		"name": "Full", "description": "D", "tags": []string{"a", "b"}, "address": "Carrer 1", "latitude": 41.0, "longitude": 2.1893,
-		"place_id": "osm:N1", "website": "https://full.example", "phone": "931 000 000", "opening_hours": "Mo-Fr", "price_level": 2,
-	})
-	bare := newRecord(t, app, "restaurants", map[string]any{"name": "Bare", "tags": []string{}})
-	recipe := newRecord(t, app, "recipes", map[string]any{
-		"name": "Dal", "description": "D", "tags": []string{"x"}, "ingredients": []string{"lentils"}, "steps": []string{"Cook."},
-		"source": "https://dal.example", "total_time": 30, "servings": 4,
-	})
-	bareRecipe := newRecord(t, app, "recipes", map[string]any{"name": "Toast", "ingredients": []string{"bread"}, "steps": []string{"Toast."}})
-
-	for j := i; j < len(items); j++ {
-		if err := items[j].Up(app); err != nil {
-			t.Fatalf("up %s: %v", items[j].File, err)
-		}
-	}
-	for _, tc := range []struct {
-		k history.Kind
-		r *core.Record
-	}{{history.Restaurants, full}, {history.Restaurants, bare}, {history.Recipes, recipe}, {history.Recipes, bareRecipe}} {
-		vs := versions(t, app, tc.k, tc.r.Id)
-		if len(vs) != 1 {
-			t.Fatalf("%s: %d versions, want 1", tc.r.GetString("name"), len(vs))
-		}
-		wantVersion(t, vs[0], 1, history.ActionBaseline, history.SourceAdmin, "")
-		if vs[0].GetDateTime("created").String() != tc.r.GetDateTime("updated").String() {
-			t.Errorf("%s: baseline created %s, want the updated time %s", tc.r.GetString("name"), vs[0].GetDateTime("created"), tc.r.GetDateTime("updated"))
-		}
-		want, err := tc.k.Snapshot(tc.r)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := snapshotOf(t, vs[0]); !reflect.DeepEqual(got, want) {
-			t.Errorf("%s: baseline %v, want %v", tc.r.GetString("name"), got, want)
-		}
 	}
 }

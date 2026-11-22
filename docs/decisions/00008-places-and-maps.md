@@ -94,8 +94,7 @@ GET /v1/restaurants?sort=distance&near[latitude]=41.377&near[longitude]=2.189&ne
 - `near` needs `latitude` and `longitude`. `radius` is optional, in meters from 1 to 50,000.
 - `near` without `radius` selects all restaurants and only gives the point of the `distance` sort
 - `within` needs all four sides. `south` more than `north` gets `400`. `west` more than `east` is a box across the 180th meridian.
-- a restaurant without a location matches no `near` filter with a radius and no `within` filter
-- `distance` puts the nearest restaurant first. It needs `near`, or gets `400`. Restaurants without a location are last in both directions.
+- `distance` puts the nearest restaurant first. It needs `near`, or gets `400`.
 - the filters work with the search, the other filters, the sorts, and the cursors
 
 ## The maps
@@ -110,7 +109,6 @@ Restaurants page:
 - a click on a pin, or Enter and Space, shows the card of the restaurant under the map
 - pins that are less than 44 pixels apart join into one round pin with a count. A click on it zooms until its pins are apart. The selected pin stays out of a cluster.
 - the map shows at most 100 restaurants. A line below the map then tells the person to zoom in.
-- a restaurant without a location is only in the list. A text under the map says this.
 - a pan or a zoom puts the position in the URL, such as `at=41.3874,2.1686,13`. A reload and a link then open this view.
 - the map opens at the first of these views: the `at` position of the URL, the last view before the person left the map, the restaurants of a list filter, the preferred location, and the center of Barcelona
 

@@ -124,12 +124,6 @@ var restaurantGuard = fieldGuard{
 	noun:       "restaurant",
 	schema:     createSchema("RestaurantCreate"),
 	properties: restaurantProperties,
-	// The record has no location field. Its address field is required.
-	required: func(props map[string]json.RawMessage, errs validation.Errors) {
-		if _, ok := props["location"]; !ok {
-			errs["address"] = validation.NewError("validation_public_api", "is required")
-		}
-	},
 	set: func(r *core.Record, name string, value json.RawMessage) error {
 		switch name {
 		case "tags":
@@ -162,11 +156,6 @@ func restaurantProperties(r *core.Record, schema *openapi3.Schema) (map[string]j
 	if tags, ok := r.Get("tags").(types.JSONRaw); ok {
 		all["tags"] = json.RawMessage(tags)
 	}
-	if partial := partialLocation(r); partial != nil {
-		if all["location"], err = json.Marshal(partial); err != nil {
-			return nil, err
-		}
-	}
 	props := map[string]json.RawMessage{}
 	for name, value := range all {
 		if _, ok := schema.Properties[name]; ok && len(value) > 0 && string(value) != "null" {
@@ -174,22 +163,6 @@ func restaurantProperties(r *core.Record, schema *openapi3.Schema) (map[string]j
 		}
 	}
 	return props, nil
-}
-
-// partialLocation returns the location fields of a record without an
-// address. It returns nil when these fields are empty too.
-func partialLocation(r *core.Record) *reviewsapi.Location {
-	if r.GetString("address") != "" {
-		return nil
-	}
-	l := reviewsapi.Location{Latitude: r.GetFloat("latitude"), Longitude: r.GetFloat("longitude")}
-	if id := r.GetString("place_id"); id != "" {
-		l.PlaceId = &id
-	}
-	if l.Latitude == 0 && l.Longitude == 0 && l.PlaceId == nil {
-		return nil
-	}
-	return &l
 }
 
 // schemaFieldErrors keys each error with the record field. An error of the

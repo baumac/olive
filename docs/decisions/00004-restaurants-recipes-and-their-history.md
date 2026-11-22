@@ -109,7 +109,7 @@ Out of scope:
 | Property | Rules |
 |---|---|
 | `name` | required. A `Name` of 1 to 255 characters. |
-| `location` | required on create. `latitude` and `longitude` in degrees, an `address` of 1 to 255 characters, and an optional `place_id`. It is `null` for an old restaurant without one. |
+| `location` | required on create. `latitude` and `longitude` in degrees, an `address` of 1 to 255 characters, and an optional `place_id`. |
 | `description` | optional. A `LongText` of at most 10,000 characters. |
 | `tags` | optional. See [Tags](#tags). |
 | `website` | optional. An `http` or `https` URL of at most 2,048 characters, without spaces and hidden characters. |
@@ -279,7 +279,7 @@ Joe can change the values. The save makes version 4 with the editor Joe.
 | `recipes` | `name`, `description`, `tags`, `ingredients`, `steps`, `source`, `source_key`, `total_time`, `servings`, `creator`, `created`, `updated` |
 
 - `creator` is an optional relation without a cascade delete. PocketBase removes the user ID in the delete transaction of the user. A test checks this behavior.
-- a restaurant without a location has an empty `address`. A number field cannot be empty, and 0 is a valid coordinate.
+- each restaurant has a location. `address` is a required field. `latitude` and `longitude` are not required fields, because a required number field refuses 0. 0 is a valid coordinate.
 - `idx_restaurants_place_id` is a unique index on `place_id` where it is not empty. It also stops a duplicate from the dashboard.
 - `idx_restaurants_latitude` on `(latitude, longitude)` serves the `near` and `within` filters
 - `price_level` is 0 for "not set". PocketBase makes each number column `NUMERIC DEFAULT 0 NOT NULL`.
@@ -368,11 +368,10 @@ Joe can change the values. The save makes version 4 with the editor Joe.
 
 - the API rules are `null`. Only superusers use the collections in the dashboard.
 - a migration that drops or renames a property of `restaurants` or `recipes` also changes the `snapshot` of their versions
-- a migration wrote a `baseline` version for each subject that existed. The baseline is not in the list. It is the base of the comparison for the next version.
 - `app/api/internal/history` binds `OnRecordCreateExecute` and `OnRecordUpdateExecute` of both collections. It runs the save and the version write in one transaction, for each save.
 - `app/api/internal/recordvalues` gives the API values of the fields. The Public API and `Kind.Snapshot` use the same functions.
 - a save that changes no property writes no version. A change of only `creator` or `source_key` writes nothing.
-- an update of a subject without a version first writes a baseline from the stored record
+- an update of a subject without a version first writes a baseline from the stored record. The baseline is not in the list. It is the base of the comparison for the next version.
 - a Public API save calls `SaveWithContext` with `history.WithEditor`. A save without it gets the source `admin`. The dashboard of PocketBase 0.40 does not send the request context to the save.
 - `TestHistoryHasTheCreateProperties` fails when a create schema has a property that `Kind.Properties` does not have
 
@@ -381,7 +380,7 @@ Joe can change the values. The save makes version 4 with the editor Joe.
 - `GET /restaurants/{restaurantId}/versions` and `GET /recipes/{recipeId}/versions` need a token and an approved user. They have no rate limit.
 - the order is `-number`, with `limit` and `cursor`
 - a version has `id`, `number`, `created`, `action`, `source`, `editor`, `before`, and `after`
-- `before` and `after` have only the changed properties. `before` is empty for a create. Their schemas have the properties of the patch schemas. `location` can also be `null`.
+- `before` and `after` have only the changed properties. `before` is empty for a create. Their schemas have the properties of the patch schemas.
 - `versions.go` gets a page of versions and the version before the oldest item. It takes `before` and `after` from the snapshots and `changed`.
 
 ### The UI

@@ -39,7 +39,7 @@ function list(kind: 'favorites' | 'custom', name: string, restaurantCount = 1): 
 const restaurant: Restaurant = {
   id: 'k3x9m2p7q1w8z4a',
   name: "Luigi's Trattoria",
-  location: null,
+  location: { latitude: 41.3766, longitude: 2.1893, address: 'Carrer de Sant Carles 4' },
   creator: { id: ana.id, name: 'Ana' },
   reviewCount: 0,
   rating: null,

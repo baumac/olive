@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<{ restaurant: Restaurant; heading?: 'h2' 
 })
 
 const distance = computed(() =>
-  props.from && props.restaurant.location ? formatDistance(distanceMeters(props.from, props.restaurant.location)) : null,
+  props.from ? formatDistance(distanceMeters(props.from, props.restaurant.location)) : null,
 )
 
 defineEmits<{ favorite: [favorite: boolean] }>()
@@ -22,7 +22,7 @@ defineEmits<{ favorite: [favorite: boolean] }>()
 
 <template>
   <ParentCard :parent="restaurant" kind="restaurant" :heading="heading" @favorite="$emit('favorite', $event)">
-    <p v-if="restaurant.location" class="text-muted-foreground flex items-start gap-1.5 text-sm">
+    <p class="text-muted-foreground flex items-start gap-1.5 text-sm">
       <MapPinIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <span class="line-clamp-1">
         <template v-if="distance"><span class="sr-only">Distance: </span>{{ distance }}<span aria-hidden="true"> · </span></template>

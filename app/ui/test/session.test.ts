@@ -121,17 +121,6 @@ describe('session', () => {
     expect(JSON.parse(localStorage.getItem('reviews-session')!).expires).toBe(expires)
   })
 
-  it('refreshes a stored session without an issued value', async ({ onTestFinished }) => {
-    onTestFinished(watchOtherTabs(() => {}))
-    fromOtherTab(JSON.stringify({ expires, user }))
-    const sent: string[] = []
-    vi.stubGlobal('fetch', sendTo(sent))
-
-    await checkSession()
-    expect(sent).toEqual(['/v1/users/tokens/refresh?cookie=true'])
-    expect(JSON.parse(localStorage.getItem('reviews-session')!)).toHaveProperty('issued')
-  })
-
   it('does not write an unchanged user', async () => {
     saveSession({ expires, user })
     vi.stubGlobal('fetch', async () => userResponse())
@@ -156,24 +145,6 @@ describe('session', () => {
     vi.advanceTimersByTime(day)
     await settle()
     expect(sent).toEqual(['/v1/users/me', '/v1/users/tokens/refresh?cookie=true'])
-  })
-
-  it('moves the token of an older version into the cookie', async ({ onTestFinished }) => {
-    onTestFinished(watchOtherTabs(() => {}))
-    fromOtherTab(JSON.stringify({ token: 'old-token', expires, user }))
-    const sent: { url: string; auth: string | null }[] = []
-    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
-      sent.push({ url, auth: new Headers(init.headers).get('Authorization') })
-      return url.endsWith('/users/me') ? userResponse() : authToken()
-    })
-
-    await checkSession()
-    await checkSession()
-    expect(sent).toEqual([
-      { url: '/v1/users/tokens/refresh?cookie=true', auth: 'Bearer old-token' },
-      { url: '/v1/users/me', auth: null },
-    ])
-    expect(localStorage.getItem('reviews-session')).not.toContain('old-token')
   })
 
   it('gives a draft only to the user who saved it', () => {

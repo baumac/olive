@@ -58,7 +58,7 @@ func (e *env) save(t *testing.T, collection string, fields map[string]any) *core
 }
 
 func restaurantFields(name, description string, tags any) map[string]any {
-	return map[string]any{"name": name, "description": description, "tags": tags}
+	return map[string]any{"name": name, "description": description, "tags": tags, "address": "Carrer 1"}
 }
 
 func (e *env) reviewFields(restaurant *core.Record, title, feedback string) map[string]any {
