@@ -3,6 +3,8 @@ description: Remove the schema.org JSON-LD of the pages and the sitemap of decis
 status: implemented
 ---
 
+Decision 00053 changes robots.txt to `Disallow: /` for all crawlers. It also removes the canonical link.
+
 # Motivation
 [motivation]: #motivation
 
@@ -31,6 +33,7 @@ In scope:
 
 Out of scope:
 - the link preview tags, the canonical link, and the page titles. Decision 00013 has them. Chat apps and social sites use them.
+  - decision 00053 removes the canonical link
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -38,6 +41,8 @@ Out of scope:
 The page-meta block has only the tags of decision 00013.
 
 ## robots.txt
+
+**Decision 00053 replaces the file of this section.** It has `Disallow: /` for all crawlers. The photo files under `/v1` are not open to crawlers. Link preview bots that obey `robots.txt` show no preview.
 
 `/robots.txt` stays. It is not search engine optimization.
 

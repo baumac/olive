@@ -21,14 +21,6 @@ Decide if a smaller prior, such as 1 review, or the plain average with a minimum
 Decision 00050 allows a review for each visit or cook. The count of reviews then also counts the visits of one user. A user who visits a restaurant often then moves its ranking more.
 
 
-### 4. All pages are open to search engines
-00049 removes the sitemap because "the app does not need search engine optimization". robots.txt still lets crawlers read each restaurant, recipe, review, reviewer, and list page. 00013 also gives each page a canonical URL. Search engines can then show the names and reviews of friends and family. 00033 makes all lists public, and the reviewer pages show the names of users.
-
-00000 wants to share with "close friends, family, and fellow foodies". Its example has a friend who opens a shared link, so the pages must stay readable without an account. They do not need to be in search results.
-
-Decide if robots.txt gets Disallow: /, or the pages get a noindex tag. The link previews of 00013 still work. Some link preview bots read robots.txt, so test them first.
-
-
 ## For Me
 
 - review and confirm that users cannot edit other users reviews, lists, or user details.

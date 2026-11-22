@@ -13,7 +13,7 @@ test('a restaurant page has its own link preview', async ({ page, api }) => {
   const head = page.locator('head')
   await expect(head.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Casa <Pepe> & "Co"')
   await expect(head.locator('meta[name="description"]')).toHaveAttribute('content', 'Tapas and wine.')
-  await expect(head.locator('link[rel="canonical"]')).toHaveAttribute('href', `${appURL}${path}`)
+  await expect(head.locator('link[rel="canonical"]')).toHaveCount(0)
   await expect(head.locator('meta[property="og:url"]')).toHaveAttribute('content', `${appURL}${path}`)
   await expect(head.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og-image\.png$/)
   await expect(page.getByRole('heading', { name: 'Casa <Pepe> & "Co"' })).toBeVisible()
@@ -65,7 +65,7 @@ test('a recipe page has its own link preview', async ({ page, api }) => {
   const head = page.locator('head')
   await expect(head.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Preview dal')
   await expect(head.locator('meta[name="description"]')).toHaveAttribute('content', 'Red lentils.')
-  await expect(head.locator('link[rel="canonical"]')).toHaveAttribute('href', `${appURL}${path}`)
+  await expect(head.locator('link[rel="canonical"]')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Preview dal', level: 1 })).toBeVisible()
 })
 

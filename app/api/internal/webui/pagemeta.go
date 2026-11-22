@@ -86,9 +86,6 @@ type pageMeta struct {
 
 var metaTemplate = template.Must(template.New("meta").Parse(`<title>{{.Title}}</title>
     <meta name="description" content="{{.Description}}" />
-    {{- if .URL}}
-    <link rel="canonical" href="{{.URL}}" />
-    {{- end}}
     <meta property="og:type" content="{{.Type}}" />
     <meta property="og:title" content="{{.OGTitle}}" />
     <meta property="og:description" content="{{.Description}}" />

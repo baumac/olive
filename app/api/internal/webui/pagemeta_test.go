@@ -172,14 +172,13 @@ func TestPageMeta(t *testing.T) {
 		{"GET", restaurantPath, 200, []string{
 			`<title>Luigi&#39;s &lt;script&gt;alert(1)&lt;/script&gt; &amp; &#34;Co&#34; · Sponga47 Reviews</title>`,
 			`<meta name="description" content="Pasta and pizza." />`,
-			`<link rel="canonical" href="https://reviews.example.com` + restaurantPath + `" />`,
 			`<meta property="og:url" content="https://reviews.example.com` + restaurantPath + `" />`,
 			`<meta property="og:type" content="website" />`,
 			`<meta property="og:image" content="https://site.example.com/og-image.png" />`,
 			`<meta property="og:image:alt" content="Logo &amp; tagline" />`,
 			`<meta property="og:site_name" content="Sponga47 Reviews" />`,
 		}},
-		{"GET", restaurantPath + "/", 200, []string{`href="https://reviews.example.com` + restaurantPath + `"`}},
+		{"GET", restaurantPath + "/", 200, []string{`content="https://reviews.example.com` + restaurantPath + `"`}},
 		{"HEAD", restaurantPath, 200, nil},
 		{"GET", "/restaurants/" + plain.Id, 200, []string{
 			`<meta name="description" content="Reviews of Plain on Sponga47 Reviews." />`,
@@ -243,6 +242,9 @@ func TestPageMeta(t *testing.T) {
 		if strings.Contains(body, "<script>") || strings.Contains(body, "<b>") {
 			t.Errorf("%s %s: a value is not escaped:\n%s", tc.method, tc.path, body)
 		}
+		if strings.Contains(body, `rel="canonical"`) {
+			t.Errorf("%s %s: the page has a canonical link:\n%s", tc.method, tc.path, body)
+		}
 		if strings.Contains(body, "application/ld+json") {
 			t.Errorf("%s %s: the page has structured data:\n%s", tc.method, tc.path, body)
 		}
@@ -255,7 +257,7 @@ func TestPageMeta(t *testing.T) {
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", reviewPath, nil))
 	body := w.Body.String()
-	if w.Code != 200 || strings.Contains(body, "canonical") || strings.Contains(body, "og:url") || strings.Contains(body, "localhost") {
+	if w.Code != 200 || strings.Contains(body, "og:url") || strings.Contains(body, "localhost") {
 		t.Errorf("default Application URL: %d\n%s", w.Code, body)
 	}
 	if !strings.Contains(body, `<meta property="og:image" content="https://site.example.com/og-image.png" />`) ||
@@ -338,12 +340,9 @@ func TestRobotsTxt(t *testing.T) {
 	h := newHandler(t, newTestApp(t), fstest.MapFS{"index.html": {Data: []byte(testIndex)}})
 
 	robots := get(h, "/robots.txt")
-	if robots.Code != 200 || robots.Body.String() != robotsTxt || !strings.HasPrefix(robots.Header().Get("Content-Type"), "text/plain") ||
+	if robots.Code != 200 || robots.Body.String() != "User-agent: *\nDisallow: /\n" || !strings.HasPrefix(robots.Header().Get("Content-Type"), "text/plain") ||
 		robots.Header().Get("Cache-Control") != robotsCacheControl {
 		t.Errorf("robots.txt: %d %v %q", robots.Code, robots.Header(), robots.Body.String())
-	}
-	if strings.Contains(robotsTxt, "Sitemap") {
-		t.Errorf("robots.txt names a sitemap:\n%s", robotsTxt)
 	}
 
 	sitemap, unknown := get(h, "/sitemap.xml"), get(h, "/unknown-page")

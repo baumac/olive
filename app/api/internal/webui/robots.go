@@ -10,19 +10,10 @@ const robotsPath = "robots.txt"
 
 const robotsCacheControl = "public, max-age=3600"
 
-// robotsTxt keeps crawlers out of the dashboard, the PocketBase API, and
-// the screens that need an account. The photo files under /v1 stay open
-// for link previews.
+// robotsTxt keeps all crawlers out of the site. The pages are for the
+// people who get a link. See decision 00053.
 const robotsTxt = `User-agent: *
-Disallow: /_/
-Disallow: /api/
-Disallow: /sign-in
-Disallow: /sign-up
-Disallow: /my-reviews
-Disallow: /account
-Disallow: /confirm-email
-Disallow: /forgot-password
-Disallow: /reset-password
+Disallow: /
 `
 
 func serveRobots(e *core.RequestEvent) error {

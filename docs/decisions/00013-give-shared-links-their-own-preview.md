@@ -3,6 +3,8 @@ description: The app server writes the title, description, and link preview tags
 status: implemented
 ---
 
+Decision 00053 removes the canonical link. `og:url` stays. robots.txt then keeps all crawlers out.
+
 # Motivation
 [motivation]: #motivation
 
@@ -17,6 +19,7 @@ Expected outcome:
 - A shared restaurant link shows the name and the description of the restaurant.
 - A shared review link shows the title and the feedback of the review, and its first photo.
 - Each restaurant and review page has a canonical URL.
+  - decision 00053 removes the canonical link. `og:url` stays.
 - A link to a restaurant or review that does not exist gets HTTP `404`.
 - The UI, the Content Security Policy, and the Vite dev server do not change.
 
@@ -25,6 +28,7 @@ Expected outcome:
 
 In scope:
 - The `<title>`, `description`, canonical link, Open Graph tags, and Twitter tags of `/restaurants/{id}` and `/restaurants/{id}/reviews/{id}`
+  - decision 00053 removes the canonical link
 - The HTTP status of these pages when the record does not exist
 - The escaping of the values
 
@@ -60,7 +64,6 @@ New concepts:
 ```html
 <title>Casa Pepe · Sponga47 Reviews</title>
 <meta name="description" content="Tapas and wine." />
-<link rel="canonical" href="https://reviews.sponga47.com/restaurants/k3x9m2p7q1w8z4a" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Casa Pepe" />
 <meta property="og:description" content="Tapas and wine." />
@@ -72,11 +75,14 @@ New concepts:
 <meta name="twitter:description" content="Tapas and wine." />
 ```
 
+Decision 00053 removes the `<link rel="canonical">` that came after the description.
+
 A review page has `og:type` `article`, the title of the review, and its feedback.
 `og:title` adds the name of the restaurant, for example `Great grill · Preview Grill`.
 If the review has photos, `og:image` is the `full` file of the first photo, with its size and alt text.
 
 The canonical URL, `og:url`, and the photo URL start with the Application URL of the PocketBase settings.
+Decision 00053 removes the canonical URL.
 In production, set it to the public URL of the site, such as `https://reviews.sponga47.com`.
 An Application URL on a host that the public cannot reach has no use for link previews. The default `http://localhost:8090` is such a URL.
 With it, the pages have no canonical URL, no `og:url`, and the image of the site.

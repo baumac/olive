@@ -223,7 +223,7 @@ func watchAppURL(app core.App, warn func(core.App, string)) {
 }
 
 func warnAppURL(app core.App, appURL string) {
-	app.Logger().Warn("The Application URL is not public. Pages get no canonical URL. See decision 00013.", "appURL", appURL)
+	app.Logger().Warn("The Application URL is not public. Pages get no og:url. See decision 00013.", "appURL", appURL)
 }
 
 // warnNoMetaBlock is a variable for the tests. PocketBase writes its log
