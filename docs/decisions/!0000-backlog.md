@@ -9,9 +9,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 ## For claude
 
 ## For Me
-- tags in the API
-  - tags should exist on restaurants and recipes
-  - tags should not exist on reviews
 - reset api spec version to 1.0.0 and consolidate migrations
 - deploy to prod
 

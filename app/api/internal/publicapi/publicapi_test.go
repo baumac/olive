@@ -927,6 +927,7 @@ func TestReviews(t *testing.T) {
 		e.expect(request{method: "PATCH", path: goodPath, body: `{"cleanliness":8}`, token: joe.Token}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: reviews + "?tags[has]=pasta"}, http.StatusBadRequest)
 		e.expect(request{method: "GET", path: "/v1/restaurant-reviews?tags[has_any]=pasta"}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/reviewers/" + joe.User.ID + "/restaurant-reviews?tags[has_all]=pasta"}, http.StatusBadRequest)
 
 		for body, want := range map[string]string{
 			`{"date":"2024-11-06","space":7,"service":9,"food":0,"price":6,"title":"X"}`:          "food",

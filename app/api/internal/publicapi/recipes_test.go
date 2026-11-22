@@ -390,6 +390,18 @@ func TestRecipeReviews(t *testing.T) {
 			body: `{"date":"2024-11-06","space":8,"ease":8,"instructions":8,"value":8,"title":"T"}`}, http.StatusBadRequest)
 	})
 
+	t.Run("a review has no tags", func(t *testing.T) {
+		e.expect(request{method: "POST", path: "/v1/recipes/" + other + "/reviews", token: ana.Token,
+			body: `{"date":"2024-11-06","taste":9,"ease":8,"instructions":8,"value":8,"title":"T","tags":["eggs"]}`}, http.StatusBadRequest)
+		e.expect(request{method: "PATCH", path: reviews + "/" + reviewID, token: ana.Token, body: `{"tags":null}`}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: reviews + "?tags[has]=eggs"}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/recipe-reviews?tags[has_any]=eggs"}, http.StatusBadRequest)
+		e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID + "/recipe-reviews?tags[has_all]=eggs"}, http.StatusBadRequest)
+		if _, ok := review["tags"]; ok {
+			t.Errorf("review %v has tags", review)
+		}
+	})
+
 	for _, tc := range []struct{ path, want string }{
 		{reviews + "?sort=-taste", "Quick breakfast,Fine"},
 		{reviews + "?sort=overall", "Fine,Quick breakfast"},
