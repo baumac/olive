@@ -105,6 +105,7 @@ test('a signed in user reviews a recipe', async ({ page, api, user }) => {
   }
   await expect(page.getByRole('status').filter({ hasText: 'Overall' })).toHaveText('Overall8.3')
   await page.getByLabel('Title').fill('Smooth and quick')
+  await expect(page.getByLabel('Tags')).toHaveCount(0)
   await page.getByRole('button', { name: 'Save review' }).click()
 
   await expect(page.getByText('Review saved')).toBeVisible()

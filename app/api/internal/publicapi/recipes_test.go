@@ -390,15 +390,31 @@ func TestRecipeReviews(t *testing.T) {
 			body: `{"date":"2024-11-06","space":8,"ease":8,"instructions":8,"value":8,"title":"T"}`}, http.StatusBadRequest)
 	})
 
+	// Only restaurants and recipes have tags. See decision 00004.
 	t.Run("a review has no tags", func(t *testing.T) {
-		e.expect(request{method: "POST", path: "/v1/recipes/" + other + "/reviews", token: ana.Token,
-			body: `{"date":"2024-11-06","taste":9,"ease":8,"instructions":8,"value":8,"title":"T","tags":["eggs"]}`}, http.StatusBadRequest)
-		e.expect(request{method: "PATCH", path: reviews + "/" + reviewID, token: ana.Token, body: `{"tags":null}`}, http.StatusBadRequest)
-		e.expect(request{method: "GET", path: reviews + "?tags[has]=eggs"}, http.StatusBadRequest)
-		e.expect(request{method: "GET", path: "/v1/recipe-reviews?tags[has_any]=eggs"}, http.StatusBadRequest)
-		e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID + "/recipe-reviews?tags[has_all]=eggs"}, http.StatusBadRequest)
-		if _, ok := review["tags"]; ok {
-			t.Errorf("review %v has tags", review)
+		for _, req := range []request{
+			{method: "POST", path: "/v1/recipes/" + other + "/reviews", token: ana.Token,
+				body: `{"date":"2024-11-06","taste":9,"ease":8,"instructions":8,"value":8,"title":"T","tags":["eggs"]}`},
+			{method: "PATCH", path: reviews + "/" + reviewID, token: ana.Token, body: `{"tags":null}`},
+			{method: "GET", path: reviews + "?tags[has]=eggs"},
+			{method: "GET", path: "/v1/recipe-reviews?tags[has_any]=eggs"},
+			{method: "GET", path: "/v1/reviewers/" + ana.User.ID + "/recipe-reviews?tags[has_all]=eggs"},
+		} {
+			detail, _ := e.expect(req, http.StatusBadRequest).object(t)["detail"].(string)
+			if !strings.Contains(detail, "tags") {
+				t.Errorf("%s %s: detail %q does not name tags", req.method, req.path, detail)
+			}
+		}
+		reviewsOf := map[string][]any{"create": {review}, "get": {e.expect(request{method: "GET", path: reviews + "/" + reviewID}, http.StatusOK).object(t)}}
+		for _, path := range []string{reviews, "/v1/recipe-reviews", "/v1/reviewers/" + ana.User.ID + "/recipe-reviews"} {
+			reviewsOf[path] = e.expect(request{method: "GET", path: path}, http.StatusOK).object(t)["items"].([]any)
+		}
+		for source, items := range reviewsOf {
+			for _, item := range items {
+				if _, ok := item.(map[string]any)["tags"]; ok {
+					t.Errorf("%s: review %v has tags", source, item)
+				}
+			}
 		}
 	})
 
