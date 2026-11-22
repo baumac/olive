@@ -53,7 +53,7 @@ describe('ReviewFormPage scores', () => {
   it('links the meaning of each score and its scale to the group', async () => {
     const w = await mountForm()
     const groups = w.findAll('[role=radiogroup]')
-    expect(groups.map((g) => g.attributes('aria-label'))).toEqual(['Space', 'Service', 'Food', 'Value', 'Cleanliness'])
+    expect(groups.map((g) => g.attributes('aria-label'))).toEqual(['Space', 'Service', 'Food', 'Value'])
     const price = groups[3]!.element
     expect(descriptionOf(price)).toBe(
       'Value for money, and whether the final bill matches the quality provided. 1 means poor value. 10 means great value.',
@@ -64,15 +64,15 @@ describe('ReviewFormPage scores', () => {
     await expectAccessible(w.element)
   })
 
-  it('shows the overall score after the five scores have a value', async () => {
+  it('shows the overall score after the four scores have a value', async () => {
     const w = await mountForm()
     const overall = w.get('[role=status]')
-    expect(overall.text()).toContain('It shows after you select the five scores.')
-    const values = [7, 9, 8, 6, 8]
+    expect(overall.text()).toContain('It shows after you select each score.')
+    const values = [7, 9, 8, 6]
     for (const [i, group] of w.findAll('[role=radiogroup]').entries()) {
       await group.findAll('[role=radio]')[values[i]! - 1]!.trigger('click')
     }
-    expect(overall.text()).toBe('Overall7.6')
+    expect(overall.text()).toBe('Overall7.5')
   })
 
   it('keeps the help text linked when a score has an error', async () => {
@@ -91,7 +91,7 @@ describe('ReviewFormPage date', () => {
   function mockCreate(date: string) {
     return vi.spyOn(restaurantsApi, 'createRestaurantReview').mockResolvedValue({
       id: 'r1b8c5e2g9i6k3m', restaurant: restaurant.id, restaurantName: restaurant.name, date,
-      overall: 7, space: 7, service: 7, food: 7, price: 7, cleanliness: 7, title: 'Second dinner',
+      overall: 7, space: 7, service: 7, food: 7, price: 7, title: 'Second dinner',
       creator: restaurant.creator!, photos: [], created: '2024-11-06T19:02:11.120Z', updated: '2024-11-06T19:02:11.120Z',
     })
   }

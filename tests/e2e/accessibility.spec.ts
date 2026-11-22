@@ -25,7 +25,7 @@ async function restaurantWithReview(api: TestApi, owner: TestUser) {
     description: 'A family-run Italian restaurant.',
     tags: ['italian'],
   })
-  await api.createReview(owner, restaurant.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 6, title: 'Great food' })
+  await api.createReview(owner, restaurant.id, { space: 7, service: 9, food: 8, price: 6, title: 'Great food' })
   return restaurant
 }
 
@@ -45,14 +45,14 @@ async function recipeWithReview(api: TestApi, owner: TestUser) {
 async function restaurantWithTwoReviews(api: TestApi) {
   const restaurant = await restaurantWithReview(api, await api.signUp('Joe'))
   const reviewer = await api.signUp('Ana')
-  await api.createReview(reviewer, restaurant.id, { space: 4, service: 4, food: 4, price: 4, cleanliness: 4, title: 'Good' })
+  await api.createReview(reviewer, restaurant.id, { space: 4, service: 4, food: 4, price: 4, title: 'Good' })
   return restaurant
 }
 
 async function reviewWithPhotos(api: TestApi, user: TestUser) {
   const restaurant = await api.createRestaurant(user, { name: uniqueTag('Photo Spot') })
   const review = await api.createReview(user, restaurant.id, {
-    space: 6, service: 6, food: 6, price: 6, cleanliness: 6, title: 'With photos',
+    space: 6, service: 6, food: 6, price: 6, title: 'With photos',
   })
   await api.addPhoto(user, review, 'menu.png', 'The menu')
   await api.addPhoto(user, review, 'gps-rotated.jpg')
@@ -113,7 +113,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     test('the review form has no axe violations', async ({ page, api, user }) => {
       const restaurant = await api.createRestaurant(user, { name: uniqueTag('Form Place') })
-      const review = await api.createReview(user, restaurant.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 6, title: 'Great food' })
+      const review = await api.createReview(user, restaurant.id, { space: 7, service: 9, food: 8, price: 6, title: 'Great food' })
       await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
       await expect(page.getByRole('heading', { name: 'Write a review' })).toBeVisible()
       await expectNoViolations(page)

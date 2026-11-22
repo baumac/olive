@@ -110,7 +110,7 @@ test('a user changes the name and the password on the account page', async ({ pa
 test('a user deletes the account', async ({ page, api }) => {
   const user = await api.signUp('Jon')
   const restaurant = await api.createRestaurant(user, { name: 'Leftover Kitchen' })
-  await api.createReview(user, restaurant.id, { space: 7, service: 7, food: 7, price: 7, cleanliness: 7, title: 'Gone soon' })
+  await api.createReview(user, restaurant.id, { space: 7, service: 7, food: 7, price: 7, title: 'Gone soon' })
   await signIn(page, user)
   await page.goto('/account')
 

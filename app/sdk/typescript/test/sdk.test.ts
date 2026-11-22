@@ -41,7 +41,6 @@ const review = {
   service: 9,
   food: 8,
   price: 6,
-  cleanliness: 5,
   title: 'Best carbonara in town',
   creator: { id: 'u2g6k0m4o8q1s5w', name: 'Joe' },
   photos: [],
@@ -119,7 +118,7 @@ describe('reviews', () => {
     const { config } = fakeFetch(200, { items: [review], next_cursor: null })
     const page = await new RestaurantsApi(config).listRestaurantReviews({ restaurantId: 'k3x9m2p7q1w8z4a' })
 
-    expect(page.items[0]).toMatchObject({ space: 7, service: 9, food: 8, price: 6, cleanliness: 5, restaurantName: "Luigi's Trattoria" })
+    expect(page.items[0]).toMatchObject({ space: 7, service: 9, food: 8, price: 6, restaurantName: "Luigi's Trattoria" })
     expect(page.nextCursor).toBeNull()
   })
 
@@ -135,7 +134,7 @@ describe('reviews', () => {
 
 describe('restaurant rating', () => {
   it('keeps a null rating and reads the averages', async () => {
-    const rated = { ...restaurant, review_count: 2, rating: { overall: 7.6, space: 7.5, service: 8.5, food: 9, price: 5.5, cleanliness: 7.5 } }
+    const rated = { ...restaurant, review_count: 2, rating: { overall: 7.6, space: 7.5, service: 8.5, food: 9, price: 5.5 } }
     const { config } = fakeFetch(200, { items: [restaurant, rated], next_cursor: null })
     const page = await new RestaurantsApi(config).listRestaurants({})
     expect(page.items[0].rating).toBeNull()

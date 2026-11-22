@@ -124,6 +124,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and restaurant review operations. The names of restaurant review operations, schemas, and paths have `restaurant`, like the recipe ones. See decision 00048.
+    - a restaurant review has four scores: `space`, `service`, `food`, and `price`. Its `overall` is their average. See decision 00052.
     - the `recipes` tag has the recipe and recipe review operations. Recipes have ingredients, steps, and four scores. See decision 00047.
     - a review is one visit or one cook. A user can write many reviews of one restaurant or recipe. See decision 00050.
     - each review has a `date` without a time. The `review-date` format allows the dates from 1900-01-01 to today in UTC+14. The review lists sort by `-date` by default.

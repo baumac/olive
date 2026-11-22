@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reviews Public API
-  version: 7.1.0
+  version: 8.0.0
   description: |
     The Public API lets users sign up, sign in, and review restaurants and recipes.
 
@@ -51,6 +51,8 @@ info:
       Restaurants and recipes have the `own_review_count` of the user of the token.
     - Version 7.1.0 lets each approved user change each property of each restaurant and recipe.
       The reviews of other users do not lock the `name`, the `location`, the `source`, the `ingredients`, or the `steps` any more.
+    - Version 8.0.0 removes the `cleanliness` score of restaurant reviews, its filter, and its sort.
+      The `overall` of a restaurant review is now the average of four scores. It can have two decimals.
 
 servers:
   - url: /v1
@@ -757,7 +759,6 @@ paths:
         - $ref: '#/components/parameters/ServiceFilter'
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
-        - $ref: '#/components/parameters/CleanlinessFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
@@ -838,7 +839,6 @@ paths:
         - $ref: '#/components/parameters/ServiceFilter'
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
-        - $ref: '#/components/parameters/CleanlinessFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
@@ -949,7 +949,6 @@ paths:
         - $ref: '#/components/parameters/ServiceFilter'
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
-        - $ref: '#/components/parameters/CleanlinessFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
@@ -2551,7 +2550,7 @@ components:
         The API always adds `id` as the last sort key.
       schema:
         type: string
-        pattern: '^-?(overall|space|service|food|price|cleanliness|relevance|title|date|created|updated)(,-?(overall|space|service|food|price|cleanliness|relevance|title|date|created|updated))*$'
+        pattern: '^-?(overall|space|service|food|price|relevance|title|date|created|updated)(,-?(overall|space|service|food|price|relevance|title|date|created|updated))*$'
         default: '-date'
       example: '-food,title'
 
@@ -2718,16 +2717,6 @@ components:
       name: price
       in: query
       description: Compares the `price` score. Each key is an operator, for example `price[gte]=`.
-      style: deepObject
-      explode: true
-      schema:
-        $ref: '#/components/schemas/ScoreRange'
-      example: {gte: 7}
-
-    CleanlinessFilter:
-      name: cleanliness
-      in: query
-      description: Compares the `cleanliness` score. Each key is an operator, for example `cleanliness[gte]=`.
       style: deepObject
       explode: true
       schema:
@@ -3838,7 +3827,6 @@ components:
             service: 8.5
             food: 9
             price: 5.5
-            cleanliness: 7.5
           cover:
             id: p4h7j1l5n9q2s6v
             alt: A plate of carbonara on a wooden table
@@ -3859,10 +3847,10 @@ components:
     RestaurantRating:
       description: |
         The average of each score over the reviews of a restaurant.
-        `overall` is the average of the five averages.
+        `overall` is the average of the four averages.
         The API rounds each value to one decimal.
       type: object
-      required: [overall, space, service, food, price, cleanliness]
+      required: [overall, space, service, food, price]
       properties:
         overall:
           $ref: '#/components/schemas/AverageScore'
@@ -3873,8 +3861,6 @@ components:
         food:
           $ref: '#/components/schemas/AverageScore'
         price:
-          $ref: '#/components/schemas/AverageScore'
-        cleanliness:
           $ref: '#/components/schemas/AverageScore'
     AverageScore:
       description: An average score from 1 to 10. The property tells its number of decimals.
@@ -4075,9 +4061,9 @@ components:
               updated: '2024-11-04T01:26:55.002Z'
 
     RestaurantReview:
-      description: A review of a restaurant. It scores the space, service, food, price, and cleanliness.
+      description: A review of a restaurant. It scores the space, service, food, and price.
       type: object
-      required: [id, restaurant, restaurant_name, date, overall, space, service, food, price, cleanliness, title, creator, photos, created, updated]
+      required: [id, restaurant, restaurant_name, date, overall, space, service, food, price, title, creator, photos, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -4095,8 +4081,8 @@ components:
           $ref: '#/components/schemas/ReviewDate'
         overall:
           description: |
-            The average of the five scores. The API computes it. A client cannot set it.
-            Each value is exact with one decimal.
+            The average of the four scores. The API computes it. A client cannot set it.
+            Each value is exact with two decimals.
             The average of the `overall` values of the reviews of a restaurant is its `rating.overall` before the rounding.
           type: number
           $ref: '#/components/schemas/AverageScore'
@@ -4108,8 +4094,6 @@ components:
           $ref: '#/components/schemas/FoodScore'
         price:
           $ref: '#/components/schemas/PriceScore'
-        cleanliness:
-          $ref: '#/components/schemas/CleanlinessScore'
         title:
           $ref: '#/components/schemas/Title'
         feedback:
@@ -4131,12 +4115,11 @@ components:
           restaurant: k3x9m2p7q1w8z4a
           restaurant_name: Luigi's Trattoria
           date: '2024-11-06'
-          overall: 7.6
+          overall: 7.5
           space: 7
           service: 9
           food: 8
           price: 6
-          cleanliness: 8
           title: Great food, a bit expensive
           feedback: Friendly staff and great pasta
           creator:
@@ -4154,7 +4137,7 @@ components:
           created: '2024-11-06T19:02:11.120Z'
           updated: '2024-11-07T09:12:00.000Z'
     SpaceScore:
-      description: Decoration, comfort, atmosphere, and kitchen setup.
+      description: Decoration, comfort, atmosphere, cleanliness, and kitchen setup.
       $ref: '#/components/schemas/Score'
     ServiceScore:
       description: Professionalism, speed, friendliness, and attentiveness of the waitstaff.
@@ -4165,15 +4148,12 @@ components:
     PriceScore:
       description: Value for money, and whether the final bill matches the quality provided.
       $ref: '#/components/schemas/Score'
-    CleanlinessScore:
-      description: Cleanliness of the dining room, the tableware, and the restrooms.
-      $ref: '#/components/schemas/Score'
 
     RestaurantReviewCreate:
       description: The properties of a new review.
       type: object
       additionalProperties: false
-      required: [date, space, service, food, price, cleanliness, title]
+      required: [date, space, service, food, price, title]
       properties:
         date:
           description: The date of the visit.
@@ -4187,8 +4167,6 @@ components:
           $ref: '#/components/schemas/FoodScore'
         price:
           $ref: '#/components/schemas/PriceScore'
-        cleanliness:
-          $ref: '#/components/schemas/CleanlinessScore'
         title:
           $ref: '#/components/schemas/Title'
         feedback:
@@ -4199,7 +4177,6 @@ components:
           service: 9
           food: 8
           price: 6
-          cleanliness: 8
           title: Great food, a bit expensive
 
     RestaurantReviewPatch:
@@ -4219,8 +4196,6 @@ components:
           $ref: '#/components/schemas/FoodScore'
         price:
           $ref: '#/components/schemas/PriceScore'
-        cleanliness:
-          $ref: '#/components/schemas/CleanlinessScore'
         title:
           $ref: '#/components/schemas/Title'
         feedback:
@@ -4248,12 +4223,11 @@ components:
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
               date: '2024-11-06'
-              overall: 9
+              overall: 9.25
               space: 8
               service: 10
               food: 10
               price: 9
-              cleanliness: 8
               title: Best carbonara in town
               creator:
                 id: u2g6k0m4o8q1s5w
@@ -4265,12 +4239,11 @@ components:
               restaurant: k3x9m2p7q1w8z4a
               restaurant_name: Luigi's Trattoria
               date: '2024-11-06'
-              overall: 7.6
+              overall: 7.5
               space: 7
               service: 9
               food: 8
               price: 6
-              cleanliness: 8
               title: Great food, a bit expensive
               creator:
                 id: u5n1c8r3t6y0b2e

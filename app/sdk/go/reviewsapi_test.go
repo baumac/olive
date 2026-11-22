@@ -14,7 +14,7 @@ import (
 
 const reviewJSON = `{
 	"id": "r7d4f0h2j9l5s3v", "restaurant": "k3x9m2p7q1w8z4a", "restaurant_name": "Luigi's",
-	"space": 7, "service": 9, "food": 8, "price": 6, "cleanliness": 5, "title": "Best carbonara in town",
+	"space": 7, "service": 9, "food": 8, "price": 6, "title": "Best carbonara in town",
 	"creator": {"id": "u2g6k0m4o8q1s5w", "name": "Joe"},
 	"created": "2024-11-04T01:38:00.431Z", "updated": "2024-11-05T09:12:00.000Z"
 }`
@@ -70,7 +70,7 @@ func TestReviewReadsScores(t *testing.T) {
 	if err := json.Unmarshal([]byte(reviewJSON), &r); err != nil {
 		t.Fatal(err)
 	}
-	if r.Space != 7 || r.Service != 9 || r.Food != 8 || r.Price != 6 || r.Cleanliness != 5 || r.RestaurantName != "Luigi's" {
+	if r.Space != 7 || r.Service != 9 || r.Food != 8 || r.Price != 6 || r.RestaurantName != "Luigi's" {
 		t.Errorf("got %+v", r)
 	}
 }

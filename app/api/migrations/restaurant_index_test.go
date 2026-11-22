@@ -24,7 +24,15 @@ func newIndexApp(t *testing.T) *tests.TestApp {
 }
 
 func scores(n int) map[string]any {
-	return map[string]any{"space": n, "service": n, "food": n, "price": n, "cleanliness": n}
+	return map[string]any{"space": n, "service": n, "food": n, "price": n}
+}
+
+// oldScores has the scores of the migrations before
+// removeCleanlinessFile.
+func oldScores(n int) map[string]any {
+	s := scores(n)
+	s["cleanliness"] = n
+	return s
 }
 
 func review(user, restaurant *core.Record, s map[string]any) map[string]any {
@@ -110,23 +118,23 @@ func TestOverallTriggers(t *testing.T) {
 	wantNoRanking(t, app, a.Id, "new restaurant")
 
 	first := newRecord(t, app, "reviews", review(ana, a, scores(8)))
-	newRecord(t, app, "reviews", review(joe, a, map[string]any{"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 6}))
-	wantOverall(t, app, a.Id, 7.4)
-	wantRanking(t, app, a.Id, (5*5.5+8+6.8)/7)
+	newRecord(t, app, "reviews", review(joe, a, map[string]any{"space": 7, "service": 7, "food": 7, "price": 3}))
+	wantOverall(t, app, a.Id, 7)
+	wantRanking(t, app, a.Id, (5*5.5+8+6)/7)
 
-	first.Set("food", 3)
+	first.Set("food", 4)
 	if err := app.Save(first); err != nil {
 		t.Fatal(err)
 	}
-	wantOverall(t, app, a.Id, 6.9)
+	wantOverall(t, app, a.Id, 6.5)
 
 	first.Set("restaurant", b.Id)
 	if err := app.Save(first); err != nil {
 		t.Fatal(err)
 	}
-	wantOverall(t, app, a.Id, 6.8)
+	wantOverall(t, app, a.Id, 6)
 	wantOverall(t, app, b.Id, 7)
-	wantRanking(t, app, a.Id, (5*5.5+6.8)/6)
+	wantRanking(t, app, a.Id, (5*5.5+6)/6)
 	wantRanking(t, app, b.Id, (5*5.5+7)/6)
 
 	if err := app.Delete(first); err != nil {
@@ -235,14 +243,14 @@ func TestTagTriggers(t *testing.T) {
 func TestOverallRankingFillsExistingRows(t *testing.T) {
 	t.Parallel()
 	app := newIndexApp(t)
-	redo := downTo(t, app, "1794268810_add_overall_ranking.go")
+	downTo(t, app, "1794268810_add_overall_ranking.go")
 
 	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	joe := newRecord(t, app, "users", map[string]any{"email": "joe@example.com", "password": "correct-horse", "name": "Joe"})
 	rated := newRecord(t, app, "restaurants", map[string]any{"name": "Rated"})
 	unrated := newRecord(t, app, "restaurants", map[string]any{"name": "Unrated"})
-	first := newRecord(t, app, "reviews", review(ana, rated, scores(8)))
-	newRecord(t, app, "reviews", review(joe, rated, scores(9)))
+	first := newRecord(t, app, "reviews", review(ana, rated, oldScores(8)))
+	newRecord(t, app, "reviews", review(joe, rated, oldScores(9)))
 	wantOverall(t, app, rated.Id, 8.5)
 	first.Set("food", 3)
 	if err := app.Save(first); err != nil {
@@ -255,7 +263,7 @@ func TestOverallRankingFillsExistingRows(t *testing.T) {
 		t.Errorf("down sort key is %v (%v), want 8", sortKey, err)
 	}
 
-	redo()
+	upTo(t, app, "1794268810_add_overall_ranking.go", removeCleanlinessFile)
 	wantOverall(t, app, rated.Id, 8)
 	wantRanking(t, app, rated.Id, (5*5.5+7+9)/7)
 	wantNoRanking(t, app, unrated.Id, "up")

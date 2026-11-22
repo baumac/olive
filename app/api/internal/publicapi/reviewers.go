@@ -79,7 +79,7 @@ func (s *Server) ListReviewerRestaurantReviews(ctx context.Context, req reviewsa
 	all := reviewsapi.ListAllRestaurantReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, CreatorEq: &req.ReviewerId,
 		RestaurantEq: p.RestaurantEq, RestaurantIn: p.RestaurantIn,
-		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price, Cleanliness: p.Cleanliness,
+		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price,
 		Overall: p.Overall, Created: p.Created, Updated: p.Updated,
 	}
 	fingerprintOf := func(sort string) []any {

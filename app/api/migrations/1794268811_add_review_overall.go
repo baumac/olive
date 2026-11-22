@@ -20,9 +20,7 @@ func init() {
 			return err
 		}
 		return execAll(app,
-			// The division in a double gives the value of the responses.
-			"ALTER TABLE {{reviews}} ADD COLUMN [[overall]] REAL AS "+
-				"(([[space]] + [[service]] + [[food]] + [[price]] + [[cleanliness]]) / 5.0)",
+			"ALTER TABLE {{reviews}} ADD COLUMN [[overall]] REAL AS "+fiveRestaurantScores.column(),
 			"CREATE INDEX {{idx_reviews_restaurant_overall}} ON {{reviews}} ([[restaurant]], [[overall]], [[id]])",
 			"CREATE INDEX {{idx_reviews_creator_overall}} ON {{reviews}} ([[creator]], [[overall]], [[id]])",
 			"CREATE INDEX {{idx_reviews_overall}} ON {{reviews}} ([[overall]], [[id]])",

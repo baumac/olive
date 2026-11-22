@@ -13,7 +13,7 @@ func TestChangesOfMissingRecords(t *testing.T) {
 	ana := e.signUp("ana@example.com", "Ana")
 	bo := e.signUp("bo@example.com", "Bo")
 	restaurantID := e.createRestaurant(ana.Token, `{"name":"Cafe"}`)["id"].(string)
-	reviewID := e.createReview(bo.Token, restaurantID, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"T"}`)["id"].(string)
+	reviewID := e.createReview(bo.Token, restaurantID, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"title":"T"}`)["id"].(string)
 	reviews := "/v1/restaurants/" + restaurantID + "/reviews/"
 
 	for _, req := range []request{

@@ -40,6 +40,7 @@ New Concepts:
   - a user can have at most one review per restaurant
     - decision 00050 removes this rule. A review is one visit, and each review has a date.
   - a review scores five categories: space, service, food, price, and cleanliness
+    - decision 00052 removes `cleanliness`. A review scores four categories.
 - **Restaurant**: a restaurant that can be reviewed
   - a restaurant has zero to many reviews
 - **User**: a person who can sign in
@@ -158,6 +159,7 @@ The migration gives each old `basic` review two times its `rating` in each of th
 
 `cleanliness` came later as a fifth score.
 The `space` score covered cleanliness before, so the migration gives existing reviews their `space` value as `cleanliness`.
+Decision 00052 removes `cleanliness` again.
 
 ### Properties
 

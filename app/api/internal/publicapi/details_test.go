@@ -89,7 +89,7 @@ func TestRestaurantDetails(t *testing.T) {
 	})
 
 	t.Run("reviews of other users do not lock the details", func(t *testing.T) {
-		e.createReview(joe.Token, r["id"].(string), `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Great"}`)
+		e.createReview(joe.Token, r["id"].(string), `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"title":"Great"}`)
 		e.expect(request{method: "PATCH", path: path, body: `{"price_level":2}`, token: ana.Token}, http.StatusOK)
 	})
 }
@@ -172,8 +172,8 @@ func TestPriceLevelFilter(t *testing.T) {
 	}
 
 	// The restaurants page sends the overall sort, near, and within.
-	e.createReview(ana.Token, ids["L2"], `{"date":"2024-11-06","space":9,"service":9,"food":9,"price":9,"cleanliness":9,"title":"Top"}`)
-	e.createReview(ana.Token, ids["L3"], `{"date":"2024-11-06","space":5,"service":5,"food":5,"price":5,"cleanliness":5,"title":"Fine"}`)
+	e.createReview(ana.Token, ids["L2"], `{"date":"2024-11-06","space":9,"service":9,"food":9,"price":9,"title":"Top"}`)
+	e.createReview(ana.Token, ids["L3"], `{"date":"2024-11-06","space":5,"service":5,"food":5,"price":5,"title":"Fine"}`)
 	box := "within[west]=2&within[south]=41&within[east]=3&within[north]=42"
 	for query, want := range map[string]string{
 		"sort=-overall&price_level[lte]=2":                                                             "L2,L1",

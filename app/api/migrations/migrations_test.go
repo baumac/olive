@@ -84,7 +84,7 @@ func TestSingleReviewKindKeepsBasicReviews(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer app.Cleanup()
-	redo := downTo(t, app, "1794268803_single_review_kind.go")
+	downTo(t, app, "1794268803_single_review_kind.go")
 
 	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
@@ -92,7 +92,7 @@ func TestSingleReviewKindKeepsBasicReviews(t *testing.T) {
 		"restaurant": restaurant.Id, "creator": user.Id, "kind": "basic", "rating": 4, "title": "Good",
 	})
 
-	redo()
+	upTo(t, app, "1794268803_single_review_kind.go", removeCleanlinessFile)
 	got, err := app.FindRecordById("reviews", review.Id)
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func TestCleanlinessCopiesSpace(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer app.Cleanup()
-	redo := downTo(t, app, "1794268804_add_review_cleanliness.go")
+	downTo(t, app, "1794268804_add_review_cleanliness.go")
 
 	user := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	restaurant := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
@@ -126,7 +126,7 @@ func TestCleanlinessCopiesSpace(t *testing.T) {
 		"restaurant": restaurant.Id, "creator": user.Id, "space": 3, "service": 9, "food": 8, "price": 6, "title": "Good",
 	})
 
-	redo()
+	upTo(t, app, "1794268804_add_review_cleanliness.go", removeCleanlinessFile)
 	got, err := app.FindRecordById("reviews", review.Id)
 	if err != nil {
 		t.Fatal(err)
@@ -141,10 +141,7 @@ func TestCleanlinessCopiesSpace(t *testing.T) {
 func downTo(t *testing.T, app core.App, file string) func() {
 	t.Helper()
 	items := core.AppMigrations.Items()
-	i := slices.IndexFunc(items, func(m *core.Migration) bool { return m.File == file })
-	if i < 0 {
-		t.Fatalf("no migration %s", file)
-	}
+	i := migrationIndex(t, file)
 	for j := len(items) - 1; j >= i; j-- {
 		if err := items[j].Down(app); err != nil {
 			t.Fatalf("down %s: %v", items[j].File, err)
@@ -152,10 +149,30 @@ func downTo(t *testing.T, app core.App, file string) func() {
 	}
 	return func() {
 		t.Helper()
-		for _, m := range items[i:] {
-			if err := m.Up(app); err != nil {
-				t.Fatalf("up %s: %v", m.File, err)
-			}
+		applyUp(t, app, items[i:])
+	}
+}
+
+// upTo does not apply the migration of the file to.
+func upTo(t *testing.T, app core.App, from, to string) {
+	t.Helper()
+	applyUp(t, app, core.AppMigrations.Items()[migrationIndex(t, from):migrationIndex(t, to)])
+}
+
+func migrationIndex(t *testing.T, file string) int {
+	t.Helper()
+	i := slices.IndexFunc(core.AppMigrations.Items(), func(m *core.Migration) bool { return m.File == file })
+	if i < 0 {
+		t.Fatalf("no migration %s", file)
+	}
+	return i
+}
+
+func applyUp(t *testing.T, app core.App, items []*core.Migration) {
+	t.Helper()
+	for _, m := range items {
+		if err := m.Up(app); err != nil {
+			t.Fatalf("up %s: %v", m.File, err)
 		}
 	}
 }
@@ -310,7 +327,7 @@ func TestRestaurantIndexFillsExistingRecords(t *testing.T) {
 	for _, row := range overall {
 		got[row.Restaurant] = row.Overall
 	}
-	if len(got) != 2 || got[rated.Id] == nil || *got[rated.Id] != 6 || got[unrated.Id] != nil {
+	if len(got) != 2 || got[rated.Id] == nil || *got[rated.Id] != 6.5 || got[unrated.Id] != nil {
 		t.Errorf("restaurant_overall: %v", overall)
 	}
 	var tags []string
@@ -416,8 +433,8 @@ func TestReviewOverallColumn(t *testing.T) {
 	if hasCreatorIndex() {
 		t.Error("up: reviews still has idx_reviews_creator")
 	}
-	if got := reviewOverall(t, app, review.Id); got != 6.6 {
-		t.Errorf("overall is %v, want 6.6", got)
+	if got := reviewOverall(t, app, review.Id); got != 6.5 {
+		t.Errorf("overall is %v, want 6.5", got)
 	}
 	review, err = app.FindRecordById("reviews", review.Id)
 	if err != nil {

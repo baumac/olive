@@ -328,7 +328,7 @@ async function submit() {
         <p class="flex items-baseline gap-2 border-t pt-4" role="status">
           <span class="text-sm font-medium">Overall</span>
           <span v-if="overall !== null" class="text-2xl font-extrabold tabular-nums">{{ formatScore(overall) }}</span>
-          <span v-else class="text-muted-foreground text-sm">It shows after you select the {{ scoreFields.length === 5 ? 'five' : 'four' }} scores.</span>
+          <span v-else class="text-muted-foreground text-sm">It shows after you select each score.</span>
         </p>
       </div>
 

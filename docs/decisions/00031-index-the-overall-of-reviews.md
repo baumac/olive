@@ -32,6 +32,7 @@ Out of scope:
 [guide-level-explanation]: #guide-level-explanation
 
 The `reviews` table has an `overall` column. SQLite computes it from the five scores of the row.
+Decision 00052 makes the column again from four scores.
 The list queries use the column where they used the expression before.
 
 | Request | Index |

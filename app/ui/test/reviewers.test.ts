@@ -14,12 +14,11 @@ const review: RestaurantReview = {
   restaurant: 'k3x9m2p7q1w8z4a',
   restaurantName: "Luigi's Trattoria",
   date: '2024-11-06',
-  overall: 7.6,
+  overall: 7.5,
   space: 7,
   service: 9,
   food: 8,
   price: 6,
-  cleanliness: 8,
   title: 'Great food, a bit expensive',
   creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
   photos: [],
@@ -62,7 +61,7 @@ describe('ReviewCard', () => {
   it('shows the overall score first and links the reviewer', async () => {
     const w = mount(ReviewCard, { props: { review, showCreator: true }, attachTo: attach() })
     const labels = w.findAll('[role=img]').map((e) => e.attributes('aria-label'))
-    expect(labels).toEqual(['Overall: 7.6 out of 10'])
+    expect(labels).toEqual(['Overall: 7.5 out of 10'])
     const link = w.findAll('a').find((a) => a.text() === 'Ana')
     expect(link?.attributes('href')).toBe('/reviewers/u5n1c8r3t6y0b2e')
     await expectAccessible(w.element)
@@ -80,7 +79,6 @@ describe('ReviewCard', () => {
       'Service: 9 out of 10',
       'Food: 8 out of 10',
       'Value: 6 out of 10',
-      'Cleanliness: 8 out of 10',
     ])
     await expectAccessible(w.element)
   })

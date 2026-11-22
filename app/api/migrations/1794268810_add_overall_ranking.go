@@ -18,9 +18,9 @@ func init() {
 				"ALTER TABLE {{restaurant_overall}} DROP COLUMN [[overall_or_0]]",
 				"ALTER TABLE {{restaurant_overall}} ADD COLUMN [[ranking]] REAL",
 				"ALTER TABLE {{restaurant_overall}} ADD COLUMN [[ranking_or_0]] REAL AS (COALESCE([[ranking]], 0))",
-				"UPDATE {{restaurant_overall}} SET [[ranking]] = (" + selectOfReviews(rankingAverage, "[[restaurant_overall.restaurant]]") + ")",
+				"UPDATE {{restaurant_overall}} SET [[ranking]] = (" + selectOfReviews(fiveRestaurantScores.ranking(), "[[restaurant_overall.restaurant]]") + ")",
 			},
-			makeOverallSort("ranking_or_0", "[[overall]], [[ranking]]", overallAverage+", "+rankingAverage),
+			makeOverallSort(fiveRestaurantScores, "ranking_or_0", "[[overall]], [[ranking]]", fiveRestaurantScores.overall()+", "+fiveRestaurantScores.ranking()),
 		)...)
 	}, func(app core.App) error {
 		return execAll(app, slices.Concat(
@@ -30,7 +30,7 @@ func init() {
 				"ALTER TABLE {{restaurant_overall}} DROP COLUMN [[ranking]]",
 				"ALTER TABLE {{restaurant_overall}} ADD COLUMN [[overall_or_0]] REAL AS (COALESCE([[overall]], 0))",
 			},
-			makeOverallSort("overall_or_0", "[[overall]]", overallAverage),
+			makeOverallSort(fiveRestaurantScores, "overall_or_0", "[[overall]]", fiveRestaurantScores.overall()),
 		)...)
 	})
 }
@@ -41,10 +41,6 @@ const (
 	rankingPriorReviews = "5"
 	rankingPriorScore   = "5.5"
 )
-
-// rankingAverage is NULL without reviews.
-const rankingAverage = "(" + rankingPriorReviews + " * " + rankingPriorScore +
-	" + " + scoreSum + " / 5.0) / (" + rankingPriorReviews + " + COUNT(*))"
 
 func selectOfReviews(values, restaurant string) string {
 	return "SELECT " + values + " FROM {{reviews}} WHERE [[reviews.restaurant]] = " + restaurant
@@ -64,7 +60,7 @@ func dropOverallSort() []string {
 
 // makeOverallSort needs one aggregate of the reviews in values for each
 // column of columns.
-func makeOverallSort(sortColumn, columns, values string) []string {
+func makeOverallSort(scores reviewScores, sortColumn, columns, values string) []string {
 	update := func(row string) string {
 		restaurant := row + ".[[restaurant]]"
 		return "UPDATE {{restaurant_overall}} SET (" + columns + ") = (" + selectOfReviews(values, restaurant) + ") WHERE [[restaurant]] = " + restaurant + ";"
@@ -77,7 +73,7 @@ func makeOverallSort(sortColumn, columns, values string) []string {
 			selectOfReviews("NEW.[[id]], "+values, "NEW.[[id]]") + "; " +
 			insertTags("NEW") + " END",
 		"CREATE TRIGGER {{review_overall_insert}} AFTER INSERT ON {{reviews}} BEGIN " + update("NEW") + " END",
-		"CREATE TRIGGER {{review_overall_update}} AFTER UPDATE OF " + strings.Join(overallColumns, ", ") + " ON {{reviews}} WHEN " + anyChanged(overallColumns) + " BEGIN " +
+		"CREATE TRIGGER {{review_overall_update}} AFTER UPDATE OF " + strings.Join(scores.triggerColumns, ", ") + " ON {{reviews}} WHEN " + anyChanged(scores.triggerColumns) + " BEGIN " +
 			update("NEW") + " " + update("OLD") + " END",
 		"CREATE TRIGGER {{review_overall_delete}} AFTER DELETE ON {{reviews}} BEGIN " + update("OLD") + " END",
 	}

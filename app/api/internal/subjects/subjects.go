@@ -37,7 +37,7 @@ var Restaurants = Tables{
 	FTS:           "restaurants_fts",
 	ReviewsFTS:    "reviews_fts",
 	IndexedFields: []string{"name", "description", "address"},
-	Scores:        []string{"space", "service", "food", "price", "cleanliness"},
+	Scores:        []string{"space", "service", "food", "price"},
 }
 
 var Recipes = Tables{

@@ -70,7 +70,7 @@ export interface KindInfo {
 // The score fields of the SDK have the type any. These builders name each
 // field. A missing or a wrong score is then a type error.
 function restaurantScores(s: Record<string, number>): Omit<RestaurantReviewCreate, 'date' | 'title'> {
-  return { space: s.space, service: s.service, food: s.food, price: s.price, cleanliness: s.cleanliness }
+  return { space: s.space, service: s.service, food: s.food, price: s.price }
 }
 
 function recipeScores(s: Record<string, number>): Omit<RecipeReviewCreate, 'date' | 'title'> {

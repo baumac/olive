@@ -112,7 +112,7 @@ test('a location of the device puts the nearest restaurants first', async ({ pag
   const far = await api.createRestaurant(owner, { name: 'Far Place', tags: [tag], location: { latitude: 40.4168, longitude: -3.7038, address: 'Calle Mayor 1, Madrid' } })
   await api.createRestaurant(owner, { name: 'Mid Place', tags: [tag], location: eixample })
   await api.createRestaurant(owner, { name: 'Near Place', tags: [tag], location: barceloneta })
-  await api.createReview(owner, far.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Top' })
+  await api.createReview(owner, far.id, { space: 9, service: 9, food: 9, price: 9, title: 'Top' })
   await context.grantPermissions(['geolocation'])
   await context.setGeolocation({ latitude: barceloneta.latitude, longitude: barceloneta.longitude })
   const names = page.getByRole('heading', { level: 2, name: / Place$/ })

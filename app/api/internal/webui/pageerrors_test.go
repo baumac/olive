@@ -52,7 +52,7 @@ func TestReviewPhotoWithoutAlt(t *testing.T) {
 	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's", "creator": user.Id})
 	review := save(t, app, "reviews", map[string]any{
 		"restaurant": restaurant.Id, "creator": user.Id, "date": "2024-11-06", "title": "Good",
-		"space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7,
+		"space": 7, "service": 7, "food": 7, "price": 7,
 	})
 	photo := savePhoto(t, app, "review_photos", review.Id)
 	photo.Set("alt", "")

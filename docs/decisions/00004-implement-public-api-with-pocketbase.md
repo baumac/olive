@@ -196,6 +196,7 @@ Decision 00050 allows many reviews of one user and restaurant. The index is then
 - PocketBase stores an empty string for a text field that has no value. An empty `description` or `feedback` is therefore not in responses.
 - the five score fields are required, with the minimum 1 and the maximum 10. A migration removed the `kind` and `rating` fields. It gave each `basic` review two times its `rating` in each score.
 - a later migration added `cleanliness`. It gave each review its `space` value, then made the field required.
+  Decision 00052 removes it.
 - an update saves only when a value changes. A merge patch without changes keeps `updated`.
 - the unique `email` index of `users` uses `COLLATE NOCASE`. The down migration restores the PocketBase defaults of `users`.
 - PocketBase removes the user ID from `restaurants.creator` in the delete transaction of the user. The API has no hook for it.

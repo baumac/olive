@@ -8,5 +8,5 @@ Lives in `@/components/ui/rating-display`. Props: `value` (number), `max`, `labe
 - The whole element has `role="img"` and an `aria-label` such as "Food: 8 out of 10". The visible parts are `aria-hidden`.
 - `showLabel` puts the label before the number in `muted-foreground`, such as "Food 8".
 - A card shows only the overall score, in size `md`, next to the title or the review count.
-- The page of a restaurant or a review shows the overall score in size `lg`. The text "out of 10" follows it one time. One line below has the five scores with labels: space, service, food, value, cleanliness.
+- The page of a restaurant or a review shows the overall score in size `lg`. The text "out of 10" follows it one time. One line below has the four scores with labels: space, service, food, value.
 - A restaurant shows its averages in the same order. The number keeps one decimal.

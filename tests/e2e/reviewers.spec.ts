@@ -5,13 +5,13 @@ test('a review card shows the overall score and links the reviewer page', async 
   const ana = await api.signUp('Ana')
   const first = await api.createRestaurant(owner, { name: 'Overall Kitchen' })
   const second = await api.createRestaurant(owner, { name: 'Overall Grill' })
-  await api.createReview(ana, first.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 8, title: 'Ana likes it' })
-  await api.createReview(ana, second.id, { space: 2, service: 2, food: 2, price: 2, cleanliness: 2, title: 'Ana does not' })
-  await api.createReview(owner, first.id, { space: 5, service: 5, food: 5, price: 5, cleanliness: 5, title: 'Joe at his place' })
+  await api.createReview(ana, first.id, { space: 7, service: 9, food: 8, price: 6, title: 'Ana likes it' })
+  await api.createReview(ana, second.id, { space: 2, service: 2, food: 2, price: 2, title: 'Ana does not' })
+  await api.createReview(owner, first.id, { space: 5, service: 5, food: 5, price: 5, title: 'Joe at his place' })
 
   await page.goto(`/restaurants/${first.id}`)
   const card = page.getByRole('listitem').filter({ hasText: 'Ana likes it' })
-  await expect(card.getByRole('img', { name: 'Overall: 7.6 out of 10' })).toBeVisible()
+  await expect(card.getByRole('img', { name: 'Overall: 7.5 out of 10' })).toBeVisible()
   await card.getByRole('link', { name: 'Ana', exact: true }).click()
 
   await expect(page).toHaveURL(new RegExp(`/reviewers/${ana.auth.user.id}$`))
@@ -47,7 +47,7 @@ test('a reviewer page lists the restaurants or the recipes that the reviewer add
     api.createRecipe(joe, { name: 'Joe Dal' }),
   ])
   await api.createRestaurant(ana, { name: 'Ana Bistro' })
-  await api.createReview(ana, first.id, { space: 7, service: 9, food: 8, price: 6, cleanliness: 8, title: 'Ana likes it' })
+  await api.createReview(ana, first.id, { space: 7, service: 9, food: 8, price: 6, title: 'Ana likes it' })
 
   await page.goto(`/reviewers/${joe.auth.user.id}`)
   await expect(page.getByText('No restaurant reviews yet · 4 restaurants added', { exact: true })).toBeVisible()

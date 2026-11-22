@@ -120,7 +120,6 @@ describe('reviewFilterParams', () => {
       service: undefined,
       space: undefined,
       price: undefined,
-      cleanliness: undefined,
     })
     expect(reviewFilterParams({ overall: '8' }).overall).toEqual({ gte: 8 })
   })
@@ -133,7 +132,7 @@ describe('ratings', () => {
 
   it('names the price score by its meaning', () => {
     expect(scoreFields.map((f) => `${f.name} ${f.label}`)).toEqual([
-      'space Space', 'service Service', 'food Food', 'price Value', 'cleanliness Cleanliness',
+      'space Space', 'service Service', 'food Food', 'price Value',
     ])
   })
 })
@@ -249,8 +248,8 @@ describe('own reviews', () => {
 
 describe('overallOf', () => {
   it('gives the average with one decimal after each score has a value', () => {
-    expect(overallOf({ space: 7, service: 9, food: 8, price: 6, cleanliness: 8 })).toBe(7.6)
-    expect(overallOf({ space: 7, service: 9, food: 8, price: 6, cleanliness: null })).toBeNull()
+    expect(overallOf({ space: 7, service: 9, food: 8, price: 6 })).toBe(7.5)
+    expect(overallOf({ space: 7, service: 9, food: 8, price: null })).toBeNull()
   })
 })
 

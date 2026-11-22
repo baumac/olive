@@ -10,7 +10,7 @@ func TestUserApproval(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	restaurant := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
-	review := e.createReview(ana.Token, restaurant, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Good"}`)["id"].(string)
+	review := e.createReview(ana.Token, restaurant, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"title":"Good"}`)["id"].(string)
 	list := e.expect(request{method: "POST", path: "/v1/lists", body: `{"name":"Date night"}`, token: ana.Token}, http.StatusCreated).object(t)["id"].(string)
 
 	e.expect(request{method: "POST", path: "/v1/users",
@@ -27,7 +27,7 @@ func TestUserApproval(t *testing.T) {
 		{method: "POST", path: "/v1/restaurants", body: `{"name":"X","location":` + testLocation + `}`},
 		{method: "PATCH", path: "/v1/restaurants/" + restaurant, body: `{"description":"X"}`},
 		{method: "DELETE", path: "/v1/restaurants/" + restaurant},
-		{method: "POST", path: "/v1/restaurants/" + restaurant + "/reviews", body: `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`},
+		{method: "POST", path: "/v1/restaurants/" + restaurant + "/reviews", body: `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"title":"X"}`},
 		{method: "PATCH", path: reviewPath, body: `{"title":"X"}`},
 		{method: "DELETE", path: reviewPath},
 		{method: "DELETE", path: reviewPath + "/photos/aaaaaaaaaaaaaaa"},

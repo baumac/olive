@@ -293,7 +293,7 @@ let lastView: { center: MapPoint; zoom: number } | undefined
   <main id="main" class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
     <h1 class="sr-only">Restaurants</h1>
     <p v-if="!currentUser && !active && !mapView" class="text-muted-foreground max-w-2xl text-lg">
-      Find a restaurant by its scores for food, service, space, value, and cleanliness.
+      Find a restaurant by its scores for food, service, space, and value.
       <RouterLink to="/sign-up" class="text-foreground font-medium underline underline-offset-4">Sign up</RouterLink>
       to add a restaurant or to write a review.
     </p>

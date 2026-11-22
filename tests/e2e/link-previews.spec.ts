@@ -25,7 +25,7 @@ test('a review page shows its first photo in the link preview', async ({ page, a
   const owner = await api.signUp('Joe')
   const restaurant = await api.createRestaurant(owner, { name: 'Preview Grill' })
   const review = await api.createReview(user, restaurant.id, {
-    space: 8, service: 8, food: 8, price: 8, cleanliness: 8, title: 'Great grill', feedback: 'Juicy ribs.',
+    space: 8, service: 8, food: 8, price: 8, title: 'Great grill', feedback: 'Juicy ribs.',
   })
   const photo = await api.addPhoto(user, review, 'gps-rotated.jpg', 'Ribs on a plate')
   const path = `/restaurants/${restaurant.id}/reviews/${review.id}`

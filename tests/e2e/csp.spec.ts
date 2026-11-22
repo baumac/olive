@@ -27,7 +27,7 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
 
   const restaurant = await api.createRestaurant(user, { name: 'Strict Place' })
   await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
-  for (const label of ['Space', 'Service', 'Food', 'Value', 'Cleanliness']) {
+  for (const label of ['Space', 'Service', 'Food', 'Value']) {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: '7 out of 10' }).click()
   }
   await page.getByLabel('Title').fill('Fine')
@@ -47,7 +47,7 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
   // The page does not know the new review of another user. The delete gets
   // 409. The UI then shows an error toast.
   const reviewer = await api.signUp('Joe')
-  await api.createReview(reviewer, restaurant.id, { space: 7, service: 7, food: 7, price: 7, cleanliness: 7, title: 'Late' })
+  await api.createReview(reviewer, restaurant.id, { space: 7, service: 7, food: 7, price: 7, title: 'Late' })
   await page.getByRole('button', { name: 'Delete restaurant' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete restaurant' }).click()
   await expect(page.getByText('Restaurant not deleted')).toBeVisible()
@@ -59,7 +59,7 @@ test('the UI works under the Content Security Policy', async ({ page, api, user 
 // The upload form shows a blob: preview. The viewer shows the full image.
 test('the photos work under the Content Security Policy', async ({ page, api, user }) => {
   const restaurant = await api.createRestaurant(user, { name: 'Photo Policy' })
-  const review = await api.createReview(user, restaurant.id, { space: 7, service: 7, food: 7, price: 7, cleanliness: 7, title: 'Policy' })
+  const review = await api.createReview(user, restaurant.id, { space: 7, service: 7, food: 7, price: 7, title: 'Policy' })
   await api.addPhoto(user, review, 'menu.png', 'A menu')
 
   await page.goto(`/restaurants/${restaurant.id}/reviews/${review.id}/edit`)

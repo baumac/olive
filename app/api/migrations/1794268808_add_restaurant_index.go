@@ -37,7 +37,7 @@ func init() {
 				"DELETE FROM {{restaurant_overall}} WHERE [[restaurant]] = OLD.[[id]]; "+
 				"DELETE FROM {{restaurant_tags}} WHERE [[restaurant]] = OLD.[[id]]; END",
 			"CREATE TRIGGER {{review_overall_insert}} AFTER INSERT ON {{reviews}} BEGIN "+updateOverall("NEW")+" END",
-			"CREATE TRIGGER {{review_overall_update}} AFTER UPDATE OF "+strings.Join(overallColumns, ", ")+" ON {{reviews}} WHEN "+anyChanged(overallColumns)+" BEGIN "+
+			"CREATE TRIGGER {{review_overall_update}} AFTER UPDATE OF "+strings.Join(fiveRestaurantScores.triggerColumns, ", ")+" ON {{reviews}} WHEN "+anyChanged(fiveRestaurantScores.triggerColumns)+" BEGIN "+
 				updateOverall("NEW")+" "+updateOverall("OLD")+" END",
 			"CREATE TRIGGER {{review_overall_delete}} AFTER DELETE ON {{reviews}} BEGIN "+updateOverall("OLD")+" END",
 		)
@@ -55,18 +55,10 @@ func init() {
 	})
 }
 
-// A migration that drops one of these columns must first drop the triggers.
-// SQLite refuses to drop a column that a trigger uses.
-var overallColumns = []string{"[[restaurant]]", "[[space]]", "[[service]]", "[[food]]", "[[price]]", "[[cleanliness]]"}
-
-const scoreSum = "SUM([[space]] + [[service]] + [[food]] + [[price]] + [[cleanliness]])"
-
-const overallAverage = "ROUND(" + scoreSum + " * 1.0 / (5 * COUNT(*)), 1)"
-
 // overallOf is the rounded overall average of the reviews of a restaurant.
 // It is NULL without reviews.
 func overallOf(restaurant string) string {
-	return "(SELECT " + overallAverage + " " +
+	return "(SELECT " + fiveRestaurantScores.overall() + " " +
 		"FROM {{reviews}} WHERE [[reviews.restaurant]] = " + restaurant + ")"
 }
 

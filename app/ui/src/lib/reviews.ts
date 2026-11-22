@@ -1,5 +1,5 @@
 export interface ScoreField {
-  name: 'space' | 'service' | 'food' | 'price' | 'cleanliness' | 'taste' | 'ease' | 'instructions' | 'value'
+  name: 'space' | 'service' | 'food' | 'price' | 'taste' | 'ease' | 'instructions' | 'value'
   label: string
   max: number
   // description is a copy of the score description in the API spec.
@@ -14,7 +14,7 @@ export const scoreFields: ScoreField[] = [
     name: 'space',
     label: 'Space',
     max: 10,
-    description: 'Decoration, comfort, atmosphere, and kitchen setup.',
+    description: 'Decoration, comfort, atmosphere, cleanliness, and kitchen setup.',
     lowest: 'uncomfortable',
     highest: 'comfortable',
   },
@@ -41,14 +41,6 @@ export const scoreFields: ScoreField[] = [
     description: 'Value for money, and whether the final bill matches the quality provided.',
     lowest: 'poor value',
     highest: 'great value',
-  },
-  {
-    name: 'cleanliness',
-    label: 'Cleanliness',
-    max: 10,
-    description: 'Cleanliness of the dining room, the tableware, and the restrooms.',
-    lowest: 'dirty',
-    highest: 'spotless',
   },
 ]
 

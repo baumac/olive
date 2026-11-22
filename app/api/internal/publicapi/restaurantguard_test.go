@@ -37,7 +37,7 @@ func TestDashboardRestaurantEdit(t *testing.T) {
 	bo := e.signUp("bo@example.com", "Bo")
 	root := e.superuserToken("root@example.com")
 	id := e.createRestaurant(ana.Token, `{"name":"Cafe","location":{"latitude":41.4,"longitude":2.2,"address":"Carrer 1"}}`)["id"].(string)
-	e.createReview(bo.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"T"}`)
+	e.createReview(bo.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"title":"T"}`)
 	records := "/api/collections/restaurants/records"
 
 	t.Run("a superuser changes the fields of a restaurant of another user", func(t *testing.T) {

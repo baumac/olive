@@ -71,7 +71,7 @@ func TestRunDeletesOnlyOldFoldersWithoutARecord(t *testing.T) {
 	user := save(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	restaurant := save(t, app, "restaurants", map[string]any{"name": "Luigi's"})
 	review := save(t, app, "reviews", map[string]any{
-		"restaurant": restaurant.Id, "creator": user.Id, "date": "2024-11-06", "space": 7, "service": 7, "food": 7, "price": 7, "cleanliness": 7, "title": "Good",
+		"restaurant": restaurant.Id, "creator": user.Id, "date": "2024-11-06", "space": 7, "service": 7, "food": 7, "price": 7, "title": "Good",
 	})
 	full, err := filesystem.NewFileFromBytes(testJPEG(t), "full.jpg")
 	if err != nil {

@@ -41,7 +41,8 @@ Out of scope:
 
 ## Overall score
 
-The API computes `overall`. It is the average of the five scores:
+The API computes `overall`. It is the average of the five scores.
+Decision 00052 removes `cleanliness`. `overall` is then the average of four scores.
 
 ```json
 {

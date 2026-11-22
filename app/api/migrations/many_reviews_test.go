@@ -17,7 +17,7 @@ func TestAllowManyReviewsSetsTheDate(t *testing.T) {
 	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse", "name": "Ana"})
 	luigi := newRecord(t, app, "restaurants", map[string]any{"name": "Luigi's"})
 	dal := newRecord(t, app, "recipes", map[string]any{"name": "Dal", "ingredients": []string{"lentils"}, "steps": []string{"Boil."}})
-	old := newRecord(t, app, "reviews", review(ana, luigi, scores(8)))
+	old := newRecord(t, app, "reviews", review(ana, luigi, oldScores(8)))
 	oldRecipe := newRecord(t, app, "recipe_reviews", recipeReview(ana, dal, 8))
 	for table, id := range map[string]string{"reviews": old.Id, "recipe_reviews": oldRecipe.Id} {
 		if _, err := app.DB().Update(table, dbx.Params{"created": "2024-03-31 23:59:59.999Z"}, dbx.HashExp{"id": id}).Execute(); err != nil {
@@ -114,7 +114,7 @@ func TestAllowManyReviewsDownKeepsTheLatestReview(t *testing.T) {
 		t.Error("down kept the date field")
 	}
 	r := core.NewRecord(c)
-	r.Load(review(ana, luigi, scores(5)))
+	r.Load(review(ana, luigi, oldScores(5)))
 	if err := app.Save(r); err == nil {
 		t.Error("down allowed a second review of one user")
 	}

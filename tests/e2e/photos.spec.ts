@@ -1,7 +1,7 @@
 import { photoFile, uniqueTag } from '../api'
 import { expect, signIn, test } from '../fixtures'
 
-const scores = { space: 7, service: 8, food: 9, price: 6, cleanliness: 8 }
+const scores = { space: 7, service: 8, food: 9, price: 6 }
 
 test('a user adds a photo with alt text to a review', async ({ page, api, user }) => {
   const owner = await api.signUp('Joe')
@@ -26,7 +26,7 @@ test('a user adds a photo on the create form of a review', async ({ page, api, u
   const restaurant = await api.createRestaurant(owner, { name: 'New Photos' })
 
   await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
-  for (const label of ['Space', 'Service', 'Food', 'Value', 'Cleanliness']) {
+  for (const label of ['Space', 'Service', 'Food', 'Value']) {
     await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: '7 out of 10' }).click()
   }
   await page.getByLabel('Title').fill('With a menu')
@@ -69,7 +69,7 @@ test('the restaurant card and page show the cover and the gallery', async ({ pag
   // The projects share one app. The search then finds only this restaurant.
   const name = uniqueTag('Gallery Place')
   const restaurant = await api.createRestaurant(owner, { name })
-  const best = await api.createReview(owner, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
+  const best = await api.createReview(owner, restaurant.id, { space: 9, service: 9, food: 9, price: 9, title: 'Great' })
   const cover = await api.addPhoto(owner, best, 'gps-rotated.jpg', 'The best dish')
   const other = await api.signUp('Bo')
   const worse = await api.createReview(other, restaurant.id, { ...scores, title: 'Fine' })

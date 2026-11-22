@@ -16,7 +16,6 @@ export const reviewFilterDefs: FilterDef[] = [
   { key: 'service', label: 'Service', type: 'select', options: scoreOptions(10), chip: (v) => `Service: ${v} or more` },
   { key: 'space', label: 'Space', type: 'select', options: scoreOptions(10), chip: (v) => `Space: ${v} or more` },
   { key: 'price', label: 'Value', type: 'select', options: scoreOptions(10), chip: (v) => `Value: ${v} or more` },
-  { key: 'cleanliness', label: 'Cleanliness', type: 'select', options: scoreOptions(10), chip: (v) => `Cleanliness: ${v} or more` },
 ]
 
 // reviewDefaultSort puts the newest visit or cook first. See decision 00050.
@@ -44,7 +43,6 @@ export const oldReviewSortOptions: Option[] = [
   { value: '-service', label: 'Best service' },
   { value: '-space', label: 'Best space' },
   { value: '-price', label: 'Best value' },
-  { value: '-cleanliness', label: 'Cleanest' },
   { value: 'title', label: 'Title, A to Z' },
 ]
 
@@ -94,7 +92,6 @@ export function reviewFilterParams(f: Record<string, FilterValue>) {
     service: atLeast(f, 'service'),
     space: atLeast(f, 'space'),
     price: atLeast(f, 'price'),
-    cleanliness: atLeast(f, 'cleanliness'),
   }
 }
 

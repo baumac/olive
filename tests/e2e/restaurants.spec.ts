@@ -105,7 +105,7 @@ test('the place search fills the details, and the creator changes and removes th
 test('another user changes the name, the location, and the details but cannot delete', async ({ page, api }) => {
   const owner = await api.signUp('Joe')
   const restaurant = await api.createRestaurant(owner, { name: 'Can Sloe' })
-  await api.createReview(owner, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
+  await api.createReview(owner, restaurant.id, { space: 9, service: 9, food: 9, price: 9, title: 'Great' })
   const other = await api.signUp('Ana')
   await signIn(page, other)
 
@@ -145,7 +145,7 @@ test('a save keeps the change of another user to a different field', async ({ pa
 test('a restaurant with a review of another user cannot be deleted', async ({ page, api, user }) => {
   const restaurant = await api.createRestaurant(user, { name: 'Luigis' })
   const reviewer = await api.signUp('Joe')
-  await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
+  await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, title: 'Great' })
 
   await page.goto(`/restaurants/${restaurant.id}/edit`)
   await expect(page.getByLabel('Location')).toBeEditable()
@@ -167,7 +167,7 @@ test('a review that arrives after the form opens does not block the move', async
   await expect(page.getByLabel('Name')).toHaveValue("Luigi's")
 
   const reviewer = await api.signUp('Joe')
-  await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
+  await api.createReview(reviewer, restaurant.id, { space: 9, service: 9, food: 9, price: 9, title: 'Great' })
   await selectPlace(page, uniqueTag('move'))
   await page.getByRole('button', { name: 'Save restaurant' }).click()
   await expect(page.getByText('Restaurant saved')).toBeVisible()
@@ -228,7 +228,7 @@ test('a user enters a location by hand', async ({ page, api, user: _user }) => {
 
 test('the creator renames and deletes a restaurant that has only the own review', async ({ page, api, user }) => {
   const restaurant = await api.createRestaurant(user, { name: 'Luigis' })
-  await api.createReview(user, restaurant.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Great' })
+  await api.createReview(user, restaurant.id, { space: 9, service: 9, food: 9, price: 9, title: 'Great' })
 
   await page.goto(`/restaurants/${restaurant.id}/edit`)
   await page.getByLabel('Name').fill("Luigi's")
@@ -252,20 +252,20 @@ test('restaurants show the average scores of their reviews', async ({ page, api 
   const rated = await api.createRestaurant(owner, { name: 'Rated Place', tags: [tag] })
   await api.createRestaurant(owner, { name: 'New Place', tags: [tag] })
   const ana = await api.signUp('Ana')
-  await api.createReview(owner, rated.id, { space: 7, service: 8, food: 9, price: 6, cleanliness: 8, title: 'Good' })
-  await api.createReview(ana, rated.id, { space: 8, service: 9, food: 10, price: 5, cleanliness: 7, title: 'Great' })
+  await api.createReview(owner, rated.id, { space: 7, service: 8, food: 9, price: 6, title: 'Good' })
+  await api.createReview(ana, rated.id, { space: 8, service: 9, food: 10, price: 6, title: 'Great' })
 
   await page.goto(`/restaurants?tags=${tag}&sort=name`)
   const ratedCard = page.getByRole('listitem').filter({ hasText: 'Rated Place' })
-  await expect(ratedCard.getByRole('img', { name: 'Overall: 7.7 out of 10' })).toBeVisible()
+  await expect(ratedCard.getByRole('img', { name: 'Overall: 7.9 out of 10' })).toBeVisible()
   await expect(ratedCard).toContainText('2 reviews')
   await expect(page.getByRole('listitem').filter({ hasText: 'New Place' })).toContainText('No reviews yet')
 
   await page.getByRole('link', { name: 'Rated Place' }).click()
   const averages = page.getByRole('region', { name: 'Average scores' })
-  await expect(averages.getByRole('img', { name: 'Overall: 7.7 out of 10' })).toBeVisible()
+  await expect(averages.getByRole('img', { name: 'Overall: 7.9 out of 10' })).toBeVisible()
   await expect(averages.getByRole('img', { name: 'Food: 9.5 out of 10' })).toBeVisible()
-  await expect(averages.getByRole('img', { name: 'Value: 5.5 out of 10' })).toBeVisible()
+  await expect(averages.getByRole('img', { name: 'Value: 6 out of 10' })).toBeVisible()
   await expect(averages).toContainText('out of 10 · 2 reviews')
 })
 
@@ -275,8 +275,8 @@ test('restaurants filter and sort by the overall rating', async ({ page, api }) 
   const top = await api.createRestaurant(owner, { name: 'Top Place', tags: [tag] })
   const fine = await api.createRestaurant(owner, { name: 'Fine Place', tags: [tag] })
   await api.createRestaurant(owner, { name: 'Unrated Place', tags: [tag] })
-  await api.createReview(owner, top.id, { space: 9, service: 9, food: 9, price: 9, cleanliness: 9, title: 'Top' })
-  await api.createReview(owner, fine.id, { space: 6, service: 6, food: 6, price: 6, cleanliness: 6, title: 'Fine' })
+  await api.createReview(owner, top.id, { space: 9, service: 9, food: 9, price: 9, title: 'Top' })
+  await api.createReview(owner, fine.id, { space: 6, service: 6, food: 6, price: 6, title: 'Fine' })
   const names = page.getByRole('heading', { level: 2, name: / Place$/ })
 
   // The highest rated restaurants are first without a sort in the link.

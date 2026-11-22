@@ -8,7 +8,7 @@ import (
 )
 
 func restaurantReviewBody(date, title string) string {
-	return `{"date":"` + date + `","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"` + title + `"}`
+	return `{"date":"` + date + `","space":7,"service":9,"food":8,"price":6,"title":"` + title + `"}`
 }
 
 func recipeReviewOn(date, title string) string {
@@ -116,7 +116,7 @@ func TestReviewDateChecks(t *testing.T) {
 
 	t.Run("a create without a date gets 422", func(t *testing.T) {
 		res := e.expect(request{method: "POST", path: reviews, token: ana.Token,
-			body: `{"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`}, http.StatusUnprocessableEntity)
+			body: `{"space":7,"service":9,"food":8,"price":6,"title":"X"}`}, http.StatusUnprocessableEntity)
 		if got := errorProperties(t, res); !slices.Equal(got, []string{"date"}) {
 			t.Errorf("errors %v, want date", got)
 		}

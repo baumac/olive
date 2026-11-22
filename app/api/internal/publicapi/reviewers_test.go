@@ -18,25 +18,25 @@ func TestReviewOverall(t *testing.T) {
 	id := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
 	reviews := "/v1/restaurants/" + id + "/reviews"
 
-	low := e.createReview(ana.Token, id, `{"date":"2024-11-06","space":4,"service":5,"food":6,"price":7,"cleanliness":3,"title":"Low"}`)
-	e.createReview(joe.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"High"}`)
-	e.createReview(sam.Token, id, `{"date":"2024-11-06","space":7,"service":7,"food":7,"price":7,"cleanliness":7,"title":"Mid"}`)
+	low := e.createReview(ana.Token, id, `{"date":"2024-11-06","space":4,"service":5,"food":6,"price":7,"title":"Low"}`)
+	e.createReview(joe.Token, id, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"title":"High"}`)
+	e.createReview(sam.Token, id, `{"date":"2024-11-06","space":7,"service":7,"food":7,"price":7,"title":"Mid"}`)
 
-	if low["overall"] != 5.0 {
-		t.Errorf("create: overall %v, want 5", low["overall"])
+	if low["overall"] != 5.5 {
+		t.Errorf("create: overall %v, want 5.5", low["overall"])
 	}
 	lowPath := reviews + "/" + low["id"].(string)
-	patched := e.expect(request{method: "PATCH", path: lowPath, body: `{"food":7}`, token: ana.Token}, http.StatusOK).object(t)
-	if patched["overall"] != 5.2 {
-		t.Errorf("patch: overall %v, want 5.2", patched["overall"])
+	patched := e.expect(request{method: "PATCH", path: lowPath, body: `{"service":6}`, token: ana.Token}, http.StatusOK).object(t)
+	if patched["overall"] != 5.75 {
+		t.Errorf("patch: overall %v, want 5.75", patched["overall"])
 	}
-	if got := e.expect(request{method: "GET", path: lowPath}, http.StatusOK).object(t)["overall"]; got != 5.2 {
-		t.Errorf("get: overall %v, want 5.2", got)
+	if got := e.expect(request{method: "GET", path: lowPath}, http.StatusOK).object(t)["overall"]; got != 5.75 {
+		t.Errorf("get: overall %v, want 5.75", got)
 	}
 
 	restaurant := e.expect(request{method: "GET", path: "/v1/restaurants/" + id}, http.StatusOK).object(t)
-	if got := restaurant["rating"].(map[string]any)["overall"]; got != 6.6 {
-		t.Errorf("rating.overall %v, want 6.6, the average of 5.2, 7.6, and 7", got)
+	if got := restaurant["rating"].(map[string]any)["overall"]; got != 6.8 {
+		t.Errorf("rating.overall %v, want 6.8, the average of 5.75, 7.5, and 7", got)
 	}
 
 	list := func(path string) string {
@@ -58,7 +58,8 @@ func TestReviewOverall(t *testing.T) {
 	for query, want := range map[string]struct{ all, joe string }{
 		"sort=overall":                 {"Low,Mid,High", "High"},
 		"sort=-overall":                {"High,Mid,Low", "High"},
-		"overall[eq]=7.6":              {"High", "High"},
+		"overall[eq]=7.5":              {"High", "High"},
+		"overall[eq]=5.75":             {"Low", ""},
 		"overall[gte]=7&sort=-overall": {"High,Mid", "High"},
 		"overall[lt]=7":                {"Low", ""},
 	} {
@@ -80,7 +81,7 @@ func TestReviewOverall(t *testing.T) {
 	}
 	e.expect(request{method: "PATCH", path: lowPath, body: `{"overall":9}`, token: ana.Token}, http.StatusBadRequest)
 	e.expect(request{method: "POST", path: "/v1/restaurants/" + e.createRestaurant(ana.Token, `{"name":"Other"}`)["id"].(string) + "/reviews",
-		body: `{"overall":9,"space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"X"}`, token: ana.Token}, http.StatusBadRequest)
+		body: `{"overall":9,"space":7,"service":9,"food":8,"price":6,"title":"X"}`, token: ana.Token}, http.StatusBadRequest)
 }
 
 func TestReviewers(t *testing.T) {
@@ -91,16 +92,16 @@ func TestReviewers(t *testing.T) {
 	sam := e.signUp("sam@example.com", "Sam")
 	luigi := e.createRestaurant(ana.Token, `{"name":"Luigi's"}`)["id"].(string)
 	sole := e.createRestaurant(joe.Token, `{"name":"Can Sole"}`)["id"].(string)
-	e.createReview(ana.Token, luigi, `{"date":"2024-11-04","space":4,"service":4,"food":4,"price":4,"cleanliness":8,"title":"Ana at Luigi"}`)
+	e.createReview(ana.Token, luigi, `{"date":"2024-11-04","space":4,"service":4,"food":4,"price":5,"title":"Ana at Luigi"}`)
 	time.Sleep(2 * time.Millisecond)
-	e.createReview(joe.Token, luigi, `{"date":"2024-11-05","space":2,"service":2,"food":2,"price":2,"cleanliness":8,"title":"Joe at Luigi"}`)
+	e.createReview(joe.Token, luigi, `{"date":"2024-11-05","space":2,"service":2,"food":2,"price":2,"title":"Joe at Luigi"}`)
 	time.Sleep(2 * time.Millisecond)
-	e.createReview(ana.Token, sole, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"cleanliness":8,"title":"Ana at Sole"}`)
+	e.createReview(ana.Token, sole, `{"date":"2024-11-06","space":7,"service":9,"food":8,"price":6,"title":"Ana at Sole"}`)
 
 	t.Run("the profile has only public fields", func(t *testing.T) {
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID}, http.StatusOK).object(t)
-		// The overall values of Ana are 4.8 and 7.6.
-		want := map[string]any{"id": ana.User.ID, "name": "Ana", "restaurant_review_count": 2.0, "restaurant_average_overall": 6.2, "restaurant_count": 1.0,
+		// The overall values of Ana are 4.25 and 7.5.
+		want := map[string]any{"id": ana.User.ID, "name": "Ana", "restaurant_review_count": 2.0, "restaurant_average_overall": 5.9, "restaurant_count": 1.0,
 			"recipe_review_count": 0.0, "recipe_average_overall": nil, "recipe_count": 0.0, "list_count": 1.0}
 		if len(got) != len(want) {
 			t.Errorf("profile %v, want only %v", got, want)
@@ -119,13 +120,13 @@ func TestReviewers(t *testing.T) {
 
 	t.Run("the average is rounded to one decimal", func(t *testing.T) {
 		tom := e.signUp("tom@example.com", "Tom")
-		for name, cleanliness := range map[string]int{"Tom A": 8, "Tom B": 7, "Tom C": 7} {
+		for name, price := range map[string]int{"Tom A": 8, "Tom B": 7, "Tom C": 7} {
 			id := e.createRestaurant(tom.Token, fmt.Sprintf(`{"name":%q}`, name))["id"].(string)
-			e.createReview(tom.Token, id, fmt.Sprintf(`{"date":"2024-11-06","space":7,"service":7,"food":7,"price":7,"cleanliness":%d,"title":"T"}`, cleanliness))
+			e.createReview(tom.Token, id, fmt.Sprintf(`{"date":"2024-11-06","space":7,"service":7,"food":7,"price":%d,"title":"T"}`, price))
 		}
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + tom.User.ID}, http.StatusOK).object(t)
 		if got["restaurant_average_overall"] != 7.1 || got["restaurant_count"] != 3.0 {
-			t.Errorf("profile %v, want an average of 7.1 for 7.2, 7, and 7, and 3 restaurants", got)
+			t.Errorf("profile %v, want an average of 7.1 for 7.25, 7, and 7, and 3 restaurants", got)
 		}
 		var page struct {
 			Items []struct {

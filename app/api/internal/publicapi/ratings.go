@@ -28,14 +28,13 @@ func (w *where) joinOverall(sub subject) {
 }
 
 type restaurantRating struct {
-	Restaurant  string  `db:"restaurant"`
-	Count       int     `db:"count"`
-	Overall     float64 `db:"overall"`
-	Space       float64 `db:"space"`
-	Service     float64 `db:"service"`
-	Food        float64 `db:"food"`
-	Price       float64 `db:"price"`
-	Cleanliness float64 `db:"cleanliness"`
+	Restaurant string  `db:"restaurant"`
+	Count      int     `db:"count"`
+	Overall    float64 `db:"overall"`
+	Space      float64 `db:"space"`
+	Service    float64 `db:"service"`
+	Food       float64 `db:"food"`
+	Price      float64 `db:"price"`
 }
 
 func (s *Server) ratings(restaurants ...*core.Record) (map[string]restaurantRating, error) {
@@ -80,7 +79,7 @@ func ratingsOf[R any](s *Server, sub subject, parents []*core.Record, parentOf f
 func (r restaurantRating) toAPI() reviewsapi.RestaurantRating {
 	return reviewsapi.RestaurantRating{
 		Overall: r.Overall, Space: r.Space, Service: r.Service,
-		Food: r.Food, Price: r.Price, Cleanliness: r.Cleanliness,
+		Food: r.Food, Price: r.Price,
 	}
 }
 

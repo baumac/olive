@@ -85,7 +85,7 @@ func (s *Server) ListRestaurantReviews(_ context.Context, req reviewsapi.ListRes
 	p := req.Params
 	all := reviewsapi.ListAllRestaurantReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, RestaurantEq: &req.RestaurantId,
-		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price, Cleanliness: p.Cleanliness,
+		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price,
 		Overall: p.Overall, Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
 	}
 	// The cursor keeps the fingerprint of the first version of this
@@ -150,7 +150,7 @@ func (s *Server) reviewPage(
 		limit: p.Limit, cursor: p.Cursor, sort: p.Sort, search: p.Search,
 		parentEq: p.RestaurantEq, parentIn: p.RestaurantIn,
 		scores: map[string]*reviewsapi.ScoreRange{
-			"space": p.Space, "service": p.Service, "food": p.Food, "price": p.Price, "cleanliness": p.Cleanliness,
+			"space": p.Space, "service": p.Service, "food": p.Food, "price": p.Price,
 		},
 		overall: p.Overall, created: p.Created, updated: p.Updated, creatorEq: p.CreatorEq, creatorIn: p.CreatorIn,
 	}, fingerprintOf, restaurant)
@@ -501,7 +501,7 @@ func (sub subject) reviewPath(parentID, reviewID string) string {
 
 func createInput(body *reviewsapi.RestaurantReviewCreate) reviewInput {
 	return reviewInput{
-		scores: map[string]int{"space": body.Space, "service": body.Service, "food": body.Food, "price": body.Price, "cleanliness": body.Cleanliness},
+		scores: map[string]int{"space": body.Space, "service": body.Service, "food": body.Food, "price": body.Price},
 		date:   &body.Date, title: &body.Title, feedback: optional(body.Feedback),
 	}
 }
@@ -512,7 +512,6 @@ func patchInput(body *reviewsapi.RestaurantReviewPatch) reviewInput {
 	setScore(in.scores, "service", body.Service)
 	setScore(in.scores, "food", body.Food)
 	setScore(in.scores, "price", body.Price)
-	setScore(in.scores, "cleanliness", body.Cleanliness)
 	return in
 }
 
@@ -557,12 +556,12 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string, photo
 	if photos == nil {
 		photos = []reviewsapi.Photo{}
 	}
-	space, service, food, price, cleanliness := r.GetInt("space"), r.GetInt("service"), r.GetInt("food"), r.GetInt("price"), r.GetInt("cleanliness")
+	space, service, food, price := r.GetInt("space"), r.GetInt("service"), r.GetInt("food"), r.GetInt("price")
 	// TestOverallColumnEqualsResponse keeps the overall column equal to this.
 	return reviewsapi.RestaurantReview{
 		Id: r.Id, Restaurant: r.GetString("restaurant"), RestaurantName: restaurantName,
-		Date: r.GetString("date"), Overall: float64(space+service+food+price+cleanliness) / 5,
-		Space: space, Service: service, Food: food, Price: price, Cleanliness: cleanliness,
+		Date: r.GetString("date"), Overall: float64(space+service+food+price) / 4,
+		Space: space, Service: service, Food: food, Price: price,
 		Title: r.GetString("title"), Feedback: optionalText(r, "feedback"),
 		Creator: toCreator(creator), Photos: photos, Created: apiTimestamp(r.GetDateTime("created")), Updated: apiTimestamp(r.GetDateTime("updated")),
 	}, nil

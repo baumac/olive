@@ -14,18 +14,7 @@ func init() {
 	m.Register(addRecipes, dropRecipes)
 }
 
-// recipeOverallColumns are the columns of recipe_reviews that the triggers
-// use. SQLite refuses to drop them while the triggers exist.
-var recipeOverallColumns = []string{"[[recipe]]", "[[taste]]", "[[ease]]", "[[instructions]]", "[[value]]"}
-
-const (
-	recipeScoreSum = "SUM([[taste]] + [[ease]] + [[instructions]] + [[value]])"
-	recipeOverall  = "ROUND(" + recipeScoreSum + " * 1.0 / (4 * COUNT(*)), 1)"
-	// recipeRanking is the Bayesian average of decision 00029. It is NULL
-	// without reviews.
-	recipeRanking = "(" + rankingPriorReviews + " * " + rankingPriorScore +
-		" + " + recipeScoreSum + " / 4.0) / (" + rankingPriorReviews + " + COUNT(*))"
-)
+var recipeScores = newReviewScores("recipe", "taste", "ease", "instructions", "value")
 
 func addRecipes(app core.App) error {
 	users, err := app.FindCollectionByNameOrId("users")
@@ -145,12 +134,13 @@ func newRecipeReviewPhotos(reviews *core.Collection) *core.Collection {
 // recipeTables makes the generated overall column of decision 00031, the
 // tables of decision 00012, and the FTS5 tables of decision 00004.
 func recipeTables() []string {
+	recipeValues := recipeScores.overall() + ", " + recipeScores.ranking()
 	ofReviews := func(values, recipe string) string {
 		return "SELECT " + values + " FROM {{recipe_reviews}} WHERE [[recipe_reviews.recipe]] = " + recipe
 	}
 	update := func(row string) string {
 		recipe := row + ".[[recipe]]"
-		return "UPDATE {{recipe_overall}} SET ([[overall]], [[ranking]]) = (" + ofReviews(recipeOverall+", "+recipeRanking, recipe) +
+		return "UPDATE {{recipe_overall}} SET ([[overall]], [[ranking]]) = (" + ofReviews(recipeValues, recipe) +
 			") WHERE [[recipe]] = " + recipe + ";"
 	}
 	insertTags := func(row string) string {
@@ -158,9 +148,7 @@ func recipeTables() []string {
 			stringTags(row+".[[tags]]") + ";"
 	}
 	return []string{
-		// The division in a double gives the value of the responses.
-		"ALTER TABLE {{recipe_reviews}} ADD COLUMN [[overall]] REAL AS " +
-			"(([[taste]] + [[ease]] + [[instructions]] + [[value]]) / 4.0)",
+		"ALTER TABLE {{recipe_reviews}} ADD COLUMN [[overall]] REAL AS " + recipeScores.column(),
 		"CREATE INDEX {{idx_recipe_reviews_recipe_overall}} ON {{recipe_reviews}} ([[recipe]], [[overall]], [[id]])",
 		"CREATE INDEX {{idx_recipe_reviews_creator_overall}} ON {{recipe_reviews}} ([[creator]], [[overall]], [[id]])",
 		"CREATE INDEX {{idx_recipe_reviews_overall}} ON {{recipe_reviews}} ([[overall]], [[id]])",
@@ -176,7 +164,7 @@ func recipeTables() []string {
 
 		"CREATE TRIGGER {{recipe_index_insert}} AFTER INSERT ON {{recipes}} BEGIN " +
 			"INSERT INTO {{recipe_overall}} ([[recipe]], [[overall]], [[ranking]]) " +
-			ofReviews("NEW.[[id]], "+recipeOverall+", "+recipeRanking, "NEW.[[id]]") + "; " +
+			ofReviews("NEW.[[id]], "+recipeValues, "NEW.[[id]]") + "; " +
 			insertTags("NEW") + " END",
 		"CREATE TRIGGER {{recipe_index_update}} AFTER UPDATE OF [[tags]] ON {{recipes}} WHEN OLD.[[tags]] IS NOT NEW.[[tags]] BEGIN " +
 			"DELETE FROM {{recipe_tags}} WHERE [[recipe]] = OLD.[[id]]; " +
@@ -185,8 +173,8 @@ func recipeTables() []string {
 			"DELETE FROM {{recipe_overall}} WHERE [[recipe]] = OLD.[[id]]; " +
 			"DELETE FROM {{recipe_tags}} WHERE [[recipe]] = OLD.[[id]]; END",
 		"CREATE TRIGGER {{recipe_review_overall_insert}} AFTER INSERT ON {{recipe_reviews}} BEGIN " + update("NEW") + " END",
-		"CREATE TRIGGER {{recipe_review_overall_update}} AFTER UPDATE OF " + strings.Join(recipeOverallColumns, ", ") +
-			" ON {{recipe_reviews}} WHEN " + anyChanged(recipeOverallColumns) + " BEGIN " + update("NEW") + " " + update("OLD") + " END",
+		"CREATE TRIGGER {{recipe_review_overall_update}} AFTER UPDATE OF " + strings.Join(recipeScores.triggerColumns, ", ") +
+			" ON {{recipe_reviews}} WHEN " + anyChanged(recipeScores.triggerColumns) + " BEGIN " + update("NEW") + " " + update("OLD") + " END",
 		"CREATE TRIGGER {{recipe_review_overall_delete}} AFTER DELETE ON {{recipe_reviews}} BEGIN " + update("OLD") + " END",
 
 		"CREATE VIRTUAL TABLE {{recipes_fts}} USING fts5(id UNINDEXED, name, description, tags, ingredients, " +
