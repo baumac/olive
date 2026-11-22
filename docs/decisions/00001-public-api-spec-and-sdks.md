@@ -35,8 +35,7 @@ In scope:
 
 Out of scope:
 - the operations of each topic. Decisions 00003, 00004, 00005, 00006, 00007, and 00008 have them.
-- the auth tokens, the cookie, and the approval. Decision 00003 has them.
-- the rate limits. Decision 00003 has them.
+- the auth tokens, the cookie, the approval, and the rate limits. Decision 00003 has them.
 - all APIs of PocketBase. Clients use only the Public API.
 - publishing the SDKs to npm or to another registry. Only this repository uses them.
 - a Go client. The app needs only the server code.

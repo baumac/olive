@@ -90,7 +90,7 @@ Examples:
 # Implementation Details
 [implementation-details]: #implementation-details
 
-The other decisions cover the implementation. Each one covers one topic:
+The other decisions cover the implementation. Each one covers one area:
 
 - [00001](00001-public-api-spec-and-sdks.md): the spec of the Public API, the SDKs, and the validation
 - [00002](00002-app-server-link-previews-and-crawlers.md): the PocketBase app, the UI route, the Content Security Policy, the link previews, and robots.txt

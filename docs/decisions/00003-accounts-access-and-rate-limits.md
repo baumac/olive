@@ -129,11 +129,10 @@ When the two passwords are not the same, the form shows "The passwords do not ma
 ## Sign in and wrong passwords
 
 - a wrong email address and a wrong password get the same `401`. The response does not say which one is wrong.
-- each email address can get 10 wrong passwords in 15 minutes. After that, sign in gets `429` with `wrong_password_limit`, also with the correct password.
+- after too many wrong passwords for one email address, sign in gets `429` with `wrong_password_limit`, also with the correct password. [Rate limits](#rate-limits) has the numbers and their environment variables.
 - the count is the same for an address with a user and for an address without one. The limit then does not show which addresses have a user.
 - `changePassword` and `deleteUser` need the current password. A wrong password gets `422` and counts for the same limit.
 - a password reset removes the count
-- [Rate limits](#rate-limits) has the numbers and their environment variables
 
 ## Approval
 
@@ -348,11 +347,11 @@ Cross-origin check:
 - a superuser makes a user in the dashboard. The user is approved only when the superuser turns on `approved`.
 
 Accepted risks:
-- a person who knows an address can block its sign in with 10 wrong passwords in each 15 minutes. A session that the user has continues to work.
+- a person who knows an address can block its sign in with wrong passwords. A session that the user has continues to work.
 - a person can make the sign up of an owner fail for one hour with sign ups up to the email limit. The owner then resets the password.
 - a failed sign out leaves the cookie in the browser until it expires. The token stays valid on the server. The UI does not send this cookie while it has no session.
 - a script on the page can send requests as the user while the page is open. The Content Security Policy of decision 00002 is the defence.
-- the counts of wrong passwords are in memory. A restart clears them.
+- the counts of the rate limits are in memory. A restart clears them. An attacker then gets at most one more window.
 
 ## Tests
 
@@ -409,9 +408,6 @@ Accepted risks:
 - the end-to-end tests set the `create` and `edit` limits to 10000
 - the rate limit project of the end-to-end tests checks the `create` limit with its own app. See decision 00010.
 - the Go tests use high limits. Some tests use a low limit.
-
-Accepted risks:
-- the counts are in memory. A restart clears them. An attacker then gets at most one more window.
 
 # Alternatives
 [alternatives]: #alternatives

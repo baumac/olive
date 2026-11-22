@@ -62,8 +62,7 @@ In scope:
 
 Out of scope:
 - the rules of the spec. Decision 00001 has them.
-- the auth tokens and the cookie. Decision 00003 has them.
-- the rate limits. Decision 00003 has them.
+- the auth tokens, the cookie, and the rate limits. Decision 00003 has them.
 - the collections of each topic. The topic decisions have them.
 - the map settings of the UI route. Decision 00008 has them.
 - the screens and the components of the UI. Decision 00009 has them.
@@ -355,7 +354,7 @@ Tests:
 ### The route
 
 - `pagemeta.go` of `app/api/internal/webui` has the page meta. `webui.Register` reads `index.html` one time and cuts it around the block. It also reads the site name and the default `og:image` tags of the block.
-- the UI route sends its own page only for the paths above, with an optional trailing slash. The path words ignore case, like Vue Router. Each ID must match `^[a-z0-9]{15}$`.
+- the UI route sends its own page only for the pages of the table in [The page-meta block](#the-page-meta-block), with an optional trailing slash. The path words ignore case, like Vue Router. Each ID must match `^[a-z0-9]{15}$`.
   `/restaurants/new` does not match. The edit and new pages need an account and keep the default tags.
 - `html/template` writes the values. A name such as `<script>` stays text.
 - the description puts all whitespace on one line. A text of more than 200 characters is cut at the end of a word and ends with `…`.

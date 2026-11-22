@@ -3,8 +3,8 @@ description: The description of the decision.
 status: The status of the decision, such as proposed, in progress, or implemented.
 ---
 
-A decision covers one topic. It describes the current design of the topic.
-A change of a requirement updates the decision of its topic. A new topic gets a new decision.
+A decision covers one area of the app. It describes the current design of the area.
+A change of a requirement updates the decision of its area. A new area gets a new decision.
 Git keeps the old texts. The decision does not tell its own history.
 
 # Motivation
