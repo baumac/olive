@@ -9,7 +9,7 @@ status: implemented
 The API sent timestamps in the PocketBase format, such as `2024-11-04 01:26:55.002Z`.
 This is not RFC 3339, so the date parsers of most platforms refuse it.
 Each client needed its own function that changes the space to a `T`. The UI had `parseTimestamp` for this.
-A change is cheap now. The UI is the only client. An iOS app is in the backlog.
+A change is cheap now. The UI is the only client. The backlog has an iOS app under "Won't do" for now.
 
 Expected outcome:
 - `new Date(value)` in JavaScript and the ISO 8601 parsers of Swift and Go read each timestamp of the API

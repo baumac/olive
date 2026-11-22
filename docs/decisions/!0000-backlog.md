@@ -16,7 +16,7 @@ Each sub-bullet point contains notes about the incomplete decision.
   - decide if we want to revert those decisions
   - Findings of the review on 2026-11-22:
     - Not aligned, still in force:
-      - 00047: wines and cheeses are out of scope. 00000 names them. 00047 says they are under "Won't do", but the backlog has them under "For the Future".
+      - 00047: wines and cheeses are out of scope. 00000 names them. The backlog has them under "For the Future".
       - 00017 and 00018: the place search sends the search text to `photon.komoot.io`. The browsers load the map tiles from `tile.openstreetmap.org`, which gets the IP address of each user. 00000 wants a self-hosted app. "For the Future" has only the Photon item. It has no item for the map tiles.
     - Partly aligned:
       - 00053: robots.txt keeps all crawlers out. Link preview bots that obey it show no preview of a shared link. The share example of 00000 then loses the preview of 00013.
@@ -31,9 +31,6 @@ Each sub-bullet point contains notes about the incomplete decision.
     - Judgement calls:
       - All reviews, reviewer names, and lists are public without an account. See 00033 and 00034. A private or unlisted option is not in the backlog.
       - Some decisions are heavier than a small group of trusted users needs: the rate limits of each operation, the version history, the end-to-end tests in many browsers, Renovate, and the coverage checks.
-    - Stale text for the consolidation:
-      - 00023 says "An iOS app is in the backlog". It is under "Won't do".
-      - 00047 says that wines and cheeses are under "Won't do".
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
 - verify app implementation against consolidated decisions
 - deploy to prod

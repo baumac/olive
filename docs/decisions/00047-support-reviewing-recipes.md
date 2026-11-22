@@ -36,7 +36,7 @@ In scope:
 
 Out of scope:
 
-- Cheeses and wines. The backlog has them under "Won't do".
+- Cheeses and wines. The backlog has them under "For the Future". The first release does not have them.
 - Amounts and units as separate values of an ingredient. An ingredient is one line of text, for example `2 cans of chickpeas`.
 - A scale of the servings that changes the amounts.
 - A recipe import from a URL, for example from the schema.org `Recipe` of a web page.
