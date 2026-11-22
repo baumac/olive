@@ -11,7 +11,7 @@ import (
 var fourRestaurantScores = newReviewScores("restaurant", "space", "service", "food", "price")
 
 // Restaurant reviews lose the cleanliness score. The overall is the average
-// of the other four scores. See decision 00007.
+// of the other four scores. See decision 00005.
 func init() {
 	m.Register(func(app core.App) error {
 		if err := execAll(app, dropReviewOverall()...); err != nil {
@@ -55,8 +55,8 @@ func init() {
 	})
 }
 
-// dropReviewOverall drops the generated overall column of decision 00007.
-// It also drops the triggers of decision 00007 that use the scores.
+// dropReviewOverall drops the generated overall column of decision 00005.
+// It also drops the triggers of decision 00005 that use the scores.
 func dropReviewOverall() []string {
 	return append(dropOverallSort(),
 		"DROP INDEX {{idx_reviews_restaurant_overall}}",

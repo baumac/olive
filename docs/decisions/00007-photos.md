@@ -45,7 +45,7 @@ Out of scope:
 - a limit on the total photo storage of a user
 - a CDN, S3 storage, and a separate host for the files
 - a change of the order of photos, and a search in the alt text
-- the cover in the link previews. Decision 00012 has the previews.
+- the cover in the link previews. Decision 00002 has the previews.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -111,7 +111,7 @@ The app turned the pixels, so `width` and `height` show the photo upright. It ma
 | upload types | `image/jpeg`, `image/png`, `image/webp` | `415` |
 | pixels of the upload | at most 25 megapixels, at most 8192 on each side | `422` |
 | photos of a review | 5 | `409` with `photo_limit` |
-| uploads of a user | 30 per hour. See decision 00004. | `429` |
+| uploads of a user | 30 per hour. See decision 00003. | `429` |
 | memory of all uploads | 64 MB of bodies and processed photos | `429` with `Retry-After: 5` |
 
 - GIF, HEIC, AVIF, SVG, and TIFF get `415`. SVG can contain scripts.
@@ -251,7 +251,7 @@ The file operation reads the file through the PocketBase filesystem and sends it
 |---|---|
 | a delete of a photo | the record and its two files are deleted |
 | a delete of a review | its photos go with the cascade |
-| a delete of a subject | the reviews of the creator and their photos go. See decision 00006. |
+| a delete of a subject | the reviews of the creator and their photos go. See decision 00004. |
 | a delete of a user | the reviews of the user and their photos go |
 
 - PocketBase deletes the files after the delete transaction, in the background. It does not try a failed file delete again.

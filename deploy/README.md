@@ -1,6 +1,6 @@
 # Deploy
 
-This folder runs the app as one instance with Docker Compose. Decision 00013 has the reasons.
+This folder runs the app as one instance with Docker Compose. Decision 00010 has the reasons.
 
 | Service | What |
 | --- | --- |
@@ -186,7 +186,7 @@ Each backup is one ZIP file of all of `pb_data`: the databases and the photo fil
 - Restore from a ZIP file. A copy of the database files that the host task makes while the app runs can be broken.
 - Each backup has all photos again. The disk needs space for `pb_data` and for `pb_data` times the number of backups.
 - The app can be slower while a backup runs.
-- PocketBase advises a different plan for a `pb_data` of 5 GB or more. Decision 00013 has the plan with `sqlite3` and `rsync`.
+- PocketBase advises a different plan for a `pb_data` of 5 GB or more. Decision 00010 has the plan with `sqlite3` and `rsync`.
 - A failed backup shows only in the logs of the dashboard. Look at the list of backups from time to time.
 
 ### One instance only

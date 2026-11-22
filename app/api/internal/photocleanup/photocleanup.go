@@ -1,5 +1,5 @@
 // Package photocleanup deletes the photo folders of the review photo
-// collections that have no record. Decision 00009 has the details.
+// collections that have no record. Decision 00007 has the details.
 package photocleanup
 
 import (

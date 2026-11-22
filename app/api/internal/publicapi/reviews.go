@@ -24,7 +24,7 @@ type reviewInput struct {
 }
 
 // reviewOverall is a generated column with indexes. It has the value that
-// toReview computes. See decision 00007.
+// toReview computes. See decision 00005.
 func (sub subject) reviewOverall() string {
 	return column(sub.Reviews, "overall")
 }
@@ -39,7 +39,7 @@ func (sub subject) overallFilter(sort string) string {
 	return "+" + sub.reviewOverall()
 }
 
-// reviewDefaultSort puts the newest visit or cook first. See decision 00007.
+// reviewDefaultSort puts the newest visit or cook first. See decision 00005.
 const reviewDefaultSort = "-date"
 
 // legacyReviewSort is the default sort before the review dates.
@@ -296,7 +296,7 @@ func (s *Server) parentNames(sub subject, known map[string]string, reviews ...*c
 }
 
 // CreateRestaurantReview makes a review of one visit. A user can write many
-// reviews of one restaurant. See decision 00007.
+// reviews of one restaurant. See decision 00005.
 func (s *Server) CreateRestaurantReview(ctx context.Context, req reviewsapi.CreateRestaurantReviewRequestObject) (reviewsapi.CreateRestaurantReviewResponseObject, error) {
 	user := stateFrom(ctx).user
 	saved, restaurant, p, err := s.createReview(restaurantSubject, req.RestaurantId, user, createInput(req.Body))

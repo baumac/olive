@@ -9,4 +9,4 @@ From shadcn-vue (`@/components/ui/avatar`): `Avatar`, `AvatarImage`, `AvatarFall
 - Fill is `muted`, text is `foreground` (15.4:1 light, 13.8:1 dark).
 - When the name shows beside it, the avatar is decorative: `aria-hidden="true"`. Alone, it has `role="img"` and an `aria-label` with the name.
 - Use `default` in `UserMenu` and `lg` on the reviewer page.
-- Use it only in `UserMenu` and at the top of the reviewer page. Cards and bylines show the name as text. See decision 00011.
+- Use it only in `UserMenu` and at the top of the reviewer page. Cards and bylines show the name as text. See decision 00009.

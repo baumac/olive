@@ -2,7 +2,7 @@ import type { Ref } from 'vue'
 import { ref } from 'vue'
 
 // MapConfig has the tile server of the maps. The app server gives it in
-// /map-config.json. See decision 00010.
+// /map-config.json. See decision 00008.
 export interface MapConfig {
   // tiles is a URL template with {z}, {x}, and {y}.
   tiles: string

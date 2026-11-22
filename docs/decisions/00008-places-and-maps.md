@@ -6,7 +6,7 @@ status: implemented
 # Motivation
 [motivation]: #motivation
 
-Decision 00005 gives each restaurant a point and an address.
+Decision 00004 gives each restaurant a point and an address.
 A user who adds a restaurant should not type coordinates.
 A person wants to see where a restaurant is, look for restaurants in one part of a city, and find the restaurants near them.
 
@@ -34,13 +34,13 @@ In scope:
 - the preferred location of the UI and the default sort of the restaurant list
 
 Out of scope:
-- the location of a restaurant and the duplicate check of a place. Decision 00005 has them.
+- the location of a restaurant and the duplicate check of a place. Decision 00004 has them.
 - self-hosted maps and place search in the first release
 - a proxy for the tiles, and a download of tiles for offline use
 - a dark map. The tiles are light in both themes.
 - a location in the user record, and a position that follows the device
 - a distance in the responses of the API. The UI computes it.
-- the review lists and the lists of decision 00008 with a distance
+- the review lists and the lists of decision 00006 with a distance
 - maps of recipes
 
 # Guide-level explanation
@@ -75,7 +75,7 @@ GET /v1/places?search=can+sole&latitude=41.3874&longitude=2.1686
 - a place has `website`, `phone`, and `opening_hours` when the geocoder gives them. The public server does not give them.
 - a client sends the `location` of the selected place in `createRestaurant` or `updateRestaurant`
 - the search gets `503` when it is off or when the geocoder does not answer. A client can then send a location that the user typed.
-- decision 00004 has the limit of each user
+- decision 00003 has the limit of each user
 
 The browser does not call the geocoder:
 - `connect-src` of the Content Security Policy stays `'self'`
@@ -119,7 +119,7 @@ Restaurant form:
 - "Enter the location by hand" has a map. A click sets the latitude and the longitude. The pin can also be dragged.
 - the two number fields stay. They are the way for the keyboard, and the pin follows them.
 - the search box searches 0.4 seconds after the last key, from 3 characters. A link under it credits OpenStreetMap.
-- after a selection, the form shows the restaurants at most 75 meters away. See decision 00005.
+- after a selection, the form shows the restaurants at most 75 meters away. See decision 00004.
 
 The list view is the text alternative of the map view. Each map has a name for screen readers.
 

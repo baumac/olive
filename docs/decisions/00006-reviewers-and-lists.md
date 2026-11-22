@@ -154,9 +154,9 @@ Lists:
 
 - `findReviewer` returns no user for a deleted user or a user without approval, except for the user of the token. The reviewer and list read operations use it.
 - `reviewerStats` reads the counts and the averages in one statement. The counts and the averages then come from the same reviews.
-- the averages are `ROUND(AVG(overall), 1)` of the generated `overall` columns of decision 00007. The statement finds the reviews through the creator indexes.
+- the averages are `ROUND(AVG(overall), 1)` of the generated `overall` columns of decision 00005. The statement finds the reviews through the creator indexes.
 - the cursor fingerprint of a reviewer list has its own prefix and the user ID. A cursor of one list does not work in another.
-- the `webui` package gives `/reviewers/{id}` its own page meta with `og:type` `profile`. See decision 00012.
+- the `webui` package gives `/reviewers/{id}` its own page meta with `og:type` `profile`. See decision 00002.
 
 ## Collections
 

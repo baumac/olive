@@ -25,7 +25,7 @@ const signIn = computed(() => {
   return router.resolve(signInPath(route.fullPath)).fullPath
 })
 
-// A section link is current on each page of its section. See decision 00005.
+// A section link is current on each page of its section. See decision 00004.
 const sections = [
   { path: '/restaurants', label: 'Restaurants' },
   { path: '/recipes', label: 'Recipes' },

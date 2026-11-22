@@ -17,7 +17,7 @@ var reviewKinds = []reviewKind{
 }
 
 // A review is one visit or one cook. A user can have many reviews of one
-// subject. See decision 00007.
+// subject. See decision 00005.
 func init() {
 	m.Register(func(app core.App) error {
 		for _, k := range reviewKinds {

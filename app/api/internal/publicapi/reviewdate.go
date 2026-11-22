@@ -14,7 +14,7 @@ const reviewDateLayout = "2006-01-02"
 const firstReviewDate = "1900-01-01"
 
 // latestZone is UTC+14. A user in any time zone can then give the local date
-// of today. See decision 00007.
+// of today. See decision 00005.
 var latestZone = time.FixedZone("UTC+14", 14*60*60)
 
 // checkReviewDate checks the review-date format of the spec. The pattern of

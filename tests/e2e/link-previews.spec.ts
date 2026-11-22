@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures'
 import { appURL } from '../playwright.config'
 
-// The app server writes these tags into index.html. See decision 00012.
+// The app server writes these tags into index.html. See decision 00002.
 test('a restaurant page has its own link preview', async ({ page, api }) => {
   const owner = await api.signUp('Joe')
   const restaurant = await api.createRestaurant(owner, { name: 'Casa <Pepe> & "Co"', description: 'Tapas\nand wine.' })

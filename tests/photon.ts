@@ -5,12 +5,12 @@ import { createServer } from 'node:http'
 // tile is a gray PNG of 1 by 1 pixel.
 const tile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGO4CwAA3wDeKXlwtgAAAABJRU5ErkJggg==', 'base64')
 
-// startPhoton starts a fake of the Photon geocoder of decision 00010. It also
-// gives a map tile for each path under /tiles. See decision 00010.
+// startPhoton starts a fake of the Photon geocoder of decision 00008. It also
+// gives a map tile for each path under /tiles. See decision 00008.
 //
 // A search with the word "nothing" finds no place. Each other search finds a
 // restaurant with the name of the search and then an address. The restaurant
-// of a search with the word "details" has the extra tags of decision 00005.
+// of a search with the word "details" has the extra tags of decision 00004.
 export async function startPhoton(port: number): Promise<{ url: string; stop: () => Promise<void> }> {
   const server: Server = createServer((req, res) => {
     if (req.url?.startsWith('/tiles/')) {

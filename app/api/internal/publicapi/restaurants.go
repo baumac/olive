@@ -175,7 +175,7 @@ func (s *Server) GetRestaurant(ctx context.Context, req reviewsapi.GetRestaurant
 }
 
 // UpdateRestaurant runs the place check and the save in one transaction. Each
-// approved user can change each property. See decision 00006.
+// approved user can change each property. See decision 00004.
 func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRestaurantRequestObject) (reviewsapi.UpdateRestaurantResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body

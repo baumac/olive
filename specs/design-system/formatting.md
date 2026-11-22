@@ -16,7 +16,7 @@ The API sends UTC timestamps in the RFC 3339 format, `2024-11-04T01:26:55.002Z`.
 
 - Review scores are integers. Show them with the maximum: "8 / 10". Use `tabular-nums`.
 - Restaurant averages come from the API with one decimal: "7.6 / 10". Show a whole average without a decimal: "9 / 10".
-- The `overall` of a recipe review has up to two decimals, such as 8.25. Show it with one decimal, like the averages: "8.3 / 10". See decision 00005.
+- The `overall` of a recipe review has up to two decimals, such as 8.25. Show it with one decimal, like the averages: "8.3 / 10". See decision 00004.
 - The total time of a recipe is in minutes. Show it with `Intl.NumberFormat` units and `unitDisplay: "short"`: "45 min", "1 hr", "1 hr 30 min". `formatMinutes` of `lib/format.ts` does this.
 - Do not average or round scores in the UI. Show the values of the API.
 - Counts use `Intl.NumberFormat` and the right plural: "1 review", "12 reviews", "1,204 reviews". Use `Intl.PluralRules` to pick the word.
@@ -31,5 +31,5 @@ The API sends UTC timestamps in the RFC 3339 format, `2024-11-04T01:26:55.002Z`.
 
 ## Language
 
-- The UI supports only English, with `<html lang="en">`. Other languages are out of scope (ADR 00011). Do not add a language switcher or translation files.
+- The UI supports only English, with `<html lang="en">`. Other languages are out of scope (ADR 00009). Do not add a language switcher or translation files.
 - Format numbers with the `en` locale and dates with `en-GB`, as in the examples above. The page language stays `en`.

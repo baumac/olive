@@ -282,7 +282,7 @@ func (s *Server) GetRecipe(ctx context.Context, req reviewsapi.GetRecipeRequestO
 }
 
 // UpdateRecipe runs the source check and the save in one transaction. Each
-// approved user can change each property. See decision 00006.
+// approved user can change each property. See decision 00004.
 func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRequestObject) (reviewsapi.UpdateRecipeResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body

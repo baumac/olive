@@ -7,7 +7,7 @@ import (
 )
 
 // guardReviewOverall rejects a change of the reviews collection that SQLite
-// refuses because of the generated overall column. See decision 00007.
+// refuses because of the generated overall column. See decision 00005.
 func guardReviewOverall(app core.App, sub subject) {
 	app.OnCollectionValidate(sub.Reviews).BindFunc(func(e *core.CollectionEvent) error {
 		var generated bool
@@ -25,7 +25,7 @@ func guardReviewOverall(app core.App, sub subject) {
 		for _, name := range sub.Scores {
 			if e.Collection.Fields.GetByName(name) == nil {
 				return reviewSchemaError("The generated overall column of the " + sub.Reviews + " table uses the " + name +
-					" field. A migration must drop the column first. See decision 00007.")
+					" field. A migration must drop the column first. See decision 00005.")
 			}
 		}
 		return e.Next()

@@ -11,7 +11,7 @@ const robotsPath = "robots.txt"
 const robotsCacheControl = "public, max-age=3600"
 
 // robotsTxt keeps all crawlers out of the site. The pages are for the
-// people who get a link. See decision 00012.
+// people who get a link. See decision 00002.
 const robotsTxt = `User-agent: *
 Disallow: /
 `

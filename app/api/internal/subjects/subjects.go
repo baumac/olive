@@ -1,5 +1,5 @@
 // Package subjects has the tables of each kind of thing that users review.
-// The Public API and the search index use them. See decision 00005.
+// The Public API and the search index use them. See decision 00004.
 package subjects
 
 // Tables has the table names of one kind.
@@ -12,7 +12,7 @@ type Tables struct {
 	Reviews   string
 	Photos    string
 	ListItems string
-	// Versions has the history of each record of Table. See decision 00006.
+	// Versions has the history of each record of Table. See decision 00004.
 	Versions   string
 	Overall    string
 	Tags       string

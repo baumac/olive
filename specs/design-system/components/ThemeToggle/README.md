@@ -1,6 +1,6 @@
 # ThemeToggle
 
-Lets a person choose the light theme, the dark theme or the system setting. ADR 00011 requires it.
+Lets a person choose the light theme, the dark theme or the system setting. ADR 00009 requires it.
 
 Project component built from shadcn-vue `DropdownMenu` with a `DropdownMenuRadioGroup`. Lives in `@/components/ui/theme-toggle`. No props. It reads and writes the `useColorMode` value from `@vueuse/core`, which stores the choice in `localStorage` and sets the `dark` class on `html`.
 

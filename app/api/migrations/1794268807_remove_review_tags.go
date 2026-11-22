@@ -7,7 +7,7 @@ import (
 	m "github.com/pocketbase/pocketbase/migrations"
 )
 
-// Reviews have no tags. See decision 00007. FTS5 cannot drop a column. The
+// Reviews have no tags. See decision 00005. FTS5 cannot drop a column. The
 // migration makes reviews_fts again. Down cannot restore the deleted tags.
 func init() {
 	m.Register(func(app core.App) error {

@@ -25,7 +25,7 @@ import (
 var dist embed.FS
 
 // contentSecurityPolicy allows the files of this origin and the tiles origin.
-// Decisions 00002, 00009, and 00010 explain the directives.
+// Decisions 00002, 00007, and 00008 explain the directives.
 func contentSecurityPolicy(tiles string) string {
 	if tiles != "" {
 		tiles = " " + tiles
@@ -39,7 +39,7 @@ func contentSecurityPolicy(tiles string) string {
 }
 
 // DefaultTileURL is the tile server of OpenStreetMap. Its usage policy has
-// rules for the map. Decision 00010 lists them.
+// rules for the map. Decision 00008 lists them.
 const DefaultTileURL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 
 // mapConfigPath gives the UI the settings of the map.
@@ -223,13 +223,13 @@ func watchAppURL(app core.App, warn func(core.App, string)) {
 }
 
 func warnAppURL(app core.App, appURL string) {
-	app.Logger().Warn("The Application URL is not public. Pages get no og:url. See decision 00012.", "appURL", appURL)
+	app.Logger().Warn("The Application URL is not public. Pages get no og:url. See decision 00002.", "appURL", appURL)
 }
 
 // warnNoMetaBlock is a variable for the tests. PocketBase writes its log
 // later. A test cannot wait for it.
 var warnNoMetaBlock = func(app core.App) {
-	app.Logger().Warn("index.html of the UI build has no page-meta block. Pages get no link preview. See decision 00012.")
+	app.Logger().Warn("index.html of the UI build has no page-meta block. Pages get no link preview. See decision 00002.")
 }
 
 // renderPage returns false for a path without its own page meta. A missing

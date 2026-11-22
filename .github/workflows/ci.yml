@@ -1,5 +1,5 @@
 # Runs the checks of AGENTS.md on each push to main and each pull request.
-# Decision 00015 explains the jobs. CI result gives the result of the run.
+# Decision 00010 explains the jobs. CI result gives the result of the run.
 name: CI
 
 on:

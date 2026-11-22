@@ -1,5 +1,5 @@
 ---
-description: Restaurants and recipes are the subjects that users review. A restaurant has a location, details, and tags. A recipe has ingredients, steps, a source, and tags. Both kinds share one pattern in the API, the database, and the UI, so a later kind needs little new code.
+description: Restaurants and recipes are the subjects that users review. Both kinds share one pattern in the API, the database, and the UI. Each approved user can change each subject, only the creator can delete one, and each save writes a version that approved users can undo.
 status: implemented
 ---
 
@@ -10,7 +10,7 @@ Decision 00000 wants one app to save each food experience.
 The first release has two kinds of subjects: restaurants and recipes.
 Wines and cheeses can come later. The backlog has them under "For the Future".
 
-A restaurant needs a place. Without it, two restaurants with one name in different cities look the same, and the maps of decision 00010 have no point.
+A restaurant needs a place. Without it, two restaurants with one name in different cities look the same, and the maps of decision 00008 have no point.
 People who look at a restaurant also want its website, its phone, its opening hours, and how much it costs.
 
 A recipe needs its ingredients and its steps, so a user can cook it again.
@@ -18,12 +18,27 @@ The users write the steps in their own words. The source link gives the credit t
 
 Two users can add the same restaurant or recipe. Its reviews then split between two pages.
 
+The users are a small group of friends and family. A superuser approves each of them. See decision 00003.
+The facts of a restaurant change over time, such as a new phone number or new opening hours.
+A wrong name, place, source, ingredient, or step is more common than a misuse.
+If only the creator could fix them, a creator who stops using the app would freeze them.
+
+Each user can then change each subject. The group accepts the risk of vandalism.
+A history of each change lets each approved user see who changed what, and undo a wrong change.
+A delete stays with the creator. The reviews of other users are about the subject, so they block its delete.
+
 Expected outcome:
 - users add restaurants with a location from a place search, and recipes with ingredients and steps
 - users find restaurants and recipes by search, tags, filters, and sorts
 - the same place cannot get a second restaurant. The same source cannot get a second recipe.
 - tags can have the letters and digits of all scripts
 - both kinds share the review, photo, rating, search, and list code. A later kind uses the same pattern.
+- each approved user can change each restaurant and each recipe
+- two users who change different fields at the same time keep both changes
+- only the creator deletes a subject, and only while no other user has a review of it
+- each change makes a version with the user and the time
+- an approved user undoes one change in the UI. A superuser is not necessary.
+- an undo is a normal change. The history loses nothing.
 
 # Scope
 [scope]: #scope
@@ -34,19 +49,30 @@ In scope:
 - the duplicate checks of a place and of a source
 - the tags and their tables
 - the `subject` pattern of the API, the database, and the UI
+- the rules of `updateRestaurant`, `updateRecipe`, `deleteRestaurant`, and `deleteRecipe`
+- the subjects without a creator
+- the `restaurant_versions` and `recipe_versions` collections and their record hook
+- `listRestaurantVersions` and `listRecipeVersions`
+- the edit buttons, the history page, and the undo of the UI
 
 Out of scope:
-- who can change and delete a subject, and the history of changes. Decision 00006 has them.
-- the reviews and the ratings. Decision 00007 has them.
-- the lists and the favorites. Decision 00008 has them.
-- the photos, the cover, and the gallery. Decision 00009 has them.
-- the place search, the maps, and the distance sort. Decision 00010 has them.
+- the reviews and the ratings. Decision 00005 has them.
+- the lists and the favorites. Decision 00006 has them.
+- the photos, the cover, and the gallery. Decision 00007 has them.
+- the place search, the maps, and the distance sort. Decision 00008 has them.
 - wines and cheeses in the first release
 - a merge of duplicate restaurants or recipes. Superusers do it in the dashboard.
 - a duplicate check for recipes without a source, and for restaurants at an address without a place
 - opening hours that the app can read, such as "open now"
 - amounts and units as separate values of an ingredient, and a scale of the servings
-- a recipe import from a URL. A superuser imports old data. See decision 00004.
+- a recipe import from a URL. A superuser imports old data. See decision 00003.
+- the rules of reviews, photos, and lists. Only their creator changes them.
+- a history of reviews, photos, and lists
+- a moderator role and a report flow. The backlog has reports under "Won't do".
+- a check of `updated` before a save. Two changes of the same field keep the last one.
+- the restore of a deleted subject. The delete also deletes its versions.
+- the name of the superuser of a dashboard change. The version shows "an admin".
+- a delete of old versions. The app keeps each version for the life of its subject.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -97,9 +123,9 @@ Out of scope:
 - the price level is not the `price` score of a review. The score tells if the price was fair. The level tells how much a meal costs. The API has no currency.
 - a property without a value is not in the response
 - `creator` is `null` after the user is deleted
-- `review_count`, `own_review_count`, and `rating` come from the reviews. See decision 00007.
-- `cover` is the first photo of the gallery. See decision 00009.
-- `favorite` tells if the restaurant is in the favorites list of the user of the token. See decision 00008.
+- `review_count`, `own_review_count`, and `rating` come from the reviews. See decision 00005.
+- `cover` is the first photo of the gallery. See decision 00007.
+- `favorite` tells if the restaurant is in the favorites list of the user of the token. See decision 00006.
 
 ## A recipe
 
@@ -135,9 +161,9 @@ The list operations:
 | filters | `overall`, `price_level`, `near`, `within`, `tags`, `created`, `updated`, `creator`, `list` | `overall`, `total_time`, `tags`, `created`, `updated`, `creator`, `list` |
 | search | `name` 10, `tags` 4, `address` 2, `description` 1 | `name` 10, `tags` 4, `ingredients` 2, `description` 1 |
 
-- the default sort of the API is `-created`. With `search`, it is `relevance`. The UI has its own default. See decision 00010.
+- the default sort of the API is `-created`. With `search`, it is `relevance`. The UI has its own default. See decision 00008.
 - decision 00001 has the rules of the filters, the search, and the sorts
-- decision 00007 has the `overall` sort and filter. Decision 00010 has `near`, `within`, and `distance`. Decision 00008 has `list[eq]`.
+- decision 00005 has the `overall` sort and filter. Decision 00008 has `near`, `within`, and `distance`. Decision 00006 has `list[eq]`.
 - the `total_time` sort puts recipes without a `total_time` last in both directions
 - a restaurant without a `price_level` matches no `price_level` filter, like a restaurant without reviews and the `overall` filter
 
@@ -184,12 +210,62 @@ A rule on the name and the distance would refuse real restaurants, such as two b
 
 - the header has a "Sections" navigation with "Restaurants" and "Recipes". `/` opens the restaurants.
 - the restaurant form has "Name", "Location", "Description", "Tags", and a "Details" group with "Website", "Phone", "Opening hours", and "Price level"
-  - "Location" has the place search of decision 00010. The selected place fills the empty name and the empty details.
+  - "Location" has the place search of decision 00008. The selected place fills the empty name and the empty details.
   - "Website" gets `https://` for a value without a scheme, such as `cansole.example`
 - the restaurant page shows the address with a pin icon, then the website as a link with the host name, the phone as a `tel:` link, the opening hours with their line breaks, and the price level as a word
 - the recipe form has a text area for the ingredients with one ingredient on each line. The steps are a list of text areas that the user adds, removes, and moves.
 - the recipe page shows the ingredients as a list and the steps as a numbered list. The total time shows in hours and minutes.
 - the "Filters" popover of the restaurants page has a "Price level" select with ranges, such as "Moderate or less"
+
+## Editing and history
+
+### The rules
+
+| Action | Who | Condition |
+|---|---|---|
+| Create | each approved user | none |
+| Change each property | each approved user | none |
+| Delete | the creator | no other user has a review |
+
+- for a subject without a creator, "the creator" is each user who has a review of it
+- a user who cannot delete gets `403` with `not_creator`. A delete with reviews of other users gets `409` with `other_reviews`.
+- the delete also deletes the reviews and the photos of the creator. The confirm dialog says so.
+- the duplicate checks of [One restaurant for one place](#one-restaurant-for-one-place) and [One recipe for one source](#one-recipe-for-one-source) still apply to a change of the location or the source
+- a superuser can change each field of each record in the dashboard
+
+Example: Ana adds "Luigis" at a wrong address. Joe and Eva review it.
+Eva changes the name to "Luigi's" and selects the correct place. The reviews then show the new name, and the search finds them by it.
+Ana cannot delete the restaurant. Joe and Eva cannot delete it either. They are not the creator.
+
+The edit forms send only the properties that differ from the loaded record.
+Ana changes the phone while Joe changes the opening hours. Both saves keep their change.
+
+### Vandalism
+
+- only approved users can change a subject. A superuser can take the approval back.
+- the history names the editor of each change, and an undo fixes it in the UI
+- the edit limit of decision 00003 is 300 changes of each operation per user and hour
+- the backups of decision 00010 also have the old values
+
+### The history
+
+Ana adds "Can Solé". This is version 1. Joe changes the phone. This is version 2.
+Eva clears the description by mistake and adds the tag `tapas`. This is version 3.
+Joe selects "History" on the restaurant page. The page shows the newest version first, with the editor, the time, and the old and new value of each changed property.
+
+- a version from the dashboard or a migration shows "An admin"
+- a version of a deleted user shows "Deleted user"
+- only approved users can read the history. A wrong private value, such as a phone number, then does not stay public in old versions.
+
+### Undo
+
+Joe selects "Undo this change" on version 3. The edit form opens with `?undo=3`.
+The description is "Small tapas bar" again, and the tags are empty again. A note says "Undo of version 3. Check the values, then save."
+Joe can change the values. The save makes version 4 with the editor Joe.
+
+- an undo always fixes forward. Version 3 stays, and version 4 has no link to it.
+- an undo keeps a property that a newer version changed again. The note names it with the editor and the version.
+- an undo uses `updateRestaurant` or `updateRecipe`, so all their checks apply. A place that another restaurant took since then gets `409`.
 
 # Implementation Details
 [implementation-details]: #implementation-details
@@ -265,6 +341,60 @@ A rule on the name and the distance would refuse real restaurants, such as two b
 - `priceLevelRanges` of `restaurantFilters.ts` has the options of the price level select. `useListQuery` ignores a link value that is not an option.
 - the form trims the phone and the opening hours before it checks them. A draft keeps the details.
 
+## Editing and history
+
+### API
+
+- `UpdateRestaurant` and `UpdateRecipe` have no creator check. The place check and the source check stay in the transaction of the save.
+- `deleteForbidden` of `restaurants.go` is the creator check of the delete. A subject with a creator needs no query. A subject without one needs a count of the reviews of the user.
+- `countReviewsOfOtherUsers` blocks the delete. `idx_reviews_restaurant_creator` serves both counts.
+- the delete removes the reviews of the subject and then the subject, in the transaction of the checks. The parent relation of reviews has no cascade.
+- the photo records go with the cascade of decision 00007. PocketBase deletes the files after the commit.
+- the triggers and the `searchindex` hooks remove the index rows. A rename updates the parent name in the review search tables.
+
+### Versions
+
+| Field | `restaurant_versions` and `recipe_versions` |
+|---|---|
+| parent | `restaurant` or `recipe`, a required relation with cascade delete |
+| `number` | starts at 1 for each parent. A unique index on the parent and `number`. |
+| `action` | `baseline`, `create`, or `update` |
+| `source` | `user` or `admin` |
+| `editor` | an optional relation to `users` without cascade |
+| `changed` | a JSON array of the changed property names |
+| `snapshot` | a JSON object with all properties after the save, in the shape of `RestaurantCreate` or `RecipeCreate` |
+| `created` | autodate |
+
+- the API rules are `null`. Only superusers use the collections in the dashboard.
+- a migration that drops or renames a property of `restaurants` or `recipes` also changes the `snapshot` of their versions
+- a migration wrote a `baseline` version for each subject that existed. The baseline is not in the list. It is the base of the comparison for the next version.
+- `app/api/internal/history` binds `OnRecordCreateExecute` and `OnRecordUpdateExecute` of both collections. It runs the save and the version write in one transaction, for each save.
+- `app/api/internal/recordvalues` gives the API values of the fields. The Public API and `Kind.Snapshot` use the same functions.
+- a save that changes no property writes no version. A change of only `creator` or `source_key` writes nothing.
+- an update of a subject without a version first writes a baseline from the stored record
+- a Public API save calls `SaveWithContext` with `history.WithEditor`. A save without it gets the source `admin`. The dashboard of PocketBase 0.40 does not send the request context to the save.
+- `TestHistoryHasTheCreateProperties` fails when a create schema has a property that `Kind.Properties` does not have
+
+### Operations
+
+- `GET /restaurants/{restaurantId}/versions` and `GET /recipes/{recipeId}/versions` need a token and an approved user. They have no rate limit.
+- the order is `-number`, with `limit` and `cursor`
+- a version has `id`, `number`, `created`, `action`, `source`, `editor`, `before`, and `after`
+- `before` and `after` have only the changed properties. `before` is empty for a create. Their schemas have the properties of the patch schemas. `location` can also be `null`.
+- `versions.go` gets a page of versions and the version before the oldest item. It takes `before` and `after` from the snapshots and `changed`.
+
+### The UI
+
+- `parentAccess` of `app/ui/src/lib/parents.ts` returns `canEdit`, `isCreator`, and `hasOtherReviews`. The delete needs `isCreator` and no reviews of other users.
+- another user has a review when `review_count` minus `own_review_count` is more than 0
+- the restaurant and recipe pages show "Edit" and "History" for each signed in user. The router guard of decision 00003 stops a user who waits.
+- the creator of a subject with reviews of other users sees "You cannot delete it" in place of the delete button
+- `changedPatch` makes a patch with only the changed properties
+- `HistoryPage.vue` has the routes `/restaurants/:restaurantId/history` and `/recipes/:recipeId/history`
+- `undoChange` and `findUndo` of `lib/history.ts` fill the form. A `null` value of `name`, `location`, `ingredients`, or `steps` stays out, because a patch cannot clear them.
+- `UndoAlert.vue` shows the undo note, the kept properties, or "This change cannot be undone here"
+- a draft after a new sign in wins over the undo
+
 # Alternatives
 [alternatives]: #alternatives
 
@@ -280,6 +410,12 @@ A rule on the name and the distance would refuse real restaurants, such as two b
 | The details from a second request to OpenStreetMap | Not selected. It is a second service with its own terms. The place search fills them when the geocoder has them. |
 | Complete recipes in the list responses | Removed. A page of 100 recipes could have about 13 MB. |
 | Wines and cheeses in the first release | Not selected. The backlog has them under "For the Future". |
+| Only the creator can change a subject | Removed. A creator who left froze wrong values. The group trusts its members. |
+| The reviews of other users lock the name, the location, the source, the ingredients, and the steps | Removed. The lock also kept the wrong values. |
+| The creator of the oldest review becomes the owner of a subject without a creator | Not selected. The UI would need a new property to know the owner. |
+| A revert operation that restores a complete version | Not selected. It also undoes newer changes of other properties, and it needs its own checks. |
+| An undo with a link to its version | Not selected. An undo is a new change. |
+| Public versions | Not selected. A wrong private value would stay public. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

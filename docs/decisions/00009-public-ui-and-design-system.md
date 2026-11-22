@@ -97,7 +97,7 @@ A new component goes into the set only when a screen needs it.
 ## Dates, numbers, and text
 
 - dates in the last 7 days show relative time, such as "3 hours ago". Older dates show "4 Nov 2024".
-- the `date` of a review is a local date. Decision 00007 has the labels.
+- the `date` of a review is a local date. Decision 00005 has the labels.
 - the UI uses `Intl` to format dates, numbers, and plurals
 - the UI supports only English. Pages set `lang="en"`.
 - `specs/design-system/formatting.md` has the rules
@@ -152,7 +152,7 @@ A new component goes into the set only when a screen needs it.
 
 - `make test-ui` runs Vitest with Vue Test Utils in jsdom
 - the component tests run `axe-core` directly. `vitest-axe` has no release since 2022.
-- jsdom does not render, so these tests cannot check color contrast. The end-to-end tests check contrast in real browsers in both themes. See decision 00014.
+- jsdom does not render, so these tests cannot check color contrast. The end-to-end tests check contrast in real browsers in both themes. See decision 00010.
 
 # Alternatives
 [alternatives]: #alternatives

@@ -1,5 +1,5 @@
 // Package testapp gives the tests one migrated database for each test
-// binary. See decision 00014.
+// binary. See decision 00010.
 package testapp
 
 import (

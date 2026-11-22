@@ -65,10 +65,10 @@ Each page of the app is public.
 A person without an account can read each review, reviewer page, and list.
 A shared link then works for each friend.
 Only approved users can write.
-Search engines and AI crawlers that obey robots.txt do not get the pages. See decision 00012.
+Search engines and AI crawlers that obey robots.txt do not get the pages. See decision 00002.
 
 New concepts:
-- **Subjects**: a thing that users review. The first release has restaurants and recipes. Decision 00005 gives the pattern for more kinds, such as wines and cheeses.
+- **Subjects**: a thing that users review. The first release has restaurants and recipes. Decision 00004 gives the pattern for more kinds, such as wines and cheeses.
 - **Review**: the scores, the text, and the photos of one user for one subject.
 - **Reviewer**: a user who writes reviews. Each reviewer has a public profile page.
 - **List**: a named group of subjects. Each user has a favorites list.
@@ -93,20 +93,15 @@ Examples:
 The other decisions cover the implementation. Each one covers one topic:
 
 - [00001](00001-public-api-spec-and-sdks.md): the spec of the Public API, the SDKs, and the validation
-- [00002](00002-app-server-on-pocketbase.md): the PocketBase app, the UI route, and the Content Security Policy
-- [00003](00003-accounts-and-access.md): the sign up, the email confirmation, the approval, and the session
-- [00004](00004-rate-limits.md): the rate limits
-- [00005](00005-restaurants-and-recipes.md): the restaurants, the recipes, and their tags
-- [00006](00006-editing-and-history.md): the edit and delete rules and the history of changes
-- [00007](00007-reviews-and-ratings.md): the reviews, the overall, and the ratings
-- [00008](00008-reviewers-and-lists.md): the reviewer pages and the lists
-- [00009](00009-photos.md): the photos, the cover, and the gallery
-- [00010](00010-places-and-maps.md): the place search, the maps, and the preferred location
-- [00011](00011-public-ui-and-design-system.md): the Public UI and its design system
-- [00012](00012-link-previews-and-crawlers.md): the link previews and robots.txt
-- [00013](00013-deployment-and-operations.md): the deploy with Docker Compose and the backups
-- [00014](00014-tests.md): the Go, UI, and end-to-end tests
-- [00015](00015-ci-and-dependency-updates.md): the CI workflow and Renovate
+- [00002](00002-app-server-link-previews-and-crawlers.md): the PocketBase app, the UI route, the Content Security Policy, the link previews, and robots.txt
+- [00003](00003-accounts-access-and-rate-limits.md): the sign up, the email confirmation, the approval, the session, and the rate limits
+- [00004](00004-restaurants-recipes-and-their-history.md): the restaurants, the recipes, their tags, the edit and delete rules, and the history of changes
+- [00005](00005-reviews-and-ratings.md): the reviews, the overall, and the ratings
+- [00006](00006-reviewers-and-lists.md): the reviewer pages and the lists
+- [00007](00007-photos.md): the photos, the cover, and the gallery
+- [00008](00008-places-and-maps.md): the place search, the maps, and the preferred location
+- [00009](00009-public-ui-and-design-system.md): the Public UI and its design system
+- [00010](00010-deployment-tests-and-ci.md): the deploy, the backups, the tests, the CI workflow, and Renovate
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

@@ -1,5 +1,5 @@
 // Package recordvalues gets the API values of the fields of a restaurant or
-// a recipe. The Public API and the history use it. See decision 00006.
+// a recipe. The Public API and the history use it. See decision 00004.
 package recordvalues
 
 import "github.com/pocketbase/pocketbase/core"

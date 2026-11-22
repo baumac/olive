@@ -38,8 +38,8 @@ In scope:
 - the review form, the review card, and the review page of the UI
 
 Out of scope:
-- the photos of a review. Decision 00009 has them.
-- the reviewer pages and the reviewer averages. Decision 00008 has them.
+- the photos of a review. Decision 00007 has them.
+- the reviewer pages and the reviewer averages. Decision 00006 has them.
 - an overall that the reviewer types
 - tags on reviews
 - a `date` filter, and a count of the visits of one user, such as "You visited 3 times"
@@ -117,7 +117,7 @@ Each score is an integer from 1 to 10.
 - the lists have the sorts `overall`, the scores, `relevance`, `title`, `date`, `created`, and `updated`. The default is `-date`. Reviews of one day sort by `created`.
 - the lists have the filters `overall`, the scores, `created`, `updated`, and `creator`. The lists of all reviews also have `restaurant` or `recipe` with `eq` and `in`.
 - the search looks in `title` 10, the name of the subject 2, and `feedback` 1
-- decision 00008 has the reviews of one reviewer
+- decision 00006 has the reviews of one reviewer
 
 ## The rating of a subject
 
@@ -175,7 +175,7 @@ Two equal values sort by the number of reviewers. More reviewers come first.
 | `reviews` | `restaurant`, `creator`, `date`, `space`, `service`, `food`, `price`, `title`, `feedback`, `created`, `updated` |
 | `recipe_reviews` | `recipe`, `creator`, `date`, `taste`, `ease`, `instructions`, `value`, `title`, `feedback`, `created`, `updated` |
 
-- the parent relation is required and has no cascade. A delete of a subject deletes the reviews itself. See decision 00006.
+- the parent relation is required and has no cascade. A delete of a subject deletes the reviews itself. See decision 00004.
 - `creator` is required and cascades. A deleted user takes the reviews.
 - the score fields are required numbers from 1 to 10
 - `date` is a required text field with the pattern `^\d{4}-\d{2}-\d{2}$`

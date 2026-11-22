@@ -22,7 +22,7 @@ import (
 )
 
 // The page-meta block of index.html starts and ends with these comments.
-// Decision 00012 has the details.
+// Decision 00002 has the details.
 const (
 	metaStart = "<!-- page-meta -->"
 	metaEnd   = "<!-- /page-meta -->"

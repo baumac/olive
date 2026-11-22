@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# The build context is the root of the repository. See decision 00013.
+# The build context is the root of the repository. See decision 00010.
 
 FROM node:22.23.5-alpine3.24 AS ui
 WORKDIR /src

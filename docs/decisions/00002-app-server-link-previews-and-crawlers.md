@@ -1,5 +1,5 @@
 ---
-description: One PocketBase app serves the Public API, the PocketBase API, the PocketBase dashboard, and the embedded UI build. It runs the request checks, the transactions, the list queries, and the search, and it sends a strict Content Security Policy for the UI.
+description: One PocketBase app serves the Public API, the PocketBase API, the PocketBase dashboard, and the embedded UI build. It runs the request checks, the transactions, the list queries, and the search, sends a strict Content Security Policy, writes the link preview tags of each page, and keeps all crawlers out with robots.txt.
 status: implemented
 ---
 
@@ -21,6 +21,15 @@ A script that an attacker injects into the page could act as the user.
 Vue escapes text by default. A bug in a dependency can still let a script in.
 A strict Content Security Policy stops the browser from running such a script.
 
+Decision 00000 has this example: "I send the link of my review to a friend. The friend opens the link and reads my review."
+The UI is a client-side Vue app with one `index.html` for all routes.
+Chat apps do not run JavaScript when they make a link preview.
+Without help from the server, a shared review shows the preview of the site, not the review.
+
+The pages are public for friends with a link. They do not need to be in search results.
+Search engines would show the names and the reviews of friends and family. AI crawlers could collect the text of the reviews.
+Search engine optimization then only has costs.
+
 Expected outcome:
 - one binary serves the Public UI, the Public API, the PocketBase API, and the PocketBase dashboard
 - the UI and the Public API have one origin. The API needs no CORS settings.
@@ -28,6 +37,12 @@ Expected outcome:
 - the server applies the migrations when it starts
 - developers run the UI with the Vite dev server and hot reload
 - each response of the UI route has a Content Security Policy that allows scripts and styles only from the same origin
+- a shared subject link shows the name and the description of the subject
+- a shared review link shows the title, the feedback, and the first photo of the review
+- a shared reviewer or list link shows the name of the reviewer or the list
+- a link to a record that does not exist gets HTTP `404`
+- crawlers that obey robots.txt read no page and no photo of the site
+- the pages stay open without an account
 
 # Scope
 [scope]: #scope
@@ -40,18 +55,27 @@ In scope:
 - the PocketBase mapping that all collections share
 - the embedded UI build, its routes, and its cache headers
 - the Content Security Policy of the UI route and its reports
+- the page-meta block of `index.html` and the values that the server writes into it
+- the pages with their own page meta, and the `404` of a missing record
+- the Application URL warnings
+- `/robots.txt`
 
 Out of scope:
 - the rules of the spec. Decision 00001 has them.
 - the auth tokens and the cookie. Decision 00003 has them.
-- the rate limits. Decision 00004 has them.
+- the rate limits. Decision 00003 has them.
 - the collections of each topic. The topic decisions have them.
-- the link preview tags and `robots.txt` of the UI route. Decision 00012 has them.
-- the map settings of the UI route. Decision 00010 has them.
-- the screens and the components of the UI. Decision 00011 has them.
-- the deploy. Decision 00013 has it.
-- server-side rendering, a CDN, and a separate static host
-- more than one instance. See decision 00013.
+- the map settings of the UI route. Decision 00008 has them.
+- the screens and the components of the UI. Decision 00009 has them.
+- the deploy. Decision 00010 has it.
+- server-side rendering of the page body, a CDN, and a separate static host
+- more than one instance. See decision 00010.
+- structured data, such as schema.org JSON-LD, and a sitemap
+- a canonical link, an `X-Robots-Tag` header, and a `robots` meta tag
+- an `Allow` group for the link preview bots that obey robots.txt. A later decision can add it after a check of the previews on the deployed site.
+- blocks of crawlers that do not obey robots.txt. They need firewall rules.
+- the average scores in a description, and a cover in the preview of a subject
+- page meta for the list screens, such as `/restaurants` and `/my-reviews`. They keep the tags of the site.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -92,12 +116,12 @@ app/api/
   internal/
     publicapi/                 # the Public API
     searchindex/               # the hooks of the search tables
-    history/                   # the versions of decision 00006
+    history/                   # the versions of decision 00004
     recordvalues/              # the API values of restaurants and recipes
     subjects/                  # the table names of each kind
-    photocleanup/              # the job of decision 00009
+    photocleanup/              # the job of decision 00007
     usercleanup/               # the job of decision 00003
-    testapp/                   # the test database of decision 00014
+    testapp/                   # the test database of decision 00010
     webui/
       webui.go                 # embeds dist/ and adds the UI route
       dist/                    # the UI build. Only .gitkeep is in git.
@@ -115,10 +139,69 @@ Each response of the UI route has a `Content-Security-Policy` header.
 The UI must not add:
 - inline scripts, `eval`, or `new Function`
 - inline `<style>` elements or `style="..."` attributes. Vue `:style` bindings are allowed, because they set styles through the CSSOM.
-- files from other origins, such as fonts or images from a CDN. The map tiles of decision 00010 are the one exception.
+- files from other origins, such as fonts or images from a CDN. The map tiles of decision 00008 are the one exception.
 - `data:` URLs. `assetsInlineLimit: 0` in `app/ui/vite.config.ts` makes Vite emit each asset as a file.
 
 A change that breaks one of these rules fails the end-to-end tests with the text of the violation.
+
+## Link previews and crawlers
+
+### The page-meta block
+
+The page-meta block is the part of `app/ui/index.html` between `<!-- page-meta -->` and `<!-- /page-meta -->`.
+It has the title, the description, and the link preview tags of the site.
+
+`GET /restaurants/k3x9m2p7q1w8z4a` for the restaurant "Casa Pepe" sends:
+
+```html
+<title>Casa Pepe · Sponga47 Reviews</title>
+<meta name="description" content="Tapas and wine." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Casa Pepe" />
+<meta property="og:description" content="Tapas and wine." />
+<meta property="og:url" content="https://reviews.sponga47.com/restaurants/k3x9m2p7q1w8z4a" />
+<meta property="og:image" content="https://reviews.sponga47.com/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+```
+
+| Page | Values |
+|---|---|
+| `/restaurants/{id}`, `/recipes/{id}` | the name and the description |
+| `/restaurants/{id}/reviews/{id}`, `/recipes/{id}/reviews/{id}` | `og:type` `article`, the title with the name of the subject, the feedback, and the first photo |
+| `/reviewers/{id}` | `og:type` `profile` and the name of the reviewer |
+| `/lists/{id}` | "NAME by CREATOR" and the number of restaurants and recipes |
+
+- `og:image` of a review with photos is the `full` file of its first photo, with its size and alt text. Other pages have the image of the site.
+- a missing record, a review of a different subject, and a reviewer without approval get `404` with the default `index.html`. The UI then shows its not found screen.
+- `og:url` and the photo URL start with the Application URL of the PocketBase settings
+
+### The Application URL
+
+- set it to the public URL of the site, such as `https://reviews.sponga47.com`
+- the default `http://localhost:8090` is a host that the public cannot reach. The pages then have no `og:url` and the image of the site.
+- the app logs a warning when it starts with such a URL, and when a settings save changes the URL to one
+
+### robots.txt
+
+```
+User-agent: *
+Disallow: /
+```
+
+- the rule covers the UI, the photo files under `/v1`, the dashboard, and the PocketBase API
+- it also covers the AI crawlers that obey robots.txt, such as GPTBot, ClaudeBot, and CCBot
+- a link preview bot that obeys robots.txt does not get the page or the photo. The chat app then shows the plain link.
+
+| Bot | Reads robots.txt |
+|---|---|
+| Twitterbot of X | yes |
+| LinkedInBot | yes |
+| Slackbot-LinkExpanding | no |
+| facebookexternalhit, Meta-ExternalFetcher | not always. A fetch that a user asks for can skip robots.txt. |
+| Discordbot, TelegramBot, WhatsApp, iMessage, Signal | not known |
+
+The friends and family share links in chat apps. X and LinkedIn are not the usual place.
+Google can still show a URL without a title when a public page links to it. Few public pages link to the app.
 
 # Implementation Details
 [implementation-details]: #implementation-details
@@ -126,7 +209,7 @@ A change that breaks one of these rules fails the end-to-end tests with the text
 ## Mounting the Public API
 
 - an `OnServe` hook adds the route `/v1/{path...}`. The route calls the handler that `reviewsapi.HandlerWithOptions` makes on its own `http.ServeMux`.
-- the route puts the client IP of `RequestEvent.RealIP` in the request context. `RealIP` uses the trusted proxy settings of PocketBase. See decision 00013.
+- the route puts the client IP of `RequestEvent.RealIP` in the request context. `RealIP` uses the trusted proxy settings of PocketBase. See decision 00010.
 - the default PocketBase middlewares, such as the panic recovery, also apply to `/v1`
 - a known path with a different method gets `405` with an `Allow` header
 
@@ -134,7 +217,7 @@ A change that breaks one of these rules fails the end-to-end tests with the text
 
 - `limitBody` of the `/v1` route replaces the body limit of PocketBase. It has the same ID, `pbBodyLimit`.
 - the PocketBase limit is 32 MB, and its `413` is not Problem Details
-- `limitBody` limits each body under `/v1` to 10 MiB, the largest photo upload of decision 00009. A larger `Content-Length` gets `413` before the handler.
+- `limitBody` limits each body under `/v1` to 10 MiB, the largest photo upload of decision 00007. A larger `Content-Length` gets `413` before the handler.
 - `readBody` limits each JSON body to 256 KB. A body without `Content-Length` fails at the first read over 256 KB with the same `413`.
 - the largest valid JSON body is about 100 KB. `TestBodyLimit` sends bodies of 33 MB with and without `Content-Length`.
 
@@ -155,7 +238,7 @@ The `prepare` middleware runs before the generated strict handler. The spec give
 | 9 | the body properties against the spec | `422` |
 | 10 | the sort, the search, and the cursor rules that the spec cannot describe | `400` |
 | 11 | the records of the path exist | `404` |
-| 12 | the rules of the topic, such as the creator check of decision 00006 | `403` |
+| 12 | the rules of the topic, such as the creator check of decision 00004 | `403` |
 | 13 | conflicts with stored data | `409` |
 
 - checks 1 to 9 are in `prepare`. Checks 10 to 13 are in the operation handlers.
@@ -212,7 +295,7 @@ The `prepare` middleware runs before the generated strict handler. The spec give
 - PocketBase stores an empty string for a text field without a value. An empty `description` or `feedback` is not in the responses.
 - an update saves only when a value changes. A merge patch without changes keeps `updated`.
 - `creator` is a relation field. The API expands it and returns only the `id` and the `name` of the user.
-- `tags` is a `json` field. PocketBase has no field type for a list of free-form strings. Decision 00005 has the tag tables.
+- `tags` is a `json` field. PocketBase has no field type for a list of free-form strings. Decision 00004 has the tag tables.
 - PocketBase v0.40.6 needs Go 1.27. The app module and `go.work` use it.
 
 ## The UI build
@@ -239,7 +322,7 @@ The `prepare` middleware runs before the generated strict handler. The spec give
 | `default-src` | `'self'` | the base for all other types |
 | `script-src` | `'self'` | the Vite chunks and `theme.js`. No inline scripts. |
 | `style-src` | `'self'` and one hash | the Tailwind CSS file and the inline style of Reka UI `SelectViewport` |
-| `img-src` | `'self' blob:` and the origin of the map tiles | the logos, the icons, and the photos of `/v1`. `blob:` shows the preview of a selected photo. Decision 00010 has the tile origin. |
+| `img-src` | `'self' blob:` and the origin of the map tiles | the logos, the icons, and the photos of `/v1`. `blob:` shows the preview of a selected photo. Decision 00008 has the tile origin. |
 | `font-src` | `'self'` | the UI uses system fonts |
 | `connect-src` | `'self'` | the Public API is on the same origin |
 | `manifest-src` | `'self'` | `site.webmanifest` |
@@ -258,7 +341,7 @@ The `prepare` middleware runs before the generated strict handler. The spec give
 
 Uploads:
 - PocketBase serves uploaded files under `/api/files` on the origin of the UI, which `'self'` trusts
-- a migration removed the `avatar` file field of `users`. Only the photo collections of decision 00009 have file fields.
+- a migration removed the `avatar` file field of `users`. Only the photo collections of decision 00007 have file fields.
 - their files are protected, so `/api/files` does not send them to clients. The Public API sends only the JPEG files that it encoded, with `nosniff` and a `sandbox` policy.
 - a new file field needs a check of this risk
 
@@ -266,6 +349,38 @@ Tests:
 - the Go tests of `app/api/internal/webui` check the routes, the cache headers, and that `/v1` has no policy
 - the `noCspViolations` fixture of `tests/fixtures.ts` runs in each end-to-end test. A refused or blocked load fails the test with the text of the violation.
 - `tests/e2e/csp.spec.ts` opens the parts of the UI that change styles at runtime, such as the menus, the selects, the toasts, and the dialogs
+
+## Link previews and crawlers
+
+### The route
+
+- `pagemeta.go` of `app/api/internal/webui` has the page meta. `webui.Register` reads `index.html` one time and cuts it around the block. It also reads the site name and the default `og:image` tags of the block.
+- the UI route sends its own page only for the paths above, with an optional trailing slash. The path words ignore case, like Vue Router. Each ID must match `^[a-z0-9]{15}$`.
+  `/restaurants/new` does not match. The edit and new pages need an account and keep the default tags.
+- `html/template` writes the values. A name such as `<script>` stays text.
+- the description puts all whitespace on one line. A text of more than 200 characters is cut at the end of a word and ends with `…`.
+- without a description or feedback, the description is `Reviews of NAME on Sponga47 Reviews.` or `A review of NAME on Sponga47 Reviews.`
+- the `<title>` has the format of `usePageTitle` in the UI. The end-to-end tests compare the two titles.
+- on a database error other than a missing record, the app logs the error and sends the default `index.html` with `200`
+- `publicapi.PhotoFilePath` makes the photo path. The API responses use the same function.
+- a host that the public cannot reach is `localhost`, a name that ends in `.localhost`, or a loopback, private, link-local, or unspecified IP address
+- the URLs use only the scheme, the host, and the path of the Application URL
+- a hook on `OnSettingsReload` checks the Application URL after each settings save. It warns only when the URL changed.
+- a block without `<title>` or `og:image` is not used. The app then logs a warning, and the pages have the tags of the site.
+- a Go test checks that `app/ui/index.html` has the block. A Vite change that removes the comments then fails `make test-app`.
+- the route does not add content to the body. Vue removes the content of `#app` when it mounts, and two versions of a heading would make the end-to-end tests unstable.
+
+### robots.txt
+
+- `robotsTxt` of `robots.go` has the two lines. The route sends `Cache-Control: public, max-age=3600`.
+- `TestRobotsTxt` compares the body with the two lines
+- `TestPageMeta` and `tests/e2e/link-previews.spec.ts` check that no page has a canonical link
+
+### Tests
+
+- `pagemeta_test.go` checks the tags, the escaping, the photo, the `404` cases, and the paths that keep the default tags
+- `tests/e2e/link-previews.spec.ts` checks the tags of the built app, the photo file, the titles, and the not found screen
+- the end-to-end app has the Application URL `https://reviews.example.com`. `tests/app.ts` sets it through `PATCH /api/settings`.
 
 # Alternatives
 [alternatives]: #alternatives
@@ -282,6 +397,13 @@ Tests:
 | Trusted Types | Not selected. Vue sets `innerHTML` for static template parts. |
 | `Content-Security-Policy-Report-Only` first | Not selected. The end-to-end tests run the UI under the enforced policy in all browsers and find violations before a release. |
 | An empty Go module in `app/ui` | Removed. The UI moved out of the Go module, so the Go tools do not walk its `node_modules`. |
+| Server-side rendering of the Vue app | Not selected. It needs a JavaScript runtime in the server or a second server. |
+| A prerender service for bots | Not selected. It is a second deploy, and user agent detection is not reliable. |
+| Tags that the UI sets at runtime | Not selected. Link preview bots do not run JavaScript. |
+| schema.org JSON-LD and a sitemap | Removed. The app does not need search engine optimization. Each page needed more queries, and each new field needed a schema.org property. |
+| A canonical link on each page | Removed. It helped search engines show the pages of friends and family. |
+| A robots.txt that allowed the pages and the photos | Removed. Search engines could show the names and reviews of friends and family. |
+| `X-Robots-Tag: noindex` | Not selected. A crawler that obeys `Disallow: /` does not get the page, so it does not see a noindex. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

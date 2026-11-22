@@ -1,5 +1,5 @@
 # One app instance behind Caddy. PocketBase makes the backups. See decision
-# 00013 and deploy/README.md.
+# 00010 and deploy/README.md.
 services:
   app:
     image: reviews-app:local

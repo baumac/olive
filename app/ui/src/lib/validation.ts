@@ -32,7 +32,7 @@ export function checkName(v: string, empty: string): string {
   return hidden.test(v) ? hiddenText : ''
 }
 
-// firstReviewDay is the first date that the API allows. See decision 00007.
+// firstReviewDay is the first date that the API allows. See decision 00005.
 export const firstReviewDay = '1900-01-01'
 
 // checkReviewDay allows the dates from firstReviewDay to today. A text

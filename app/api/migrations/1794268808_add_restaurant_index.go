@@ -8,7 +8,7 @@ import (
 )
 
 // Triggers keep these tables equal to the records. Each restaurant has one
-// restaurant_overall row. See decision 00007.
+// restaurant_overall row. See decision 00005.
 func init() {
 	m.Register(func(app core.App) error {
 		return execAll(app,

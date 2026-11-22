@@ -1,5 +1,5 @@
 ---
-description: Users sign up with an email confirmation, sign in with a password, and wait for the approval of a superuser before they can write. The UI keeps the auth token in an HttpOnly cookie. Sign out ends all sessions of the user. Users can reset the password, change the name and the password, and delete the account.
+description: Users sign up with an email confirmation, sign in with a password, and wait for the approval of a superuser before they can write. The UI keeps the auth token in an HttpOnly cookie, and sign out ends all sessions. Each write operation and each auth operation has a rate limit that the spec names.
 status: implemented
 ---
 
@@ -17,6 +17,15 @@ These risks shape the accounts:
 - a script on the page could take the auth token. The UI therefore keeps it in an HttpOnly cookie.
 - a token could leak. Sign out therefore ends all tokens of the user on the server.
 
+The approval stops a new account until a superuser approves it.
+An approved account can still have a stolen token or a bad script.
+Without limits, one client could:
+- guess the passwords of a user from many IP addresses
+- check many email addresses at sign up
+- fill the site with restaurants, recipes, reviews, photos, or lists
+- send many searches to the public geocoder, which then blocks the app
+- send many emails to one address
+
 Expected outcome:
 - a person signs up, confirms the address with a link, and signs in
 - a new user can read, but cannot write until a superuser approves the account
@@ -25,6 +34,11 @@ Expected outcome:
 - sign out makes all tokens of the user invalid. All tabs of one browser show the same session.
 - a person who forgot the password resets it by email
 - a user changes the name and the password, and deletes the account
+- each write operation and each auth operation has a limit
+- the spec tells the limit of each operation, so a new operation cannot skip it
+- a person who uses the UI in the usual way never gets a limit
+- the operator changes the limits without a new build
+- the limits do not show which email addresses have an account
 
 # Scope
 [scope]: #scope
@@ -35,9 +49,14 @@ In scope:
 - the approval of new users, its emails, and the cleanup job of users who wait
 - the emails of the sign up and the password reset
 - the session of the UI, its sync between tabs, and the sign up and account pages
+- the `x-rate-limit` extension and the `429` response
+- the limits of the Public API and their environment variables
+- the limit of wrong passwords and the limit of emails
+- the limiter, its windows, and its caps
+- the PocketBase rate limit rules
+- the text of the UI for a `429`
 
 Out of scope:
-- the rate limits of sign up, sign in, wrong passwords, and emails. Decision 00004 has them.
 - a change of the email address. A superuser changes it in the dashboard.
 - a sign in link without a password, OAuth2, MFA, and OTP for users
 - a sign out of one device, and a list of the sessions of a user
@@ -45,6 +64,12 @@ Out of scope:
 - an approval page in the Public UI. The dashboard is the only admin surface.
 - a setting that turns the approval off
 - templates of the emails in the dashboard. The texts are in `app/api/internal/publicapi/mail.go`.
+- a rate limit on the read operations
+- a rate limit on `signOut`, `refreshToken`, and `getCurrentUser`. A user can then always sign out, and the UI checks the session on each page load.
+- a limit that stays after a restart, and a limit that more than one server shares. The app runs as one instance. See decision 00010.
+- a limit for all write operations of a user together. Each operation has its own count.
+- a limit on the total photo storage of a user. The upload limit makes its growth slow.
+- large bulk imports. A superuser imports old data in the dashboard or with the PocketBase API.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -108,7 +133,7 @@ When the two passwords are not the same, the form shows "The passwords do not ma
 - the count is the same for an address with a user and for an address without one. The limit then does not show which addresses have a user.
 - `changePassword` and `deleteUser` need the current password. A wrong password gets `422` and counts for the same limit.
 - a password reset removes the count
-- decision 00004 has the numbers and their environment variables
+- [Rate limits](#rate-limits) has the numbers and their environment variables
 
 ## Approval
 
@@ -178,6 +203,66 @@ Sign out ends all sessions of the user. A sign out on one device also signs out 
 - the restaurants and recipes of the user stay. Their `creator` becomes `null`. The reviews of other users can be about them.
 - this is the same as a delete in the dashboard
 
+## Rate limits
+
+### Limits of the Public API
+
+| Name | Key | Operations | Default |
+|---|---|---|---|
+| `sign-in` | IP address | `signUp`, `confirmEmail`, `signIn`, `requestPasswordReset`, `resetPassword` | 10 per minute |
+| `create` | user | `createRestaurant`, `createRecipe`, `createRestaurantReview`, `createRecipeReview`, `createList` | 30 per hour |
+| `edit` | user | the updates and the deletes of restaurants, recipes, reviews, photos, lists, and the user, and the list changes | 300 per hour |
+| `photo-upload` | user | `addRestaurantReviewPhoto`, `addRecipeReviewPhoto` | 30 per hour |
+| `place-search` | user | `searchPlaces` | 30 per minute |
+
+- each operation has its own count. The 31st new restaurant of a user in one hour gets `429`, but the user can still create a review.
+- each user has its own count
+- `create` and `edit` give back the count of a request with a `4xx` or `5xx` response. A failed write changes no data.
+
+Other limits:
+
+| Limit | Key | Default |
+|---|---|---|
+| wrong passwords of sign in, `changePassword`, and `deleteUser` | email address | 10 in 15 minutes |
+| wrong passwords of `confirmEmail` | user | 10 in 15 minutes |
+| emails of each kind | email address | 5 per hour |
+| requests of all users to the geocoder | the app | 60 per minute. See decision 00008. |
+
+A request over a limit gets this response:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 2400
+Content-Type: application/problem+json
+
+{"type":"about:blank","title":"Too Many Requests","status":429,"detail":"Too many requests. Try again later."}
+```
+
+The wrong password limit adds the `code` `wrong_password_limit`.
+At the email limit, the request still gets its usual response, but the app sends no email.
+
+Why these values:
+- 30 new restaurants in one hour is more than a person adds after a long trip
+- a person can add and remove many favorites in a short time. 300 changes of one operation is more than this.
+- 5 photos for each review and 30 uploads per hour are the values of the first release. Real use can change them.
+
+### Environment variables
+
+| Variable | Limit |
+|---|---|
+| `REVIEWS_SIGN_IN_LIMIT` | `sign-in` per minute. The end-to-end tests raise it, because their parallel sign ups come from one IP address. |
+| `REVIEWS_SIGN_IN_FAILURE_LIMIT` | wrong passwords per 15 minutes |
+| `REVIEWS_CREATE_LIMIT` | `create` per hour |
+| `REVIEWS_EDIT_LIMIT` | `edit` per hour |
+| `REVIEWS_PHOTO_UPLOAD_LIMIT` | `photo-upload` per hour |
+| `REVIEWS_PLACE_SEARCH_LIMIT` | `place-search` per minute |
+| `REVIEWS_EMAIL_LIMIT` | emails of each kind per address and hour |
+
+### The UI
+
+- a `429` of a write shows "You made many changes in a short time. Try again later."
+- the form keeps its draft after a `429`
+
 # Implementation Details
 [implementation-details]: #implementation-details
 
@@ -196,9 +281,9 @@ Sign out ends all sessions of the user. A sign out on one device also signs out 
 
 - sign up runs the PocketBase validation also for a used address. Both cases get the same `422`.
 - the app sends each email after the response. The response time is then the same with and without an email.
-- at the email limit of decision 00004, a sign up does not change a user without confirmation. The last link then stays valid.
+- at the email limit, a sign up does not change a user without confirmation. The last link then stays valid.
 - the emails to users do not have the name of the user. A person who does not own the address can set this name.
-- with SMTP off, the app writes each email with its link to the log. See decision 00013.
+- with SMTP off, the app writes each email with its link to the log. See decision 00010.
 - sign in compares the password with a dummy bcrypt hash when no user has the address. Sign in then takes the same time for an unknown address and a wrong password.
 - `ConfirmEmail` checks the token first, then the password. Its count of wrong passwords has the key `confirm:` and the user ID. A person without the link then cannot block the confirmation.
 - sign up and sign in ignore the `Authorization` header. A stored token that is not valid does not block them.
@@ -220,7 +305,7 @@ Sign out ends all sessions of the user. A sign out on one device also signs out 
 - `Path=/v1` sends the cookie only to the API. The UI build, the photos in `<img>`, and the PocketBase routes do not get it.
 - `HttpOnly` hides the cookie from scripts. `SameSite=Strict` stops the browser from sending it on a request from another site.
 - `Max-Age` is the time until the `exp` claim of the token
-- `Secure` comes from TLS, or from the `X-Forwarded-Proto` header of the reverse proxy. Without the header, it comes from an `https` Application URL with the host of the request. See decision 00013.
+- `Secure` comes from TLS, or from the `X-Forwarded-Proto` header of the reverse proxy. Without the header, it comes from an `https` Application URL with the host of the request. See decision 00010.
 - a client can send a wrong `X-Forwarded-Proto`. This changes only its own cookie.
 - the name has no `__Host-` prefix. This prefix needs `Path=/`.
 - `authenticate` in `server.go` reads the cookie when the request has no `Authorization` header
@@ -267,7 +352,7 @@ Accepted risks:
 - a person can make the sign up of an owner fail for one hour with sign ups up to the email limit. The owner then resets the password.
 - a failed sign out leaves the cookie in the browser until it expires. The token stays valid on the server. The UI does not send this cookie while it has no session.
 - a script on the page can send requests as the user while the page is open. The Content Security Policy of decision 00002 is the defence.
-- the counts of wrong passwords are in memory. A restart clears them. See decision 00004.
+- the counts of wrong passwords are in memory. A restart clears them.
 
 ## Tests
 
@@ -275,6 +360,58 @@ Accepted risks:
 - each end-to-end app has a superuser. `api.signUp` confirms and approves the user through the PocketBase API. `api.signUpPending` only confirms.
 - `api.emailLink` reads the link of an email from the log of the test app. The test app has no mail server.
 - not tested: an email through a real SMTP server
+
+## Rate limits
+
+### The spec
+
+- `x-rate-limit` has a `key` and a `name`. The key is `ip` or `user`. The name selects the settings: `sign-in`, `create`, `edit`, `photo-upload`, or `place-search`.
+- `loadSpec` refuses an operation with `x-rate-limit` and without a `429` response
+- each write operation must have `x-rate-limit`. `signOut` and `refreshToken` are the exceptions.
+- the `TooManyRequests` response tells that each operation has its own count
+- the wrong password limit and the email limit are not in the extension. Their key comes from the body, and they count only some requests.
+
+### Order of the checks
+
+- the `ip` key counts before the token check. Sign up and sign in have no user.
+- the `user` key counts after the token check and the approval check. A request without a token gets `401`, and a user without approval gets `403`. Neither uses a count.
+- sign in counts the wrong password limit before it looks for the user. An address at the limit gets `429` without a lookup and without a bcrypt compare.
+- a sign in with the correct password does not count. A correct password over the limit also gets `429`. Otherwise the limit would not stop a guess.
+
+### The limiter
+
+- `rateLimiter` in `app/api/internal/publicapi/ratelimit.go` counts in fixed windows in the memory of the process
+- each request removes the expired windows first
+- a limiter keeps at most 10,000 windows. At the cap, a new key removes the oldest window.
+- `Retry-After` is the number of seconds until the window ends, at least 1
+- an IPv6 address counts as its /64 network. One host often gets a full /64 network.
+- the IP address comes from `RequestEvent.RealIP`. Behind a reverse proxy, the trusted proxy header must be set. See decision 00010.
+- `Options` of `publicapi` has the limits and the windows. Zero uses the default.
+
+### The wrong password limit
+
+- `signInFailures` counts with the key of `passwordLimitKey`, the email address in lower case
+- the count is the same for an address with a user and for an address without one. The limit then does not show which addresses have a user.
+- its cap is 100,000 windows. Clients without an account make its keys, so a limiter without a cap could use all memory.
+  `Credentials.email` has at most 255 characters, so the limiter uses less than 40 MB.
+- at the cap, a new key removes the oldest window, the same for all addresses. A client needs 100,000 requests with new addresses to get 10 more tries for one user.
+- `confirmEmail` counts with the key `confirm:` and the user ID. No email address is equal to this key.
+- the PocketBase rate limit rules cannot do this. They count only per IP address.
+
+### PocketBase rules
+
+- a migration turns on the rate limits of PocketBase. Their default rules limit the auth routes under `/api`, which include the superuser sign in.
+- a migration adds the rule `POST /csp-report` with 20 requests per minute. See decision 00002.
+- these rules do not apply to `/v1`
+
+### Tests
+
+- the end-to-end tests set the `create` and `edit` limits to 10000
+- the rate limit project of the end-to-end tests checks the `create` limit with its own app. See decision 00010.
+- the Go tests use high limits. Some tests use a low limit.
+
+Accepted risks:
+- the counts are in memory. A restart clears them. An attacker then gets at most one more window.
 
 # Alternatives
 [alternatives]: #alternatives
@@ -293,6 +430,11 @@ Accepted risks:
 | Block the sign in of a user who waits | Not selected. The person could not see the state of the account. |
 | A refresh of the token at each load of the UI | Removed. Each load made a new token, so many valid tokens of one user existed. |
 | No "Confirm password" field | Removed. A typing error in the password could lose the account. |
+| A limit only on sign up, sign in, uploads, and the place search | Removed. An approved account with a stolen token could fill the site. |
+| A wrong password limit with the user ID as the key | Removed. An address without a user got `401` where an address with a user got `429`. |
+| A wrong password limiter without a cap | Removed. Clients without an account make its keys, so it could use all memory. |
+| A count in the database | Not selected. The app runs as one instance, so a stored count gives little. |
+| A table of operations and limits in Go | Not selected. The spec already names each operation. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

@@ -27,7 +27,7 @@ const isSelf = computed(() => currentUser.value?.id === props.reviewerId)
 const kind = useKindQuery()
 
 // summary reads after the average, such as "average of 12 restaurant
-// reviews". Each kind has its own average. See decision 00005.
+// reviews". Each kind has its own average. See decision 00004.
 const summary = computed(() => {
   const r = reviewer.data.value
   if (!r) {

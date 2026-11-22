@@ -3,7 +3,7 @@ import type { MapPoint } from '@/components/ui/map'
 import { defaultCenter } from './places'
 
 // PreferredLocation is the point that a person sets for the restaurant list
-// and the maps. Only the browser keeps it. See decision 00010.
+// and the maps. Only the browser keeps it. See decision 00008.
 export interface PreferredLocation {
   latitude: number
   longitude: number

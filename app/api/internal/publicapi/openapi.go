@@ -71,7 +71,7 @@ func loadSpec() (*apiSpec, error) {
 }
 
 // specOf makes the operations of doc. It refuses a spec that breaks the
-// rules of decisions 00003 and 00004.
+// rules of decision 00003.
 func specOf(doc *openapi3.T) (*apiSpec, error) {
 	s := &apiSpec{operations: map[string]*operation{}}
 	for path, item := range doc.Paths.Map() {

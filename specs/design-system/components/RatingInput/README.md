@@ -10,4 +10,4 @@ Lives in `@/components/ui/rating-input`. Props: `v-model` (number), `max`, `labe
 - The component links the description and the ends to the group with `aria-describedby`. `describedBy` adds the id of the error message.
 - The value is required. Do not preselect a value. Show a `FormMessage` if the person submits with no value.
 - Each segment shows its number. The selected segment is `primary` with `primary-foreground`. Others are `background` with an `input` border.
-- Proposed rendering: numbered segments, 32px square, 4px gap. ADR 00011 does not fix the visual form.
+- Proposed rendering: numbered segments, 32px square, 4px gap. ADR 00009 does not fix the visual form.

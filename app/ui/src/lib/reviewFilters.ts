@@ -18,7 +18,7 @@ export const reviewFilterDefs: FilterDef[] = [
   { key: 'price', label: 'Value', type: 'select', options: scoreOptions(10), chip: (v) => `Value: ${v} or more` },
 ]
 
-// reviewDefaultSort puts the newest visit or cook first. See decision 00007.
+// reviewDefaultSort puts the newest visit or cook first. See decision 00005.
 export const reviewDefaultSort = '-date'
 
 export function reviewSortOptionsOf(kind: ReviewKind): Option[] {
@@ -47,7 +47,7 @@ export const oldReviewSortOptions: Option[] = [
 ]
 
 // recipeReviewFilterDefs have the scores of recipe reviews. See decision
-// 00005.
+// 00004.
 export const recipeReviewFilterDefs: FilterDef[] = [
   reviewFilterDefs[0]!,
   reviewFilterDefs[1]!,

@@ -131,7 +131,7 @@ func (s *Server) viewerDataOf(sub subject, user *core.Record, records ...*core.R
 }
 
 // ownReviewCounts counts the reviews of the user for each record. A user can
-// have many reviews of one parent. See decision 00007.
+// have many reviews of one parent. See decision 00005.
 func (s *Server) ownReviewCounts(sub subject, user *core.Record, records ...*core.Record) (map[string]int, error) {
 	out := map[string]int{}
 	if user == nil || len(records) == 0 {

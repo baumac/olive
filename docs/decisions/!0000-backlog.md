@@ -24,13 +24,13 @@ Each sub-bullet point contains notes about the incomplete decision.
   - reviewing wines
 - Replace the public Photon server of Komoot and the tile server of OpenStreetMap with self-hosted options
   - `REVIEWS_PLACES_URL` and `REVIEWS_MAP_TILE_URL` already change the servers. The move needs no code change, only the servers on the home server.
-  - The tile server of OpenStreetMap has no guarantee and can block heavy use. See decision 00010.
+  - The tile server of OpenStreetMap has no guarantee and can block heavy use. See decision 00008.
 
 ## Won't do
 - Allow directly uploading photos to restaurants or recipes: all photos must be uploaded via a review to force photos being associated to a review
 - Expose operations that can be worked around by having an admin use the PocketBase dashboard
   - No email change. UserPatch has only name; a new address needs the dashboard.
-  - No bulk import and no recipe import from a URL. A superuser adds old restaurants, recipes, and reviews in the dashboard or with the PocketBase API. The create limit of decision 00004 is only on the Public API.
+  - No bulk import and no recipe import from a URL. A superuser adds old restaurants, recipes, and reviews in the dashboard or with the PocketBase API. The create limit of decision 00003 is only on the Public API.
     - Add photos only through the Public API. A photo from the dashboard keeps its metadata, such as the GPS position.
 - Add IOS app: won't do for now as this requires a mac laptop and side-loading the app from that device, or a 99$ per year subscription to host the app in the app store
 - Add load tests: not needed as the number of users are quite low
@@ -47,4 +47,4 @@ Each sub-bullet point contains notes about the incomplete decision.
   - Private or collaborative lists
   - A share button in the UI (sharing works by copying the page link)
   - Content moderation and a way for users to report content
-    - a superuser must find it and delete it in the dashboard. Decision 00009 accepts this for photos.
+    - a superuser must find it and delete it in the dashboard. Decision 00007 accepts this for photos.

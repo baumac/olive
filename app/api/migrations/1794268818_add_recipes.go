@@ -10,7 +10,7 @@ import (
 )
 
 // The recipes get the tables, the triggers, and the indexes of the
-// restaurants. A recipe has four scores. See decision 00005.
+// restaurants. A recipe has four scores. See decision 00004.
 func init() {
 	m.Register(addRecipes, dropRecipes)
 }
@@ -132,8 +132,8 @@ func newRecipeReviewPhotos(reviews *core.Collection) *core.Collection {
 	return c
 }
 
-// recipeTables makes the generated overall column of decision 00007, the
-// tables of decision 00007, and the FTS5 tables of decision 00002.
+// recipeTables makes the generated overall column of decision 00005, the
+// tables of decision 00005, and the FTS5 tables of decision 00002.
 func recipeTables() []string {
 	return slices.Concat([]string{
 		"ALTER TABLE {{recipe_reviews}} ADD COLUMN [[overall]] REAL AS " + recipeScores.column(),
@@ -162,7 +162,7 @@ func recipeTables() []string {
 	})
 }
 
-// recipeRankingValues are the overall and the ranking of decision 00007.
+// recipeRankingValues are the overall and the ranking of decision 00005.
 var recipeRankingValues = recipeScores.overall() + ", " + recipeScores.ranking()
 
 func selectOfRecipeReviews(values, recipe string) string {
@@ -170,7 +170,7 @@ func selectOfRecipeReviews(values, recipe string) string {
 }
 
 // makeRecipeRankingSort makes the sort indexes and the triggers of the
-// ranking of decision 00007.
+// ranking of decision 00005.
 func makeRecipeRankingSort() []string {
 	update := func(row string) string {
 		recipe := row + ".[[recipe]]"

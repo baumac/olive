@@ -10,7 +10,7 @@ import (
 
 // versionKind has the SQL of the baseline snapshot of one parent
 // collection. The history package makes the same snapshot. See decision
-// 00006.
+// 00004.
 type versionKind struct {
 	parent   string
 	table    string
@@ -60,7 +60,7 @@ var versionKinds = []versionKind{
 }
 
 // Each restaurant and recipe gets a baseline version with its snapshot. The
-// history of the next change starts from it. See decision 00006.
+// history of the next change starts from it. See decision 00004.
 func init() {
 	m.Register(func(app core.App) error {
 		users, err := app.FindCollectionByNameOrId("users")

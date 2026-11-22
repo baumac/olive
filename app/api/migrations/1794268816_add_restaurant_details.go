@@ -15,7 +15,7 @@ const (
 	openingHoursPattern = `^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F` + hiddenCharacters + `]*$`
 )
 
-// A price_level of 0 is "not set". See decision 00005.
+// A price_level of 0 is "not set". See decision 00004.
 func init() {
 	m.Register(func(app core.App) error {
 		restaurants, err := app.FindCollectionByNameOrId("restaurants")

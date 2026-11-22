@@ -1,5 +1,5 @@
 // priceLevels has the names of the price levels of the API. The names have
-// no currency. See decision 00005.
+// no currency. See decision 00004.
 export const priceLevels = [
   { value: 1, label: 'Inexpensive' },
   { value: 2, label: 'Moderate' },

@@ -1,5 +1,5 @@
 name: Set up Go and Node.js
-description: Installs the Go version of app/api/go.mod and Node.js 22, and restores the Go and npm caches. See decision 00015.
+description: Installs the Go version of app/api/go.mod and Node.js 22, and restores the Go and npm caches. See decision 00010.
 inputs:
   save-cache:
     description: Save the caches at the end of the job. Only one job of a run saves them.

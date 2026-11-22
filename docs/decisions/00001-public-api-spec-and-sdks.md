@@ -34,9 +34,9 @@ In scope:
 - the validation of requests and responses at runtime
 
 Out of scope:
-- the operations of each topic. Decisions 00003, 00005, 00006, 00007, 00008, 00009, and 00010 have them.
+- the operations of each topic. Decisions 00003, 00004, 00005, 00006, 00007, and 00008 have them.
 - the auth tokens, the cookie, and the approval. Decision 00003 has them.
-- the rate limits. Decision 00004 has them.
+- the rate limits. Decision 00003 has them.
 - all APIs of PocketBase. Clients use only the Public API.
 - publishing the SDKs to npm or to another registry. Only this repository uses them.
 - a Go client. The app needs only the server code.
@@ -52,11 +52,11 @@ The paths of the spec are relative to `/v1`. The spec has six tags:
 | Tag | Operations | Decision |
 |---|---|---|
 | `users` | sign up, email confirmation, sign in, sign out, token refresh, password reset, and `/users/me` | 00003 |
-| `restaurants` | restaurants, their reviews, their photos, and their versions | 00005, 00006, 00007, 00009 |
-| `recipes` | recipes, their reviews, their photos, and their versions | 00005, 00006, 00007, 00009 |
-| `reviewers` | the public profile of a user and the reviews of a user | 00008 |
-| `places` | the place search | 00010 |
-| `lists` | the lists of restaurants and recipes | 00008 |
+| `restaurants` | restaurants, their reviews, their photos, and their versions | 00004, 00005, 00007 |
+| `recipes` | recipes, their reviews, their photos, and their versions | 00004, 00005, 00007 |
+| `reviewers` | the public profile of a user and the reviews of a user | 00006 |
+| `places` | the place search | 00008 |
+| `lists` | the lists of restaurants and recipes | 00006 |
 
 The restaurant and the recipe parts have the same shape. Their names tell the kind:
 - the operations and schemas of restaurant reviews have `restaurant`, such as `createRestaurantReview` and `RestaurantReview`
@@ -88,7 +88,7 @@ A browser tab with the UI from before a deploy can fail until a reload.
 - **Timestamp**: RFC 3339 in UTC with three decimals, such as `2024-11-04T01:26:55.002Z`. `new Date(value)` in JavaScript and the ISO 8601 parsers of Swift and Go read it.
 - **ID**: the PocketBase record ID. It has 15 characters that match `^[a-z0-9]+$`, such as `k3x9m2p7q1w8z4a`. IDs are random and are not in the order of time.
 - **Length**: a string length counts Unicode code points, not bytes. This matches `maxLength` of JSON Schema.
-- **Date**: the `date` of a review has no time. Decision 00007 has its range.
+- **Date**: the `date` of a review has no time. Decision 00005 has its range.
 
 ## Text rules
 
@@ -189,8 +189,8 @@ An array item has a zero-based index, such as `tags[2]`.
 | `413` | a body over the size limit, such as a photo over 10 MiB |
 | `415` | a wrong content type |
 | `422` | an invalid value in the body |
-| `429` | a rate limit. The response has a `Retry-After` header. Decision 00004 has the limits. |
-| `503` | the place search is off, or its geocoder does not answer. See decision 00010. |
+| `429` | a rate limit. The response has a `Retry-After` header. Decision 00003 has the limits. |
+| `503` | the place search is off, or its geocoder does not answer. See decision 00008. |
 
 Each `403` and each `409` has a `code`. Clients select their texts by the `code`, not by the status or the `detail`.
 A new reason needs a new value in the `code` enum of `Problem`.
@@ -199,15 +199,15 @@ A new reason needs a new value in the `code` enum of `Problem`.
 |---|---|---|---|
 | `not_approved` | 403 | no superuser approved the user | 00003 |
 | `email_not_confirmed` | 403 | a sign in before the email confirmation | 00003 |
-| `not_creator` | 403 | the user is not the creator | 00006 |
-| `favorites_list` | 403 | a rename or a delete of a favorites list | 00008 |
-| `other_reviews` | 409 | a delete of a restaurant or a recipe with reviews of other users | 00006 |
-| `place_taken` | 409 | a `location.place_id` that another restaurant has | 00005 |
-| `source_taken` | 409 | a `source` that another recipe has | 00005 |
-| `photo_limit` | 409 | a sixth photo of a review | 00009 |
-| `list_name_taken` | 409 | a list name that another list of the user has | 00008 |
-| `list_limit` | 409 | a list above the 50 lists of a user | 00008 |
-| `list_restaurant_limit`, `list_recipe_limit` | 409 | a restaurant or a recipe above the limit of a list | 00008 |
+| `not_creator` | 403 | the user is not the creator | 00004 |
+| `favorites_list` | 403 | a rename or a delete of a favorites list | 00006 |
+| `other_reviews` | 409 | a delete of a restaurant or a recipe with reviews of other users | 00004 |
+| `place_taken` | 409 | a `location.place_id` that another restaurant has | 00004 |
+| `source_taken` | 409 | a `source` that another recipe has | 00004 |
+| `photo_limit` | 409 | a sixth photo of a review | 00007 |
+| `list_name_taken` | 409 | a list name that another list of the user has | 00006 |
+| `list_limit` | 409 | a list above the 50 lists of a user | 00006 |
+| `list_restaurant_limit`, `list_recipe_limit` | 409 | a restaurant or a recipe above the limit of a list | 00006 |
 | `wrong_password_limit` | 429 | too many wrong passwords for an email address | 00003 |
 
 A conflict of one property also has `property`, such as `name`, `location`, or `source`.
@@ -287,7 +287,7 @@ app/sdk/
 - the server uses `net/http`, because the PocketBase router uses `net/http` handlers. Decision 00002 mounts it under `/v1`.
 - `nullable.Nullable[T]` tells a missing property from `null` in a merge patch
 - the strict server calls hand-written error handlers for decode errors and handler errors. All errors then have one format.
-- the embedded spec has gzip data. The Go version that builds `oapi-codegen` changes these bytes. `TOOLS_GO` of the makefile pins this Go version. See decision 00015.
+- the embedded spec has gzip data. The Go version that builds `oapi-codegen` changes these bytes. `TOOLS_GO` of the makefile pins this Go version. See decision 00010.
 
 ## Hard parts of the spec
 
