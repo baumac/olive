@@ -353,7 +353,7 @@ Switches:
 - `REVIEWS_VALIDATE_REQUESTS=false` turns off the validation of the parameters and the body values. The checks that the strict handler needs stay: the query names, the content type, the size, the JSON object, the unknown properties, and the integer literals.
 - without the request validation, invalid values can be saved. A response with such a value then gets `500`. Turn off the request validation only with the response validation. The server logs a warning at start.
 - the handlers keep the guards that stop a panic without the request validation. `limit` stays from 1 to 100. An `overall` filter of `NaN` gets `400`.
-- an unset variable keeps the default, which is on. A value that is not `true` or `false` stops the server at start.
+- an unset variable keeps the default, which is on. The value is a Go boolean: `true`, `false`, `1`, `0`, `t`, `f`, and their upper-case forms. Another value, such as `off` or `yes`, stops the server at start.
 
 ## Timestamps
 
