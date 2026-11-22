@@ -9,16 +9,11 @@ Each sub-bullet point contains notes about the incomplete decision.
 ## For claude
 
 ## For Me
-- Can you make a plan to consolidate decision docs into far fewer decision docs? For context, decisions are meant to be living documents that evolve as requirements change. Today, there are many decisions that were initially made and then either superseded, fixed, or replaced by a future decision. This results in duplicate information and makes the duplicates hard to follow.
-  - Some examples, with the old decision numbers of `!0000-old-numbers.md`:
-    - 00001: only restaurants, no text search, and one review per user and restaurant. Fixed by 00047, the search index, and 00050.
-    - 00013: canonical links for search engines. Fixed by 00053.
-    - 00016: only the creator can edit, for "an open public site". Fixed by 00051 and 00055.
-    - 00021: structured data and a sitemap for search engines. Fixed by 00049 and 00053.
-    - 00029: a ranking for about 200 reviews per restaurant. Fixed by 00054.
-    - 00038: structured data for search engines in the expected outcome. Fixed by 00049.
-- add note in agents.md decisions are meant to be living documents that evolve as requirements change
-- verify app implementation against consolidated decisions
+- tags on restaurants and recipes
+  - no tags on reviews
+- consolidate decision docs further
+- reset api spec version to 1.0.0 and consolidate migrations
+- remove old numbers file
 - deploy to prod
 
 ## For the Future
