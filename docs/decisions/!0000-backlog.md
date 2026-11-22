@@ -15,8 +15,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - generate a list of all potential decisions that go against it
   - decide if we want to revert those decisions
   - Findings of the review on 2026-11-22:
-    - Not aligned, still in force:
-      - 00017 and 00018: the place search sends the search text to `photon.komoot.io`. The browsers load the map tiles from `tile.openstreetmap.org`, which gets the IP address of each user. 00000 wants a self-hosted app. "For the Future" has only the Photon item. It has no item for the map tiles.
     - Partly aligned:
       - 00053: robots.txt keeps all crawlers out. Link preview bots that obey it show no preview of a shared link. The share example of 00000 then loses the preview of 00013.
       - 00036 and 00047: the app has no bulk import and no recipe import from a URL. The default create limit is 30 per hour. A user must type each past experience by hand.
@@ -32,6 +30,7 @@ Each sub-bullet point contains notes about the incomplete decision.
       - Some decisions are heavier than a small group of trusted users needs: the rate limits of each operation, the version history, the end-to-end tests in many browsers, Renovate, and the coverage checks.
     - Resolved:
       - 00047: wines and cheeses are out of scope. 00000 now puts them out of scope for the first release.
+      - 00017 and 00018: the maps and the place search use public servers. 00000 now puts self-hosted options out of scope for the first release.
 - consolidate and review all decisions as there are several duplicates and related decision docs that can be merged
 - verify app implementation against consolidated decisions
 - deploy to prod
@@ -41,7 +40,9 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Support reviewing individual foods: for initial release reviewing individual foods won't be completed
   - reviewing cheeses
   - reviewing wines
-- Replace Photon maps server that is hosted by Komoot with a self-hosted option
+- Replace the public Photon server of Komoot and the tile server of OpenStreetMap with self-hosted options
+  - `REVIEWS_PLACES_URL` and `REVIEWS_MAP_TILE_URL` already change the servers. The move needs no code change, only the servers on the home server.
+  - The tile server of OpenStreetMap has no guarantee and can block heavy use. See decision 00018.
 
 ## Won't do
 - Allow directly uploading photos to restaurants or recipes: all photos must be uploaded via a review to force photos being associated to a review

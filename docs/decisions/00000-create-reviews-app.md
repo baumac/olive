@@ -36,6 +36,7 @@ Out of scope:
 - The choice of technology. Later decisions cover it. See [Implementation Details](#implementation-details).
 - Specifying the exact things that can be reviewed
 - Wines and cheeses in the first release. The first release has restaurants and recipes. A later decision can add them. The backlog has them under "For the Future".
+- Self-hosted maps and place search in the first release. The first release uses the free public Photon server of Komoot and the tile server of OpenStreetMap. These servers get the search text and the IP address of users. A later decision can move them to our home server. The backlog has this under "For the Future".
 - Social features, such as comments, likes, follows, and messages. The users are few and talk to each other in other ways.
 - Ads or other income
 
