@@ -171,6 +171,7 @@ The list operations:
 
 - restaurants and recipes have tags. Reviews have no tags. See decision 00005.
 - `tags` has at most 20 unique items
+- an empty list is no tags. The API stores and returns it as `null`, in a create, a patch, and a dashboard save. A patch from `null` to `[]` changes nothing and makes no version.
 - a tag has 1 to 63 characters. It has words with single hyphens between them.
 - each word starts with a lowercase letter, a letter without case, or a digit of any script. Combining marks, such as the vowel signs of Devanagari, can follow.
 - the API changes each tag to Unicode normalization form C first. `cafe` with a separate accent U+0301 becomes `café`.

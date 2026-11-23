@@ -123,7 +123,7 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 	if b.Description != nil {
 		r.Set("description", *b.Description)
 	}
-	if b.Tags != nil {
+	if b.Tags != nil && len(*b.Tags) > 0 {
 		r.Set("tags", *b.Tags)
 	}
 	setLocation(r, b.Location)
@@ -501,14 +501,18 @@ func (c *changes) patchTags(v nullable.Nullable[reviewsapi.Tags]) {
 	if !v.IsSpecified() {
 		return
 	}
+	// An empty list is no tags, like null. See decision 00004.
 	next, _ := v.Get()
 	old := tagsOf(c.r)
-	if v.IsNull() == (old == nil) && (old == nil || slices.Equal(*old, next)) {
-		return
-	}
-	if v.IsNull() {
+	if len(next) == 0 {
+		if old == nil {
+			return
+		}
 		c.r.Set("tags", nil)
 	} else {
+		if old != nil && slices.Equal(*old, next) {
+			return
+		}
 		c.r.Set("tags", next)
 	}
 	c.changed = true

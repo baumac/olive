@@ -23,12 +23,21 @@ func OptionalNumber(r *core.Record, field string) *int {
 }
 
 // OptionalList returns nil for a field that is not a JSON array of strings.
+// An empty array is also nil. The API has one value for a list without items.
 func OptionalList(r *core.Record, field string) *[]string {
 	var items []string
-	if err := r.UnmarshalJSONField(field, &items); err != nil || items == nil {
+	if err := r.UnmarshalJSONField(field, &items); err != nil || len(items) == 0 {
 		return nil
 	}
 	return &items
+}
+
+// ClearEmptyList stores an empty JSON array as null. See OptionalList.
+func ClearEmptyList(r *core.Record, field string) {
+	var items []string
+	if err := r.UnmarshalJSONField(field, &items); err == nil && items != nil && len(items) == 0 {
+		r.Set(field, nil)
+	}
 }
 
 // List returns an empty list for a field that is not a JSON array of

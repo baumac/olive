@@ -131,7 +131,7 @@ func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRe
 	r := core.NewRecord(collection)
 	r.Set("name", b.Name)
 	setOptionalText(r, "description", b.Description)
-	if b.Tags != nil {
+	if b.Tags != nil && len(*b.Tags) > 0 {
 		r.Set("tags", *b.Tags)
 	}
 	r.Set("ingredients", b.Ingredients)
