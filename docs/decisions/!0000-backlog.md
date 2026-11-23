@@ -12,6 +12,9 @@ Each sub-bullet point contains notes about the incomplete decision.
 - deploy to prod
 
 ## For the Future
+- Rename repo from "reviews-app" to "food-journal"
+  - Rename repo in GitHub
+  - Regenerate docs and READMEs
 - Support reviewing individual foods: for initial release reviewing individual foods won't be completed
   - reviewing cheeses
   - reviewing wines
