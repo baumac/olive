@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": [
     "app/ui",
-    "app/sdk/typescript",
+    "specs/api/sdk/client/typescript",
     "tests"
   ]
 }

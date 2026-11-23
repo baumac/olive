@@ -51,8 +51,8 @@ lint-spec: $(VACUUM)
 	$(VACUUM) lint --details --fail-severity warn --ruleset specs/api/vacuum-ruleset.yaml $(SPEC)
 
 lint-go:
-	go vet ./app/api/... ./app/sdk/go/...
-	@test -z "$$(gofmt -l app/api app/sdk/go)" || { gofmt -l app/api app/sdk/go; echo "Run gofmt -w on these files."; exit 1; }
+	go vet ./app/api/... ./specs/api/sdk/server/go/...
+	@test -z "$$(gofmt -l app/api specs/api/sdk/server/go)" || { gofmt -l app/api specs/api/sdk/server/go; echo "Run gofmt -w on these files."; exit 1; }
 
 lint-ui: build-sdk-ts
 	npm run typecheck --workspace @reviews/ui
@@ -67,25 +67,25 @@ lint-eslint: $(NODE_MODULES)
 # modules call.
 security-scan: $(GOVULNCHECK)
 	$(GOVULNCHECK) -C app/api ./...
-	$(GOVULNCHECK) -C app/sdk/go ./...
+	$(GOVULNCHECK) -C specs/api/sdk/server/go ./...
 
 generate: generate-sdk-go generate-sdk-ts
 
 generate-sdk-go: $(OAPI_CODEGEN)
-	cd app/sdk/go && $(OAPI_CODEGEN) -config oapi-codegen.yaml $(CURDIR)/$(SPEC)
+	cd specs/api/sdk/server/go && $(OAPI_CODEGEN) -config oapi-codegen.yaml $(CURDIR)/$(SPEC)
 
 # The generator does not delete the files of removed schemas.
 generate-sdk-ts:
-	rm -rf app/sdk/typescript/src
+	rm -rf specs/api/sdk/client/typescript/src
 	docker run --rm -u "$$(id -u):$$(id -g)" -v "$(CURDIR):/local" -w /local $(OPENAPI_GENERATOR_IMAGE) generate \
 		--generator-name typescript-fetch \
 		--input-spec $(SPEC) \
-		--output app/sdk/typescript/src \
-		--template-dir app/sdk/typescript/templates \
+		--output specs/api/sdk/client/typescript/src \
+		--template-dir specs/api/sdk/client/typescript/templates \
 		--global-property apiDocs=false,modelDocs=false \
 		--additional-properties supportsES6=true,importFileExtension=.js,useSingleRequestParameter=true,withInterfaces=true,legacyDiscriminatorBehavior=false
 
-GENERATED := app/sdk/go/reviewsapi.gen.go app/sdk/typescript/src
+GENERATED := specs/api/sdk/server/go/reviewsapi.gen.go specs/api/sdk/client/typescript/src
 CHECK_DIR := .check-generate
 
 # check-generate keeps a copy of the generated files, generates them again,
@@ -95,8 +95,8 @@ check-generate:
 	mkdir -p $(CHECK_DIR)
 	tar -cf - $(GENERATED) | tar -xf - -C $(CHECK_DIR)
 	$(MAKE) --no-print-directory generate
-	@diff -r $(CHECK_DIR)/app/sdk/go/reviewsapi.gen.go app/sdk/go/reviewsapi.gen.go && \
-		diff -r $(CHECK_DIR)/app/sdk/typescript/src app/sdk/typescript/src || \
+	@diff -r $(CHECK_DIR)/specs/api/sdk/server/go/reviewsapi.gen.go specs/api/sdk/server/go/reviewsapi.gen.go && \
+		diff -r $(CHECK_DIR)/specs/api/sdk/client/typescript/src specs/api/sdk/client/typescript/src || \
 		{ echo "The generated SDKs do not match the spec. Run make generate."; exit 1; }
 	rm -rf $(CHECK_DIR)
 	@test -z "$$(git ls-files --others --exclude-standard -- $(GENERATED))" || { git ls-files --others --exclude-standard -- $(GENERATED); echo "New generated files are not in git. Run make generate and add them."; exit 1; }
@@ -106,7 +106,7 @@ test: test-sdk test-app test-ui
 test-sdk: test-sdk-go test-sdk-ts
 
 test-sdk-go:
-	cd app/sdk/go && go test ./...
+	cd specs/api/sdk/server/go && go test ./...
 
 test-sdk-ts: $(NODE_MODULES)
 	npm test --workspace @reviews/sdk
@@ -169,7 +169,7 @@ test-e2e-ui: build-app
 $(NODE_MODULES): package-lock.json
 	npm ci
 
-# The UI imports the built SDK from app/sdk/typescript/dist.
+# The UI imports the built SDK from specs/api/sdk/client/typescript/dist.
 build-sdk-ts: $(NODE_MODULES)
 	npm run build --workspace @reviews/sdk
 

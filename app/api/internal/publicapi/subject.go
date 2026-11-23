@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/baumac/reviews-app/app/api/internal/subjects"
-	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 )
 
 // subject has the tables of one kind of thing that users review. The review,

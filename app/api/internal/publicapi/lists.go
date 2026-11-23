@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"

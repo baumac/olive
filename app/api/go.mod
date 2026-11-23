@@ -5,7 +5,7 @@ go 1.27
 toolchain go1.27.4
 
 require (
-	github.com/baumac/reviews-app/app/sdk/go v0.0.0-00010101000000-000000000000
+	github.com/baumac/reviews-app/specs/api/sdk/server/go v0.0.0-00010101000000-000000000000
 	github.com/getkin/kin-openapi v0.153.0
 	github.com/oapi-codegen/nullable v1.2.0
 	github.com/oapi-codegen/runtime v1.8.0
@@ -51,4 +51,4 @@ require (
 	modernc.org/sqlite v1.60.1 // indirect
 )
 
-replace github.com/baumac/reviews-app/app/sdk/go => ../sdk/go
+replace github.com/baumac/reviews-app/specs/api/sdk/server/go => ../../specs/api/sdk/server/go

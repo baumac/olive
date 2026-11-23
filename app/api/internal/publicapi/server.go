@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/pocketbase/pocketbase/core"
 	"golang.org/x/crypto/bcrypt"

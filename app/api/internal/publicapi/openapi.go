@@ -12,7 +12,7 @@ import (
 	"sync"
 	"unicode"
 
-	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"

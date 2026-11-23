@@ -20,7 +20,7 @@ This project allows users to review a variety of things. It is composed of the f
 make install-tools    # Install dev tools to ./bin/tools-<TOOLS_GO>/ with the Go of TOOLS_GO. Needs Go.
 make lint             # Run all linters. Needs Docker and Node.js.
 make lint-spec        # Lint the API specs in specs/api with vacuum
-make generate         # Generate the SDKs in app/sdk/ from the API spec. Needs Docker.
+make generate         # Generate the SDKs in specs/api/sdk/ from the API spec. Needs Docker.
 make generate-sdk-go  # Generate only the Go SDK
 make generate-sdk-ts  # Generate only the TypeScript SDK. Needs Docker.
 make lint-go          # Run go vet and gofmt on the Go modules
@@ -36,7 +36,7 @@ make test-app         # Run the Go tests of the app without the race detector
 make test-race        # Run the Go tests of the app with the race detector. Needs a C compiler.
 make test-ui          # Run the UI tests. Needs Node.js.
 make test-coverage    # Run the Go and UI tests with coverage. Fail below the minimum. Needs Node.js and a C compiler.
-make build-sdk-ts     # Build the TypeScript SDK into app/sdk/typescript/dist. Needs Node.js.
+make build-sdk-ts     # Build the TypeScript SDK into specs/api/sdk/client/typescript/dist. Needs Node.js.
 make build-ui         # Build the UI into app/api/internal/webui/dist. Needs Node.js.
 make build-app        # Build the UI, then the app server to ./bin/reviews-app
 make build-image      # Build the Docker image reviews-app:local from deploy/Dockerfile. Needs Docker.
@@ -150,12 +150,12 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `lists` tag has the public lists of restaurants and recipes of users. Each user has a favorites list. See decisions 00006 and 00004.
     - `listRestaurants` and `listRecipes` with `list[eq]` search, sort, and filter the restaurants or the recipes of a list. See decisions 00006 and 00004.
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
+  - **`specs/api/sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00001.
+    - **`specs/api/sdk/client/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
+    - **`specs/api/sdk/server/go`** - the Go module with the server interface and the types that the API uses
   - **`specs/design-system`** - the design system for the Public UI: tokens, component guidelines, logos, and icons
     - Start from `specs/design-system/README.md`
-- **`app/sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00001.
-  - **`app/sdk/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
-  - **`app/sdk/go`** - the Go module with the server interface and the types that the API uses
-- **`app`** - the directory with the three parts of the app: `app/api`, `app/ui`, and `app/sdk`
+- **`app`** - the directory with the two parts of the app: `app/api` and `app/ui`
 - **`app/api`** - the Go module of the app that serves the Public UI, Public API, Pocketbase API, and Pocketbase UI
   - Implements the OpenAPI specification defined in `specs/api/public-openapi.yaml`
   - Written in the Go programming language
@@ -172,8 +172,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - A hook of `app/api/internal/publicapi` rejects this change from the dashboard with a message.
     - They also make the indexes, the FTS5 search tables, and the rate limit rules
     - `1794096000_init.go` has all changes from before the first deploy. A later change of the schema needs a new migration. See decision 00002.
-  - **`app/api/internal/publicapi`** - the Public API. It implements the strict server interface of `app/sdk/go`.
-    - It validates each request and response against the spec that `app/sdk/go` embeds. See decision 00001.
+  - **`app/api/internal/publicapi`** - the Public API. It implements the strict server interface of `specs/api/sdk/server/go`.
+    - It validates each request and response against the spec that `specs/api/sdk/server/go` embeds. See decision 00001.
     - It checks, changes, and serves the photos of reviews. See decision 00007.
     - Its timestamps are RFC 3339. The database has the PocketBase format with a space. See decision 00001.
     - It gets the places of the place search from a Photon geocoder. See decision 00008.

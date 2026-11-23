@@ -23,7 +23,7 @@ runs:
           ~/go/pkg/mod
           ~/.cache/go-build
           ~/.npm
-        key: ci-${{ runner.os }}-${{ hashFiles('app/api/go.sum', 'app/sdk/go/go.sum', 'package-lock.json') }}
+        key: ci-${{ runner.os }}-${{ hashFiles('app/api/go.sum', 'specs/api/sdk/server/go/go.sum', 'package-lock.json') }}
         restore-keys: ci-${{ runner.os }}-
     - if: inputs.save-cache != 'true'
       uses: actions/cache/restore@v4
@@ -32,5 +32,5 @@ runs:
           ~/go/pkg/mod
           ~/.cache/go-build
           ~/.npm
-        key: ci-${{ runner.os }}-${{ hashFiles('app/api/go.sum', 'app/sdk/go/go.sum', 'package-lock.json') }}
+        key: ci-${{ runner.os }}-${{ hashFiles('app/api/go.sum', 'specs/api/sdk/server/go/go.sum', 'package-lock.json') }}
         restore-keys: ci-${{ runner.os }}-

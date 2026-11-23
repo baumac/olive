@@ -4,12 +4,12 @@
 FROM node:22.23.5-alpine3.24 AS ui
 WORKDIR /src
 COPY package.json package-lock.json ./
-COPY app/sdk/typescript/package.json app/sdk/typescript/
+COPY specs/api/sdk/client/typescript/package.json specs/api/sdk/client/typescript/
 COPY app/ui/package.json app/ui/
 # The root package.json names this workspace. npm ci needs its package.json.
 COPY tests/package.json tests/
 RUN npm ci --workspace @reviews/sdk --workspace @reviews/ui
-COPY app/sdk/typescript app/sdk/typescript
+COPY specs/api/sdk/client/typescript specs/api/sdk/client/typescript
 COPY app/ui app/ui
 RUN npm run build --workspace @reviews/sdk && npm run build --workspace @reviews/ui
 
@@ -17,10 +17,10 @@ FROM golang:1.27.4-alpine3.24 AS build
 WORKDIR /src
 COPY go.work go.work.sum ./
 COPY app/api/go.mod app/api/go.sum app/api/
-COPY app/sdk/go/go.mod app/sdk/go/go.sum app/sdk/go/
+COPY specs/api/sdk/server/go/go.mod specs/api/sdk/server/go/go.sum specs/api/sdk/server/go/
 RUN cd app/api && go mod download
 COPY app/api app/api
-COPY app/sdk/go app/sdk/go
+COPY specs/api/sdk/server/go specs/api/sdk/server/go
 COPY --from=ui /src/app/api/internal/webui/dist app/api/internal/webui/dist
 # PocketBase uses a SQLite driver in Go. The build needs no C compiler.
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/reviews-app ./app/api

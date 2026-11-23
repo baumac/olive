@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 )
 
 func TestProblemUnexpected(t *testing.T) {

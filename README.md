@@ -48,9 +48,9 @@ CI runs the same commands. See `.github/workflows/ci.yml`.
 | Folder | What |
 | --- | --- |
 | `specs/api` | the OpenAPI spec of the Public API |
+| `specs/api/sdk` | the SDKs, generated from the spec: the TypeScript client in `client/typescript` and the Go server in `server/go` |
 | `specs/design-system` | tokens, component rules, logos, and icons of the UI |
 | `app` | the PocketBase app, the Public API, and the migrations |
-| `app/sdk` | the TypeScript and Go SDKs, generated from the spec |
 | `app/ui` | the Public UI |
 | `tests` | the end-to-end tests |
 | `docs/decisions` | the design decisions. Start with `!0000-backlog.md`. |

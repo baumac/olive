@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	reviewsapi "github.com/baumac/reviews-app/app/sdk/go"
+	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 )
 
 // rateLimiter counts requests per key in fixed time windows.

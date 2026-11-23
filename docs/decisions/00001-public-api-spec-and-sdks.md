@@ -223,7 +223,7 @@ make check-generate   # Fail if the generated code does not match the spec
 make test-sdk         # Run the tests of both SDKs
 ```
 
-The TypeScript SDK is the npm package `@reviews/sdk` in `app/sdk/typescript`.
+The TypeScript SDK is the npm package `@reviews/sdk` in `specs/api/sdk/client/typescript`.
 It has one API class for each tag. Each method has the name of the `operationId` and takes one request object.
 
 ```ts
@@ -238,7 +238,7 @@ const page = await restaurants.listRestaurantReviews({
 A response with a status that is not `2xx` throws a `ResponseError`. The UI reads the problem from `error.response`.
 Each method has a `Raw` form that gives the response headers.
 
-The Go SDK is the module `github.com/baumac/reviews-app/app/sdk/go`. Its package `reviewsapi` has the Go types and the strict server interface.
+The Go SDK is the module `github.com/baumac/reviews-app/specs/api/sdk/server/go`. Its package `reviewsapi` has the Go types and the strict server interface.
 The strict server interface has one method for each operation. Each method gets a typed request and returns a typed response.
 The compiler fails when the app does not implement an operation. It also fails when a handler returns a status or a body that the operation does not define.
 
@@ -250,25 +250,27 @@ The compiler fails when the app does not implement an operation. It also fails w
 ```
 go.work                       # hand-written
 package.json                  # hand-written npm workspace root
-app/sdk/
-  typescript/
-    package.json              # hand-written
-    tsconfig.json             # hand-written
-    tsconfig.test.json        # hand-written
-    templates/                # hand-written template overrides
-    test/                     # hand-written tests
-    src/                      # generated
-  go/
-    go.mod                    # hand-written. A separate module inside app.
-    oapi-codegen.yaml         # hand-written generator settings
-    reviewsapi_test.go        # hand-written tests
-    reviewsapi.gen.go         # generated
+specs/api/sdk/
+  client/
+    typescript/
+      package.json            # hand-written
+      tsconfig.json           # hand-written
+      tsconfig.test.json      # hand-written
+      templates/              # hand-written template overrides
+      test/                   # hand-written tests
+      src/                    # generated
+  server/
+    go/
+      go.mod                  # hand-written. A separate module.
+      oapi-codegen.yaml       # hand-written generator settings
+      reviewsapi_test.go      # hand-written tests
+      reviewsapi.gen.go       # generated
 ```
 
 - the generated files are committed. The app and the UI build without the generators.
-- `make generate` deletes `app/sdk/typescript/src` before it runs the generator. The generator does not delete the files of removed schemas.
-- the root `go.work` has `app/sdk/go` and `app/api`. The app module also has a `replace` line for the SDK. `go mod tidy` does not use `go.work`, and the SDK module is not published.
-- the root `package.json` is an npm workspace with `app/sdk/typescript`, `app/ui`, and `tests`
+- `make generate` deletes `specs/api/sdk/client/typescript/src` before it runs the generator. The generator does not delete the files of removed schemas.
+- the root `go.work` has `specs/api/sdk/server/go` and `app/api`. The app module also has a `replace` line for the SDK. `go mod tidy` does not use `go.work`, and the SDK module is not published.
+- the root `package.json` is an npm workspace with `specs/api/sdk/client/typescript`, `app/ui`, and `tests`
 
 ## TypeScript SDK
 
@@ -276,7 +278,7 @@ app/sdk/
 - the makefile pins the version of the `openapitools/openapi-generator-cli` Docker image. Developers do not need Java.
 - the options: `supportsES6: true`, `importFileExtension: .js`, `useSingleRequestParameter: true`, `withInterfaces: true`, `legacyDiscriminatorBehavior: false`, and no API and model docs
 - `withInterfaces` lets the UI tests replace an API class with a fake
-- `tsc` builds the package into `app/sdk/typescript/dist`. The UI imports the built package. `make build-ui` builds the SDK first.
+- `tsc` builds the package into `specs/api/sdk/client/typescript/dist`. The UI imports the built package. `make build-ui` builds the SDK first.
 - the SDK and the UI use one TypeScript version. `vue-tsc` needs the JavaScript API of the compiler, which TypeScript 7 does not have.
 
 ## Go SDK
@@ -306,12 +308,12 @@ The meaning of the spec does not change for a generator without a decision.
 
 Workarounds:
 - `typescript-fetch` changes an optional `null` array with `uniqueItems` to `undefined`. A merge patch then cannot clear `tags`.
-  `app/sdk/typescript/templates/modelGeneric.mustache` is a copy of the generator template with a fix in `ToJSON`. Update the copy when the generator version changes.
+  `specs/api/sdk/client/typescript/templates/modelGeneric.mustache` is a copy of the generator template with a fix in `ToJSON`. Update the copy when the generator version changes.
 - `typescript-fetch` makes a `Set<string>` for `tags`, because of `uniqueItems`. The UI changes it to an array where it needs one.
 
 ## The out-of-date check
 
-- `make check-generate` runs `make generate`. It fails when `git diff` shows changes in `app/sdk`, or when `app/sdk` has untracked files.
+- `make check-generate` runs `make generate`. It fails when `git diff` shows changes in `specs/api/sdk`, or when `specs/api/sdk` has untracked files.
 - `make lint` runs it after `lint-spec`. The lint then needs Docker.
 - `make lint-spec` checks the spec with vacuum and the rules of `specs/api/vacuum-ruleset.yaml`
 
