@@ -79,7 +79,19 @@ const draftKey = computed(() => `recipe:${props.recipeId ?? 'new'}`)
 // undo is the change that ?undo of the history page undoes. See decision
 // 00004.
 const undo = ref<Undo | null | undefined>(undefined)
-const cancelPath = computed(() => (props.recipeId ? `/recipes/${props.recipeId}` : '/recipes'))
+// A new recipe from the review form returns to it. See decision 00005.
+const fromReview = computed(() => !props.recipeId && route.query.review === 'new')
+const cancelPath = computed(() => {
+  if (fromReview.value) {
+    return '/reviews/new?kind=recipes'
+  }
+  return props.recipeId ? `/recipes/${props.recipeId}` : '/recipes'
+})
+// subjectPath opens a recipe that exists. From the review form, it opens a
+// review of it.
+function subjectPath(id: string) {
+  return fromReview.value ? `/reviews/new?recipe=${id}` : `/recipes/${id}`
+}
 
 function setSteps(steps: string[]) {
   fields.value.steps = steps.length ? steps : ['']
@@ -238,8 +250,7 @@ async function submit() {
         })
     clearDraft(draftKey.value)
     toast.success(editing.value ? 'Recipe saved' : 'Recipe added', { description: saved.name })
-    // A new subject from the review form goes back to it. See decision 00005.
-    if (!editing.value && route.query.review === 'new') {
+    if (fromReview.value) {
       void router.push({ path: '/reviews/new', query: { recipe: saved.id } })
       return
     }
@@ -294,8 +305,8 @@ async function submit() {
         <AlertTitle>{{ alert.title }}</AlertTitle>
         <AlertDescription>
           {{ alert.description }}
-          <RouterLink v-if="alert.recipe" :to="`/recipes/${alert.recipe}`" class="font-medium underline underline-offset-4">
-            Open the recipe
+          <RouterLink v-if="alert.recipe" :to="subjectPath(alert.recipe)" class="font-medium underline underline-offset-4">
+            {{ fromReview ? 'Review this recipe' : 'Open the recipe' }}
           </RouterLink>
         </AlertDescription>
       </Alert>

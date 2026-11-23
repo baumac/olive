@@ -17,7 +17,7 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, notApprovedText, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
-import { formatDay, formatScore, localDay } from '@/lib/format'
+import { formatDay, formatScore, localDay, parseDay } from '@/lib/format'
 import { type AnyReview, type Parent, kinds, scoreOf } from '@/lib/reviewKinds'
 import { overallOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
@@ -116,9 +116,9 @@ onMounted(async () => {
   }
 })
 
-// yesterday is the local date before today.
+// yesterday follows today. It moves on in a form that is open past midnight.
 const yesterday = computed(() => {
-  const d = new Date()
+  const d = parseDay(today.value) ?? new Date()
   d.setDate(d.getDate() - 1)
   return localDay(d)
 })
@@ -134,9 +134,11 @@ function pickDate() {
   }
 }
 
-// saveDraftNow keeps the fields before NewReviewPage changes the subject.
+// saveDraftNow keeps the fields and the queued photos before NewReviewPage
+// changes the subject.
 function saveDraftNow() {
   saveDraft(draftKey.value, fields.value)
+  keepPendingPhotos(draftKey.value, queued.value.map(({ file, alt }) => ({ file, alt })))
 }
 defineExpose({ saveDraftNow })
 
@@ -335,7 +337,7 @@ async function submit() {
         <div class="flex flex-wrap items-center gap-2">
           <div role="group" aria-label="Quick dates" class="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" :aria-pressed="fields.date === today" :class="fields.date === today && 'bg-accent text-accent-foreground border-primary'" @click="today = localDay(); fields.date = today">Today</Button>
-            <Button type="button" variant="outline" size="sm" :aria-pressed="fields.date === yesterday" :class="fields.date === yesterday && 'bg-accent text-accent-foreground border-primary'" @click="fields.date = yesterday">Yesterday</Button>
+            <Button type="button" variant="outline" size="sm" :aria-pressed="fields.date === yesterday" :class="fields.date === yesterday && 'bg-accent text-accent-foreground border-primary'" @click="today = localDay(); fields.date = yesterday">Yesterday</Button>
             <Button type="button" variant="outline" size="sm" @click="pickDate">Pick a date</Button>
           </div>
           <FormControl>

@@ -1,8 +1,9 @@
-import type { RecipeReview, RestaurantReview } from '@reviews/sdk'
+import { type RecipeReview, ResponseError, type RestaurantReview } from '@reviews/sdk'
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import EntryCard from '@/components/app/EntryCard.vue'
+import { InitialsAvatar } from '@/components/ui/avatar'
 import { ScoreStamp } from '@/components/ui/score-stamp'
 import { useEntries } from '@/composables/useEntries'
 import { groupByMonth, groupByWritten, takeMerged } from '@/lib/entries'
@@ -127,6 +128,38 @@ describe('useEntries', () => {
     await entries.loadMore()
     expect(ids(entries.items.value)).toEqual(['a', 'c', 'b', 'd'])
     expect(entries.hasMore.value).toBe(false)
+  })
+
+  it('keeps a newer load when an older load fails later', async () => {
+    let readProblem!: (problem: unknown) => void
+    const body = new Promise((resolve) => (readProblem = resolve))
+    const failure = Object.assign(Object.create(ResponseError.prototype) as ResponseError, {
+      response: { status: 500, headers: new Headers(), clone: () => ({ json: () => body }) },
+    })
+    let calls = 0
+    const entries = useEntries(
+      () => {
+        calls++
+        return calls === 1
+          ? [async () => Promise.reject(failure)]
+          : [async () => ({ items: [visit('a', '2026-11-01', '2026-11-22T10:00:00.000Z')], nextCursor: null })]
+      },
+      () => 'created',
+    )
+    const older = entries.reload()
+    await flushPromises()
+    await entries.reload()
+    readProblem({ title: 'Server error' })
+    await older
+    expect(entries.failed.value).toBeNull()
+    expect(ids(entries.items.value)).toEqual(['a'])
+  })
+})
+
+describe('InitialsAvatar', () => {
+  it('shows the full first character of a name in the large size', () => {
+    const w = mount(InitialsAvatar, { props: { name: '\u{20BB7}田 Ana', size: 'lg' } })
+    expect(w.text()).toBe('\u{20BB7}')
   })
 })
 

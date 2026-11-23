@@ -27,6 +27,8 @@ async function search() {
   const origin = preferredLocation.value
   if (!query && (props.kind === 'recipe' || !origin)) {
     results.value = []
+    loading.value = false
+    failed.value = false
     return
   }
   loading.value = true

@@ -179,10 +179,10 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
     </div>
     <template v-else-if="list.data.value">
       <nav v-if="mapConfig && restaurantCount" aria-label="View" class="bg-card border-input flex w-fit self-center rounded-full border p-[3px]">
-        <span aria-current="page" class="bg-primary text-primary-foreground inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
+        <span aria-current="page" class="bg-primary text-primary-foreground inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
           <ListIcon class="size-4" aria-hidden="true" />Menu
         </span>
-        <RouterLink :to="`/restaurants${listQuery}&view=map`" class="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
+        <RouterLink :to="`/restaurants${listQuery}&view=map`" class="inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
           <MapIcon class="size-4" aria-hidden="true" />Map
         </RouterLink>
       </nav>
@@ -227,7 +227,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
             <h2 id="list-restaurants-heading" class="flex items-center gap-3">
               <span class="flex-1 border-t" aria-hidden="true" /><span class="kicker">Restaurants</span><span class="flex-1 border-t" aria-hidden="true" />
             </h2>
-            <RouterLink v-if="restaurantCount" :to="`/restaurants${listQuery}`" class="text-primary inline-flex w-fit items-center gap-1.5 self-center text-sm font-semibold underline-offset-4 hover:underline">
+            <RouterLink v-if="restaurantCount" :to="`/restaurants${listQuery}`" class="text-primary inline-flex min-h-11 w-fit items-center gap-1.5 self-center text-sm font-semibold underline-offset-4 hover:underline">
               <SlidersHorizontalIcon class="size-4" aria-hidden="true" />Sort and filter<span class="sr-only"> the restaurants</span>
             </RouterLink>
             <PagedList :list="restaurants" noun="restaurants" list-class="gap-4" skeleton-class="h-12 rounded-md" :skeleton-count="3" unfiltered>
@@ -243,7 +243,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
                     </div>
                     <p class="text-muted-foreground text-[13px] leading-[18px]">{{ restaurantMeta(item) }}</p>
                   </div>
-                  <FavoriteButton :restaurant-id="item.id" :name="item.name" :favorite="item.favorite" class="relative z-10 size-9 shrink-0" @change="favoriteChanged(item, $event)" />
+                  <FavoriteButton :restaurant-id="item.id" :name="item.name" :favorite="item.favorite" class="relative z-10 shrink-0" @change="favoriteChanged(item, $event)" />
                   <Button
                     v-if="isOwner && !isFavorites"
                     type="button"
@@ -281,7 +281,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
             <h2 id="list-recipes-heading" class="flex items-center gap-3">
               <span class="flex-1 border-t" aria-hidden="true" /><span class="kicker">Recipes</span><span class="flex-1 border-t" aria-hidden="true" />
             </h2>
-            <RouterLink :to="`/recipes${listQuery}`" class="text-primary inline-flex w-fit items-center gap-1.5 self-center text-sm font-semibold underline-offset-4 hover:underline">
+            <RouterLink :to="`/recipes${listQuery}`" class="text-primary inline-flex min-h-11 w-fit items-center gap-1.5 self-center text-sm font-semibold underline-offset-4 hover:underline">
               <SlidersHorizontalIcon class="size-4" aria-hidden="true" />Sort and filter<span class="sr-only"> the recipes</span>
             </RouterLink>
             <PagedList :list="recipes" noun="recipes" list-class="gap-4" skeleton-class="h-12 rounded-md" :skeleton-count="3" unfiltered>
@@ -297,7 +297,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
                     </div>
                     <p class="text-muted-foreground text-[13px] leading-[18px]">{{ recipeMeta(item) }}</p>
                   </div>
-                  <FavoriteButton :recipe-id="item.id" :name="item.name" :favorite="item.favorite" class="relative z-10 size-9 shrink-0" @change="recipeFavoriteChanged(item, $event)" />
+                  <FavoriteButton :recipe-id="item.id" :name="item.name" :favorite="item.favorite" class="relative z-10 shrink-0" @change="recipeFavoriteChanged(item, $event)" />
                   <Button
                     v-if="isOwner && !isFavorites"
                     type="button"

@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadMore } from '@/components/ui/load-more'
 import { Skeleton } from '@/components/ui/skeleton'
-import { type EntryFetch, useEntries } from '@/composables/useEntries'
+import { type EntryFetch, loadMoreAndFocus, useEntries } from '@/composables/useEntries'
 import { groupByMonth } from '@/lib/entries'
-import { kinds } from '@/lib/reviewKinds'
+import { type AnyReview, kinds } from '@/lib/reviewKinds'
 import EntryTile from './EntryTile.vue'
 
 // JournalEntries shows the reviews of both kinds by the month of their date.
@@ -27,6 +27,7 @@ const entries = useEntries(fetchers, () => 'date')
 watch(() => props.reviewerId, () => void entries.reload(), { immediate: true })
 
 const groups = computed(() => groupByMonth(entries.items.value))
+const entryId = (review: AnyReview) => `entries-${review.id}`
 </script>
 
 <template>
@@ -55,7 +56,7 @@ const groups = computed(() => groupByMonth(entries.items.value))
     <section v-for="g in groups" :key="g.key" class="flex flex-col gap-2.5" :aria-label="g.label">
       <h3 class="kicker">{{ g.label }}</h3>
       <ul class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
-        <li v-for="e in g.entries" :key="e.id"><EntryTile :review="e" /></li>
+        <li v-for="e in g.entries" :id="entryId(e)" :key="e.id" tabindex="-1" class="rounded-xl"><EntryTile :review="e" /></li>
       </ul>
     </section>
     <Alert v-if="entries.moreFailed.value" variant="destructive">
@@ -63,6 +64,6 @@ const groups = computed(() => groupByMonth(entries.items.value))
       <AlertTitle>More reviews did not load</AlertTitle>
       <AlertDescription>Check your connection and try again.</AlertDescription>
     </Alert>
-    <LoadMore :cursor="entries.hasMore.value ? 'more' : null" :loading="entries.loadingMore.value" label="Load more reviews" @load="entries.loadMore" />
+    <LoadMore :cursor="entries.hasMore.value ? 'more' : null" :loading="entries.loadingMore.value" label="Load more reviews" @load="loadMoreAndFocus(entries, entryId)" />
   </div>
 </template>

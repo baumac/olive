@@ -19,6 +19,9 @@ const props = withDefaults(
     zoom?: number
     markers?: MapMarker[]
     selected?: string
+    // marked has the look of selected without aria-pressed. The row of a
+    // list under the pointer marks its pin.
+    marked?: string
     // pick lets a click on the map and a drag of the marker select a point.
     pick?: boolean
     // wheelZoom is off for a map inside a page that scrolls.
@@ -34,7 +37,7 @@ const props = withDefaults(
     fit?: Box | null
     class?: HTMLAttributes['class']
   }>(),
-  { zoom: 13, markers: () => [], selected: undefined, origin: null, fit: null, pick: false, wheelZoom: false, cluster: false, clusterLabel: (count: number) => `${count} places`, class: undefined },
+  { zoom: 13, markers: () => [], selected: undefined, marked: undefined, origin: null, fit: null, pick: false, wheelZoom: false, cluster: false, clusterLabel: (count: number) => `${count} places`, class: undefined },
 )
 
 const emit = defineEmits<{
@@ -184,8 +187,8 @@ function pins(): Pin[] {
   const groups: { x: number; y: number; alone: boolean; members: MapMarker[] }[] = []
   for (const m of props.markers) {
     const { x, y } = map.project([m.latitude, m.longitude], zoom)
-    // The selected pin stays out of a cluster.
-    const alone = !last && m.id === props.selected
+    // The selected pin and the marked pin stay out of a cluster.
+    const alone = !last && (m.id === props.selected || m.id === props.marked)
     const near = alone ? undefined : groups.find((g) => !g.alone && Math.hypot(g.x - x, g.y - y) <= clusterRadius)
     if (near) {
       near.members.push(m)
@@ -237,7 +240,8 @@ function draw() {
   }
   for (const p of next) {
     const cluster = p.members.length > 1
-    const selected = p.key === props.selected
+    const pressed = p.key === props.selected
+    const selected = pressed || p.key === props.marked
     let entry = drawn.get(p.key)
     if (!entry) {
       const marker = L.marker([p.latitude, p.longitude], {
@@ -267,7 +271,7 @@ function draw() {
         entry.marker.setLatLng([p.latitude, p.longitude])
       }
       if (entry.selected !== selected) {
-        // A stamp changes its size, so it gets a new icon.
+        // A stamp changes its size. It needs a new icon.
         if (!cluster && p.score !== undefined) {
           entry.marker.setIcon(stampIcon(p.score, selected, p.shift))
         } else {
@@ -281,7 +285,7 @@ function draw() {
     el?.setAttribute('aria-label', p.label)
     el?.setAttribute('title', p.label)
     if (!cluster && p.score !== undefined) {
-      el?.setAttribute('aria-pressed', String(selected))
+      el?.setAttribute('aria-pressed', String(pressed))
     }
   }
 }
@@ -362,7 +366,7 @@ function fitView() {
   }
 }
 
-watch(() => [props.markers, props.selected, props.pick], draw, { deep: true })
+watch(() => [props.markers, props.selected, props.marked, props.pick], draw, { deep: true })
 watch(() => props.origin && `${props.origin.latitude},${props.origin.longitude}`, drawOrigin)
 watch(() => props.fit && JSON.stringify(props.fit), fitView)
 // The key is a string. A new center object with the same point then does

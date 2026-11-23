@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import type { ListFailure, Page } from '@/composables/usePagedList'
 import { apiFailure } from '@/lib/api'
 import { type EntryOrder, type EntrySource, takeMerged } from '@/lib/entries'
@@ -52,8 +52,8 @@ export function useEntries(sources: () => EntryFetch[], order: () => EntryOrder)
       states = pages.map((p) => ({ buffer: [...p.items], cursor: p.nextCursor }))
       update(false)
     } catch (error) {
+      const { status, problem } = await apiFailure(error)
       if (g === generation) {
-        const { status, problem } = await apiFailure(error)
         failed.value = { status, detail: status === 400 ? (problem?.detail ?? null) : null }
       }
     } finally {
@@ -94,4 +94,16 @@ export function useEntries(sources: () => EntryFetch[], order: () => EntryOrder)
   }
 
   return { items, hasMore, loading, loadingMore, failed, moreFailed, reload, loadMore }
+}
+
+// loadMoreAndFocus moves the focus to the first new entry after the load.
+// A keyboard user then goes on from there. idOf gives the element ID.
+export async function loadMoreAndFocus(entries: Entries, idOf: (review: AnyReview) => string) {
+  const start = entries.items.value.length
+  await entries.loadMore()
+  await nextTick()
+  const first = entries.items.value[start]
+  if (first) {
+    document.getElementById(idOf(first))?.focus()
+  }
 }

@@ -106,7 +106,7 @@ Restaurant page:
 Restaurants page:
 - below the `lg` breakpoint, "List" and "Map" select the view. The map view has `view=map` in the URL.
 - from `lg`, the page shows the list and the map side by side, without "List" and "Map". The list keeps its search, filters, sort, and pages. The map shows the restaurants in its view.
-- a hover or a focus on a row marks its pin. A click on a pin marks its row and scrolls it into view.
+- a hover or a focus on a row marks its pin. The mark has the look of a selected pin, but the pin is not pressed for screen readers. A click on a pin marks its row and scrolls it into view.
 - a pin of a restaurant that the list has not loaded shows its card above the list, under "On the map"
 - the map shows the restaurants in its view that match the search and the filters. A move or a zoom loads the restaurants of the new view.
 - each pin is the score stamp of decision 00009 with the overall and a dark ring. It is at least 44 px wide. The selected pin is larger and dark, with a saffron number.

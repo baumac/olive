@@ -50,7 +50,7 @@
   --border: #e2dccb;
   --input: #878672;
   --ring: #4b6113;
-  /* The map tiles are light in both themes, so the map colors are fixed. */
+  /* The map tiles are light in both themes. The map colors are fixed. */
   --map-pin: #f0bd45;
   --map-pin-foreground: #1d1f14;
   --map-cluster: #4b6113;
@@ -129,7 +129,8 @@
 }
 
 @layer components {
-  /* A kicker is a group label in small caps. The text stays in sentence case. */
+  /* A kicker is a group label in small caps. */
+  /* The text stays in sentence case. */
   .kicker {
     font-size: 15px;
     line-height: 20px;
@@ -141,5 +142,15 @@
   .score-numerals {
     font-family: var(--serif);
     font-variant-numeric: lining-nums tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

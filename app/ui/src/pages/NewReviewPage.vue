@@ -12,12 +12,13 @@ import ReviewFormPage from './ReviewFormPage.vue'
 
 // NewReviewPage is "Add review" of the navigation. The person selects the
 // kind and the subject, then fills the review form. See decision 00005.
-const props = defineProps<{ restaurantId?: string; recipeId?: string }>()
+// startKind is the kind of kind=recipes in the URL.
+const props = defineProps<{ restaurantId?: string; recipeId?: string; startKind?: ReviewKind }>()
 const router = useRouter()
 
 usePageTitle('Add review')
 
-const kind = ref<ReviewKind>(props.recipeId ? 'recipe' : 'restaurant')
+const kind = ref<ReviewKind>('restaurant')
 const subject = ref<{ id: string; name: string } | null>(null)
 const loadingSubject = ref(false)
 const form = ref<InstanceType<typeof ReviewFormPage> | null>(null)
@@ -25,23 +26,35 @@ const form = ref<InstanceType<typeof ReviewFormPage> | null>(null)
 // The draft of each kind keeps the fields while the subject changes.
 const draftName = computed(() => `review:new:${kind.value}`)
 
-// A link from the subject form gives the new subject.
+// The route gives the kind and the subject. A link from the subject form
+// gives the new subject. RouterView keeps this page when only the query
+// changes.
+let linked = 0
 async function loadLinked() {
+  const l = ++linked
+  form.value?.saveDraftNow()
+  kind.value = props.recipeId !== undefined || props.startKind === 'recipe' ? 'recipe' : 'restaurant'
+  subject.value = null
   const id = props.recipeId ?? props.restaurantId
   if (!id) {
+    loadingSubject.value = false
     return
   }
   loadingSubject.value = true
   try {
     const parent = await kinds[kind.value].getParent(id)
-    subject.value = { id: parent.id, name: parent.name }
+    if (l === linked) {
+      subject.value = { id: parent.id, name: parent.name }
+    }
   } catch {
-    subject.value = null
+    // An unknown subject leaves the search open.
   } finally {
-    loadingSubject.value = false
+    if (l === linked) {
+      loadingSubject.value = false
+    }
   }
 }
-watch(() => [props.restaurantId, props.recipeId], () => void loadLinked(), { immediate: true })
+watch([() => props.restaurantId, () => props.recipeId, () => props.startKind], () => void loadLinked(), { immediate: true })
 
 function chooseKind(next: ReviewKind) {
   if (next !== kind.value) {

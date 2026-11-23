@@ -206,7 +206,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - The UI shows the `date` of a review as "Visited on" or "Cooked on". `parseDay` of `format.ts` reads it as a local date. `new Date()` would read it as UTC. See decision 00005.
   - `/` is the table, the latest reviews of both kinds. `useEntries` merges the two review lists. The journal of a reviewer at `/reviewers/{id}` uses it too. See decision 00009.
   - `?kind=restaurants` or `?kind=recipes` selects one kind on the table and on a journal. `KindSwitch` sets it. Without it, both kinds show.
-  - `/reviews/new` is "Add review" without a subject. `NewReviewPage` embeds `ReviewFormPage`. See decision 00005.
+  - `/reviews/new` is "Add review" without a subject. `?kind=recipes` starts it with "I cooked". `NewReviewPage` embeds `ReviewFormPage`. See decision 00005.
   - The Fraunces font files and their license are in `app/ui/src/assets/fonts`. See decision 00009.
   - `HistoryPage.vue` shows the versions. `?undo=NUMBER` of the edit form undoes one version. `lib/history.ts` has the undo. See decision 00004.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00010.

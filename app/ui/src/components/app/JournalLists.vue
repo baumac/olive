@@ -85,9 +85,9 @@ async function create() {
   </p>
   <template v-else>
     <section v-if="favorites && favoriteCount" class="flex flex-col gap-3" aria-labelledby="favorites-heading">
-      <div class="flex items-baseline justify-between gap-3">
+      <div class="flex items-center justify-between gap-3">
         <h2 id="favorites-heading" class="font-serif text-[21px] leading-[26px] font-semibold">Favorites</h2>
-        <RouterLink :to="`/lists/${favorites.id}`" class="text-primary text-sm font-semibold underline-offset-4 hover:underline">
+        <RouterLink :to="`/lists/${favorites.id}`" class="text-primary inline-flex min-h-11 items-center text-sm font-semibold underline-offset-4 hover:underline">
           See all {{ favoriteCount }}<span class="sr-only"> favorites</span>
         </RouterLink>
       </div>

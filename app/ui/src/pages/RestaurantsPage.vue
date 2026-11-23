@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Restaurant } from '@reviews/sdk'
 import { ListIcon, MapIcon, PlusIcon, UtensilsIcon } from 'lucide-vue-next'
-import { useMediaQuery } from '@vueuse/core'
+import { useMediaQuery, usePreferredReducedMotion } from '@vueuse/core'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LocationMenu from '@/components/app/LocationMenu.vue'
@@ -273,8 +273,15 @@ const markers = computed(() =>
 )
 
 // hoveredId marks the pin of the row under the pointer or with the focus.
+// A removed row sends no mouseleave or focusout. Its mark then goes here.
 const hoveredId = ref<string>()
+watch(list.items, (items) => {
+  if (hoveredId.value && !items.some((r) => r.id === hoveredId.value)) {
+    hoveredId.value = undefined
+  }
+})
 const marked = computed(() => hoveredId.value ?? selectedId.value)
+const reducedMotion = usePreferredReducedMotion()
 const selectedInList = computed(() => list.items.value.some((r) => r.id === selectedId.value))
 
 // A pin selected beside the list marks its row. A restaurant that the list
@@ -283,7 +290,7 @@ async function selectPin(id: string) {
   selectedId.value = id
   if (wide.value && selectedInList.value) {
     await nextTick()
-    document.getElementById(`restaurants-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    document.getElementById(`restaurants-${id}`)?.scrollIntoView({ block: 'nearest', behavior: reducedMotion.value === 'reduce' ? 'auto' : 'smooth' })
   }
 }
 
@@ -350,7 +357,8 @@ let lastView: { center: MapPoint; zoom: number } | undefined
           :center="startView.center"
           :zoom="startView.zoom"
           :markers="markers"
-          :selected="marked"
+          :selected="selectedId"
+          :marked="wide ? hoveredId : undefined"
           :origin="preferredLocation"
           :fit="fit"
           wheel-zoom

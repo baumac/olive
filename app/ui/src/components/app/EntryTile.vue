@@ -24,7 +24,8 @@ const day = computed(() => parseDay(props.review.date)?.getDate() ?? '')
     </div>
     <h4 class="truncate text-[13px] leading-[17px] font-semibold">
       <RouterLink :to="reviewPathOf(review)" class="rounded-sm after:absolute after:inset-0 after:rounded-xl">
-        <!-- Chromium puts a space before a hidden span, so the hidden text repeats the name. -->
+        <!-- Chromium puts a space before a hidden span. -->
+        <!-- The hidden text therefore has the full name. -->
         <span class="sr-only">{{ parentNameOf(review) }}: {{ review.title }}, <ReviewDate :review="review" /></span>
         <span aria-hidden="true">{{ parentNameOf(review) }}</span>
       </RouterLink>

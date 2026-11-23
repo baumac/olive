@@ -5,7 +5,7 @@ import { RatingDisplay } from '@/components/ui/rating-display'
 import { type AnyReview, type ReviewKind, kinds, scoreOf } from '@/lib/reviewKinds'
 
 // The default slot adds a line under "out of 10", such as the review count.
-// A rating does not tell its kind, so each caller gives it.
+// A rating does not tell its kind. Each caller gives it.
 const props = defineProps<{ scores: AnyReview | RestaurantRating | RecipeRating; kind: ReviewKind }>()
 
 const max = 10

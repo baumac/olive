@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
+import { signInPath } from '@/composables/useAuth'
 import { currentUser } from '@/lib/session'
 
 // VisitorNote tells a signed out visitor of a shared page what the app is.
 defineProps<{ name: string }>()
+
+// The visitor comes back to this page after the sign in or the sign up.
+const route = useRoute()
 </script>
 
 <template>
@@ -16,8 +21,8 @@ defineProps<{ name: string }>()
       higher score is always better.
     </p>
     <div class="flex flex-wrap gap-2.5">
-      <Button as-child><RouterLink to="/sign-up">Create account</RouterLink></Button>
-      <Button variant="outline" as-child><RouterLink to="/sign-in">Sign in</RouterLink></Button>
+      <Button as-child><RouterLink :to="{ path: '/sign-up', query: { redirect: route.fullPath } }">Create account</RouterLink></Button>
+      <Button variant="outline" as-child><RouterLink :to="signInPath(route.fullPath)">Sign in</RouterLink></Button>
     </div>
   </aside>
 </template>

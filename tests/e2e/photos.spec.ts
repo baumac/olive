@@ -15,7 +15,8 @@ test('a user adds a photo with alt text to a review', async ({ page, api, user }
   await page.getByRole('button', { name: 'Upload photo' }).click()
   await expect(page.getByText('Photo added')).toBeVisible()
 
-  // The review page starts with the first photo and has all photos. See decision 00007.
+  // The review page starts with the first photo. It has all photos.
+  // See decision 00007.
   await page.goto(`/restaurants/${restaurant.id}/reviews/${review.id}`)
   await expect(page.getByRole('main').getByRole('img', { name: 'A plate of carbonara' }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'A plate of carbonara' })).toBeVisible()

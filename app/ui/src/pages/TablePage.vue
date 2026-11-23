@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadMore } from '@/components/ui/load-more'
 import { Skeleton } from '@/components/ui/skeleton'
-import { type EntryFetch, useEntries } from '@/composables/useEntries'
+import { type EntryFetch, loadMoreAndFocus, useEntries } from '@/composables/useEntries'
 import { useKindQuery } from '@/composables/useKindQuery'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { recipesApi, restaurantsApi } from '@/lib/api'
 import { groupByWritten } from '@/lib/entries'
 import { formatCount } from '@/lib/format'
+import type { AnyReview } from '@/lib/reviewKinds'
 import { currentUser } from '@/lib/session'
 
 usePageTitle('On the table')
@@ -39,6 +40,7 @@ const entries = useEntries(
 watch(kind, () => void entries.reload(), { immediate: true })
 
 const groups = computed(() => groupByWritten(entries.items.value))
+const entryId = (review: AnyReview) => `entries-${review.id}`
 const today = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
 
 const status = computed(() => {
@@ -91,7 +93,7 @@ const status = computed(() => {
       <section v-for="g in groups" :key="g.key" class="flex flex-col gap-5" :aria-labelledby="`group-${g.key}`">
         <h2 :id="`group-${g.key}`" class="kicker mt-3">{{ g.label }}</h2>
         <ul class="flex flex-col gap-5">
-          <li v-for="e in g.entries" :key="e.id"><EntryCard :review="e" /></li>
+          <li v-for="e in g.entries" :id="entryId(e)" :key="e.id" tabindex="-1" class="rounded-2xl"><EntryCard :review="e" /></li>
         </ul>
       </section>
       <Alert v-if="entries.moreFailed.value" variant="destructive">
@@ -99,7 +101,7 @@ const status = computed(() => {
         <AlertTitle>More entries did not load</AlertTitle>
         <AlertDescription>Check your connection and try again.</AlertDescription>
       </Alert>
-      <LoadMore :cursor="entries.hasMore.value ? 'more' : null" :loading="entries.loadingMore.value" label="Load more entries" @load="entries.loadMore" />
+      <LoadMore :cursor="entries.hasMore.value ? 'more' : null" :loading="entries.loadingMore.value" label="Load more entries" @load="loadMoreAndFocus(entries, entryId)" />
     </template>
   </main>
 </template>

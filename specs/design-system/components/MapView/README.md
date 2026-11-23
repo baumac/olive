@@ -6,6 +6,7 @@ Lives in `@/components/ui/map`. Props: `config` (from `/map-config.json`), `labe
 
 - Each pin is the score stamp of a restaurant: a 44px disc in `map-pin` with a 2px `map-pin-foreground` ring and the overall in the serif. A restaurant without reviews has an empty stamp. Its name ends with "No reviews yet".
 - The selected pin is 52px, in `map-pin-foreground` with the number in `map-pin`. It has `aria-pressed="true"` and sits above the others.
+- From `lg`, the pin of the list row under the pointer or with the focus has the same look and stays out of a cluster. It does not get `aria-pressed`.
 - Pins less than 44px apart join into a 46px cluster pin in `map-cluster` with a 3px `map-cluster-foreground` ring and the count. A click zooms until its pins are apart.
 - The preferred location is a 16px `map-location` dot with a white ring and a halo. It is not a button.
 - Each pin is a button named with the name and the overall, such as "Luigi's Trattoria, 7.8". Enter and Space select it.

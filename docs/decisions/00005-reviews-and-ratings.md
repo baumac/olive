@@ -162,6 +162,8 @@ Two equal values sort by the number of reviewers. More reviewers come first.
 - "Add review" of the navigation opens `/reviews/new`, a new review without a subject. The form starts with "What did you eat?" and the choices "I ate out" and "I cooked".
 - the restaurant or recipe field searches the existing subjects. With a preferred location, the nearest restaurants come first. See decision 00008.
 - "Add a new restaurant" or "Add a new recipe" below the field saves a draft of the review, then opens the form of decision 00004. After the save, the UI goes back to `/reviews/new` with the new subject and restores the draft.
+- when the place or the source already has a subject, the form of decision 00004 links "Review this restaurant" or "Review this recipe". "Cancel" also goes back to `/reviews/new`.
+- "Change" and a switch of the kind keep the fields and the photos of the review in the draft of the kind
 - the date has "Today", "Yesterday", and "Pick a date". The line below shows "Visited on 22 Nov 2026" or "Cooked on 22 Nov 2026". The form starts with the local date of today and allows no later date.
 - the form shows the overall of the selected scores before the save. Each score has ten buttons, so one click selects it.
 - the title and the feedback are the last fields, under "In a few words". The photos section follows the form. See decision 00007.

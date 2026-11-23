@@ -358,8 +358,11 @@ test.describe('from the lg breakpoint', () => {
     await expect(map.getByRole('button', { name: 'Side Nou, No reviews yet' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 2 })).toHaveCount(2)
 
+    // A hover marks the pin with the selected look. It does not press it.
     await page.getByRole('link', { name: 'Side Nou' }).hover()
-    await expect(map.getByRole('button', { name: 'Side Nou, No reviews yet' })).toHaveAttribute('aria-pressed', 'true')
+    const nou = map.getByRole('button', { name: 'Side Nou, No reviews yet' })
+    await expect(nou).toHaveClass(/map-stamp-selected/)
+    await expect(nou).toHaveAttribute('aria-pressed', 'false')
     await map.getByRole('button', { name: 'Side Sole, 8' }).click()
     await expect(map.getByRole('button', { name: 'Side Sole, 8' })).toHaveAttribute('aria-pressed', 'true')
   })

@@ -35,6 +35,7 @@ export const router = createRouter({
       props: (route) => ({
         restaurantId: typeof route.query.restaurant === 'string' ? route.query.restaurant : undefined,
         recipeId: typeof route.query.recipe === 'string' ? route.query.recipe : undefined,
+        startKind: route.query.kind === 'recipes' ? 'recipe' : undefined,
       }),
       meta: { requiresAuth: true, requiresApproval: true },
     },

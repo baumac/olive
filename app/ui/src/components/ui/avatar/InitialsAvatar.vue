@@ -18,7 +18,7 @@ const props = withDefaults(
 
 const sizes = { sm: 'size-7 text-[13px]', default: 'size-9 text-base', lg: 'size-[68px] text-3xl' }
 // The large avatar of the journal shows only the first letter.
-const letters = computed(() => (props.size === 'lg' && props.name ? initials(props.name).slice(0, 1) : initials(props.name)))
+const letters = computed(() => (props.size === 'lg' && props.name ? Array.from(initials(props.name))[0] : initials(props.name)))
 const label = computed(() => props.name ?? 'Deleted user')
 </script>
 

@@ -1,4 +1,4 @@
-import { uniqueTag } from '../api'
+import { photoFile, uniqueTag } from '../api'
 import { expect, test } from '../fixtures'
 
 test('a signed in user writes a review', async ({ page, api, user: _user }) => {
@@ -139,7 +139,8 @@ test('the header has the home link and the page has one sections navigation', as
   await page.goto('/restaurants')
   const header = page.getByRole('banner')
   await expect(header.getByRole('link', { name: 'Sponga47 Reviews, home' })).toBeVisible()
-  // Below md, the sections are in the bottom bar. From md, they are in the header.
+  // Below md, the sections are in the bottom bar.
+  // From md, they are in the header.
   await expect(page.getByRole('navigation', { name: 'Sections' })).toHaveCount(1)
   await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('link')).toHaveText(['Table', 'Restaurants', 'Recipes'])
   await expect(page.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0)
@@ -179,4 +180,79 @@ test('the search box finds reviews by their text', async ({ page, api, user }) =
   await expect(journal.getByRole('heading', { level: 4 })).toHaveCount(2)
   await expect(journal.getByRole('link', { name: new RegExp(`The ${word} was good`) })).toBeVisible()
   await expect(journal.getByRole('link', { name: /Search Grill: Fine/ })).toBeVisible()
+})
+
+test.describe('add review', () => {
+  test('keeps the fields and the photos when the restaurant changes', async ({ page, api, user: _user }) => {
+    const owner = await api.signUp('Joe')
+    const word = uniqueTag('pick')
+    const first = await api.createRestaurant(owner, { name: `${word} One` })
+    const second = await api.createRestaurant(owner, { name: `${word} Two` })
+
+    await page.goto('/reviews/new')
+    await expect(page.getByRole('button', { name: 'I ate out' })).toHaveAttribute('aria-pressed', 'true')
+    await page.getByRole('searchbox', { name: 'Restaurant' }).fill(word)
+    await page.getByRole('list', { name: 'Restaurants' }).getByRole('button', { name: first.name }).click()
+    for (const label of ['Space', 'Service', 'Food', 'Value']) {
+      await page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: '7 out of 10' }).click()
+    }
+    await page.getByLabel('Title').fill('Moved tables')
+    await page.getByLabel('Add photo').setInputFiles({ name: 'menu.png', mimeType: 'image/png', buffer: photoFile('menu.png') })
+    await page.getByLabel('Description').fill('The menu')
+    await page.getByRole('button', { name: 'Add to review' }).click()
+    const queued = page.getByRole('list', { name: 'Photos to add' }).getByRole('img', { name: 'The menu' })
+    await expect(queued).toBeVisible()
+
+    await page.getByRole('button', { name: 'Change the restaurant' }).click()
+    await page.getByRole('searchbox', { name: 'Restaurant' }).fill(word)
+    await page.getByRole('list', { name: 'Restaurants' }).getByRole('button', { name: second.name }).click()
+    await expect(page.getByLabel('Title')).toHaveValue('Moved tables')
+    await expect(page.getByRole('radiogroup', { name: 'Food' }).getByRole('radio', { name: '7 out of 10' })).toBeChecked()
+    await expect(queued).toBeVisible()
+    await page.getByRole('button', { name: 'Save review' }).click()
+
+    await expect(page.getByText('Review saved')).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`/restaurants/${second.id}$`))
+    await expect(page.getByRole('button', { name: 'Open the cover photo: The menu' })).toBeVisible()
+  })
+
+  test('the recipe form returns to the review', async ({ page, api, user: _user }) => {
+    const owner = await api.signUp('Joe')
+    const source = `https://recipes.example/${uniqueTag('dal')}`
+    const first = await api.createRecipe(owner, { name: uniqueTag('Dal'), source })
+
+    await page.goto('/reviews/new')
+    await page.getByRole('button', { name: 'I cooked' }).click()
+    await page.getByRole('button', { name: 'Add a new recipe' }).click()
+    await expect(page).toHaveURL(/\/recipes\/new\?review=new$/)
+    await page.getByRole('link', { name: 'Cancel' }).click()
+    await expect(page).toHaveURL(/\/reviews\/new\?kind=recipes$/)
+    await expect(page.getByRole('button', { name: 'I cooked' })).toHaveAttribute('aria-pressed', 'true')
+
+    // A recipe that exists opens the review of it.
+    await page.getByRole('button', { name: 'Add a new recipe' }).click()
+    await page.getByLabel('Name').fill('My dal')
+    await page.getByLabel('Ingredients').fill('Lentils')
+    await page.getByLabel('Step 1', { exact: true }).fill('Boil.')
+    await page.getByLabel('Source').fill(source)
+    await page.getByRole('button', { name: 'Add recipe' }).click()
+    await expect(page.getByText('This recipe is already here')).toBeVisible()
+    await page.getByRole('link', { name: 'Review this recipe' }).click()
+    await expect(page).toHaveURL(new RegExp(`/reviews/new\\?recipe=${first.id}$`))
+    await expect(page.getByRole('main').getByText(first.name, { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Cooked on')).toBeVisible()
+
+    // A new recipe opens the review of it after the save.
+    await page.getByRole('button', { name: 'Change the recipe' }).click()
+    await page.getByRole('button', { name: 'Add a new recipe' }).click()
+    const name = uniqueTag('Soup')
+    await page.getByLabel('Name').fill(name)
+    await page.getByLabel('Ingredients').fill('Water')
+    await page.getByLabel('Step 1', { exact: true }).fill('Boil.')
+    await page.getByLabel('Source').fill('')
+    await page.getByRole('button', { name: 'Add recipe' }).click()
+    await expect(page).toHaveURL(/\/reviews\/new\?recipe=/)
+    await expect(page.getByRole('main').getByText(name, { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Cooked on')).toBeVisible()
+  })
 })
