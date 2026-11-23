@@ -1,6 +1,6 @@
 ---
 description: The creator of a review adds up to 5 photos to it. The app checks each upload, encodes it again as JPEG without metadata, and serves only its own files. A restaurant or a recipe shows the photos of its reviews as a cover and a gallery. A daily job deletes the photo files without a record.
-status: implemented
+status: proposed
 ---
 
 # Motivation
@@ -131,14 +131,16 @@ The gallery order:
 
 ## The UI
 
-- each review card shows a `PhotoGrid` of its photos. A click opens the `full` variant in `PhotoViewer`.
+- an entry of the table shows the first photo of the review with the `srcset` of the `hero` size of `CoverPhoto`. A phone with a dense screen then loads `full`.
+- a tile of the journal shows the `thumb` of the first photo of the review. See decisions 00009 and 00006.
+- the review page starts with the `full` variant of the first photo. Its "Photos" section has a `PhotoGrid` of all photos. A click opens the `full` variant in `PhotoViewer`.
 - the viewer has "Previous photo", "Next photo", and the arrow keys. On the review page, the creator also gets "Edit description" and "Delete photo".
 - the review form has a "Photos" section after the form. Enter in it does not save the review.
 - a new review gets its photos after the first save. A failed upload shows a toast and opens the edit form of the saved review.
 - a failed alt text keeps the added photo and shows "Description not saved"
 - the upload form asks the user to add only photos of food, rooms, and menus
 - a subject card shows the `thumb` of the cover. A card without a cover shows the `muted` placeholder with the utensils icon.
-- the subject page starts with the `full` cover. Its "Photos" section comes before "Reviews", with "Load more photos".
+- the subject page starts with the `full` cover. Its "Photos" section comes before "Every visit" or "Every cook", with "Load more photos".
 - the viewer of the gallery shows "From the review by Ana" with a link to the review
 
 # Implementation Details

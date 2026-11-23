@@ -209,7 +209,7 @@ A rule on the name and the distance would refuse real restaurants, such as two b
 
 ## The UI
 
-- the header has a "Sections" navigation with "Restaurants" and "Recipes". `/` opens the restaurants.
+- decision 00009 has the navigation and the route of `/`. `/restaurants` and `/recipes` open the lists of the subjects.
 - the restaurant form has "Name", "Location", "Description", "Tags", and a "Details" group with "Website", "Phone", "Opening hours", and "Price level"
   - "Location" has the place search of decision 00008. The selected place fills the empty name and the empty details.
   - "Website" gets `https://` for a value without a scheme, such as `cansole.example`

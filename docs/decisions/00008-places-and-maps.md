@@ -1,6 +1,6 @@
 ---
 description: A place search of the app finds the point and the address of a restaurant through a Photon geocoder. The UI shows restaurants on Leaflet maps with the tiles of OpenStreetMap. A person sets a preferred location in the browser, and the restaurant list then shows the nearest restaurants first.
-status: implemented
+status: proposed
 ---
 
 # Motivation
@@ -104,10 +104,14 @@ Restaurant page:
 - a "Directions" link next to the address. An Android device gets a `geo:` link. An Apple device gets Apple Maps. Other devices get the directions page of OpenStreetMap.
 
 Restaurants page:
-- "List" and "Map" select the view. The map view has `view=map` in the URL.
+- below the `lg` breakpoint, "List" and "Map" select the view. The map view has `view=map` in the URL.
+- from `lg`, the page shows the list and the map side by side, without "List" and "Map". The list then shows the restaurants in the view of the map, with the same search and filters. A move or a zoom loads both again.
+- a hover or a focus on a row marks its pin. A click on a pin marks its row and scrolls it into view.
 - the map shows the restaurants in its view that match the search and the filters. A move or a zoom loads the restaurants of the new view.
-- a click on a pin, or Enter and Space, shows the card of the restaurant under the map
-- pins that are less than 44 pixels apart join into one round pin with a count. A click on it zooms until its pins are apart. The selected pin stays out of a cluster.
+- each pin is the score stamp of decision 00009 with the overall and a dark ring. It is at least 44 px wide. The selected pin is larger and dark, with a saffron number.
+- a restaurant without reviews has an empty stamp. Its name for screen readers ends with "No reviews yet".
+- below `lg`, a click on a pin, or Enter and Space, shows the card of the restaurant under the map
+- pins that are less than 44 pixels apart join into one olive pin with a count. A click on it zooms until its pins are apart. The selected pin stays out of a cluster.
 - the map shows at most 100 restaurants. A line below the map then tells the person to zoom in.
 - a pan or a zoom puts the position in the URL, such as `at=41.3874,2.1686,13`. A reload and a link then open this view.
 - the map opens at the first of these views: the `at` position of the URL, the last view before the person left the map, the restaurants of a list filter, the preferred location, and the center of Barcelona
@@ -137,6 +141,7 @@ The restaurants page has a "Set location" button with two ways to set it:
 - each card shows the distance, such as `1.2 km`
 - the map opens at the location and shows it as a blue dot. The map has no distance filter.
 - the place search of the restaurant form prefers places near the location
+- the restaurant field of the review form lists the nearest restaurants first. See decision 00005.
 - the menu shows the name of the location, the distance, and "Clear location"
 - the location is not in the URL. A shared link does not show the location of the sender.
 
@@ -210,7 +215,7 @@ A key in the tile URL of a paid server is visible to all users.
 - Leaflet sets its styles through the style object of each element. `style-src` then does not change.
 - Leaflet stops the load of a tile with a `data:` image, which the policy blocks. `MapView` replaces the three methods of `L.TileLayer` that use it and uses a `blob:` image.
   These are internals of Leaflet. A Leaflet update needs a check. The end-to-end tests fail on a violation.
-- the pins are `divIcon` markers with an inline SVG and fixed colors
+- the pins are `divIcon` markers with the look of `ScoreStamp` and fixed colors. The tiles are light in both themes, so the pins are too.
 - `MapView` selects a pin on Enter and Space. It keeps the marker of a restaurant that stays in the view, so a pin keeps the keyboard focus.
 - the `cluster` and `clusterLabel` props make the groups from the pixel distance at the zoom level. No library is added. Only the map of the restaurants sets them.
 - the map element has `isolation: isolate`. The z-index values of Leaflet stay under the header and the dialogs.
@@ -257,6 +262,8 @@ A key in the tile URL of a paid server is visible to all users.
 | Ask for the position when the page loads | Not selected. Browsers and people refuse a request without a visible reason. |
 | The distance sort in the UI | Not selected. The UI has only one page of the list. |
 | The newest restaurants first as the default of the UI | Removed. A new restaurant is seldom the one that a person looks for. |
+| "List" and "Map" on wide screens | Removed. A wide screen has room for both, and the marked row names the selected pin. |
+| Pins without the score | Removed. A person had to open each card to compare the restaurants. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

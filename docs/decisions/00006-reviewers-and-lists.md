@@ -1,6 +1,6 @@
 ---
-description: Each reviewer has a public page with the counts, the averages, the subjects that the reviewer added, the lists, and the reviews. Users make public lists of restaurants and recipes. Each user has a favorites list, and a heart on each card adds a subject to it.
-status: implemented
+description: Each reviewer has a public journal with the counts, the averages, the favorites, the lists, the subjects that the reviewer added, and the reviews by month. Users make public lists of restaurants and recipes, and a list page reads like a menu. Each user has a favorites list, and a heart on each card adds a subject to it.
+status: proposed
 ---
 
 # Motivation
@@ -24,7 +24,7 @@ Expected outcome:
 
 In scope:
 - `getReviewer` and the review lists of one reviewer
-- the `reviewers` page and "My reviews" of the UI
+- the journal of the UI, for each reviewer and for the signed in user
 - the `lists`, `list_items`, and `list_recipes` collections and the operations of the `lists` tag
 - the `favorite` property of restaurants and recipes
 - the `list[eq]` filter of `listRestaurants` and `listRecipes`
@@ -130,22 +130,28 @@ GET /v1/restaurants?list[eq]=l7d2f9h4j1k8m3p&sort=distance&near[latitude]=41.38&
 
 ## The UI
 
-Reviewer page:
-- the page shows the name, then the average and the counts, such as "6.2 average of 2 reviews · 1 restaurant added"
-- then the lists, a `KindSwitch` of restaurants and recipes, "Restaurants added" or "Recipes added", and the reviews of the selected kind
-- "Restaurants added" shows 3 cards and "Load more restaurants". It is above the reviews, so a "Load more" of the reviews does not move it.
-- a reviewer without added subjects has no such section. A reviewer without reviews has "No reviews yet".
-- "My reviews" is the review list of the signed in user, with the same `KindSwitch`
-- `?kind=recipes` selects the recipes on "My reviews", the reviewer page, and the list page
+The journal:
+- `/reviewers/{id}` is the journal of a reviewer. "You" in the navigation opens the journal of the signed in user. It replaces "My reviews", and `/my-reviews` redirects to it.
+- the top has the avatar with the first letter, the name, the counts, such as "12 visits · 4 cooks · 3 lists", and the averages, such as "Average score 7.4 for restaurants, 8.1 for recipes"
+- then "Favorites" as a row of cards with "See all", and the other lists with their counts
+- then "Restaurants added" and "Recipes added". Each shows 3 cards and "Load more restaurants" or "Load more recipes". They are above the entries, so a "Load more" of the entries does not move them.
+- then the entries by the month of their `date`. Each month is a grid of tiles with the day, the first photo, the overall, and the name. A tile without a photo shows the name and the overall on `accent`.
+- a `KindSwitch` with "All", "Restaurants", and "Recipes" selects the kinds of the entries. `?kind=recipes` selects the recipes on the journal.
+- with "All", the entries are always the newest date first. The sort control and the score filters show only for one kind.
+- a section without items is not shown. A reviewer without reviews has "No reviews yet".
 
 Lists:
-- each card has a round heart button at the top right of the cover. The subject page has a "Favorite" button.
+- each card and each row of a subject has a heart button. The subject page has a "Favorite" button.
 - the subject page has a "Save to list" menu with a checkbox for each list and a field for a new list
-- `/lists/{id}` shows the name, the creator with a link, the counts, and the cards. The creator of a custom list sees "Rename list", "Delete list", and "Remove" below each card.
-- the list page has "Sort and filter" and "Show on map" for its restaurants. They open `/restaurants?list=<id>` and the map view.
+- `/lists/{id}` shows the list as a menu: "A list by Ana", the name, the counts, and the date of the last change. Then it has a section for the restaurants and a section for the recipes.
+- each item of the menu has the name, a dotted leader, the overall, and a line with the address or the total time and the tags. Each section has the highest overall first.
+- each section shows 100 items, then "Load more restaurants" or "Load more recipes"
+- "Menu" and "Map" select the view. "Map" opens `/restaurants?list=<id>&view=map`. "Sort and filter" opens `/restaurants?list=<id>`.
+- the creator of a custom list sees "Rename list", "Delete list", and "Remove" next to each item
 - the restaurants page and the recipes page have a "List" filter with the lists of the user. A list of the URL from another user is also an option, such as "Date night by Joe".
-- the reviewer page of the signed in user has a "Create list" form. The account menu has "My lists".
+- the journal of the signed in user has "New list"
 - a signed out user who selects a heart or "Save to list" goes to the sign in page
+- a signed out visitor sees the note of decision 00009 at the end of the journal and the list page
 
 # Implementation Details
 [implementation-details]: #implementation-details
@@ -194,6 +200,8 @@ Lists:
 - the option of the URL list exists before `getList` answers, with the label "A list". The first page then has the filter.
 - the map view of a list filter moves to the box of the restaurants of the list. A list filter ignores the distance of the preferred location.
 - `ReviewerAdded` loads `listRestaurants` or `listRecipes` with `creator[eq]`, `-created`, and a limit of 3. A reviewer with a count of 0 causes no request.
+- the journal loads its entries with `useEntries` of decision 00009 from `listReviewerRestaurantReviews` and `listReviewerRecipeReviews`
+- the menu of a list loads `listRestaurants` and `listRecipes` with `list[eq]` and `sort=-overall`
 
 ## Corner cases
 
@@ -212,7 +220,9 @@ Lists:
 | Only `limit` and `cursor` for the subjects of a list | Removed. A user could not show the favorites on a map, sort them by distance, or search them. |
 | `list[in]`, and `favorites` as the value of `list[eq]` | Not selected. A response with `favorites` would change with the token. |
 | A reviewer page with only the reviews | Removed. A reader could not see the scores in general or what the reviewer added. |
-| Tabs for the kinds on the reviewer page | Not selected. `KindSwitch` is two links, so each kind has its own URL. |
+| Tabs for the kinds on the reviewer page | Not selected. `KindSwitch` is links, so each kind has its own URL. |
+| "My reviews" apart from the reviewer page | Removed. Both pages showed the same reviews. The journal is one page for both. |
+| The cards of a list in a grid | Removed. A shared list reads better as a menu with the scores in one column. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

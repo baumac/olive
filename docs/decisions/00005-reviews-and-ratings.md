@@ -1,6 +1,6 @@
 ---
-description: A review is one visit to a restaurant or one cook of a recipe. It has a date, four scores, an overall that the API computes, a title, feedback, and photos. The rating of a subject counts each reviewer one time, and the overall sort uses this rating.
-status: implemented
+description: A review is one visit to a restaurant or one cook of a recipe. It has a date, four scores, an overall that the API computes, a title, feedback, and photos. The rating of a subject counts each reviewer one time, and the overall sort uses this rating. The UI adds a review from each screen and shows the reviews of a subject as a timeline of visits or cooks.
+status: proposed
 ---
 
 # Motivation
@@ -158,10 +158,18 @@ Two equal values sort by the number of reviewers. More reviewers come first.
 
 ## The UI
 
-- the restaurant and recipe pages always have "Write a review". It opens a new review.
-- the review form has a date input with "Visited on" or "Cooked on". It starts with the local date of today and allows no later date.
+- the restaurant page always has "Add a visit". The recipe page always has "Add a cook". Each opens a new review of the subject.
+- "Add review" of the navigation opens `/reviews/new`, a new review without a subject. The form starts with "What did you eat?" and the choices "I ate out" and "I cooked".
+- the restaurant or recipe field searches the existing subjects. With a preferred location, the nearest restaurants come first. See decision 00008.
+- "Add a new restaurant" or "Add a new recipe" below the field saves a draft of the review, then opens the form of decision 00004. After the save, the UI goes back to `/reviews/new` with the new subject and restores the draft.
+- the date has "Today", "Yesterday", and "Pick a date". The line below shows "Visited on 22 Nov 2026" or "Cooked on 22 Nov 2026". The form starts with the local date of today and allows no later date.
 - the form shows the overall of the selected scores before the save. Each score has ten buttons, so one click selects it.
-- the review card shows the overall first, then the scores. The review page shows the date and "Written" with the time of `created`.
+- the title and the feedback are the last fields, under "In a few words". The photos section follows the form. See decision 00007.
+- an entry of the table or the journal shows the overall, the title, the reviewer, and the date. Decision 00009 has the entries.
+- the review page starts with the first photo. Then it shows the subject, the title, the reviewer, the date, the score block, the feedback, the photos, the subject, and more reviews of the same reviewer.
+- the review page shows the date and "Written" with the time of `created`
+- the restaurant page lists its reviews under "Every visit". The recipe page lists them under "Every cook".
+- each item of this timeline has the date, the title, the overall, two lines of the feedback, and the reviewer. The own reviews show "You".
 - the sort control has "Newest visit" or "Newest cook", "Highest rated", and "Lowest rated". A link can also select the oldest and the written orders.
 - `lib/reviewKinds.ts` has the score fields, the labels, and the API calls of each kind
 

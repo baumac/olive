@@ -35,7 +35,7 @@ Each sub-bullet point contains notes about the incomplete decision.
   - Reviews have no owner or reader reply
   - Comments or replies on review
   - Helpful votes or likes on reviews
-  - Following users, or an activity feed
+  - Following users, or a feed of followed users (the home of decision 00009 lists all reviews by date, with no follows)
   - Messages or notifications between users
   - Profile pictures or bios (the avatar field was removed)
   - Private or collaborative lists
