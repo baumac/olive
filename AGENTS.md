@@ -78,6 +78,7 @@ The `docker` job runs `make build-image` and checks `deploy/compose.yaml`.
 `.github/workflows/renovate.yml` runs `make renovate` on the first day of each month. It opens one pull request with all dependency updates. See decision 00010.
 `.github/renovate.json` has its settings. The workflow uses its `GITHUB_TOKEN`. The repository setting "Allow GitHub Actions to create and approve pull requests" must be on.
 A person must approve the CI run of the Renovate pull request. Renovate does not update the files in `.github/workflows`. Update them by hand.
+Each action has a commit SHA and a comment with its version, such as `actions/checkout@SHA # v4.4.0`. Renovate keeps this rule.
 Renovate also updates the tool versions of the makefile. A new Go tool needs a `# renovate: depName=MODULE` comment above its version.
 `make renovate-local` checks a change of `.github/renovate.json`. Set `GITHUB_COM_TOKEN` to also get the updates of the GitHub Actions.
 When Renovate changes `TOOLS_GO`, `OAPI_CODEGEN_VERSION`, or `OPENAPI_GENERATOR_IMAGE`, run `make generate` on its branch.

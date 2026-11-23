@@ -417,6 +417,9 @@ make renovate         # Open or update the pull request. Needs RENOVATE_TOKEN an
 - the workflow gives its `GITHUB_TOKEN` to Renovate. The job gives the token write access to contents, pull requests, and issues. The token stops at the end of the job.
 - GitHub refuses a push of the `GITHUB_TOKEN` that changes a file in `.github/workflows`. With `group:all`, one such change would stop all updates, so a package rule turns them off.
 - `.github/renovate.json` has `config:recommended` and `group:all`. `rangeStrategy` is `pin`, so the versions stay exact. `prHourlyLimit` is `0`.
+- each action has a commit SHA and a comment with its full version. A moved tag then changes no run.
+- `helpers:pinGitHubActionDigestsToSemver` keeps this rule for the updates of `.github/actions/setup`
+- a person pins an action of `.github/workflows` to the SHA of a release. `gh api repos/OWNER/REPO/commits/TAG --jq .sha` shows it.
 - the cron of the workflow is the schedule. The config has no `schedule` preset, because a late run or a run by hand would then do nothing.
 - `gomodTidy` runs `go mod tidy` after a Go update
 - three custom managers of the type `regex` read the makefile. A package rule turns off the major updates of the Go tools with a `/vN` module.

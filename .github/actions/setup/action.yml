@@ -9,15 +9,15 @@ runs:
   steps:
     # The caches of setup-go and setup-node save in each job. Seven jobs then
     # race for one cache key.
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
       with:
         go-version-file: app/api/go.mod
         cache: false
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
         node-version: 22
     - if: inputs.save-cache == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           ~/go/pkg/mod
@@ -26,7 +26,7 @@ runs:
         key: ci-${{ runner.os }}-${{ hashFiles('app/api/go.sum', 'specs/api/sdk/server/go/go.sum', 'package-lock.json') }}
         restore-keys: ci-${{ runner.os }}-
     - if: inputs.save-cache != 'true'
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           ~/go/pkg/mod
