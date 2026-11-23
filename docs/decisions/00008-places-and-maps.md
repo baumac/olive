@@ -1,6 +1,6 @@
 ---
 description: A place search of the app finds the point and the address of a restaurant through a Photon geocoder. The UI shows restaurants on Leaflet maps with the tiles of OpenStreetMap. A person sets a preferred location in the browser, and the restaurant list then shows the nearest restaurants first.
-status: proposed
+status: implemented
 ---
 
 # Motivation
@@ -105,8 +105,9 @@ Restaurant page:
 
 Restaurants page:
 - below the `lg` breakpoint, "List" and "Map" select the view. The map view has `view=map` in the URL.
-- from `lg`, the page shows the list and the map side by side, without "List" and "Map". The list then shows the restaurants in the view of the map, with the same search and filters. A move or a zoom loads both again.
-- a hover or a focus on a row marks its pin. A click on a pin marks its row and scrolls it into view.
+- from `lg`, the page shows the list and the map side by side, without "List" and "Map". The list keeps its search, filters, sort, and pages. The map shows the restaurants in its view.
+- a hover or a focus on a row marks its pin. The mark has the look of a selected pin, but the pin is not pressed for screen readers. A click on a pin marks its row and scrolls it into view.
+- a pin of a restaurant that the list has not loaded shows its card above the list, under "On the map"
 - the map shows the restaurants in its view that match the search and the filters. A move or a zoom loads the restaurants of the new view.
 - each pin is the score stamp of decision 00009 with the overall and a dark ring. It is at least 44 px wide. The selected pin is larger and dark, with a saffron number.
 - a restaurant without reviews has an empty stamp. Its name for screen readers ends with "No reviews yet".
@@ -264,6 +265,7 @@ A key in the tile URL of a paid server is visible to all users.
 | The newest restaurants first as the default of the UI | Removed. A new restaurant is seldom the one that a person looks for. |
 | "List" and "Map" on wide screens | Removed. A wide screen has room for both, and the marked row names the selected pin. |
 | Pins without the score | Removed. A person had to open each card to compare the restaurants. |
+| A list beside the map that shows only the restaurants of its view | Not selected. A search would hide the matches outside the view. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

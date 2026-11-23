@@ -6,16 +6,16 @@ How people sign up, sign in and stay signed in. The API is the Users API: the `u
 
 - Reading restaurants and reviews needs no account.
 - Adding a restaurant and writing, editing or deleting a review needs an account.
-- When a signed out person starts one of these actions, such as "Write a review", go to `/sign-in?redirect=<the action's path>`. Do not show a disabled button.
+- When a signed out person starts one of these actions, such as "Add review" or "Add a visit", go to `/sign-in?redirect=<the action's path>`. Do not show a disabled button.
 
 ## Approval
 
 - A new account waits for the approval of an administrator. The `user` of the auth token has `approved`.
 - While `approved` is `false`, `ApprovalBanner` shows below `AppHeader` on each page: an `Alert` with the title "Your account waits for approval", the reason, and an `outline` button "Check again".
 - "Check again" calls `refreshToken` and stores the new `user`. It then shows a `Toast`: "Your account is approved" or "Your account is not approved yet". A failed request shows the destructive `Toast` "The check did not work".
-- The person can read all pages. A link to a form that adds or changes data stays on the page and shows the `Toast` "Your account waits for approval". A direct load of such a form first gets the `user` again. If the account still waits, it opens `/restaurants`.
+- The person can read all pages. A link to a form that adds or changes data stays on the page and shows the `Toast` "Your account waits for approval". A direct load of such a form first gets the `user` again. If the account still waits, it opens `/`.
 - A `403` with the `code` `not_approved` means that an administrator took the approval back. The UI stores `approved` as `false`, so the banner shows.
-- The heart and "Save to list" show the same `Toast` and send no request. The reviewer page of the person has no "Create list" form.
+- The heart and "Save to list" show the same `Toast` and send no request. The journal of the person has no "New list" button.
 - Do not show disabled buttons. The banner tells the reason one time.
 
 ## Pages
@@ -27,7 +27,7 @@ How people sign up, sign in and stay signed in. The API is the Users API: the `u
 - `/reset-password`: `ResetPasswordPage`. The link of the password reset email opens it.
 - `/account`: `AccountPage`. `UserMenu` has the "Account" item. The page needs an account.
 - The links of the emails have the token after `#token=`. The page reads the token and then removes it from the address.
-- Both pages take a `redirect` query and return to it after success. Accept only paths that start with `/` and not `//`. The default is `/restaurants`.
+- Both pages take a `redirect` query and return to it after success. Accept only paths that start with `/` and not `//`. The default is `/`, the table.
 - The two forms link to each other and keep the `redirect` query.
 
 ## Sign up

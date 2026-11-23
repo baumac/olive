@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Restaurant } from '@reviews/sdk'
 import { ListIcon, MapIcon, PlusIcon, UtensilsIcon } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useMediaQuery, usePreferredReducedMotion } from '@vueuse/core'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LocationMenu from '@/components/app/LocationMenu.vue'
 import PagedList from '@/components/app/PagedList.vue'
@@ -16,14 +17,13 @@ import { firstQueryValue, searchRelevance, useListQuery } from '@/composables/us
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { restaurantsApi } from '@/lib/api'
-import { formatCount } from '@/lib/format'
+import { formatCount, formatScore } from '@/lib/format'
 import type { MapConfig } from '@/lib/mapConfig'
 import { loadMapConfig } from '@/lib/mapConfig'
 import type { Box, MapPosition } from '@/lib/places'
 import { formatMapPosition, mapBox, parseMapPosition } from '@/lib/places'
 import { distanceMeters, formatRadius, homePoint, preferredLocation, setPreferredLocation } from '@/lib/preferredLocation'
 import { nearestSort, oldRestaurantSortOptions, restaurantFilterDefs, restaurantFilterParams, restaurantSortOptions } from '@/lib/restaurantFilters'
-import { currentUser } from '@/lib/session'
 
 usePageTitle('Restaurants')
 
@@ -69,8 +69,12 @@ const radius = computed(() => (listId.value ? null : (preferredLocation.value?.r
 // the value undefined.
 const near = computed(() => (origin.value && radius.value ? { ...origin.value, radius: radius.value } : origin.value))
 
-// The map view is in the URL. A link to the map then opens the map.
+// The map view is in the URL. A link to the map then opens the map. From
+// lg, the page shows the list and the map side by side. See decision 00008.
 const mapView = computed(() => route.query.view === 'map' && mapConfig.value !== null)
+const wide = useMediaQuery('(min-width: 1024px)')
+const showMap = computed(() => mapConfig.value !== null && (wide.value || mapView.value))
+const showList = computed(() => wide.value || !mapView.value)
 
 function show(view: 'list' | 'map') {
   const query = { ...route.query }
@@ -97,10 +101,10 @@ const list = usePagedList<Restaurant>(async (cursor) => {
 // A link to the map view waits for the map config. The list then does not
 // load a page that the map view hides.
 watch(
-  [filterKey, sort, near, mapView, mapConfigLoaded],
+  [filterKey, sort, near, showList, mapConfigLoaded],
   () => {
-    const waiting = route.query.view === 'map' && !mapConfigLoaded.value
-    if (!mapView.value && !waiting) {
+    const waiting = !wide.value && route.query.view === 'map' && !mapConfigLoaded.value
+    if (showList.value && !waiting) {
       void list.reload()
     }
   },
@@ -168,7 +172,7 @@ function savePosition(position: MapPosition, byUser: boolean) {
   const linked = parseMapPosition(current)
   const atHome = preferredLocation.value !== null && distanceMeters(position.center, homePoint()) < 2
   const next = (byUser && !atHome) || (linked && formatMapPosition(linked) === at) ? at : undefined
-  if (!mapView.value || next === current) {
+  if (!showMap.value || next === current) {
     return
   }
   const query = { ...route.query }
@@ -180,7 +184,7 @@ function savePosition(position: MapPosition, byUser: boolean) {
   void router.replace({ query })
 }
 
-watch([filterKey, sort], () => mapView.value && void loadMap())
+watch([filterKey, sort], () => showMap.value && void loadMap())
 
 // fit is the box of the located restaurants of the list filter. The map
 // moves to it. The list can be far from the preferred location.
@@ -195,7 +199,7 @@ watch(listId, (id) => {
 })
 async function frameList() {
   const id = listId.value
-  if (!id || !mapView.value) {
+  if (!id || !showMap.value) {
     return
   }
   if (id === linkedList) {
@@ -215,7 +219,7 @@ async function frameList() {
     // The map then stays at its view.
   }
 }
-watch([listId, mapView], () => void frameList(), { immediate: true })
+watch([listId, showMap], () => void frameList(), { immediate: true })
 
 // A card that leaves the favorites leaves a view of the favorites list.
 function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
@@ -238,7 +242,7 @@ const startView = ref(linkedPosition ?? lastView ?? { center: homePoint(), zoom:
 // movedHere is true after a move of the map on this page. A switch back to
 // the map view then opens at lastView.
 let movedHere = false
-watch(mapView, (on) => {
+watch(showMap, (on) => {
   if (on && movedHere && lastView) {
     startView.value = lastView
   }
@@ -259,15 +263,43 @@ function anyDistance() {
 }
 
 const markers = computed(() =>
-  onMap.value.map((r) => ({ id: r.id, latitude: r.location.latitude, longitude: r.location.longitude, label: r.name })),
+  onMap.value.map((r) => ({
+    id: r.id,
+    latitude: r.location.latitude,
+    longitude: r.location.longitude,
+    label: `${r.name}, ${r.rating ? formatScore(r.rating.overall) : 'No reviews yet'}`,
+    score: r.rating?.overall ?? null,
+  })),
 )
+
+// hoveredId marks the pin of the row under the pointer or with the focus.
+// A removed row sends no mouseleave or focusout. Its mark then goes here.
+const hoveredId = ref<string>()
+watch(list.items, (items) => {
+  if (hoveredId.value && !items.some((r) => r.id === hoveredId.value)) {
+    hoveredId.value = undefined
+  }
+})
+const marked = computed(() => hoveredId.value ?? selectedId.value)
+const reducedMotion = usePreferredReducedMotion()
+const selectedInList = computed(() => list.items.value.some((r) => r.id === selectedId.value))
+
+// A pin selected beside the list marks its row. A restaurant that the list
+// has not loaded shows as a card above the list.
+async function selectPin(id: string) {
+  selectedId.value = id
+  if (wide.value && selectedInList.value) {
+    await nextTick()
+    document.getElementById(`restaurants-${id}`)?.scrollIntoView({ block: 'nearest', behavior: reducedMotion.value === 'reduce' ? 'auto' : 'smooth' })
+  }
+}
 
 function clusterLabel(count: number): string {
   return `${formatCount(count, 'restaurant')}, zoom in to see them`
 }
 
 const status = computed(() => {
-  if (mapView.value) {
+  if (!showList.value) {
     if (mapLoading.value && onMap.value.length === 0) {
       return 'Loading restaurants'
     }
@@ -292,11 +324,6 @@ let lastView: { center: MapPoint; zoom: number } | undefined
 <template>
   <main id="main" class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
     <h1 class="sr-only">Restaurants</h1>
-    <p v-if="!currentUser && !active && !mapView" class="text-muted-foreground max-w-2xl text-lg">
-      Find a restaurant by its scores for food, service, space, and value.
-      <RouterLink to="/sign-up" class="text-foreground font-medium underline underline-offset-4">Sign up</RouterLink>
-      to add a restaurant or to write a review.
-    </p>
 
     <FilterBar
       v-model:filters="filters"
@@ -308,7 +335,7 @@ let lastView: { center: MapPoint; zoom: number } | undefined
     >
       <template #end>
         <LocationMenu />
-        <div v-if="mapConfig" class="flex gap-1" role="group" aria-label="View">
+        <div v-if="mapConfig" class="flex gap-1 lg:hidden" role="group" aria-label="View">
           <Button :variant="mapView ? 'ghost' : 'secondary'" size="icon" aria-label="List" title="List" :aria-pressed="!mapView" @click="show('list')">
             <ListIcon aria-hidden="true" />
           </Button>
@@ -322,46 +349,60 @@ let lastView: { center: MapPoint; zoom: number } | undefined
       </template>
     </FilterBar>
 
-    <div v-if="mapView && mapConfig" class="grid gap-4">
-      <MapView
-        :config="mapConfig"
-        label="Map of the restaurants"
-        :center="startView.center"
-        :zoom="startView.zoom"
-        :markers="markers"
-        :selected="selectedId"
-        :origin="preferredLocation"
-        :fit="fit"
-        wheel-zoom
-        cluster
-        :cluster-label="clusterLabel"
-        class="h-[60vh] min-h-80"
-        @move="moved"
-        @select="selectedId = $event"
-      />
-      <p v-if="mapFailed" class="text-destructive text-sm" role="alert">The restaurants did not load. Move the map to try again.</p>
-      <p v-if="mapHasMore" class="text-sm font-medium">
-        The map shows only {{ mapLimit }} restaurants of this area. Zoom in to see the others.
-      </p>
-      <p class="text-muted-foreground text-sm">
-        Select a pin to see the restaurant. A pin with a number has more than one restaurant.
-        <template v-if="preferredLocation">The blue dot is your location.</template>
-      </p>
-      <div class="max-w-md" aria-live="polite">
-        <RestaurantCard v-if="selected" :restaurant="selected" :from="preferredLocation" @favorite="favoriteChanged(selected, $event)" />
+    <div :class="wide && showMap ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] items-start gap-6' : 'contents'">
+      <div v-if="showMap && mapConfig" :class="['grid gap-4', wide && 'sticky top-24 lg:order-2']">
+        <MapView
+          :config="mapConfig"
+          label="Map of the restaurants"
+          :center="startView.center"
+          :zoom="startView.zoom"
+          :markers="markers"
+          :selected="selectedId"
+          :marked="wide ? hoveredId : undefined"
+          :origin="preferredLocation"
+          :fit="fit"
+          wheel-zoom
+          cluster
+          :cluster-label="clusterLabel"
+          :class="wide ? 'h-[calc(100dvh-9rem)] min-h-96' : 'h-[60vh] min-h-80'"
+          @move="moved"
+          @select="selectPin"
+        />
+        <p v-if="mapFailed" class="text-destructive text-sm" role="alert">The restaurants did not load. Move the map to try again.</p>
+        <p v-if="mapHasMore" class="text-sm font-medium">
+          The map shows only {{ mapLimit }} restaurants of this area. Zoom in to see the others.
+        </p>
+        <p class="text-muted-foreground text-sm">
+          Select a pin to see the restaurant. A pin with a number has more than one restaurant.
+          <template v-if="preferredLocation">The blue dot is your location.</template>
+        </p>
+        <div v-if="!wide" class="max-w-md" aria-live="polite">
+          <RestaurantCard v-if="selected" :restaurant="selected" :from="preferredLocation" @favorite="favoriteChanged(selected, $event)" />
+        </div>
       </div>
-    </div>
 
+      <div v-if="showList" class="flex min-w-0 flex-col gap-4 lg:order-1">
+        <div v-if="wide && selected && !selectedInList" aria-live="polite" class="grid gap-2">
+          <p class="kicker">On the map</p>
+          <RestaurantCard :restaurant="selected" :from="preferredLocation" @favorite="favoriteChanged(selected, $event)" />
+        </div>
     <PagedList
-      v-else
       :list="list"
       noun="restaurants"
-      list-class="lg:grid-cols-2 xl:grid-cols-3"
-      skeleton-class="h-36 rounded-xl"
+      list-class="gap-2.5"
+      skeleton-class="h-[86px] rounded-xl"
       :skeleton-count="6"
     >
       <template #item="{ item }">
-        <RestaurantCard :restaurant="item" :from="preferredLocation" @favorite="favoriteChanged(item, $event)" />
+        <div
+          :class="['h-full rounded-xl', wide && item.id === marked && 'ring-primary ring-2']"
+          @mouseenter="hoveredId = item.id"
+          @mouseleave="hoveredId = undefined"
+          @focusin="hoveredId = item.id"
+          @focusout="hoveredId = undefined"
+        >
+          <RestaurantCard :restaurant="item" :from="preferredLocation" @favorite="favoriteChanged(item, $event)" />
+        </div>
       </template>
       <template #empty>
         <EmptyState
@@ -403,5 +444,7 @@ let lastView: { center: MapPoint; zoom: number } | undefined
         </EmptyState>
       </template>
     </PagedList>
+      </div>
+    </div>
   </main>
 </template>

@@ -61,7 +61,19 @@ const draftKey = computed(() => `restaurant:${props.restaurantId ?? 'new'}`)
 // undo is the change that ?undo of the history page undoes. See decision
 // 00004.
 const undo = ref<Undo | null | undefined>(undefined)
-const cancelPath = computed(() => (props.restaurantId ? `/restaurants/${props.restaurantId}` : '/restaurants'))
+// A new restaurant from the review form returns to it. See decision 00005.
+const fromReview = computed(() => !props.restaurantId && route.query.review === 'new')
+const cancelPath = computed(() => {
+  if (fromReview.value) {
+    return '/reviews/new'
+  }
+  return props.restaurantId ? `/restaurants/${props.restaurantId}` : '/restaurants'
+})
+// subjectPath opens a restaurant that exists. From the review form, it
+// opens a review of it.
+function subjectPath(id: string) {
+  return fromReview.value ? `/reviews/new?restaurant=${id}` : `/restaurants/${id}`
+}
 
 function fieldsOf(r: Restaurant): Fields {
   return {
@@ -225,6 +237,10 @@ async function submit() {
         })
     clearDraft(draftKey.value)
     toast.success(editing.value ? 'Restaurant saved' : 'Restaurant added', { description: saved.name })
+    if (fromReview.value) {
+      void router.push({ path: '/reviews/new', query: { restaurant: saved.id } })
+      return
+    }
     void router.push(`/restaurants/${saved.id}`)
   } catch (error) {
     const { status, problem } = await apiFailure(error)
@@ -265,7 +281,7 @@ async function submit() {
 <template>
   <ErrorPage v-if="failed" :status="failed.status" @retry="router.go(0)" />
   <main v-else id="main" class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
-    <h1 class="text-4xl font-extrabold tracking-tight">{{ editing ? 'Edit restaurant' : 'Add a restaurant' }}</h1>
+    <h1 class="font-serif text-[34px] leading-10 font-semibold tracking-[-0.01em]">{{ editing ? 'Edit restaurant' : 'Add a restaurant' }}</h1>
     <div v-if="loading" aria-busy="true" aria-label="Loading restaurant" class="grid gap-4">
       <Skeleton class="h-9" /><Skeleton class="h-24" /><Skeleton class="h-9" />
     </div>
@@ -276,8 +292,8 @@ async function submit() {
         <AlertTitle>{{ alert.title }}</AlertTitle>
         <AlertDescription>
           {{ alert.description }}
-          <RouterLink v-if="alert.restaurant" :to="`/restaurants/${alert.restaurant}`" class="font-medium underline underline-offset-4">
-            Open the restaurant
+          <RouterLink v-if="alert.restaurant" :to="subjectPath(alert.restaurant)" class="font-medium underline underline-offset-4">
+            {{ fromReview ? 'Review this restaurant' : 'Open the restaurant' }}
           </RouterLink>
         </AlertDescription>
       </Alert>
@@ -342,7 +358,7 @@ async function submit() {
         <FormMessage />
       </FormItem>
       <fieldset class="grid gap-6">
-        <legend class="mb-1 text-xl font-semibold tracking-tight">Details</legend>
+        <legend class="mb-1 font-serif text-[22px] leading-7 font-semibold">Details</legend>
         <p class="text-muted-foreground text-sm">Optional. A selected place can fill some of them.</p>
         <FormItem id="restaurant-website" :error="errors.website">
           <FormLabel>Website</FormLabel>

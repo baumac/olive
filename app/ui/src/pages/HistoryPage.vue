@@ -54,7 +54,7 @@ function changes(version: AnyVersion) {
       <RouterLink :to="parentPath"><ArrowLeftIcon aria-hidden="true" />Back to the {{ info.noun }}</RouterLink>
     </Button>
     <Skeleton v-if="parent.loading.value" class="h-10 w-2/3" />
-    <h1 v-else class="text-4xl font-extrabold tracking-tight break-words">History of {{ parent.data.value?.name }}</h1>
+    <h1 v-else class="font-serif text-[34px] leading-10 font-semibold tracking-[-0.01em] wrap-anywhere">History of {{ parent.data.value?.name }}</h1>
     <p class="text-muted-foreground">
       Each change makes a new version. To fix a wrong change, undo it and save. The undo is a new version.
     </p>
@@ -88,7 +88,7 @@ function changes(version: AnyVersion) {
                   <ol v-else-if="Array.isArray(c[side])" class="list-decimal pl-5">
                     <li v-for="(line, i) in c[side]" :key="i" class="whitespace-pre-line">{{ line }}</li>
                   </ol>
-                  <span v-else class="break-words whitespace-pre-line">{{ c[side] }}</span>
+                  <span v-else class="wrap-anywhere whitespace-pre-line">{{ c[side] }}</span>
                 </dd>
               </div>
             </dl>

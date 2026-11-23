@@ -5,11 +5,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import FavoriteButton from '@/components/app/FavoriteButton.vue'
-import ReviewerLists from '@/components/app/ReviewerLists.vue'
+import JournalLists from '@/components/app/JournalLists.vue'
 import SaveToListMenu from '@/components/app/SaveToListMenu.vue'
 import { useListFilter } from '@/composables/useListFilter'
 import { useListQuery } from '@/composables/useListQuery'
-import { listsApi } from '@/lib/api'
+import { listsApi, recipesApi, restaurantsApi } from '@/lib/api'
 import { forgetOwnLists } from '@/lib/lists'
 import { resetMapConfig } from '@/lib/mapConfig'
 import { clearSession, saveSession } from '@/lib/session'
@@ -251,17 +251,19 @@ describe('SaveToListMenu', () => {
   })
 })
 
-describe('ReviewerLists', () => {
+describe('JournalLists', () => {
   async function mountLists(own: boolean) {
-    const w = mount(ReviewerLists, { props: { reviewerId: ana.id, own }, global: { plugins: [await routerAt('/')] }, attachTo: attach() })
+    const w = mount(JournalLists, { props: { reviewerId: ana.id, own }, global: { plugins: [await routerAt('/')] }, attachTo: attach() })
     await flushPromises()
     return w
   }
 
   it('links the lists and hides the form on the page of another user', async () => {
     vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [list('favorites', 'Favorites', 2), list('custom', 'Date night')] })
+    vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
     const w = await mountLists(false)
-    const links = w.findAll('a')
+    expect(w.get('a[href="/lists/f1a6c3e8g5i2k9m"]').text()).toContain('See all 2')
+    const links = w.get('section[aria-labelledby=lists-heading]').findAll('a')
     expect(links.map((a) => a.attributes('href'))).toEqual(['/lists/f1a6c3e8g5i2k9m', '/lists/l7d2f9h4j1k8m3p'])
     expect(links[0]!.text()).toContain('Favorites')
     expect(links[0]!.text()).toContain('2 restaurants')
@@ -278,7 +280,7 @@ describe('ReviewerLists', () => {
     await w.get('form').trigger('submit')
     await flushPromises()
     expect(create).toHaveBeenCalledWith({ savedListCreate: { name: 'Date night' } })
-    expect(w.findAll('a').map((a) => a.attributes('href'))).toEqual(['/lists/f1a6c3e8g5i2k9m', '/lists/l7d2f9h4j1k8m3p'])
+    expect(w.get('section[aria-labelledby=lists-heading]').findAll('a').map((a) => a.attributes('href'))).toEqual(['/lists/f1a6c3e8g5i2k9m', '/lists/l7d2f9h4j1k8m3p'])
     expect((w.get('input').element as HTMLInputElement).value).toBe('')
     await expectAccessible(w.element)
   })
@@ -297,7 +299,8 @@ describe('ReviewerLists', () => {
 describe('ListPage', () => {
   async function mountPage(data: SavedList, items: Restaurant[] = [restaurant]) {
     vi.spyOn(listsApi, 'getList').mockResolvedValue(data)
-    vi.spyOn(listsApi, 'listListRestaurants').mockResolvedValue({ items, nextCursor: null })
+    vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items, nextCursor: null })
+    vi.spyOn(recipesApi, 'listRecipes').mockResolvedValue({ items: [], nextCursor: null })
     const router = await routerAt(`/lists/${data.id}`)
     const w = mount(ListPage, { props: { listId: data.id }, global: { plugins: [router] }, attachTo: attach() })
     await flushPromises()
@@ -308,7 +311,8 @@ describe('ListPage', () => {
   it('shows a list of another user without the owner actions', async () => {
     const { w } = await mountPage(list('custom', 'Date night'))
     expect(w.get('h1').text()).toBe('Date night')
-    expect(w.text()).toContain('A list by Ana · 1 restaurant')
+    expect(w.text()).toContain('A list by Ana')
+    expect(w.text()).toContain('1 restaurant ·')
     expect(w.get('h3 a').text()).toBe("Luigi's Trattoria")
     expect(buttons(w)).not.toContain('Rename list')
     expect(buttons(w)).not.toContain('Delete list')
@@ -359,19 +363,20 @@ describe('ListPage', () => {
     vi.unstubAllGlobals()
     resetMapConfig()
     const links = Object.fromEntries(w.findAll('a').map((a) => [a.text(), a.attributes('href')]))
-    expect(links['Sort and filter']).toBe('/restaurants?list=l7d2f9h4j1k8m3p')
-    expect(links['Show on map']).toBe('/restaurants?list=l7d2f9h4j1k8m3p&view=map')
+    expect(links['Sort and filter the restaurants']).toBe('/restaurants?list=l7d2f9h4j1k8m3p')
+    expect(links['Map']).toBe('/restaurants?list=l7d2f9h4j1k8m3p&view=map')
   })
 
   it('has no filter links for an empty list', async () => {
     const { w } = await mountPage(list('custom', 'Date night', 0), [])
     expect(w.text()).not.toContain('Sort and filter')
-    expect(w.text()).not.toContain('Show on map')
+    expect(w.find('nav[aria-label=View]').exists()).toBe(false)
   })
 
   it('shows the not found page for an unknown list', async () => {
     vi.spyOn(listsApi, 'getList').mockRejectedValue(rejectWith(404))
-    vi.spyOn(listsApi, 'listListRestaurants').mockRejectedValue(rejectWith(404))
+    vi.spyOn(restaurantsApi, 'listRestaurants').mockRejectedValue(rejectWith(404))
+    vi.spyOn(recipesApi, 'listRecipes').mockRejectedValue(rejectWith(404))
     const w = mount(ListPage, { props: { listId: 'aaaaaaaaaaaaaaa' }, global: { plugins: [await routerAt('/lists/aaaaaaaaaaaaaaa')] }, attachTo: attach() })
     await flushPromises()
     expect(w.text()).toContain('We cannot find this page')

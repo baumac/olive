@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { User } from '@reviews/sdk'
-import { ListIcon, LogOutIcon, MessageSquareIcon, UserIcon } from 'lucide-vue-next'
+import { BookOpenIcon, LogOutIcon, UserIcon } from 'lucide-vue-next'
 import { initials } from '@/lib/format'
 import { InitialsAvatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -21,9 +21,8 @@ defineProps<{
   // signInPath is the sign in page with the current path as redirect.
   signInPath: string
   signInCurrent?: boolean
-  myReviewsPath: string
-  // myListsPath is the page with the lists of the user.
-  myListsPath?: string
+  // journalPath is the journal of the user, with the entries and the lists.
+  journalPath: string
   accountPath: string
 }>()
 
@@ -50,15 +49,9 @@ const { choice } = useTheme()
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuItem as-child>
-        <RouterLink :to="myReviewsPath">
-          <MessageSquareIcon aria-hidden="true" />
-          My reviews
-        </RouterLink>
-      </DropdownMenuItem>
-      <DropdownMenuItem v-if="myListsPath" as-child>
-        <RouterLink :to="myListsPath">
-          <ListIcon aria-hidden="true" />
-          My lists
+        <RouterLink :to="journalPath">
+          <BookOpenIcon aria-hidden="true" />
+          You
         </RouterLink>
       </DropdownMenuItem>
       <DropdownMenuItem as-child>

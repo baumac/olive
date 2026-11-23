@@ -8,13 +8,16 @@ import { searchRelevance, useListQuery } from '@/composables/useListQuery'
 import { usePagedList } from '@/composables/usePagedList'
 import { formatCount } from '@/lib/format'
 import { oldReviewSortOptionsOf, reviewDefaultSort, reviewFilterDefsOf, reviewFilterParamsOf, reviewSortOptionsOf } from '@/lib/reviewFilters'
+import { groupByMonth } from '@/lib/entries'
 import { type AnyReview, type Parent, type ReviewKind, kinds } from '@/lib/reviewKinds'
+import { currentUser } from '@/lib/session'
+import EntryTile from './EntryTile.vue'
 import PagedList from './PagedList.vue'
 import ReviewCard from './ReviewCard.vue'
 
 // Give a parent or a creator. A parent is a restaurant or a recipe of the
-// kind. Without a parent, the list has the reviews of the creator of the
-// kind.
+// kind. Its reviews show as a timeline of visits or cooks. Without a parent,
+// the list has the reviews of the creator of the kind as journal tiles.
 const props = withDefaults(
   defineProps<{
     parent?: Parent
@@ -28,6 +31,7 @@ const props = withDefaults(
 )
 
 const info = computed(() => kinds[props.kind])
+const tiles = computed(() => !props.parent)
 const filterDefs = computed(() => reviewFilterDefsOf(props.kind))
 
 const limit = 20
@@ -68,6 +72,11 @@ const total = computed(() => {
 // A filter or a sort in the URL keeps the toolbar. The user can then remove it.
 const showToolbar = computed(() => active.value || sort.value !== defaultSort || total.value >= toolbarMinimum)
 
+// A sort by date groups the tiles by month. Another sort shows one grid.
+function tileGroups(items: AnyReview[]) {
+  return sort.value.replace(/^-/, '') === 'date' ? groupByMonth(items) : [{ key: 'all', label: '', entries: items }]
+}
+
 const status = computed(() => {
   if (list.loading.value) {
     return 'Loading reviews'
@@ -93,12 +102,24 @@ const status = computed(() => {
     <PagedList
       :list="list"
       noun="reviews"
-      list-class="gap-0 divide-y border-y"
+      :list-class="tiles ? undefined : 'ml-1.5 gap-6 border-l-2 pl-[22px]'"
       item-class="rounded-sm"
-      skeleton-class="my-4 h-20 rounded-md"
+      :skeleton-class="tiles ? 'h-40 rounded-xl' : 'my-1 h-24 rounded-md'"
       :skeleton-count="3"
     >
-      <template #item="{ item }"><ReviewCard :review="item" :show-restaurant="!parent" :show-creator="!!parent" /></template>
+      <template v-if="tiles" #items="{ items }">
+        <div class="flex flex-col gap-6">
+          <section v-for="g in tileGroups(items)" :key="g.key" class="flex flex-col gap-2.5" :aria-label="g.label || undefined">
+            <h3 v-if="g.label" class="kicker">{{ g.label }}</h3>
+            <ul class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
+              <li v-for="e in g.entries" :id="`reviews-${e.id}`" :key="e.id" tabindex="-1" class="rounded-xl"><EntryTile :review="e" /></li>
+            </ul>
+          </section>
+        </div>
+      </template>
+      <template v-else #item="{ item }">
+        <ReviewCard :review="item" :show-creator="true" :own="item.creator.id === currentUser?.id" />
+      </template>
       <template #empty>
         <EmptyState
           v-if="active"
@@ -117,7 +138,7 @@ const status = computed(() => {
           :description="`Be the first to review ${parent.name}.`"
         >
           <template #action>
-            <Button as-child><RouterLink :to="writePath ?? `${info.path}/${parent.id}/reviews/new`">Write a review</RouterLink></Button>
+            <Button as-child><RouterLink :to="writePath ?? `${info.path}/${parent.id}/reviews/new`">Add a {{ info.occasion }}</RouterLink></Button>
           </template>
         </EmptyState>
         <EmptyState
@@ -130,10 +151,10 @@ const status = computed(() => {
           v-else
           :icon="MessageSquareIcon"
           title="You have no reviews yet"
-          :description="`Find a ${info.noun} and write the first one.`"
+          :description="`Add your first ${info.occasion}.`"
         >
           <template #action>
-            <Button as-child><RouterLink :to="info.path">Go to {{ info.plural }}</RouterLink></Button>
+            <Button as-child><RouterLink to="/reviews/new">Add review</RouterLink></Button>
           </template>
         </EmptyState>
       </template>

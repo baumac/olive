@@ -1,6 +1,6 @@
 ---
 description: The creator of a review adds up to 5 photos to it. The app checks each upload, encodes it again as JPEG without metadata, and serves only its own files. A restaurant or a recipe shows the photos of its reviews as a cover and a gallery. A daily job deletes the photo files without a record.
-status: proposed
+status: implemented
 ---
 
 # Motivation

@@ -111,7 +111,7 @@ export function checkTag(tag: string, tags: string[]): string {
 }
 
 // safeRedirect accepts only a path on this site. Browsers read /\ like //.
-export function safeRedirect(value: unknown, fallback = '/restaurants'): string {
+export function safeRedirect(value: unknown, fallback = '/'): string {
   return typeof value === 'string' && /^\/(?![/\\])/.test(value) ? value : fallback
 }
 

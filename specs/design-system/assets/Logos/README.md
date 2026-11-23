@@ -1,6 +1,6 @@
 # Logos
 
-The Sponga47 Reviews logo: an olive with a leaf, and the name beside it. The olive ties the logo to the olive green palette and to food. "Sponga47" is set in TeX Gyre Bonum Bold and "Reviews" in TeX Gyre Bonum Regular, a serif, both converted to outlines. No font file is needed. The serif appears only in the logo; the UI keeps the system sans.
+The Sponga47 Reviews logo: an olive with a leaf, and the name beside it. The olive ties the logo to the olive green palette and to food. "Sponga47" is set in TeX Gyre Bonum Bold and "Reviews" in TeX Gyre Bonum Regular, a serif, both converted to outlines. No font file is needed. The UI sets names, headings and scores in Fraunces, a serif that sits well next to the logo, and all other text in the system sans.
 
 - `sponga47-reviews-lockup-light.svg`: the full logo on light grounds (`background`, `card`). Olive and "Reviews" in `primary` #546e0d, leaf and stem in `accent-foreground` #41560a, "Sponga47" in olive-950 #0c0c09.
 - `sponga47-reviews-lockup-dark.svg`: the full logo on dark grounds. Olive and "Reviews" in dark `primary` #a4c665, leaf and stem in dark `accent-foreground` #d7e5b9, "Sponga47" in olive-50 #fbfbf9.

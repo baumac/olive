@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import { checkSession, signInPath } from '@/composables/useAuth'
 import { tellPendingApproval } from '@/lib/approval'
-import { pendingApproval, signedIn } from '@/lib/session'
+import { currentUser, pendingApproval, signedIn } from '@/lib/session'
 import { safeRedirect } from '@/lib/validation'
 
 declare module 'vue-router' {
@@ -22,12 +22,23 @@ export const router = createRouter({
   // keeps the position on the page.
   scrollBehavior: (to, from, saved) => saved ?? (to.path === from.path ? false : { top: 0 }),
   routes: [
-    { path: '/', redirect: '/restaurants' },
+    { path: '/', component: () => import('@/pages/TablePage.vue') },
     { path: '/restaurants', component: () => import('@/pages/RestaurantsPage.vue') },
     { path: '/recipes', component: () => import('@/pages/RecipesPage.vue') },
     { path: '/reviewers/:reviewerId', component: () => import('@/pages/ReviewerPage.vue'), props: true },
     { path: '/lists/:listId', component: () => import('@/pages/ListPage.vue'), props: true },
-    { path: '/my-reviews', component: () => import('@/pages/MyReviewsPage.vue'), meta: { requiresAuth: true } },
+    // The journal of the user replaces My reviews. See decision 00006.
+    { path: '/my-reviews', redirect: () => (currentUser.value ? `/reviewers/${currentUser.value.id}` : signInPath('/my-reviews')) },
+    {
+      path: '/reviews/new',
+      component: () => import('@/pages/NewReviewPage.vue'),
+      props: (route) => ({
+        restaurantId: typeof route.query.restaurant === 'string' ? route.query.restaurant : undefined,
+        recipeId: typeof route.query.recipe === 'string' ? route.query.recipe : undefined,
+        startKind: route.query.kind === 'recipes' ? 'recipe' : undefined,
+      }),
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
     {
       path: '/restaurants/new',
       component: () => import('@/pages/RestaurantFormPage.vue'),
@@ -119,7 +130,7 @@ router.beforeEach(async (to, from) => {
     }
     if (tellPendingApproval()) {
       // A link on a page stays on the page. A first load has no page.
-      return firstLoad ? '/restaurants' : false
+      return firstLoad ? '/' : false
     }
   }
   if (to.meta.guestOnly && signedIn.value) {

@@ -8,49 +8,51 @@
   html, body { margin:0; height:100%; }
   body { background:var(--background); color:var(--foreground); font-family:var(--font-sans); overflow:hidden; }
   .cover { position:relative; width:960px; height:288px; overflow:hidden; }
-  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
-  .art svg { display:block; width:480px; height:288px; }
-  .primary { fill:var(--primary); }
-  .mid { fill:var(--input); }
-  .soft { fill:var(--muted-foreground); }
-  .danger { fill:var(--destructive); }
-  .blk { rx:var(--radius); }
-  .sm { rx:var(--radius-sm); }
-  .pip { rx:var(--radius-md); }
-  .words { position:absolute; left:var(--space-6); bottom:var(--space-6); max-width:440px; }
-  .name { margin:0; font-size:88px; line-height:.95; font-weight:800; letter-spacing:-0.025em; color:var(--foreground); }
-  .tag { margin:var(--space-2) 0 0 4px; font-size:14px; line-height:20px; color:var(--muted-foreground); }
+  .art { position:absolute; top:0; left:440px; width:520px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:520px; height:288px; }
+  .table { fill:var(--accent); }
+  .plate { fill:var(--card); }
+  .rim { fill:none; stroke:var(--border); stroke-width:2; }
+  .food { fill:var(--primary); }
+  .stamp { fill:var(--saffron); }
+  .stamp-num { fill:var(--saffron-foreground); font-family:var(--font-serif); font-size:30px; font-weight:650; }
+  .menu { fill:var(--card); stroke:var(--border); stroke-width:1; }
+  .line { fill:var(--foreground); font-family:var(--font-sans); font-size:15px; }
+  .val { fill:var(--foreground); font-family:var(--font-serif); font-size:18px; font-weight:600; }
+  .leader { stroke:var(--border); stroke-width:2; stroke-dasharray:2 4; }
+  .words { position:absolute; left:var(--space-6); bottom:var(--space-6); max-width:420px; }
+  .kicker { margin:0 0 8px 2px; font-size:15px; font-weight:650; font-variant-caps:all-small-caps; letter-spacing:.08em; color:var(--primary); }
+  .name { margin:0; font-family:var(--font-serif); font-size:80px; line-height:.95; font-weight:600; letter-spacing:-0.02em; color:var(--foreground); }
+  .tag { margin:var(--space-3) 0 0 2px; font-size:15px; line-height:22px; color:var(--muted-foreground); }
 </style>
 </head>
 <body>
 <div class="cover">
 <div class="art" aria-hidden="true">
-<svg viewBox="0 0 480 288" width="480" height="288">
+<svg viewBox="0 0 520 288" width="520" height="288">
 <!--
-  blocks      primary 144×232 slab bled off the top (the one main action) · input 128×128 · muted-foreground (olive grey) 176×176 bled off the right edge · destructive 48×24 once (it only means delete or error) — about a third of 960×288
-  arrangement one tall primary slab with satellites, bottoms on one line at y=216, space-4 gutters
-  pattern     a literal motif, the score: ten space-6 tiles at a space-8 pitch, seven in primary (olive green) and three in input, read as a 7 / 10 RatingInput
-  scales      gutters space-4; pitch space-8; tile side space-6; corners radius (blocks), radius-sm (destructive), radius-md (tiles)
+  the table   an accent field with one plate, bled off the top and the right
+  the plate   card paper with a border rim and an olive (primary) dish: the one brand color
+  the stamp   the saffron score stamp on the plate, as on the photo of an entry
+  the menu    a card with four score lines and dotted leaders, the score block
 -->
-<rect class="primary blk" x="16" y="-16" width="144" height="232" rx="10"/>
-<rect class="danger sm" x="176" y="56" width="48" height="24" rx="6"/>
-<rect class="mid blk" x="176" y="88" width="128" height="128" rx="10"/>
-<rect class="soft blk" x="320" y="40" width="176" height="176" rx="10"/>
-<rect class="primary pip" x="16"  y="240" width="24" height="24" rx="8"/>
-<rect class="primary pip" x="48"  y="240" width="24" height="24" rx="8"/>
-<rect class="primary pip" x="80"  y="240" width="24" height="24" rx="8"/>
-<rect class="primary pip" x="112" y="240" width="24" height="24" rx="8"/>
-<rect class="primary pip" x="144" y="240" width="24" height="24" rx="8"/>
-<rect class="primary pip" x="176" y="240" width="24" height="24" rx="8"/>
-<rect class="primary pip" x="208" y="240" width="24" height="24" rx="8"/>
-<rect class="mid pip"     x="240" y="240" width="24" height="24" rx="8"/>
-<rect class="mid pip"     x="272" y="240" width="24" height="24" rx="8"/>
-<rect class="mid pip"     x="304" y="240" width="24" height="24" rx="8"/>
+<rect class="table" x="0" y="0" width="520" height="288" rx="0"/>
+<circle class="plate" cx="330" cy="120" r="132"/>
+<circle class="rim" cx="330" cy="120" r="100"/>
+<ellipse class="food" cx="326" cy="116" rx="66" ry="56"/>
+<circle class="stamp" cx="430" cy="214" r="38"/>
+<text class="stamp-num" x="430" y="225" text-anchor="middle">7.5</text>
+<rect class="menu" x="40" y="150" width="190" height="118" rx="14"/>
+<text class="line" x="58" y="182">Space</text><line class="leader" x1="108" y1="178" x2="190" y2="178"/><text class="val" x="204" y="184">7</text>
+<text class="line" x="58" y="207">Service</text><line class="leader" x1="118" y1="203" x2="190" y2="203"/><text class="val" x="204" y="209">9</text>
+<text class="line" x="58" y="232">Food</text><line class="leader" x1="100" y1="228" x2="190" y2="228"/><text class="val" x="204" y="234">8</text>
+<text class="line" x="58" y="257">Value</text><line class="leader" x1="106" y1="253" x2="190" y2="253"/><text class="val" x="204" y="259">6</text>
 </svg>
 </div>
 <div class="words">
+<p class="kicker">The table</p>
 <h1 class="name">Sponga47<br>Reviews</h1>
-<p class="tag">Find a restaurant. Score it. Say why.</p>
+<p class="tag">Save the meal. Score it. Pass it on.</p>
 </div>
 </div>
 </body>

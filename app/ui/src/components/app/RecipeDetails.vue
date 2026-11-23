@@ -26,15 +26,15 @@ defineProps<{ recipe: Recipe }>()
     </ul>
     <div class="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <section class="grid content-start gap-3" aria-labelledby="ingredients-heading">
-        <h2 id="ingredients-heading" class="text-2xl font-semibold tracking-tight">Ingredients</h2>
+        <h2 id="ingredients-heading" class="font-serif text-2xl leading-[30px] font-semibold">Ingredients</h2>
         <ul class="grid list-disc gap-1.5 pl-5">
-          <li v-for="(ingredient, i) in recipe.ingredients" :key="i" class="break-words">{{ ingredient }}</li>
+          <li v-for="(ingredient, i) in recipe.ingredients" :key="i" class="wrap-anywhere">{{ ingredient }}</li>
         </ul>
       </section>
       <section class="grid content-start gap-3" aria-labelledby="steps-heading">
-        <h2 id="steps-heading" class="text-2xl font-semibold tracking-tight">Steps</h2>
+        <h2 id="steps-heading" class="font-serif text-2xl leading-[30px] font-semibold">Steps</h2>
         <ol class="grid list-decimal gap-3 pl-5">
-          <li v-for="(step, i) in recipe.steps" :key="i" class="leading-7 break-words whitespace-pre-line">{{ step }}</li>
+          <li v-for="(step, i) in recipe.steps" :key="i" class="leading-7 wrap-anywhere whitespace-pre-line">{{ step }}</li>
         </ol>
       </section>
     </div>

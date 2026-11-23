@@ -3,9 +3,9 @@ import { formatScore } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const sizes = {
-  sm: 'text-sm',
-  md: 'text-base',
-  lg: 'text-5xl leading-none font-extrabold tracking-tight',
+  sm: 'text-lg',
+  md: 'text-2xl leading-7',
+  lg: 'text-6xl leading-none',
 }
 
 withDefaults(
@@ -26,7 +26,7 @@ withDefaults(
   <span role="img" :aria-label="`${label}: ${formatScore(value)} out of ${max}`" class="inline-flex items-baseline gap-1.5">
     <span v-if="showLabel" class="text-muted-foreground text-sm" aria-hidden="true">{{ label }}</span>
     <span
-      :class="cn('text-foreground font-semibold tabular-nums', sizes[size])"
+      :class="cn('text-foreground score-numerals font-semibold', sizes[size])"
       aria-hidden="true"
     >
       {{ formatScore(value) }}

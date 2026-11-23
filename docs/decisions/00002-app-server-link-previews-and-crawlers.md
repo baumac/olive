@@ -77,7 +77,7 @@ Out of scope:
 - an `Allow` group for the link preview bots that obey robots.txt. A later decision can add it after a check of the previews on the deployed site.
 - blocks of crawlers that do not obey robots.txt. They need firewall rules.
 - the average scores in a description, and a cover in the preview of a subject
-- page meta for the list screens, such as `/restaurants` and `/my-reviews`. They keep the tags of the site.
+- page meta for the list screens, such as `/` and `/restaurants`. They keep the tags of the site.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation

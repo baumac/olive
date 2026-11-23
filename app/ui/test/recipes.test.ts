@@ -9,12 +9,12 @@ import RecipeCard from '@/components/app/RecipeCard.vue'
 import RecipeDetails from '@/components/app/RecipeDetails.vue'
 import ReviewCard from '@/components/app/ReviewCard.vue'
 import SaveToListMenu from '@/components/app/SaveToListMenu.vue'
-import { listsApi, recipesApi, reviewersApi } from '@/lib/api'
-import { formatMinutes } from '@/lib/format'
+import { listsApi, recipesApi, restaurantsApi, reviewersApi } from '@/lib/api'
+import { formatMinutes, formatScore } from '@/lib/format'
 import { listCountText } from '@/lib/lists'
 import { recipeFilterParams } from '@/lib/recipeFilters'
 import { recipeReviewFilterParams, reviewFilterDefsOf } from '@/lib/reviewFilters'
-import { kindOf, kinds, parentNameOf, reviewPathOf } from '@/lib/reviewKinds'
+import { kindOf, parentNameOf, reviewPathOf } from '@/lib/reviewKinds'
 import { overallOf, recipeScoreFields } from '@/lib/reviews'
 import { clearSession, saveSession } from '@/lib/session'
 import { checkIngredients, checkStep, checkWholeNumber, ingredientLines } from '@/lib/validation'
@@ -164,26 +164,24 @@ describe('RecipeDetails', () => {
 
 describe('ReviewCard of a recipe review', () => {
   it('links the review and shows the recipe scores', async () => {
-    const w = mount(ReviewCard, { props: { review, showRestaurant: true }, global: { plugins: [await routerAt('/my-reviews')] }, attachTo: attach() })
+    const w = mount(ReviewCard, { props: { review, showRestaurant: true }, global: { plugins: [await routerAt('/recipes')] }, attachTo: attach() })
     expect(w.get('h3 a').attributes('href')).toBe('/recipes/c4r8e2p6i0s3t7a/reviews/v2k6m0p4r8t1w5y')
     expect(w.text()).toContain('Shakshuka')
     expect(w.text()).toContain('Cooked on 6 Nov 2024')
-    await w.get('button[aria-expanded]').trigger('click')
-    expect(w.findAll('li [role=img]').map((s) => s.attributes('aria-label'))).toEqual(
-      kinds.recipe.scoreFields.map((f) => `${f.label}: ${(review as unknown as Record<string, number>)[f.name]} out of 10`),
-    )
+    expect(w.findAll('[role=img]').map((s) => s.attributes('aria-label'))).toEqual([`Overall: ${formatScore(review.overall)} out of 10`])
   })
 })
 
 describe('KindSwitch and AppHeader', () => {
   it('marks the current kind', async () => {
-    const router = await routerAt('/my-reviews?kind=recipes')
+    const router = await routerAt(`/reviewers/${ana.id}?kind=recipes`)
     const w = mount(KindSwitch, { props: { kind: 'recipe', label: 'Reviews of' }, global: { plugins: [router] }, attachTo: attach() })
     const links = w.findAll('a')
-    expect(links.map((a) => a.text())).toEqual(['Restaurants', 'Recipes'])
-    expect(links[1]!.attributes('aria-current')).toBe('page')
-    expect(links[0]!.attributes('href')).toBe('/my-reviews')
-    expect(links[1]!.attributes('href')).toBe('/my-reviews?kind=recipes')
+    expect(links.map((a) => a.text())).toEqual(['All', 'Restaurants', 'Recipes'])
+    expect(links[2]!.attributes('aria-current')).toBe('page')
+    expect(links[0]!.attributes('href')).toBe(`/reviewers/${ana.id}`)
+    expect(links[1]!.attributes('href')).toBe(`/reviewers/${ana.id}?kind=restaurants`)
+    expect(links[2]!.attributes('href')).toBe(`/reviewers/${ana.id}?kind=recipes`)
     await expectAccessible(w.element)
   })
 
@@ -191,6 +189,7 @@ describe('KindSwitch and AppHeader', () => {
     const w = mount(AppHeader, { global: { plugins: [await routerAt('/recipes/c4r8e2p6i0s3t7a')] }, attachTo: attach() })
     const sections = w.get('nav[aria-label=Sections]').findAll('a')
     expect(sections.map((a) => [a.text(), a.attributes('aria-current')])).toEqual([
+      ['Table', undefined],
       ['Restaurants', undefined],
       ['Recipes', 'page'],
     ])
@@ -285,19 +284,19 @@ describe('recipe parts of the list and reviewer pages', () => {
   it('shows the recipes of a list and removes one', async () => {
     signIn()
     vi.spyOn(listsApi, 'getList').mockResolvedValue(list)
-    const restaurants = vi.spyOn(listsApi, 'listListRestaurants')
-    vi.spyOn(listsApi, 'listListRecipes').mockResolvedValue({ items: [recipe], nextCursor: null })
+    vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
+    const recipes = vi.spyOn(recipesApi, 'listRecipes').mockResolvedValue({ items: [recipe], nextCursor: null })
     const remove = vi.spyOn(listsApi, 'removeListRecipe').mockResolvedValue()
-    const w = mount(ListPage, { props: { listId: list.id }, global: { plugins: [await routerAt(`/lists/${list.id}?kind=recipes`)] }, attachTo: attach() })
+    const w = mount(ListPage, { props: { listId: list.id }, global: { plugins: [await routerAt(`/lists/${list.id}`)] }, attachTo: attach() })
     await flushPromises()
-    expect(restaurants).not.toHaveBeenCalled()
-    expect(w.text()).toContain('A list by Ana · 1 recipe')
+    expect(recipes.mock.calls[0]![0]).toMatchObject({ listEq: list.id, sort: '-overall' })
+    expect(w.text()).toContain('A list by Ana')
+    expect(w.text()).toContain('1 recipe')
     expect(w.get('h3 a').attributes('href')).toBe(`/recipes/${recipe.id}`)
     expect(w.findAll('a').find((a) => a.text().includes('Sort and filter'))!.attributes('href')).toBe(`/recipes?list=${list.id}`)
     await w.get(`button[aria-label="Remove ${recipe.name} from the list"]`).trigger('click')
     await flushPromises()
     expect(remove).toHaveBeenCalledWith({ listRef: list.id, recipeId: recipe.id })
-    expect(w.text()).toContain('No recipes yet')
     expect(w.text()).toContain('No restaurants or recipes yet')
   })
 
@@ -315,11 +314,12 @@ describe('recipe parts of the list and reviewer pages', () => {
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(reviewersApi, 'listReviewerRecipeReviews').mockResolvedValue({ items: [], nextCursor: null })
     const added = vi.spyOn(recipesApi, 'listRecipes').mockResolvedValue({ items: [recipe], nextCursor: null })
     const w = mount(ReviewerPage, { props: { reviewerId: ana.id }, global: { plugins: [await routerAt(`/reviewers/${ana.id}?kind=recipes`)] }, attachTo: attach() })
     await flushPromises()
     expect(w.find('[aria-label="Average recipe score: 7.5 out of 10"]').exists()).toBe(true)
-    expect(w.text()).toContain('average of 2 recipe reviews · 1 recipe added')
+    expect(w.text()).toContain('0 visits · 2 cooks · 1 list')
     expect(w.findAll('h2').map((h) => h.text())).toContain('Recipes added')
     expect(added.mock.calls[0]![0]).toMatchObject({ creatorEq: ana.id, sort: '-created' })
     expect(w.get('h3 a').attributes('href')).toBe(`/recipes/${recipe.id}`)

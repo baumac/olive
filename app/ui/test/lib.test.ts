@@ -89,10 +89,10 @@ describe('validation', () => {
 
   it('accepts only redirects to this site', () => {
     expect(safeRedirect('/restaurants/abc')).toBe('/restaurants/abc')
-    expect(safeRedirect('//evil.example')).toBe('/restaurants')
-    expect(safeRedirect('/\\evil.example')).toBe('/restaurants')
-    expect(safeRedirect('https://evil.example')).toBe('/restaurants')
-    expect(safeRedirect(undefined)).toBe('/restaurants')
+    expect(safeRedirect('//evil.example')).toBe('/')
+    expect(safeRedirect('/\\evil.example')).toBe('/')
+    expect(safeRedirect('https://evil.example')).toBe('/')
+    expect(safeRedirect(undefined)).toBe('/')
   })
 })
 

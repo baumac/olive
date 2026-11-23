@@ -130,7 +130,7 @@ async function create() {
                 :checked="has(list)"
                 @change="toggle(list, ($event.target as HTMLInputElement).checked)"
               />
-              <span class="min-w-0 break-words">{{ list.name }}</span>
+              <span class="min-w-0 wrap-anywhere">{{ list.name }}</span>
             </label>
           </li>
         </ul>

@@ -45,7 +45,7 @@ const favorites: SavedList = {
   name: 'Favorites',
   kind: 'favorites',
   creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
-  restaurantCount: 2,
+  restaurantCount: 0,
   recipeCount: 0,
   created: '2024-11-04T01:26:55.002Z',
   updated: '2024-11-04T01:26:55.002Z',
@@ -67,19 +67,11 @@ describe('ReviewCard', () => {
     await expectAccessible(w.element)
   })
 
-  it('shows the five scores after a click', async () => {
-    const w = mount(ReviewCard, { props: { review }, attachTo: attach() })
-    const button = w.get('button[aria-expanded]')
-    expect(button.text()).toBe('Show scores of Great food, a bit expensive')
-    await button.trigger('click')
-    expect(button.attributes('aria-expanded')).toBe('true')
-    const labels = w.findAll('ul [role=img]').map((e) => e.attributes('aria-label'))
-    expect(labels).toEqual([
-      'Space: 7 out of 10',
-      'Service: 9 out of 10',
-      'Food: 8 out of 10',
-      'Value: 6 out of 10',
-    ])
+  it('marks an own review with You and shows the date', async () => {
+    const w = mount(ReviewCard, { props: { review, showCreator: true, own: true }, attachTo: attach() })
+    expect(w.text()).toContain('Visited on')
+    expect(w.text()).toContain('You')
+    expect(w.findAll('a').find((a) => a.text() === 'Ana')).toBeUndefined()
     await expectAccessible(w.element)
   })
 
@@ -100,6 +92,7 @@ async function mountPage(reviewerId: string) {
 describe('ReviewerPage', () => {
   beforeEach(() => {
     vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [favorites] })
+    vi.spyOn(reviewersApi, 'listReviewerRecipeReviews').mockResolvedValue({ items: [], nextCursor: null })
   })
 
   afterEach(() => {
@@ -123,7 +116,7 @@ describe('ReviewerPage', () => {
     const w = await mountPage('u5n1c8r3t6y0b2e')
     expect(w.get('h1').text()).toBe('Ana')
     expect(w.find('[aria-label="Average restaurant score: 7.6 out of 10"]').exists()).toBe(true)
-    expect(w.text()).toContain('average of 1 restaurant review')
+    expect(w.text()).toContain('1 visit · 0 cooks · 1 list')
     expect(w.text()).not.toContain('added')
     expect(restaurants).not.toHaveBeenCalled()
     expect(w.find('[role=search], input[type=search]').exists()).toBe(false)
@@ -152,7 +145,7 @@ describe('ReviewerPage', () => {
     const w = await mountPage('u2g6k0m4o8q1s5w')
     expect(w.text()).toContain('No reviews yet')
     expect(w.find('[aria-label^="Average score"]').exists()).toBe(false)
-    expect(w.text()).toContain('Joe has not reviewed a restaurant yet.')
+    expect(w.text()).toContain('Joe has not written a review yet.')
   })
 
   it('lists the restaurants that the reviewer added', async () => {
@@ -170,8 +163,8 @@ describe('ReviewerPage', () => {
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
     const list = vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [restaurant], nextCursor: null })
     const w = await mountPage('u2g6k0m4o8q1s5w')
-    expect(w.text()).toContain('No restaurant reviews yet · 2 restaurants added')
-    expect(w.findAll('h2').map((h) => h.text())).toEqual(['Lists', 'Restaurants added', 'Reviews'])
+    expect(w.text()).toContain('0 visits · 0 cooks · 1 list')
+    expect(w.findAll('h2').map((h) => h.text())).toEqual(['Lists', 'Restaurants added', 'Journal', 'Joe keeps food notes here'])
     expect(w.get('h3 a').text()).toBe("Luigi's Trattoria")
     expect(w.get('h3 a').attributes('href')).toBe('/restaurants/k3x9m2p7q1w8z4a')
     expect(list.mock.calls[0]![0]).toMatchObject({ creatorEq: 'u2g6k0m4o8q1s5w', sort: '-created', limit: 3 })

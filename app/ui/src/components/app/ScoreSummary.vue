@@ -4,8 +4,8 @@ import { computed } from 'vue'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { type AnyReview, type ReviewKind, kinds, scoreOf } from '@/lib/reviewKinds'
 
-// The default slot adds text after the scale, such as the review count. A
-// rating does not tell its kind, so each caller gives it.
+// The default slot adds a line under "out of 10", such as the review count.
+// A rating does not tell its kind. Each caller gives it.
 const props = defineProps<{ scores: AnyReview | RestaurantRating | RecipeRating; kind: ReviewKind }>()
 
 const max = 10
@@ -13,15 +13,18 @@ const fields = computed(() => kinds[props.kind].scoreFields)
 </script>
 
 <template>
-  <div class="grid gap-2">
-    <p class="flex flex-wrap items-baseline gap-x-2">
+  <div class="bg-card flex w-full max-w-md items-center gap-5 rounded-2xl border px-5 py-[18px]">
+    <p class="flex shrink-0 flex-col items-center gap-0.5">
       <RatingDisplay :value="scores.overall" :max="max" label="Overall" size="lg" />
-      <span class="text-muted-foreground text-sm">out of {{ max }}<template v-if="$slots.default"> · <slot /></template></span>
+      <span class="text-muted-foreground text-[13px] leading-[18px]">out of {{ max }}</span>
+      <span v-if="$slots.default" class="text-muted-foreground text-[13px] leading-[18px]"><slot /></span>
     </p>
-    <ul class="flex flex-wrap gap-x-4 gap-y-1">
-      <li v-for="f in fields" :key="f.name">
-        <RatingDisplay :value="scoreOf(scores, f)" :max="f.max" :label="f.label" show-label />
-      </li>
-    </ul>
+    <dl class="flex min-w-0 flex-1 flex-col gap-1.5 text-[15px]">
+      <div v-for="f in fields" :key="f.name" class="flex items-baseline">
+        <dt>{{ f.label }}</dt>
+        <span class="mx-2 min-w-3 flex-1 border-b-2 border-dotted" aria-hidden="true" />
+        <dd><RatingDisplay :value="scoreOf(scores, f)" :max="f.max" :label="f.label" /></dd>
+      </div>
+    </dl>
   </div>
 </template>

@@ -4,8 +4,8 @@ Shows the cover photo of a restaurant in a box with a fixed aspect ratio. Projec
 
 Lives in `@/components/ui/cover-photo`. Props: `photo` (the `cover` of a `Restaurant`, or `null`), `size` (`card` or `hero`), `alt`. Decision 00007 selects the cover.
 
-- `card` shows the `thumb` image in a 16:9 box. It loads lazily. It is the first part of the restaurant `Card`, flush with its top and sides.
-- `hero` shows the `full` image in a 16:9 box, 21:9 from `sm`. It is the first part of the restaurant page, with `radius-xl`. Its `srcset` lets a narrow screen load the `thumb`.
+- `card` shows the `thumb` image in a square box of 64px with `radius`. It loads lazily. It is the thumbnail at the start of a subject row.
+- `hero` shows the `full` image, full width on a phone and with `radius-2xl` from `sm`. It is the first part of the restaurant page and of the review page. Its `srcset` lets a narrow screen load the `thumb` and a dense screen the `full`. The photo of an `EntryCard` uses the same `srcset`.
 - The image fills the box with `object-cover`. The box has the `muted` background.
 - It shows `Skeleton` until the image loads, and the image-off icon on `muted` when it fails, like `PhotoGrid`.
 - Without a photo, it shows the utensils icon on `muted`. The cards of a row then line up.

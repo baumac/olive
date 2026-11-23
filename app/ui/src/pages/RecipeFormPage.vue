@@ -79,7 +79,19 @@ const draftKey = computed(() => `recipe:${props.recipeId ?? 'new'}`)
 // undo is the change that ?undo of the history page undoes. See decision
 // 00004.
 const undo = ref<Undo | null | undefined>(undefined)
-const cancelPath = computed(() => (props.recipeId ? `/recipes/${props.recipeId}` : '/recipes'))
+// A new recipe from the review form returns to it. See decision 00005.
+const fromReview = computed(() => !props.recipeId && route.query.review === 'new')
+const cancelPath = computed(() => {
+  if (fromReview.value) {
+    return '/reviews/new?kind=recipes'
+  }
+  return props.recipeId ? `/recipes/${props.recipeId}` : '/recipes'
+})
+// subjectPath opens a recipe that exists. From the review form, it opens a
+// review of it.
+function subjectPath(id: string) {
+  return fromReview.value ? `/reviews/new?recipe=${id}` : `/recipes/${id}`
+}
 
 function setSteps(steps: string[]) {
   fields.value.steps = steps.length ? steps : ['']
@@ -238,6 +250,10 @@ async function submit() {
         })
     clearDraft(draftKey.value)
     toast.success(editing.value ? 'Recipe saved' : 'Recipe added', { description: saved.name })
+    if (fromReview.value) {
+      void router.push({ path: '/reviews/new', query: { recipe: saved.id } })
+      return
+    }
     void router.push(`/recipes/${saved.id}`)
   } catch (error) {
     const { status, problem } = await apiFailure(error)
@@ -278,7 +294,7 @@ async function submit() {
 <template>
   <ErrorPage v-if="failed" :status="failed.status" @retry="router.go(0)" />
   <main v-else id="main" class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
-    <h1 class="text-4xl font-extrabold tracking-tight">{{ editing ? 'Edit recipe' : 'Add a recipe' }}</h1>
+    <h1 class="font-serif text-[34px] leading-10 font-semibold tracking-[-0.01em]">{{ editing ? 'Edit recipe' : 'Add a recipe' }}</h1>
     <div v-if="loading" aria-busy="true" aria-label="Loading recipe" class="grid gap-4">
       <Skeleton class="h-9" /><Skeleton class="h-24" /><Skeleton class="h-9" />
     </div>
@@ -289,8 +305,8 @@ async function submit() {
         <AlertTitle>{{ alert.title }}</AlertTitle>
         <AlertDescription>
           {{ alert.description }}
-          <RouterLink v-if="alert.recipe" :to="`/recipes/${alert.recipe}`" class="font-medium underline underline-offset-4">
-            Open the recipe
+          <RouterLink v-if="alert.recipe" :to="subjectPath(alert.recipe)" class="font-medium underline underline-offset-4">
+            {{ fromReview ? 'Review this recipe' : 'Open the recipe' }}
           </RouterLink>
         </AlertDescription>
       </Alert>
@@ -392,7 +408,7 @@ async function submit() {
         </Button>
       </fieldset>
       <fieldset class="grid gap-6">
-        <legend class="mb-1 text-xl font-semibold tracking-tight">Details</legend>
+        <legend class="mb-1 font-serif text-[22px] leading-7 font-semibold">Details</legend>
         <p class="text-muted-foreground text-sm">Optional.</p>
         <FormItem id="recipe-source" :error="errors.source" description>
           <FormLabel>Source</FormLabel>

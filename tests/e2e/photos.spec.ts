@@ -15,9 +15,11 @@ test('a user adds a photo with alt text to a review', async ({ page, api, user }
   await page.getByRole('button', { name: 'Upload photo' }).click()
   await expect(page.getByText('Photo added')).toBeVisible()
 
-  await page.goto(`/restaurants/${restaurant.id}`)
-  const card = page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').filter({ hasText: 'Pasta night' })
-  await expect(card.getByRole('button', { name: 'A plate of carbonara' })).toBeVisible()
+  // The review page starts with the first photo. It has all photos.
+  // See decision 00007.
+  await page.goto(`/restaurants/${restaurant.id}/reviews/${review.id}`)
+  await expect(page.getByRole('main').getByRole('img', { name: 'A plate of carbonara' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'A plate of carbonara' })).toBeVisible()
 })
 
 // The user fixture signs in the page.
@@ -38,8 +40,9 @@ test('a user adds a photo on the create form of a review', async ({ page, api, u
 
   await expect(page.getByText('Review saved')).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}$`))
-  const card = page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').filter({ hasText: 'With a menu' })
-  await expect(card.getByRole('button', { name: 'The menu' })).toBeVisible()
+  await page.getByRole('region', { name: 'Every visit' }).getByRole('link', { name: 'With a menu' }).click()
+  await expect(page.getByRole('heading', { name: 'With a menu', level: 1 })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'The menu' })).toBeVisible()
 })
 
 test('the viewer moves between photos and closes with Escape', async ({ page, api }) => {
@@ -49,9 +52,8 @@ test('the viewer moves between photos and closes with Escape', async ({ page, ap
   await api.addPhoto(owner, review, 'gps-rotated.jpg', 'The first dish')
   await api.addPhoto(owner, review, 'menu.png')
 
-  await page.goto(`/restaurants/${restaurant.id}`)
-  const reviews = page.getByRole('region', { name: 'Reviews' })
-  await reviews.getByRole('button', { name: 'The first dish' }).click()
+  await page.goto(`/restaurants/${restaurant.id}/reviews/${review.id}`)
+  await page.getByRole('button', { name: 'The first dish' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('heading', { name: 'Photo 1 of 2' })).toBeVisible()
   await expect(dialog.getByRole('img', { name: 'The first dish' })).toBeVisible()
@@ -61,7 +63,7 @@ test('the viewer moves between photos and closes with Escape', async ({ page, ap
   await expect(dialog.getByRole('button', { name: 'Delete photo' })).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
-  await expect(reviews.getByRole('button', { name: 'Photo 2 of 2' })).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Photo 2 of 2' })).toBeFocused()
 })
 
 test('the restaurant card and page show the cover and the gallery', async ({ page, api }) => {
@@ -107,7 +109,7 @@ test('a restaurant without photos has no cover and no gallery', async ({ page, a
   await api.createReview(owner, restaurant.id, { ...scores, title: 'No pictures' })
 
   await page.goto(`/restaurants/${restaurant.id}`)
-  await expect(page.getByRole('heading', { name: 'Reviews' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Every visit' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Photos' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /cover photo/ })).toHaveCount(0)
 })

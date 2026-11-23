@@ -76,7 +76,7 @@ const status = computed(() => {
       </template>
     </FilterBar>
 
-    <PagedList :list="list" noun="recipes" list-class="lg:grid-cols-2 xl:grid-cols-3" skeleton-class="h-36 rounded-xl" :skeleton-count="6">
+    <PagedList :list="list" noun="recipes" list-class="gap-2.5 lg:grid-cols-2" skeleton-class="h-[86px] rounded-xl" :skeleton-count="6">
       <template #item="{ item }">
         <RecipeCard :recipe="item" @favorite="favoriteChanged(item, $event)" />
       </template>

@@ -16,7 +16,9 @@ const props = withDefaults(
   { size: 'default', decorative: true },
 )
 
-const sizes = { sm: 'size-6 text-[10px]', default: 'size-8 text-xs', lg: 'size-10 text-sm' }
+const sizes = { sm: 'size-7 text-[13px]', default: 'size-9 text-base', lg: 'size-[68px] text-3xl' }
+// The large avatar of the journal shows only the first letter.
+const letters = computed(() => (props.size === 'lg' && props.name ? Array.from(initials(props.name))[0] : initials(props.name)))
 const label = computed(() => props.name ?? 'Deleted user')
 </script>
 
@@ -28,9 +30,9 @@ const label = computed(() => props.name ?? 'Deleted user')
     :aria-label="decorative ? undefined : label"
   >
     <AvatarFallback
-      :class="cn('text-foreground font-medium', !name && 'bg-background border-input border border-dashed')"
+      :class="cn('bg-accent text-accent-foreground font-serif font-semibold', !name && 'bg-background text-foreground border-input border border-dashed font-sans')"
     >
-      {{ initials(name) }}
+      {{ letters }}
     </AvatarFallback>
   </Avatar>
 </template>

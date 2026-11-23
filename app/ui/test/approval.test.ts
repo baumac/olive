@@ -92,7 +92,7 @@ describe('the route guard', () => {
   // The router keeps its route between tests. Each test starts on a page.
   async function onPage() {
     saveSession({ expires, user: { ...user, approved: true } })
-    await router.push('/my-reviews')
+    await router.push('/recipes')
   }
 
   it('keeps a user who waits on the page', async () => {
@@ -100,11 +100,11 @@ describe('the route guard', () => {
     saveSession({ expires, user })
     const getUser = vi.spyOn(usersApi, 'getCurrentUser')
     const info = vi.spyOn(toast, 'info')
-    for (const path of ['/restaurants/new', '/restaurants/k3x9m2p7q1w8z4a/edit', '/restaurants/k3x9m2p7q1w8z4a/reviews/new', '/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/edit']) {
+    for (const path of ['/reviews/new', '/restaurants/new', '/restaurants/k3x9m2p7q1w8z4a/edit', '/restaurants/k3x9m2p7q1w8z4a/reviews/new', '/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/edit']) {
       await router.push(path)
-      expect(router.currentRoute.value.path).toBe('/my-reviews')
+      expect(router.currentRoute.value.path).toBe('/recipes')
     }
-    expect(info).toHaveBeenCalledTimes(4)
+    expect(info).toHaveBeenCalledTimes(5)
     expect(getUser).not.toHaveBeenCalled()
   })
 
