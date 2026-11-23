@@ -1,10 +1,21 @@
-<!-- @dsCard group="Forms" height=290 -->
+<!-- @dsCard group="Forms" height=300 -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>RatingInput — preview</title></head>
 <body>
-<div class="rv-stage">
-<fieldset class="rv-rating" role="radiogroup" aria-label="Food" aria-describedby="food-help" style="flex-direction:column"><legend>Food</legend><div class="rv-row" style="gap:4px"><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">1</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">2</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">3</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">4</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">5</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">6</span><span class="rv-rating-seg" role="radio" aria-checked="true" tabindex="0">7</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">8</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">9</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">10</span></div><div id="food-help"><p class="rv-desc">Presentation, flavor, ingredient quality, and culinary execution.</p><p class="rv-desc">1 means badly made and bland. 10 means well made and full of flavor.</p></div></fieldset>
+<div class="rv-stage" style="max-width:420px;gap:20px">
+<fieldset class="rv-rating" role="radiogroup" aria-labelledby="food-l" aria-describedby="food-help food-ends">
+<legend id="food-l">Food</legend>
+<p class="rv-desc" id="food-help">Flavor, presentation and ingredients</p>
+<div class="rv-rating-segs"><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">1</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">2</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">3</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">4</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">5</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">6</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">7</span><span class="rv-rating-seg is-focus" role="radio" aria-checked="true" tabindex="0">8</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">9</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">10</span></div>
+<div class="rv-rating-ends" id="food-ends"><span><span class="rv-sr">1 means </span>Poor</span><span><span class="rv-sr">10 means </span>Great</span></div>
+</fieldset>
+<fieldset class="rv-rating" role="radiogroup" aria-labelledby="value-l" aria-describedby="value-help value-ends">
+<legend id="value-l">Value</legend>
+<p class="rv-desc" id="value-help">Is it worth the price?</p>
+<div class="rv-rating-segs"><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="0">1</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">2</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">3</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">4</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">5</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">6</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">7</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">8</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">9</span><span class="rv-rating-seg" role="radio" aria-checked="false" tabindex="-1">10</span></div>
+<div class="rv-rating-ends" id="value-ends"><span><span class="rv-sr">1 means </span>Poor value</span><span><span class="rv-sr">10 means </span>Great value</span></div>
+</fieldset>
 </div>
 </body>
 </html>

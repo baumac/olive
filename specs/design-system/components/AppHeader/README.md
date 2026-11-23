@@ -1,15 +1,15 @@
 # AppHeader
 
-The bar at the top of every screen: logo, sections, and account.
+The bar at the top of every screen: the logo and the account menu, and from `md` the sections and "Add review".
 
 Project component. Lives in `@/components/app/AppHeader.vue`, outside `components/ui/`, because it knows the routes. No props; it reads the route and the signed in user.
 
-- Left: the logo lockup, 36px high, linking to the home screen. Use the light or dark file from the Logos group to match the theme. The link's accessible name is "Sponga47 Reviews, home".
-- After the logo: a `nav` with the name "Sections" and the links "Restaurants" and "Recipes". The logo still opens the restaurants list. See decision 00004.
-- A section link is current on each page of its section, such as `/recipes/{id}/reviews/new`. The current link has `aria-current="page"` and the `secondary` fill. The other link is `muted-foreground` and turns `foreground` on hover.
-- The section links are text links with the `md` radius. They have 8px side padding below `sm` and 12px from `sm`. The gaps of the row are 8px below `sm` and 16px from `sm`. The row then fits on a 320px screen with the mark and the account menu.
-- Right: `UserMenu`. The theme is in the menu of a signed in person. A signed out person has `ThemeToggle` in the page footer.
-- Height is `header-height` (64px). The content is at most `content-max` wide, with 24px side padding. It has a `border` hairline at the bottom.
+- Below `md`: the olive mark alone at 30px, linking to the table, and `UserMenu` at the right end. The sections are in `BottomNav`. The height is `header-height` (60px).
+- From `md`: the logo lockup at 36px, a `nav` with the name "Sections" and the links "Table", "Restaurants" and "Recipes", then "Add review" as the default `Button` and `UserMenu`. The height is `header-height-md` (72px). See decision 00009.
+- Use the light or dark logo file from the Logos group to match the theme. The link's accessible name is "Sponga47 Reviews, home". It opens `/`, the table.
+- A section link is current on each page of its section, such as `/recipes/{id}/reviews/new`. The current link has `aria-current="page"` and the `accent` fill with `accent-foreground` text. The others are `muted-foreground` and turn `foreground` on hover.
+- The section links are pills at least 44px high, with 14px side padding.
+- A signed out visitor has no "Add review". `UserMenu` shows "Sign in". The theme is in the page footer for a signed out person, and in `UserMenu` for a signed in person.
+- The content is at most `content-max` wide, with 16px side padding below `sm` and 24px from `sm`. It has a `border` hairline at the bottom.
 - The header is sticky (`sticky top-0`) with `z-header`. Its fill is `background`, so content does not show through.
-- Below `md`, swap the lockup for the olive mark alone.
 - The first item in the page is a "Skip to content" link that shows on focus.

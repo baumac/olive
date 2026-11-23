@@ -1,12 +1,18 @@
-<!-- @dsCard group="Forms" height=210 -->
+<!-- @dsCard group="Forms" height=250 -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>FilterBar — preview</title></head>
 <body>
 <div class="rv-stage">
-<div class="rv-filterbar"><button class="rv-btn rv-btn-outline rv-btn-sm"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg> Filters</button><button class="rv-select" style="height:32px;min-width:180px">Food: all <svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><button class="rv-select" style="height:32px;min-width:180px">Newest first <svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>
-<div class="rv-filterbar"><span class="rv-chip">Tag: <b>italian</b><button aria-label="Remove filter tag italian"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span><span class="rv-chip">Food: <b>8 or more</b><button aria-label="Remove filter food 8 or more"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span><button class="rv-btn rv-btn-link rv-btn-sm">Clear all</button></div>
-<p class="rv-filter-count" role="status">12 reviews</p>
+<div class="rv-filterbar">
+<label class="rv-search" style="flex:1 1 220px;max-width:320px"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span class="rv-sr">Search restaurants</span><input type="search" placeholder="Search"></label>
+<button class="rv-btn rv-btn-outline rv-btn-sm"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg>Filters</button>
+<button class="rv-select" style="min-width:150px"><span class="rv-sr">Sort: </span>Nearest <svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+<nav class="rv-viewswitch" aria-label="View"><a href="#" aria-current="page">List</a><a href="#">Map</a></nav>
+<a class="rv-btn rv-btn-outline rv-btn-sm" href="#">Add restaurant</a>
+</div>
+<div class="rv-filterbar"><span class="rv-chip">Tag: <b>handmade-pasta</b><button aria-label="Remove filter tag handmade-pasta"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span><span class="rv-chip">Overall: <b>8 or more</b><button aria-label="Remove filter overall 8 or more"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span><button class="rv-btn rv-btn-link rv-btn-sm">Clear all</button></div>
+<p class="rv-filter-count" role="status">14 restaurants within 10 km</p>
 </div>
 </body>
 </html>

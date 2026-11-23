@@ -3,15 +3,21 @@
 <html lang="en">
 <head><meta charset="utf-8"><title>CoverPhoto — preview</title></head>
 <body>
-<div class="rv-stage" style="flex-direction:row;flex-wrap:wrap;align-items:flex-start">
-<article class="rv-card" style="width:260px;padding-top:0;overflow:hidden">
-<div style="aspect-ratio:16/9;background:color-mix(in oklab, var(--primary) 35%, var(--muted))"></div>
-<div class="rv-card-header"><h3 class="rv-card-title">Luigi's Trattoria</h3><p class="rv-card-desc">A family-run Italian restaurant</p></div>
-</article>
-<article class="rv-card" style="width:260px;padding-top:0;overflow:hidden">
-<div style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:var(--muted);color:var(--muted-foreground)"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true" style="width:32px;height:32px"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></div>
-<div class="rv-card-header"><h3 class="rv-card-title">Casa Nova</h3><p class="rv-card-desc">No photos yet</p></div>
-</article>
+<div class="rv-stage" style="max-width:420px;gap:14px">
+<div style="height:170px;border-radius:16px;overflow:hidden;background:var(--muted)"><svg viewBox="0 0 390 240" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%" aria-hidden="true"><rect width="390" height="240" fill="#C9B497"/><rect y="150" width="390" height="90" fill="#8C6A4F"/><rect x="40" y="40" width="64" height="92" rx="32" fill="#F3E3B5"/><rect x="163" y="40" width="64" height="92" rx="32" fill="#F3E3B5"/><rect x="286" y="40" width="64" height="92" rx="32" fill="#F3E3B5"/></svg></div>
+<p class="rv-desc">hero, the first part of a restaurant page</p>
+<div class="rv-subject">
+<a href="#"><span class="rv-subject-thumb"><svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%" aria-hidden="true"><rect width="300" height="300" fill="#6E2F2A"/><circle cx="150" cy="150" r="120" fill="#F4F0E6"/><ellipse cx="150" cy="148" rx="78" ry="66" fill="#F0E2B8"/><circle cx="130" cy="132" r="12" fill="#8BA153"/></svg></span>
+<span class="rv-entry-body"><span class="rv-entry-name">Luigi's Trattoria</span><span class="rv-meta">1.2 km · 6 reviews</span></span>
+<span class="rv-entry-score"><span class="rv-sr">Overall </span>7.8</span></a>
+<button class="rv-btn rv-btn-ghost rv-btn-icon" aria-label="Favorite" aria-pressed="true"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px;fill:currentColor"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></button>
+</div>
+<div class="rv-subject">
+<a href="#"><span class="rv-subject-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--muted-foreground)"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></span>
+<span class="rv-entry-body"><span class="rv-entry-name">Casa Nova</span><span class="rv-meta">2.6 km · No reviews yet</span></span></a>
+<button class="rv-btn rv-btn-ghost rv-btn-icon" aria-label="Favorite" aria-pressed="false"><svg class="rv-icon" viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></button>
+</div>
+<p class="rv-desc">card, the thumbnail of a subject row, with and without a cover</p>
 </div>
 </body>
 </html>
