@@ -5,7 +5,7 @@ This folder runs the app as one instance with Docker Compose. Decision 00010 has
 | Service | What |
 | --- | --- |
 | `app` | the app server with its data in the `pb_data` volume |
-| `caddy` | the reverse proxy. It gets the TLS certificate of the site. |
+| `cloudflared` | the Cloudflare Tunnel. Cloudflare has the TLS certificate of the site. |
 
 AGENTS.md has the reasons for the settings in its Production section.
 
@@ -13,7 +13,7 @@ AGENTS.md has the reasons for the settings in its Production section.
 
 Do these steps in this sequence. Do not let users sign up before step 10.
 
-1. Get a server with Docker. Point a DNS name to it. Open the ports 80 and 443.
+1. Get a server with Docker. The server needs no open port for the site. Close the ports 80 and 443.
 
 2. Make the file `deploy/.env`:
 
@@ -21,7 +21,8 @@ Do these steps in this sequence. Do not let users sign up before step 10.
    cp deploy/.env.example deploy/.env
    ```
 
-3. In `deploy/.env`, set `SITE_ADDRESS` to the DNS name.
+3. Make the tunnel. See [Cloudflare Tunnel](#cloudflare-tunnel). In `deploy/.env`, set `CLOUDFLARE_TUNNEL_TOKEN` to its token.
+   `HOST` in the next steps is the public host name of the tunnel.
 
 4. In `deploy/.env`, set `PB_ENCRYPTION_KEY` to a key of 32 characters. This command makes one:
 
@@ -47,11 +48,11 @@ Do these steps in this sequence. Do not let users sign up before step 10.
 
    Each `reviews-app` command in the container needs `--dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY`.
 
-8. Open `https://SITE_ADDRESS/_/` and sign in. Open Settings > Application and set:
+8. Open `https://HOST/_/` and sign in. Open Settings > Application and set:
 
    - the Application name: `Sponga47 Food`. The emails use it.
-   - the Application URL: `https://SITE_ADDRESS`
-   - the trusted proxy header: `X-Real-IP`
+   - the Application URL: `https://HOST`
+   - the trusted proxy header: `CF-Connecting-IP`
    - the superuser IP allow-list
 
 9. Open Settings > Mail settings. Set the sender name to `Sponga47 Food` and set the sender address. Turn on "Use SMTP mail server", and set the host, the port, the user name, and the password.
@@ -91,7 +92,7 @@ Do these steps in this sequence. Do not let users sign up before step 10.
 A new user cannot add or change data before a superuser approves the account. See decision 00003.
 Each superuser gets an email when a new user confirms the email address.
 
-1. Open `https://SITE_ADDRESS/_/` and select the `users` collection.
+1. Open `https://HOST/_/` and select the `users` collection.
 2. Enter `approved = false` in the search field. The list then has the users that wait.
 3. Open a user, turn on `approved`, and save. The user gets an email.
 
@@ -105,6 +106,7 @@ Such a user can sign in only when `verified` is also on. Without it, the person 
 ## Update
 
 1. In the dashboard, open Settings > Backups and select "New backup".
+   Do not continue before the backup is in the list. A large backup can get the error 524 while it continues. See [Cloudflare Tunnel](#cloudflare-tunnel).
 2. Get the new version and start it:
 
    ```bash
@@ -146,6 +148,55 @@ The app applies the migrations when it starts.
 
 ## Reference
 
+### Cloudflare Tunnel
+
+The zone of the site must be in the Cloudflare account. The tunnel needs no open port and no certificate on the server.
+
+1. In the Cloudflare dashboard, open Networks > Tunnels and make a tunnel of the type Cloudflared.
+2. Select Docker as the environment. Copy the token from the `docker run` command. The token is a secret.
+3. Add a public hostname: the host name of the site, the type `HTTP`, and the URL `app:8090`.
+
+Set these options of the zone:
+
+- SSL/TLS > Edge Certificates: turn on "Always Use HTTPS".
+- Speed > Optimization: turn off Rocket Loader.
+- Scrape Shield: turn off "Email Address Obfuscation".
+- Web Analytics: do not use the automatic setup for the site.
+- Security > Bots: turn off "Bot Fight Mode". Its challenge blocks the SDK clients and the link preview bots.
+
+Rocket Loader, the email obfuscation, and the automatic analytics add scripts to the pages. The Content Security Policy of the app blocks them, and the UI can break.
+
+Cloudflare caches only the paths with a file extension of its default list, such as `.js` and `.css`.
+It then keeps the `Cache-Control` of the app. The UI files in `assets/` get one year, and the other UI files get `no-cache`.
+The photo paths have no file extension, so Cloudflare does not cache them.
+
+Cloudflare stops a request after 100 seconds with the error 524. The work on the server continues.
+"New backup" in the dashboard waits for the ZIP file. With a large `pb_data`, it can get the 524.
+After a 524, wait some minutes and look for the new backup in the list.
+
+Cloudflare decrypts each request at its edge. It sees the passwords and the session cookies of the users.
+
+### Move from Caddy
+
+A server with the old Caddy setup moves to the tunnel with these steps:
+
+1. In the dashboard, set the trusted proxy header to `CF-Connecting-IP`.
+   Caddy does not set this header, so all clients share one address until step 5.
+   Do not wait until after the switch. Cloudflare sends the `X-Real-IP` of a client without a change.
+   The superuser IP allow-list then also sees this one address. The dashboard is closed until step 6.
+2. Make the tunnel with steps 1 and 2 of [Cloudflare Tunnel](#cloudflare-tunnel). Set `CLOUDFLARE_TUNNEL_TOKEN` in `deploy/.env` and remove `SITE_ADDRESS`.
+3. Get the new version with `git pull`.
+4. In the DNS settings of the zone, delete the old `A` or `AAAA` record of the host name.
+   Cloudflare refuses the public hostname of the tunnel while this record exists. The site is down from this step until step 6.
+5. Add the public hostname with step 3 of [Cloudflare Tunnel](#cloudflare-tunnel). The tunnel adds its own `CNAME` record.
+6. Start the new setup and remove the old container:
+
+   ```bash
+   docker compose -f deploy/compose.yaml up -d --build --remove-orphans
+   ```
+
+7. Close the ports 80 and 443 of the server. Delete the volumes `deploy_caddy_data` and `deploy_caddy_config`.
+
 ### Settings encryption
 
 The PocketBase settings have secrets, such as the SMTP password.
@@ -170,11 +221,11 @@ docker compose -f deploy/compose.yaml exec app reviews-app superuser otp EMAIL -
 | memory of the `app` container | 768 MB | `APP_MEMORY_LIMIT` in `deploy/.env` |
 | memory target of the Go runtime | 600 MiB | `APP_GOMEMLIMIT` in `deploy/.env` |
 | open files of the `app` container | 65536 | `deploy/compose.yaml` |
-| request body in Caddy | 11 MB | `deploy/Caddyfile` |
+| request body in Cloudflare | 100 MB | the plan of the Cloudflare account |
 
 The memory defaults are for a server with 1 GB. On a larger server, raise both values.
 Keep `APP_GOMEMLIMIT` at about 80 percent of `APP_MEMORY_LIMIT`. Docker stops a container that gets to its memory limit.
-The app accepts a photo of up to 10 MiB. The limit of Caddy must stay above it.
+The app accepts a photo of up to 10 MiB. It refuses a larger body with its own 413.
 
 ### Backups
 

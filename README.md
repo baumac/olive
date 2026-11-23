@@ -59,4 +59,4 @@ CI runs the same commands. See `.github/workflows/ci.yml`.
 
 ## Deploy
 
-`deploy/README.md` has the Docker Compose setup with the reverse proxy, and the backup settings.
+`deploy/README.md` has the Docker Compose setup with the Cloudflare Tunnel, and the backup settings.

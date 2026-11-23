@@ -1,5 +1,5 @@
 ---
-description: The app runs as one instance on the home server with Docker Compose and Caddy. The Go, UI, and end-to-end tests check each change, with coverage minimums. A GitHub Actions workflow runs them through make, and a monthly Renovate workflow opens one pull request with all dependency updates.
+description: The app runs as one instance on the home server with Docker Compose and a Cloudflare Tunnel. The Go, UI, and end-to-end tests check each change, with coverage minimums. A GitHub Actions workflow runs them through make, and a monthly Renovate workflow opens one pull request with all dependency updates.
 status: implemented
 ---
 
@@ -47,10 +47,11 @@ Expected outcome:
 [scope]: #scope
 
 In scope:
-- `deploy/Dockerfile`, `deploy/compose.yaml`, `deploy/Caddyfile`, `deploy/.env.example`, and `deploy/README.md`
+- `deploy/Dockerfile`, `deploy/compose.yaml`, `deploy/.env.example`, and `deploy/README.md`
 - the rule of one instance
 - the backup plan and the restore
-- the settings encryption, the memory limits, and the body limit of the proxy
+- the settings encryption and the memory limits
+- the Cloudflare Tunnel and the settings of the Cloudflare zone
 - the PocketBase settings that the operator sets
 - the environment variables of the app
 - the Go tests of the app and their test database
@@ -87,9 +88,9 @@ Out of scope:
 | Service | Image | Use |
 |---|---|---|
 | `app` | `reviews-app:local` | the app server on port 8090 with the `pb_data` volume |
-| `caddy` | `caddy` | the reverse proxy on the ports 80 and 443. It gets the TLS certificate of `SITE_ADDRESS`. |
+| `cloudflared` | `cloudflare/cloudflared` | the Cloudflare Tunnel. It sends the requests of the public host name to `app:8090`. |
 
-- `deploy/.env` has `SITE_ADDRESS`, `PB_ENCRYPTION_KEY`, and the `REVIEWS_` variables of the app
+- `deploy/.env` has `CLOUDFLARE_TUNNEL_TOKEN`, `PB_ENCRYPTION_KEY`, and the `REVIEWS_` variables of the app
 - `compose.yaml` names each `REVIEWS_` variable. A new variable of the app needs a line there.
 - `make build-image` builds the image `reviews-app:local` from `deploy/Dockerfile`
 - the app applies the migrations when it starts
@@ -106,13 +107,13 @@ Out of scope:
 In the PocketBase dashboard at `/_/`:
 - **Backups**: turn on the auto backups. Without them, the app has no backup.
 - **Application URL**: the public URL of the site. The link previews of decision 00002 start with it.
-- **Trusted proxy**: the header `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign in limit counts them together.
+- **Trusted proxy**: the header `CF-Connecting-IP`. Otherwise all clients have the IP address of the tunnel, and the sign in limit counts them together.
 - **Superuser IP allow-list**: only the admin networks can open the dashboard
 - **Mail server**: set it before the first sign up. Without SMTP, the app writes each email to the log.
 - **OTP and MFA** for the `_superusers` collection, after the mail server
 - **Approval**: approve new users in the `users` collection. See decision 00003.
 
-The reverse proxy must not set a `Referrer-Policy` of `no-referrer`, and must not turn off `geolocation` in a `Permissions-Policy`. See decision 00008.
+Cloudflare must not set a `Referrer-Policy` of `no-referrer`, and must not turn off `geolocation` in a `Permissions-Policy`. See decision 00008.
 
 ## Backups
 
@@ -281,16 +282,23 @@ make renovate         # Open or update the pull request. Needs RENOVATE_TOKEN an
 
 | Limit | Value | Reason |
 |---|---|---|
-| `mem_limit` of `app` | 768 MB | The server has 1 GB. Caddy and the system get the rest. |
+| `mem_limit` of `app` | 768 MB | The server has 1 GB. `cloudflared` and the system get the rest. |
 | `GOMEMLIMIT` | 600 MiB | The Go runtime frees memory before Docker stops the container. The photo uploads of decision 00007 peak at about 264 MB. |
 | `ulimits.nofile` | 65536 | Each connection and each SQLite file uses a file descriptor. |
-| `request_body` of Caddy | 11 MB | The limit of the app is 10 MiB. A body between the two limits gets the `413` of the app with Problem Details. |
+| request body of Cloudflare | 100 MB | The plan of the account sets it. The limit of the app is 10 MiB. A body between the two limits gets the `413` of the app with Problem Details. |
 
-## Reverse proxy
+## Cloudflare Tunnel
 
-- Caddy gets and renews the certificate without more setup. It compresses the responses with zstd and gzip.
-- Caddy sets `X-Real-IP` to the address of the client
-- the session cookie of decision 00003 gets `Secure` from the `X-Forwarded-Proto` header that Caddy sets
+- `cloudflared` opens an outbound connection to Cloudflare. The server needs no open port and no certificate.
+- the tunnel is remotely managed. Its public hostname and its target `app:8090` are in the Cloudflare dashboard. `deploy/.env` has only its token.
+- Cloudflare has the certificate of the site and compresses the responses
+- Cloudflare sets `CF-Connecting-IP` to the address of the client. Only `cloudflared` can reach the app, so a client cannot set this header.
+- the session cookie of decision 00003 gets `Secure` from the `X-Forwarded-Proto` header that Cloudflare sets
+- Cloudflare caches only the paths with a file extension of its default list. It keeps the `Cache-Control` of the app. The photo paths have no extension, so Cloudflare does not cache them.
+- Cloudflare stops a request after 100 seconds with a `524`. "New backup" in the dashboard waits for the ZIP file, so a large backup can get it. The backup continues, and the operator looks for it in the list.
+- Rocket Loader, the email obfuscation, and the automatic Web Analytics add scripts. The Content Security Policy blocks them, so the zone turns them off.
+- Bot Fight Mode is off. Its challenge blocks SDK clients with a bearer token and link preview bots.
+- Cloudflare decrypts the traffic at its edge. It sees the passwords and the session cookies. This is accepted.
 
 ## Limits of the backup plan
 
@@ -310,8 +318,8 @@ make renovate         # Open or update the pull request. Needs RENOVATE_TOKEN an
 ## Checks of the deploy
 
 - the `docker` job of CI runs `make build-image` and checks `deploy/compose.yaml` with `docker compose config`
-- tested by hand: the image builds and gets the state `healthy`, a backup ZIP file restores on a new server, the key rules, the memory limits, and the two `413` limits
-- not tested: the `caddy` service with a real DNS name, the copy by a real host backup task, and the steps for the mail server and the MFA
+- tested by hand: the image builds and gets the state `healthy`, a backup ZIP file restores on a new server, the key rules, the memory limits, and the `413` of the app
+- not tested: the `cloudflared` service with a real tunnel, the 100 MB limit of Cloudflare, `CF-Connecting-IP`, the `Secure` cookie behind the tunnel, the copy by a real host backup task, and the steps for the mail server and the MFA
 
 ## Tests
 
@@ -425,6 +433,7 @@ make renovate         # Open or update the pull request. Needs RENOVATE_TOKEN an
 | `DefaultEncryptionEnv` in `main.go` | Not selected. A local run with the variable in its environment would encrypt the local `pb_data`. |
 | nginx with certbot | Not selected. It needs a second container and a renew job. |
 | PocketBase serves TLS without a proxy | Not selected. The compression, HTTP/3, and a later second site need a proxy. |
+| Caddy on the ports 80 and 443 | Removed. The home server then needs open ports and a public IP address. The tunnel needs neither. |
 | More than one instance | Not selected. The limits and the cache are in memory, and SQLite has one writer. |
 | Cypress | Not selected. Its WebKit support is experimental, and calls to the API for test data are harder. |
 | Vitest browser mode | Not selected. It tests components, not the built app with its routes. |

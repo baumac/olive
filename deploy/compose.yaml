@@ -1,5 +1,5 @@
-# One app instance behind Caddy. PocketBase makes the backups. See decision
-# 00010 and deploy/README.md.
+# One app instance behind a Cloudflare Tunnel. PocketBase makes the backups.
+# See decision 00010 and deploy/README.md.
 services:
   app:
     image: reviews-app:local
@@ -34,23 +34,16 @@ services:
     expose:
       - "8090"
 
-  caddy:
-    image: caddy:2.11.9-alpine
+  # The tunnel is the only way in. Do not publish the port of the app. A
+  # client could then send its own CF-Connecting-IP.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.7
     restart: unless-stopped
     depends_on:
       - app
+    command: tunnel --no-autoupdate run
     environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in deploy/.env}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in deploy/.env}
 
 volumes:
   pb_data:
-  caddy_data:
-  caddy_config:

@@ -90,7 +90,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - `deploy/README.md` has the steps to start, update, back up, and restore the app with Docker Compose.
 - Turn on the backups in the PocketBase settings. They go to `pb_data/backups` on the local file system. The backup task of the host copies them off the server. The app has no backup without them. See decision 00010.
 - Run only one instance. The rate limits and the place cache are in the memory of the process. See decision 00010.
-- Behind a reverse proxy, set the trusted proxy header in the PocketBase settings, such as `X-Real-IP`. Otherwise all clients have the IP address of the proxy, and the sign up and sign in rate limit counts all of them together. See decision 00003.
+- Behind the Cloudflare Tunnel, set the trusted proxy header in the PocketBase settings to `CF-Connecting-IP`. Otherwise all clients have the IP address of the tunnel, and the sign up and sign in rate limit counts all of them together. See decisions 00003 and 00010.
+  Do not publish the port 8090 of the app. A client could then send its own `CF-Connecting-IP`.
 - Set the Application URL in the PocketBase settings to the public URL of the site. The link previews of restaurant and review pages start with it. See decision 00002.
   The session cookie gets `Secure` from the `X-Forwarded-Proto` header of the reverse proxy. Without this header, it gets `Secure` when the Application URL is `https` and has the host of the request. See decision 00003.
 - The place search sends the search text of users to the public Photon server. This server has no guarantee and blocks heavy use. The app sends the Application URL in its `User-Agent`. See decision 00008.
@@ -99,7 +100,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 - Set the superuser IP allow-list in the PocketBase settings, so only admin networks can open the dashboard at `/_/`.
 - Set the mail server in the PocketBase settings, then turn on OTP and MFA for the `_superusers` collection. `deploy/README.md` has the steps.
 - `PB_ENCRYPTION_KEY` of `deploy/.env` encrypts the PocketBase settings in the database. The backups do not have it. A restore needs the same key. See decision 00010.
-- `deploy/compose.yaml` limits the memory and the open files of the app. `deploy/Caddyfile` limits the request body to 11 MB. `deploy/README.md` has the values.
+- `deploy/compose.yaml` limits the memory and the open files of the app. `deploy/README.md` has the values.
+- Turn off Rocket Loader, the email obfuscation, the automatic Web Analytics, and Bot Fight Mode in the Cloudflare zone. The scripts of the first three break the Content Security Policy. `deploy/README.md` has the steps. See decision 00010.
 - Set the mail server in the PocketBase settings before the first sign up. A new user confirms the email address with a link from an email. Without SMTP, the app writes each email to the log. See decision 00003.
 - Approve new users in the dashboard. A user without the `approved` value of the `users` collection can only sign in and read. `deploy/README.md` has the steps. See decision 00003.
   A daily job deletes a user that waits for more than 30 days and has no data.
@@ -121,7 +123,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
 ## Architecture
 
 - **`makefile`** - the Makefile for building, developing, and testing the project
-- **`deploy`** - the Dockerfile and the Docker Compose file with Caddy. Start from `deploy/README.md`. See decision 00010.
+- **`deploy`** - the Dockerfile and the Docker Compose file with the Cloudflare Tunnel. Start from `deploy/README.md`. See decision 00010.
 - **`specs`** - the directory containing the API specifications and the design system
   - **`specs/api/public-openapi.yaml`** - the OpenAPI specification for the Public API
     - the `restaurants` tag has the restaurant and restaurant review operations. The names of restaurant review operations, schemas, and paths have `restaurant`, like the recipe ones. See decision 00001.
