@@ -156,13 +156,13 @@ It has the title, the description, and the link preview tags of the site.
 `GET /restaurants/k3x9m2p7q1w8z4a` for the restaurant "Casa Pepe" sends:
 
 ```html
-<title>Casa Pepe · Sponga47 Reviews</title>
+<title>Casa Pepe · Sponga47 Food Reviews</title>
 <meta name="description" content="Tapas and wine." />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Casa Pepe" />
 <meta property="og:description" content="Tapas and wine." />
-<meta property="og:url" content="https://reviews.sponga47.com/restaurants/k3x9m2p7q1w8z4a" />
-<meta property="og:image" content="https://reviews.sponga47.com/og-image.png" />
+<meta property="og:url" content="https://food.sponga47.com/restaurants/k3x9m2p7q1w8z4a" />
+<meta property="og:image" content="https://food.sponga47.com/og-image.png" />
 <meta name="twitter:card" content="summary_large_image" />
 ```
 
@@ -174,12 +174,13 @@ It has the title, the description, and the link preview tags of the site.
 | `/lists/{id}` | "NAME by CREATOR" and the number of restaurants and recipes |
 
 - `og:image` of a review with photos is the `full` file of its first photo, with its size and alt text. Other pages have the image of the site.
+- the image of the site in `index.html` is a path. The app server adds the Application URL before it on each page. Without a public Application URL, the path stays.
 - a missing record, a review of a different subject, and a reviewer without approval get `404` with the default `index.html`. The UI then shows its not found screen.
 - `og:url` and the photo URL start with the Application URL of the PocketBase settings
 
 ### The Application URL
 
-- set it to the public URL of the site, such as `https://reviews.sponga47.com`
+- set it to the public URL of the site, such as `https://food.sponga47.com`
 - the default `http://localhost:8090` is a host that the public cannot reach. The pages then have no `og:url` and the image of the site.
 - the app logs a warning when it starts with such a URL, and when a settings save changes the URL to one
 
@@ -361,7 +362,7 @@ Tests:
   `/restaurants/new` does not match. The edit and new pages need an account and keep the default tags.
 - `html/template` writes the values. A name such as `<script>` stays text.
 - the description puts all whitespace on one line. A text of more than 200 characters is cut at the end of a word and ends with `…`.
-- without a description or feedback, the description is `Reviews of NAME on Sponga47 Reviews.` or `A review of NAME on Sponga47 Reviews.`
+- without a description or feedback, the description is `Reviews of NAME on Sponga47 Food Reviews.` or `A review of NAME on Sponga47 Food Reviews.`
 - the `<title>` has the format of `usePageTitle` in the UI. The end-to-end tests compare the two titles.
 - on a database error other than a missing record, the app logs the error and sends the default `index.html` with `200`
 - `publicapi.PhotoFilePath` makes the photo path. The API responses use the same function.

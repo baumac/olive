@@ -10,5 +10,5 @@ Project component. Lives in `@/components/app/ErrorPage.vue`. Props: `status` (n
   - `500` and network errors: "Something went wrong". "This is a problem on our side. Try again in a moment." Actions: "Try again", "Go to restaurants".
 - The status number is small, in `primary`. The title uses `h1`. The description uses `lead` in `muted-foreground`.
 - Left aligned, at most `reading-max` wide.
-- The page `<title>` starts with the title, for example "We cannot find this page · Sponga47 Reviews".
+- The page `<title>` starts with the title, for example "We cannot find this page · Sponga47 Food Reviews".
 - Use this only for the whole screen. An error inside a working screen uses `Alert` or `Toast`.

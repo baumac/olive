@@ -26,7 +26,7 @@ async function signUp(page: Page, api: TestApi, name: string, email: string) {
 test('sign up sends a link that signs the person in', async ({ page, api }) => {
   const email = `dana-${Date.now()}@example.test`
   await signUp(page, api, 'Dana', email)
-  await expect(page.getByText('Welcome to Sponga47 Reviews')).toBeVisible()
+  await expect(page.getByText('Welcome to Sponga47 Food Reviews')).toBeVisible()
   await expect(page.getByRole('button', { name: 'DA, account menu for Dana' })).toBeVisible()
 })
 

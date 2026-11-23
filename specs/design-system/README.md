@@ -1,4 +1,4 @@
-The design system of the Public UI at reviews.sponga47.com. People use it to find restaurants and to review them. Later releases can review other things, so keep restaurant words out of components and put them in screens.
+The design system of the Public UI at food.sponga47.com. People use it to find restaurants and to review them. Later releases can review other things, so keep restaurant words out of components and put them in screens.
 
 The system is shadcn-vue with Tailwind CSS v4, as ADR 00009 decides. The tokens use the shadcn-vue structure on the olive base color: the Tailwind olive scale, a grey with a faint green tint. The brand color is an olive green on `primary`, `ring` and `accent`. A blue `success` marks confirmations. `input` and `muted-foreground` differ from the olive pattern to meet WCAG 2.2 AA.
 
@@ -59,6 +59,6 @@ No icon set of our own. Use `lucide-vue-next`, which shadcn-vue uses: 16px, 2px 
 
 ## Logo
 
-The logo is an olive with a leaf in `primary`, beside the name "Sponga47 Reviews" in a serif. The files and rules are in the Logos asset group. Use the light or dark file to match the theme. Use the full logo in the page header and the mark alone for the favicon and small spaces. In running text, write the name as "Sponga47 Reviews".
+The logo is an olive with a leaf in `primary`, beside the name "Sponga47 Food Reviews" in a serif. The files and rules are in the Logos asset group. Use the light or dark file to match the theme. Use the full logo in the page header and the mark alone for the favicon and small spaces. In running text, write the name as "Sponga47 Food Reviews".
 
 The App icons group has the favicons and home screen icons, made from the mark on a light green tile. The Social group has the share image that shows when someone posts a link. Its README has the `<head>` tags to copy.

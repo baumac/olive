@@ -1,4 +1,4 @@
-# Sponga47 Reviews
+# Sponga47 Food Reviews
 
 Find a restaurant. Score it. Say why.
 

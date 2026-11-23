@@ -46,7 +46,7 @@ function current(path: string): boolean {
     <!-- Below sm, the gaps are small. The row then fits on a 320px screen. -->
     <div class="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
       <RouterLink to="/" class="shrink-0 rounded-md">
-        <span class="sr-only">Sponga47 Reviews, home</span>
+        <span class="sr-only">Sponga47 Food Reviews, home</span>
         <img :src="lockupLight" alt="" class="hidden h-9 md:block dark:md:hidden" />
         <img :src="lockupDark" alt="" class="hidden h-9 dark:md:block" />
         <img :src="markLight" alt="" class="h-9 md:hidden dark:hidden" />

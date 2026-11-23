@@ -7,6 +7,17 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## For claude
+- Update the design system and the UI for the rename to "Sponga47 Food Reviews" at food.sponga47.com
+  - The text and the page titles already have the new name. The drawn assets and their alt texts do not.
+  - The logo lockups still draw "Sponga47 Reviews" as outlines. Draw "Food Reviews" in TeX Gyre Bonum Regular and make the `viewBox` wider.
+    - Then change the `<title>` and `aria-label` of the lockups to "Sponga47 Food Reviews". They match the drawn name now.
+    - The lockups are in `specs/design-system/assets/Logos` and in `app/ui/src/assets/logos`. Change both copies.
+    - Check the header logo at phone width. The wider lockup can push the header buttons.
+    - `specs/design-system/assets/Logos/README.md` has the rules of "Food Reviews". Remove its note about the old files.
+  - `og-image.png` still shows the old name and the old domain `reviews.sponga47.com`. Make a new image and replace both copies.
+    - Then change `og:image:alt` in `app/ui/index.html` and `specs/design-system/assets/Social/README.md` to the new name.
+    - The copies are `specs/design-system/assets/Social/og-image.png` and `app/ui/public/og-image.png`.
+  - Decide on the logo file names `sponga47-reviews-*.svg` and the `short_name` "Sponga47" of `site.webmanifest`.
 
 ## For Me
 - deploy to prod

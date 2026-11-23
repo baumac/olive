@@ -222,3 +222,21 @@ func TestParentWithoutVersionGetsBaseline(t *testing.T) {
 		t.Errorf("baseline description %v, want the old value", got)
 	}
 }
+
+func TestEmptyTagsAreNoTags(t *testing.T) {
+	t.Parallel()
+	app := newApp(t)
+	history.Register(app)
+	r := newRecord(t, app, "restaurants", map[string]any{"name": "Can Solé", "address": "Carrer 1"})
+	for _, tags := range []any{[]string{}, nil, []string{}} {
+		r.Set("tags", tags)
+		saveAs(t, app, "", r)
+	}
+	vs := versions(t, app, history.Restaurants, r.Id)
+	if len(vs) != 1 {
+		t.Fatalf("%d versions, want 1", len(vs))
+	}
+	if tags := snapshotOf(t, vs[0])["tags"]; tags != nil {
+		t.Errorf("snapshot tags %v, want nil", tags)
+	}
+}

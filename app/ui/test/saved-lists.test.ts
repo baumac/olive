@@ -313,7 +313,7 @@ describe('ListPage', () => {
     expect(buttons(w)).not.toContain('Rename list')
     expect(buttons(w)).not.toContain('Delete list')
     expect(buttons(w)).not.toContain('Remove')
-    expect(document.title).toBe('Date night by Ana · Sponga47 Reviews')
+    expect(document.title).toBe('Date night by Ana · Sponga47 Food Reviews')
     await expectAccessible(w.element)
   })
 

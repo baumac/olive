@@ -6,7 +6,7 @@ status: implemented
 # Motivation
 [motivation]: #motivation
 
-Decision 00000 hosts the app on our home server at reviews.sponga47.com.
+Decision 00000 hosts the app on our home server at food.sponga47.com.
 The operator needs one way to build, start, update, back up, and restore the app.
 `pb_data` has the database and the photo files. Nothing else keeps a copy of them.
 Some state is in the memory of the process, so the app cannot run as many instances.

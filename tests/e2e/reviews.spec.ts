@@ -137,7 +137,7 @@ test('my reviews lists the reviews of the user at all restaurants', async ({ pag
 test('the header has the home link and the sections', async ({ page }) => {
   await page.goto('/restaurants')
   const header = page.getByRole('banner')
-  await expect(header.getByRole('link', { name: 'Sponga47 Reviews, home' })).toBeVisible()
+  await expect(header.getByRole('link', { name: 'Sponga47 Food Reviews, home' })).toBeVisible()
   await expect(header.getByRole('navigation')).toHaveCount(1)
   await expect(header.getByRole('navigation', { name: 'Sections' }).getByRole('link')).toHaveText(['Restaurants', 'Recipes'])
   await expect(header.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0)
