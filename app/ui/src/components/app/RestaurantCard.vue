@@ -22,8 +22,8 @@ defineEmits<{ favorite: [favorite: boolean] }>()
 
 <template>
   <ParentCard :parent="restaurant" kind="restaurant" :heading="heading" @favorite="$emit('favorite', $event)">
-    <p class="text-muted-foreground flex items-start gap-1.5 text-sm">
-      <MapPinIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+    <p class="text-muted-foreground flex items-start gap-1 text-[13px] leading-[18px]">
+      <MapPinIcon class="mt-px size-3.5 shrink-0" aria-hidden="true" />
       <span class="line-clamp-1">
         <template v-if="distance"><span class="sr-only">Distance: </span>{{ distance }}<span aria-hidden="true"> · </span></template>
         <span class="sr-only">Address: </span>{{ restaurant.location.address }}

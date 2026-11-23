@@ -115,7 +115,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       const restaurant = await api.createRestaurant(user, { name: uniqueTag('Form Place') })
       const review = await api.createReview(user, restaurant.id, { space: 7, service: 9, food: 8, price: 6, title: 'Great food' })
       await page.goto(`/restaurants/${restaurant.id}/reviews/new`)
-      await expect(page.getByRole('heading', { name: 'Write a review' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Add a visit' })).toBeVisible()
       await expectNoViolations(page)
       await page.getByRole('button', { name: 'Save review' }).click()
       await expect(page.getByText('Select a space score.')).toBeVisible()
@@ -167,11 +167,21 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectNoViolations(page)
     })
 
-    test('my reviews has no axe violations', async ({ page, api, user }) => {
+    test('the journal and the table have no axe violations', async ({ page, api, user }) => {
       await restaurantWithReview(api, user)
       await page.goto('/my-reviews')
-      await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
-      await expect(page.getByRole('status')).not.toHaveText('Loading reviews')
+      await expect(page.getByRole('heading', { name: user.name, level: 1 })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Your journal' })).toBeVisible()
+      await expect(page.getByLabel('Loading reviews')).toHaveCount(0)
+      await expectNoViolations(page)
+
+      await page.goto('/')
+      await expect(page.getByRole('heading', { name: 'On the table', level: 1 })).toBeVisible()
+      await expect(page.getByRole('status')).not.toHaveText('Loading entries')
+      await expectNoViolations(page)
+
+      await page.goto('/reviews/new')
+      await expect(page.getByRole('heading', { name: 'What did you eat?' })).toBeVisible()
       await expectNoViolations(page)
     })
 
@@ -195,6 +205,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'Add recipe' }).click()
       await expect(page.getByText('Enter at least one ingredient.')).toBeVisible()
       await page.getByRole('button', { name: 'Add step' }).click()
+      // The first remove button fades in from the disabled opacity.
+      await expect(page.getByRole('button', { name: 'Remove step 1' })).toBeEnabled()
+      await waitForAnimations(page)
       await expectNoViolations(page)
     })
 
@@ -203,7 +216,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await restaurantWithReview(api, owner)
       await page.goto(`/reviewers/${owner.auth.user.id}`)
       await expect(page.getByRole('heading', { name: 'Joe', level: 1 })).toBeVisible()
-      await expect(page.getByRole('status')).not.toHaveText('Loading reviews')
+      await expect(page.getByLabel('Loading reviews')).toHaveCount(0)
       await expectNoViolations(page)
     })
   })

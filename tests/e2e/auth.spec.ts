@@ -20,7 +20,7 @@ async function signUp(page: Page, api: TestApi, name: string, email: string) {
   await expect(page.getByText('The password is not correct.')).toBeVisible()
   await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
   await page.getByRole('button', { name: 'Confirm email address' }).click()
-  await expect(page).toHaveURL(/\/restaurants$/)
+  await expect(page).toHaveURL(/:\d+\/$/)
 }
 
 test('sign up sends a link that signs the person in', async ({ page, api }) => {
@@ -139,11 +139,12 @@ test('a new user waits for the approval of a superuser', async ({ page, api }) =
   const banner = page.getByRole('status').filter({ hasText: 'Your account waits for approval' })
   await expect(banner).toBeVisible()
 
-  // A link to a form stays on the page. A direct load goes to the list.
+  // A link to a form stays on the page. A direct load goes to the table.
+  await page.goto('/restaurants')
   await page.getByRole('link', { name: 'Add restaurant' }).first().click()
   await expect(page).toHaveURL(/\/restaurants$/)
   await page.goto('/restaurants/new')
-  await expect(page).toHaveURL(/\/restaurants$/)
+  await expect(page).toHaveURL(/:\d+\/$/)
 
   await page.goto(`/restaurants/${restaurant.id}`)
   const heart = page.getByRole('button', { name: 'Favorite Approval Kitchen' })
@@ -165,7 +166,7 @@ test('a new user waits for the approval of a superuser', async ({ page, api }) =
   await page.goto(`/restaurants/${restaurant.id}`)
   await heart.click()
   await expect(heart).toHaveAttribute('aria-pressed', 'true')
-  await page.getByRole('link', { name: 'Write a review' }).first().click()
+  await page.getByRole('link', { name: 'Add a visit' }).first().click()
   await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}/reviews/new$`))
 })
 
@@ -175,7 +176,7 @@ test('the auth token is only in an HttpOnly cookie', async ({ page, api, context
   await page.getByLabel('Email').fill(user.email)
   await page.getByLabel('Password', { exact: true }).fill(user.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/restaurants$/)
+  await expect(page).toHaveURL(/:\d+\/$/)
 
   const cookie = (await context.cookies()).find((c) => c.name === 'reviews_session')
   expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Strict', path: '/v1' })
@@ -265,8 +266,8 @@ test('sign out makes the token invalid on the server', async ({ page, user, api 
 })
 
 test('sign out in one tab signs out the other tabs', async ({ page, user, context }) => {
-  await page.goto('/my-reviews')
-  await expect(page.getByRole('heading', { name: 'My reviews' })).toBeVisible()
+  await page.goto('/account')
+  await expect(page.getByRole('heading', { name: 'Account', level: 1 })).toBeVisible()
   const other = await context.newPage()
   await other.goto('/restaurants')
   await other.getByRole('button', { name: `AN, account menu for ${user.name}` }).click()
@@ -285,8 +286,8 @@ test('sign in in one tab signs in the other tabs', async ({ page, api, context }
   await other.getByLabel('Email').fill(user.email)
   await other.getByLabel('Password', { exact: true }).fill(user.password)
   await other.getByRole('button', { name: 'Sign in' }).click()
-  await expect(other).toHaveURL(/\/restaurants$/)
+  await expect(other.getByRole('heading', { name: 'On the table', level: 1 })).toBeVisible()
 
-  await expect(page).toHaveURL(/\/my-reviews$/)
-  await expect(page.getByRole('heading', { name: 'My reviews' })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/reviewers/${user.auth.user.id}$`))
+  await expect(page.getByRole('heading', { name: user.name, level: 1 })).toBeVisible()
 })

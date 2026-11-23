@@ -5,54 +5,90 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Fraunces is under the SIL Open Font License. See fonts/OFL.txt. */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./fonts/fraunces-latin-ext-opsz.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./fonts/fraunces-latin-opsz.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.153 0.006 107.1);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.153 0.006 107.1);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.153 0.006 107.1);
-  --primary: oklch(0.5 0.12 125);
-  --primary-foreground: oklch(0.988 0.003 106.5);
-  --secondary: oklch(0.966 0.005 106.5);
-  --secondary-foreground: oklch(0.228 0.013 107.4);
-  --muted: oklch(0.966 0.005 106.5);
-  --muted-foreground: oklch(0.53 0.03 107.3);
-  --accent: oklch(0.95 0.03 122);
-  --accent-foreground: oklch(0.42 0.1 125);
-  --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.48 0.12 245);
-  --success-foreground: oklch(0.988 0.003 106.5);
-  --border: oklch(0.93 0.007 106.5);
-  --input: oklch(0.63 0.028 107);
-  --ring: oklch(0.5 0.12 125);
+  --serif: 'Fraunces', Georgia, serif;
+  --background: #f6f2e8;
+  --foreground: #1d1f14;
+  --card: #fffdf7;
+  --card-foreground: #1d1f14;
+  --popover: #fffdf7;
+  --popover-foreground: #1d1f14;
+  --primary: #4b6113;
+  --primary-foreground: #fbfaf3;
+  --secondary: #eee9dc;
+  --secondary-foreground: #1d1f14;
+  --muted: #eee9dc;
+  --muted-foreground: #585a48;
+  --accent: #e8ecd4;
+  --accent-foreground: #3d4f0e;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --success: #1f5fa8;
+  --success-foreground: #fbfaf3;
+  --saffron: #f0bd45;
+  --saffron-foreground: #1d1f14;
+  --border: #e2dccb;
+  --input: #878672;
+  --ring: #4b6113;
+  /* The map tiles are light in both themes, so the map colors are fixed. */
+  --map-pin: #f0bd45;
+  --map-pin-foreground: #1d1f14;
+  --map-cluster: #4b6113;
+  --map-cluster-foreground: #fbfaf3;
+  --map-location: #1f5fa8;
 }
 
 .dark {
-  --background: oklch(0.153 0.006 107.1);
-  --foreground: oklch(0.988 0.003 106.5);
-  --card: oklch(0.228 0.013 107.4);
-  --card-foreground: oklch(0.988 0.003 106.5);
-  --popover: oklch(0.228 0.013 107.4);
-  --popover-foreground: oklch(0.988 0.003 106.5);
-  --primary: oklch(0.78 0.13 125);
-  --primary-foreground: oklch(0.228 0.013 107.4);
-  --secondary: oklch(0.286 0.016 107.4);
-  --secondary-foreground: oklch(0.988 0.003 106.5);
-  --muted: oklch(0.286 0.016 107.4);
-  --muted-foreground: oklch(0.737 0.021 106.9);
-  --accent: oklch(0.32 0.05 125);
-  --accent-foreground: oklch(0.9 0.06 122);
-  --destructive: oklch(0.704 0.191 22.216);
-  --success: oklch(0.75 0.12 245);
-  --success-foreground: oklch(0.228 0.013 107.4);
-  --border: #ffffff1a;
-  --input: #ffffff29;
-  --ring: oklch(0.78 0.13 125);
+  --background: #15140f;
+  --foreground: #f2ede0;
+  --card: #201e17;
+  --card-foreground: #f2ede0;
+  --popover: #201e17;
+  --popover-foreground: #f2ede0;
+  --primary: #b7c878;
+  --primary-foreground: #1d1f14;
+  --secondary: #2a2820;
+  --secondary-foreground: #f2ede0;
+  --muted: #2a2820;
+  --muted-foreground: #b3ae9c;
+  --accent: #2b3119;
+  --accent-foreground: #cfdd95;
+  --destructive: #f28b7f;
+  --destructive-foreground: #ffffff;
+  --success: #8db8f0;
+  --success-foreground: #1d1f14;
+  --saffron: #e8b744;
+  --saffron-foreground: #1d1f14;
+  --border: #36332a;
+  --input: #7c7868;
+  --ring: #b7c878;
 }
 
 @theme inline {
+  --font-serif: var(--serif);
+  --color-saffron: var(--saffron);
+  --color-saffron-foreground: var(--saffron-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -77,6 +113,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 6px);
 }
 
 @layer base {
@@ -91,12 +128,18 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  ::before,
-  ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+@layer components {
+  /* A kicker is a group label in small caps. The text stays in sentence case. */
+  .kicker {
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 650;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+  }
+  .score-numerals {
+    font-family: var(--serif);
+    font-variant-numeric: lining-nums tabular-nums;
   }
 }

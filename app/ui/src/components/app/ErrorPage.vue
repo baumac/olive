@@ -34,7 +34,7 @@ usePageTitle(() => text.value.title)
 <template>
   <main id="main" class="mx-auto flex max-w-2xl flex-col items-start gap-4 px-4 py-12 sm:px-6">
     <p v-if="status" class="text-primary text-sm font-semibold tabular-nums">{{ status }}</p>
-    <h1 class="text-4xl font-extrabold tracking-tight">{{ text.title }}</h1>
+    <h1 class="font-serif text-[34px] leading-10 font-semibold tracking-[-0.01em]">{{ text.title }}</h1>
     <p class="text-muted-foreground text-xl">{{ text.description }}</p>
     <div class="flex flex-wrap gap-2 pt-2">
       <template v-if="status === 404">

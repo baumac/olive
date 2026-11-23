@@ -238,6 +238,11 @@ async function submit() {
         })
     clearDraft(draftKey.value)
     toast.success(editing.value ? 'Recipe saved' : 'Recipe added', { description: saved.name })
+    // A new subject from the review form goes back to it. See decision 00005.
+    if (!editing.value && route.query.review === 'new') {
+      void router.push({ path: '/reviews/new', query: { recipe: saved.id } })
+      return
+    }
     void router.push(`/recipes/${saved.id}`)
   } catch (error) {
     const { status, problem } = await apiFailure(error)
@@ -278,7 +283,7 @@ async function submit() {
 <template>
   <ErrorPage v-if="failed" :status="failed.status" @retry="router.go(0)" />
   <main v-else id="main" class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
-    <h1 class="text-4xl font-extrabold tracking-tight">{{ editing ? 'Edit recipe' : 'Add a recipe' }}</h1>
+    <h1 class="font-serif text-[34px] leading-10 font-semibold tracking-[-0.01em]">{{ editing ? 'Edit recipe' : 'Add a recipe' }}</h1>
     <div v-if="loading" aria-busy="true" aria-label="Loading recipe" class="grid gap-4">
       <Skeleton class="h-9" /><Skeleton class="h-24" /><Skeleton class="h-9" />
     </div>
@@ -392,7 +397,7 @@ async function submit() {
         </Button>
       </fieldset>
       <fieldset class="grid gap-6">
-        <legend class="mb-1 text-xl font-semibold tracking-tight">Details</legend>
+        <legend class="mb-1 font-serif text-[22px] leading-7 font-semibold">Details</legend>
         <p class="text-muted-foreground text-sm">Optional.</p>
         <FormItem id="recipe-source" :error="errors.source" description>
           <FormLabel>Source</FormLabel>

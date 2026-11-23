@@ -1,6 +1,6 @@
 ---
 description: A review is one visit to a restaurant or one cook of a recipe. It has a date, four scores, an overall that the API computes, a title, feedback, and photos. The rating of a subject counts each reviewer one time, and the overall sort uses this rating. The UI adds a review from each screen and shows the reviews of a subject as a timeline of visits or cooks.
-status: proposed
+status: implemented
 ---
 
 # Motivation

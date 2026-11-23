@@ -1,7 +1,7 @@
 import { uniqueTag } from '../api'
 import { expect, test } from '../fixtures'
 
-test('a signed in user writes a review', async ({ page, api, user }) => {
+test('a signed in user writes a review', async ({ page, api, user: _user }) => {
   const owner = await api.signUp('Joe')
   const restaurant = await api.createRestaurant(owner, { name: 'Can Sole' })
 
@@ -24,16 +24,13 @@ test('a signed in user writes a review', async ({ page, api, user }) => {
   await page.getByRole('button', { name: 'Save review' }).click()
 
   await expect(page.getByText('Review saved')).toBeVisible()
-  const card = page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').filter({ hasText: 'Great food, a bit expensive' })
+  const card = page.getByRole('region', { name: 'Every visit' }).getByRole('listitem').filter({ hasText: 'Great food, a bit expensive' })
   await expect(card.getByRole('img', { name: 'Overall: 7.5 out of 10' })).toBeVisible()
   await expect(card.getByRole('img')).toHaveCount(1)
-  await card.getByRole('button', { name: 'Show scores of Great food, a bit expensive' }).click()
-  await expect(card.getByRole('img', { name: 'Value: 6 out of 10' })).toBeVisible()
-  await card.getByRole('button', { name: 'Hide scores of Great food, a bit expensive' }).click()
-  await expect(card.getByRole('img')).toHaveCount(1)
-  await expect(card).toContainText(user.name)
+  await expect(card).toContainText('You')
   await expect(card).toContainText('Visited on 1 Mar 2024')
-  await expect(page.getByRole('link', { name: 'Write a review' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Average scores' }).getByRole('img', { name: 'Value: 6 out of 10' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Add a visit' })).toBeVisible()
 })
 
 test('a user writes a review of each visit', async ({ page, api, user }) => {
@@ -42,7 +39,7 @@ test('a user writes a review of each visit', async ({ page, api, user }) => {
   await api.createReview(user, restaurant.id, { date: '2024-01-15', space: 5, service: 5, food: 5, price: 5, title: 'First visit' })
 
   await page.goto(`/restaurants/${restaurant.id}`)
-  await page.getByRole('link', { name: 'Write a review' }).click()
+  await page.getByRole('link', { name: 'Add a visit' }).click()
   await expect(page).toHaveURL(new RegExp(`/restaurants/${restaurant.id}/reviews/new$`))
   await expect(page.getByLabel('Title')).toHaveValue('')
   await page.getByLabel('Visited on').fill('2024-06-01')
@@ -53,10 +50,10 @@ test('a user writes a review of each visit', async ({ page, api, user }) => {
   await page.getByRole('button', { name: 'Save review' }).click()
 
   await expect(page.getByText('Review saved')).toBeVisible()
-  const titles = page.getByRole('region', { name: 'Reviews' }).getByRole('heading', { level: 3 })
+  const titles = page.getByRole('region', { name: 'Every visit' }).getByRole('heading', { level: 3 })
   await expect(titles).toHaveText(['Second visit', 'First visit'])
-  await expect(page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').first()).toContainText('Visited on 1 Jun 2024')
-  await expect(page.getByText('out of 10 · 2 reviews')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Every visit' }).getByRole('listitem').first()).toContainText('Visited on 1 Jun 2024')
+  await expect(page.getByRole('region', { name: 'Average scores' })).toContainText('2 reviews')
 
   await page.goto(`/restaurants/${restaurant.id}?sort=date`)
   await expect(titles).toHaveText(['First visit', 'Second visit'])
@@ -105,7 +102,7 @@ test('the creator edits and deletes a review', async ({ page, api, user }) => {
   await expect(page.getByRole('radiogroup', { name: 'Food' }).getByRole('radio', { name: '3 out of 10' })).toBeChecked()
   await page.getByRole('radiogroup', { name: 'Food' }).getByRole('radio', { name: '9 out of 10' }).click()
   await page.getByRole('button', { name: 'Save review' }).click()
-  await expect(page.getByRole('region', { name: 'Reviews' }).getByRole('img', { name: 'Overall: 4.5 out of 10' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Every visit' }).getByRole('img', { name: 'Overall: 4.5 out of 10' })).toBeVisible()
   await expect(page.getByText('edited')).toBeVisible()
 
   await page.getByRole('link', { name: 'Okay' }).click()
@@ -125,28 +122,33 @@ test('my reviews lists the reviews of the user at all restaurants', async ({ pag
 
   await page.goto('/restaurants')
   await page.getByRole('button', { name: `AN, account menu for ${user.name}` }).click()
-  await page.getByRole('menuitem', { name: 'My reviews' }).click()
+  await page.getByRole('menuitem', { name: 'You' }).click()
 
-  await expect(page.getByRole('heading', { name: 'My reviews', level: 1 })).toBeVisible()
-  await expect(page).toHaveURL(/\/my-reviews$/)
-  await expect(page.getByRole('heading', { level: 3 })).toHaveText(['Mine at second', 'Mine at first'])
-  await page.getByRole('link', { name: 'First Place' }).click()
+  await expect(page.getByRole('heading', { name: user.name, level: 1 })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/reviewers/${user.auth.user.id}$`))
+  await expect(page.getByRole('heading', { name: 'Your journal' })).toBeVisible()
+  const tiles = page.getByRole('region', { name: 'Your journal' }).getByRole('heading', { level: 4 })
+  await expect(tiles).toHaveText([/^Second Place/, /^First Place/])
+  await page.getByRole('link', { name: /^First Place: Mine at first/ }).click()
+  await expect(page.getByRole('heading', { name: 'Mine at first', level: 1 })).toBeVisible()
+  await page.getByRole('link', { name: 'First Place' }).first().click()
   await expect(page.getByRole('heading', { name: 'First Place', level: 1 })).toBeVisible()
 })
 
-test('the header has the home link and the sections', async ({ page }) => {
+test('the header has the home link and the page has one sections navigation', async ({ page }) => {
   await page.goto('/restaurants')
   const header = page.getByRole('banner')
   await expect(header.getByRole('link', { name: 'Sponga47 Reviews, home' })).toBeVisible()
-  await expect(header.getByRole('navigation')).toHaveCount(1)
-  await expect(header.getByRole('navigation', { name: 'Sections' }).getByRole('link')).toHaveText(['Restaurants', 'Recipes'])
-  await expect(header.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0)
+  // Below md, the sections are in the bottom bar. From md, they are in the header.
+  await expect(page.getByRole('navigation', { name: 'Sections' })).toHaveCount(1)
+  await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('link')).toHaveText(['Table', 'Restaurants', 'Recipes'])
+  await expect(page.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0)
 })
 
-test('the list tells a signed out visitor what the site is', async ({ page }) => {
-  await page.goto('/restaurants')
+test('the table tells a signed out visitor what the site is', async ({ page }) => {
+  await page.goto('/')
   const main = page.getByRole('main')
-  await expect(main.getByText('Find a restaurant by its scores')).toBeVisible()
+  await expect(main.getByText('These are the latest visits and cooks')).toBeVisible()
   await main.getByRole('link', { name: 'Sign up' }).click()
   await expect(page).toHaveURL(/\/sign-up$/)
 })
@@ -171,7 +173,10 @@ test('the search box finds reviews by their text', async ({ page, api, user }) =
   await api.createReview(owner, first.id, { space: 5, service: 5, food: 5, price: 5, title: `Not mine, also ${word}` })
 
   // A short list shows the search box only with a filter in the URL.
-  await page.goto('/my-reviews?search=Fine')
+  await page.goto(`/reviewers/${user.auth.user.id}?kind=restaurants&search=Fine`)
   await page.getByRole('searchbox', { name: 'Search reviews' }).fill(word)
-  await expect(page.getByRole('heading', { level: 3 })).toHaveText([`The ${word} was good`, 'Fine'])
+  const journal = page.getByRole('region', { name: 'Your journal' })
+  await expect(journal.getByRole('heading', { level: 4 })).toHaveCount(2)
+  await expect(journal.getByRole('link', { name: new RegExp(`The ${word} was good`) })).toBeVisible()
+  await expect(journal.getByRole('link', { name: /Search Grill: Fine/ })).toBeVisible()
 })

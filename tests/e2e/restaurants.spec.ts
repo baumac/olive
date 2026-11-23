@@ -266,7 +266,7 @@ test('restaurants show the average scores of their reviews', async ({ page, api 
   await expect(averages.getByRole('img', { name: 'Overall: 7.9 out of 10' })).toBeVisible()
   await expect(averages.getByRole('img', { name: 'Food: 9.5 out of 10' })).toBeVisible()
   await expect(averages.getByRole('img', { name: 'Value: 6 out of 10' })).toBeVisible()
-  await expect(averages).toContainText('out of 10 · 2 reviews')
+  await expect(averages).toContainText('2 reviews')
 })
 
 test('restaurants filter and sort by the overall rating', async ({ page, api }) => {

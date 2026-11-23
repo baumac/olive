@@ -36,7 +36,7 @@ const ariaDescribedBy = computed(
 <template>
   <div class="grid gap-2">
     <p v-if="description" :id="descriptionId" class="text-muted-foreground text-sm">{{ description }}</p>
-    <div class="grid w-fit max-w-full gap-1">
+    <div class="grid w-full max-w-md gap-1">
       <RadioGroupRoot
         :id="props.id"
         v-model="value"
@@ -44,7 +44,7 @@ const ariaDescribedBy = computed(
         :aria-label="label"
         :aria-invalid="invalid ? 'true' : undefined"
         :aria-describedby="ariaDescribedBy"
-        class="flex flex-wrap gap-1"
+        class="flex gap-0.5 sm:gap-1"
       >
         <RadioGroupItem
           v-for="n in max"
@@ -53,7 +53,7 @@ const ariaDescribedBy = computed(
           :aria-label="`${n} out of ${max}`"
           :class="
             cn(
-              'border-input bg-background hover:bg-accent hover:text-accent-foreground inline-flex size-8 items-center justify-center rounded-md border text-sm font-medium tabular-nums shadow-xs',
+              'border-input bg-card hover:bg-accent hover:text-accent-foreground inline-flex h-11 min-w-8 flex-1 items-center justify-center rounded-md border text-[15px] font-semibold tabular-nums',
               'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary',
               invalid && 'border-destructive',
             )

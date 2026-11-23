@@ -17,14 +17,15 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, notApprovedText, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
-import { formatScore, localDay } from '@/lib/format'
+import { formatDay, formatScore, localDay } from '@/lib/format'
 import { type AnyReview, type Parent, kinds, scoreOf } from '@/lib/reviewKinds'
 import { overallOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, checkReviewDay, firstReviewDay, maxPhotos } from '@/lib/validation'
 
-// The route gives a restaurantId or a recipeId.
-const props = defineProps<{ restaurantId?: string; recipeId?: string; reviewId?: string }>()
+// The route gives a restaurantId or a recipeId. NewReviewPage embeds the
+// form with its own draft key. See decision 00005.
+const props = defineProps<{ restaurantId?: string; recipeId?: string; reviewId?: string; embedded?: boolean; draftName?: string }>()
 // busyRetryAfter is the longest Retry-After in seconds of a busy server.
 const busyRetryAfter = 10
 const router = useRouter()
@@ -34,7 +35,9 @@ const parentId = (props.recipeId ?? props.restaurantId)!
 const scoreFields = kind.scoreFields
 
 const editing = computed(() => props.reviewId !== undefined)
-usePageTitle(() => (editing.value ? 'Edit review' : 'Write a review'))
+if (!props.embedded) {
+  usePageTitle(() => (editing.value ? 'Edit review' : `Add a ${kind.occasion}`))
+}
 
 interface Fields {
   date: string
@@ -71,7 +74,7 @@ const photoCount = computed(() => (saved.value?.photos.length ?? 0) + queued.val
 const overall = computed(() => overallOf(fields.value.scores, scoreFields))
 
 // A restaurant draft keeps its old key. A recipe draft has the kind.
-const draftKey = computed(() => `${kind.kind === 'recipe' ? 'recipe-review' : 'review'}:${parentId}:${props.reviewId ?? 'new'}`)
+const draftKey = computed(() => props.draftName ?? `${kind.kind === 'recipe' ? 'recipe-review' : 'review'}:${parentId}:${props.reviewId ?? 'new'}`)
 const restaurantPath = computed(() => `${kind.path}/${parentId}`)
 
 onMounted(async () => {
@@ -112,6 +115,30 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+// yesterday is the local date before today.
+const yesterday = computed(() => {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return localDay(d)
+})
+const dateInput = ref<InstanceType<typeof Input> | null>(null)
+
+function pickDate() {
+  const el = (dateInput.value?.$el as HTMLInputElement | undefined) ?? null
+  el?.focus()
+  try {
+    el?.showPicker?.()
+  } catch {
+    // A browser without showPicker keeps the focus on the field.
+  }
+}
+
+// saveDraftNow keeps the fields before NewReviewPage changes the subject.
+function saveDraftNow() {
+  saveDraft(draftKey.value, fields.value)
+}
+defineExpose({ saveDraftNow })
 
 function validate(): boolean {
   const next: Record<string, string> = {}
@@ -281,9 +308,14 @@ async function submit() {
 
 <template>
   <ErrorPage v-if="failed" :status="failed.status" @retry="router.go(0)" />
-  <main v-else id="main" class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-4xl font-extrabold tracking-tight">{{ editing ? 'Edit review' : 'Write a review' }}</h1>
+  <component
+    :is="embedded ? 'div' : 'main'"
+    v-else
+    :id="embedded ? undefined : 'main'"
+    :class="embedded ? 'flex flex-col gap-6' : 'mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6'"
+  >
+    <div v-if="!embedded" class="flex flex-col gap-1">
+      <h1 class="font-serif text-[34px] leading-10 font-semibold">{{ editing ? 'Edit review' : `Add a ${kind.occasion}` }}</h1>
       <p v-if="restaurant" class="text-muted-foreground text-xl">
         <RouterLink :to="restaurantPath" class="hover:underline">{{ restaurant.name }}</RouterLink>
       </p>
@@ -300,9 +332,17 @@ async function submit() {
 
       <FormItem id="review-date" :error="errors.date">
         <FormLabel>{{ kind.dateLabel }}</FormLabel>
-        <FormControl>
-          <Input v-model="fields.date" type="date" name="date" required :min="firstReviewDay" :max="today" class="w-fit" @focus="today = localDay()" />
-        </FormControl>
+        <div class="flex flex-wrap items-center gap-2">
+          <div role="group" aria-label="Quick dates" class="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" :aria-pressed="fields.date === today" :class="fields.date === today && 'bg-accent text-accent-foreground border-primary'" @click="today = localDay(); fields.date = today">Today</Button>
+            <Button type="button" variant="outline" size="sm" :aria-pressed="fields.date === yesterday" :class="fields.date === yesterday && 'bg-accent text-accent-foreground border-primary'" @click="fields.date = yesterday">Yesterday</Button>
+            <Button type="button" variant="outline" size="sm" @click="pickDate">Pick a date</Button>
+          </div>
+          <FormControl>
+            <Input ref="dateInput" v-model="fields.date" type="date" name="date" required :min="firstReviewDay" :max="today" class="w-fit" @focus="today = localDay()" />
+          </FormControl>
+        </div>
+        <p class="text-muted-foreground text-[13px]" aria-hidden="true">{{ kind.dateLabel }} {{ formatDay(fields.date) }}</p>
         <FormMessage />
       </FormItem>
 
@@ -326,11 +366,12 @@ async function submit() {
         </div>
         <p class="flex items-baseline gap-2 border-t pt-4" role="status">
           <span class="text-sm font-medium">Overall</span>
-          <span v-if="overall !== null" class="text-2xl font-extrabold tabular-nums">{{ formatScore(overall) }}</span>
+          <span v-if="overall !== null" class="score-numerals text-3xl font-semibold">{{ formatScore(overall) }}</span>
           <span v-else class="text-muted-foreground text-sm">It shows after you select each score.</span>
         </p>
       </div>
 
+      <h2 class="font-serif text-[22px] leading-7 font-semibold">In a few words</h2>
       <FormItem id="review-title" :error="errors.title">
         <FormLabel>Title</FormLabel>
         <FormControl>
@@ -355,7 +396,7 @@ async function submit() {
     </form>
     <section v-if="!loading" class="grid gap-4 border-t pt-6" aria-labelledby="review-photos-title">
       <div class="grid gap-1">
-        <h2 id="review-photos-title" class="text-xl font-semibold">Photos</h2>
+        <h2 id="review-photos-title" class="font-serif text-[22px] leading-7 font-semibold">Photos</h2>
         <p class="text-muted-foreground text-sm">
           {{ saved ? `Optional. Up to ${maxPhotos} photos. Each photo is added at once.` : `Optional. Up to ${maxPhotos} photos. They are added when you save the review.` }}
         </p>
@@ -389,7 +430,7 @@ async function submit() {
     <!-- The buttons are after the photos. The form attribute joins them to the form. -->
     <div v-if="!loading" class="flex flex-wrap gap-2 border-t pt-6">
       <Button type="submit" form="review-form" :disabled="saving || uploading">{{ saving ? 'Saving…' : 'Save review' }}</Button>
-      <Button variant="outline" as-child><RouterLink :to="restaurantPath">Cancel</RouterLink></Button>
+      <Button variant="outline" as-child><RouterLink :to="embedded ? '/' : restaurantPath">Cancel</RouterLink></Button>
     </div>
-  </main>
+  </component>
 </template>

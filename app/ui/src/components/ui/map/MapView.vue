@@ -6,6 +6,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { MapConfig } from '@/lib/mapConfig'
 import type { Box } from '@/lib/places'
 import { maxMapZoom, minMapZoom } from '@/lib/places'
+import { formatScore } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { MapMarker, MapPoint } from '.'
 
@@ -133,8 +134,20 @@ function icon(selected: boolean, shift: number) {
   })
 }
 
+// stampIcon is the score stamp of a restaurant. The selected stamp is larger.
+function stampIcon(score: number | null, selected: boolean, shift: number) {
+  const size = selected ? 52 : 44
+  const classes = ['map-stamp', selected && 'map-stamp-selected', score === null && 'map-stamp-empty'].filter(Boolean).join(' ')
+  return L.divIcon({
+    html: score === null ? '' : escapeHtml(formatScore(score)),
+    className: classes,
+    iconSize: [size, size],
+    iconAnchor: [size / 2 - shift, size / 2],
+  })
+}
+
 function clusterIcon(count: number) {
-  return L.divIcon({ html: String(count), className: 'map-cluster', iconSize: [36, 36], iconAnchor: [18, 18] })
+  return L.divIcon({ html: String(count), className: 'map-cluster', iconSize: [46, 46], iconAnchor: [23, 23] })
 }
 
 // clusterRadius is the distance in pixels below which two pins join.
@@ -149,12 +162,13 @@ interface Pin {
   latitude: number
   longitude: number
   label: string
+  score?: number | null
   shift: number
   members: MapMarker[]
 }
 
 function single(m: MapMarker, shift = 0): Pin {
-  return { key: m.id, latitude: m.latitude, longitude: m.longitude, label: m.label, shift, members: [m] }
+  return { key: m.id, latitude: m.latitude, longitude: m.longitude, label: m.label, score: m.score, shift, members: [m] }
 }
 
 function mean(values: number[]): number {
@@ -227,7 +241,7 @@ function draw() {
     let entry = drawn.get(p.key)
     if (!entry) {
       const marker = L.marker([p.latitude, p.longitude], {
-        icon: cluster ? clusterIcon(p.members.length) : icon(selected, p.shift),
+        icon: cluster ? clusterIcon(p.members.length) : p.score !== undefined ? stampIcon(p.score, selected, p.shift) : icon(selected, p.shift),
         draggable: props.pick && !cluster,
       })
       const activate = () => (cluster ? zoomTo(p.members) : emit('select', p.key))
@@ -253,7 +267,12 @@ function draw() {
         entry.marker.setLatLng([p.latitude, p.longitude])
       }
       if (entry.selected !== selected) {
-        entry.marker.getElement()?.classList.toggle('map-pin-selected', selected)
+        // A stamp changes its size, so it gets a new icon.
+        if (!cluster && p.score !== undefined) {
+          entry.marker.setIcon(stampIcon(p.score, selected, p.shift))
+        } else {
+          entry.marker.getElement()?.classList.toggle('map-pin-selected', selected)
+        }
         entry.selected = selected
       }
     }
@@ -261,6 +280,9 @@ function draw() {
     const el = entry.marker.getElement()
     el?.setAttribute('aria-label', p.label)
     el?.setAttribute('title', p.label)
+    if (!cluster && p.score !== undefined) {
+      el?.setAttribute('aria-pressed', String(selected))
+    }
   }
 }
 
@@ -382,20 +404,50 @@ onBeforeUnmount(() => {
   color: oklch(0.2 0.01 107);
 }
 
+.map-stamp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--map-pin-foreground);
+  border-radius: 9999px;
+  background: var(--map-pin);
+  color: var(--map-pin-foreground);
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
+  box-shadow: 0 2px 5px 0 #00000052;
+}
+
+.map-stamp-selected {
+  background: var(--map-pin-foreground);
+  color: var(--map-pin);
+  font-size: 18px;
+}
+
 .map-cluster {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #fff;
+  border: 3px solid var(--map-cluster-foreground);
   border-radius: 9999px;
-  background: oklch(0.45 0.12 125);
-  color: #fff;
-  font-size: 0.875rem;
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  background: var(--map-cluster);
+  color: var(--map-cluster-foreground);
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 2px 5px 0 #00000052;
+}
+
+/* The zoom buttons are at least 44px, as all buttons. See decision 00009. */
+.leaflet-bar a,
+.leaflet-touch .leaflet-bar a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
 }
 
 .map-pin:focus-visible,
+.map-stamp:focus-visible,
 .map-cluster:focus-visible {
   outline: 3px solid var(--ring);
   outline-offset: 2px;

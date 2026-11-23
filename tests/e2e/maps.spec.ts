@@ -4,6 +4,10 @@ import { expect, test } from '../fixtures'
 
 // The fake server of photon.ts gives the map tiles. The noCspViolations
 // fixture checks that the browser loads them under the policy.
+// The List and Map buttons exist below the lg breakpoint. From lg, the list
+// and the map are side by side. See decision 00008.
+test.use({ viewport: { width: 900, height: 800 } })
+
 const barceloneta = { latitude: 41.3766, longitude: 2.1893, address: 'Carrer de Sant Carles 4, Barcelona' }
 const eixample = { latitude: 41.39, longitude: 2.16, address: 'Carrer Nou 1, Barcelona' }
 
@@ -290,7 +294,7 @@ test('a user shows the favorites on the map and sorts them', async ({ page, api,
 
   await page.goto(`/reviewers/${user.auth.user.id}`)
   await page.getByRole('region', { name: 'Lists' }).getByRole('link', { name: /Favorites/ }).click()
-  await page.getByRole('link', { name: 'Show on map' }).click()
+  await page.getByRole('navigation', { name: 'View' }).getByRole('link', { name: 'Map' }).click()
   await expect(page).toHaveURL(/\/restaurants\?list=[a-z0-9]{15}&view=map$/)
   await expect(page.getByText('List: Favorites')).toBeVisible()
   const map = page.getByRole('region', { name: 'Map of the restaurants' })
@@ -323,7 +327,7 @@ test('a list filter ignores the distance and frames the list on the map', async 
 
   await page.goto(`/reviewers/${user.auth.user.id}`)
   await page.getByRole('region', { name: 'Lists' }).getByRole('link', { name: /Favorites/ }).click()
-  await page.getByRole('link', { name: 'Sort and filter' }).click()
+  await page.getByRole('link', { name: 'Sort and filter the restaurants' }).click()
   const names = page.getByRole('heading', { level: 2, name: / Trip$/ })
   await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Nearest')
   await expect(names).toHaveText(['Nou Trip', 'Sole Trip'])
@@ -334,4 +338,29 @@ test('a list filter ignores the distance and frames the list on the map', async 
   await page.getByRole('button', { name: 'Map', exact: true }).click()
   const map = page.getByRole('region', { name: 'Map of the restaurants' })
   await expect(map.getByRole('button', { name: 'Sole Trip' })).toBeVisible()
+})
+
+test.describe('from the lg breakpoint', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+
+  test('the list and the map are side by side and mark each other', async ({ page, api }) => {
+    const owner = await api.signUp('Joe')
+    const tag = uniqueTag('side')
+    const sole = await api.createRestaurant(owner, { name: 'Side Sole', tags: [tag], location: barceloneta })
+    await api.createReview(owner, sole.id, { space: 8, service: 8, food: 8, price: 8, title: 'Good' })
+    await api.createRestaurant(owner, { name: 'Side Nou', tags: [tag], location: eixample })
+
+    await page.goto(`/restaurants?tags=${tag}`)
+    await expect(page.getByRole('button', { name: 'Map', exact: true })).toHaveCount(0)
+    const map = page.getByRole('region', { name: 'Map of the restaurants' })
+    // A pin is a score stamp. A restaurant without reviews has an empty one.
+    await expect(map.getByRole('button', { name: 'Side Sole, 8' })).toBeVisible()
+    await expect(map.getByRole('button', { name: 'Side Nou, No reviews yet' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2 })).toHaveCount(2)
+
+    await page.getByRole('link', { name: 'Side Nou' }).hover()
+    await expect(map.getByRole('button', { name: 'Side Nou, No reviews yet' })).toHaveAttribute('aria-pressed', 'true')
+    await map.getByRole('button', { name: 'Side Sole, 8' }).click()
+    await expect(map.getByRole('button', { name: 'Side Sole, 8' })).toHaveAttribute('aria-pressed', 'true')
+  })
 })

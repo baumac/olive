@@ -1,6 +1,6 @@
 ---
 description: Each reviewer has a public journal with the counts, the averages, the favorites, the lists, the subjects that the reviewer added, and the reviews by month. Users make public lists of restaurants and recipes, and a list page reads like a menu. Each user has a favorites list, and a heart on each card adds a subject to it.
-status: proposed
+status: implemented
 ---
 
 # Motivation

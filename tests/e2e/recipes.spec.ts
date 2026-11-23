@@ -3,7 +3,8 @@ import { expect, signIn, test } from '../fixtures'
 
 test('the header links the restaurants and the recipes', async ({ page }) => {
   await page.goto('/restaurants')
-  const sections = page.getByRole('banner').getByRole('navigation', { name: 'Sections' })
+  // Below md, the sections are in the bottom bar, not in the banner.
+  const sections = page.getByRole('navigation', { name: 'Sections' })
   await expect(sections.getByRole('link', { name: 'Restaurants' })).toHaveAttribute('aria-current', 'page')
   await sections.getByRole('link', { name: 'Recipes' }).click()
   await expect(page).toHaveURL(/\/recipes$/)
@@ -95,8 +96,8 @@ test('a signed in user reviews a recipe', async ({ page, api, user }) => {
   const recipe = await api.createRecipe(owner, { name: uniqueTag('Hummus') })
 
   await page.goto(`/recipes/${recipe.id}`)
-  await page.getByRole('link', { name: 'Write a review' }).first().click()
-  await expect(page.getByRole('heading', { name: 'Write a review' })).toBeVisible()
+  await page.getByRole('link', { name: 'Add a cook' }).first().click()
+  await expect(page.getByRole('heading', { name: 'Add a cook' })).toBeVisible()
   await expect(page.getByRole('radiogroup', { name: 'Ease' })).toHaveAccessibleDescription(
     'How easy the recipe is to make. A high score is easy. 1 means hard. 10 means easy.',
   )
@@ -110,18 +111,18 @@ test('a signed in user reviews a recipe', async ({ page, api, user }) => {
 
   await expect(page.getByText('Review saved')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Average scores' }).getByRole('img', { name: 'Taste: 9 out of 10' })).toBeVisible()
-  const card = page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').filter({ hasText: 'Smooth and quick' })
-  await expect(card).toContainText(user.name)
+  const card = page.getByRole('region', { name: 'Every cook' }).getByRole('listitem').filter({ hasText: 'Smooth and quick' })
+  await expect(card).toContainText('You')
   await card.getByRole('link', { name: 'Smooth and quick' }).click()
   await expect(page.getByRole('heading', { name: 'Smooth and quick', level: 1 })).toBeVisible()
-  await expect(page.getByRole('link', { name: recipe.name })).toHaveAttribute('href', `/recipes/${recipe.id}`)
+  await expect(page.getByRole('link', { name: recipe.name }).first()).toHaveAttribute('href', `/recipes/${recipe.id}`)
 
-  await page.goto('/my-reviews')
-  await expect(page.getByRole('heading', { name: 'Smooth and quick' })).toHaveCount(0)
-  await page.getByRole('navigation', { name: 'Reviews of' }).getByRole('link', { name: 'Recipes' }).click()
-  await expect(page).toHaveURL(/\/my-reviews\?kind=recipes$/)
-  await expect(page.getByRole('heading', { name: 'Smooth and quick' })).toBeVisible()
-  await expect(page.getByRole('link', { name: recipe.name })).toBeVisible()
+  await page.goto(`/reviewers/${user.auth.user.id}?kind=restaurants`)
+  await expect(page.getByRole('heading', { name: 'Your journal' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Smooth and quick/ })).toHaveCount(0)
+  await page.getByRole('navigation', { name: 'Restaurants or recipes' }).getByRole('link', { name: 'Recipes' }).click()
+  await expect(page).toHaveURL(new RegExp(`/reviewers/${user.auth.user.id}\\?kind=recipes$`))
+  await expect(page.getByRole('link', { name: `${recipe.name}: Smooth and quick` })).toBeVisible()
 
   await page.goto(`/recipes/${recipe.id}/reviews/new`)
   await page.getByLabel('Cooked on').fill('2024-02-10')
@@ -131,9 +132,9 @@ test('a signed in user reviews a recipe', async ({ page, api, user }) => {
   await page.getByLabel('Title').fill('Too much garlic')
   await page.getByRole('button', { name: 'Save review' }).click()
   await expect(page.getByText('Review saved')).toBeVisible()
-  const titles = page.getByRole('region', { name: 'Reviews' }).getByRole('heading', { level: 3 })
+  const titles = page.getByRole('region', { name: 'Every cook' }).getByRole('heading', { level: 3 })
   await expect(titles).toHaveText(['Smooth and quick', 'Too much garlic'])
-  await expect(page.getByRole('region', { name: 'Reviews' }).getByRole('listitem').last()).toContainText('Cooked on 10 Feb 2024')
+  await expect(page.getByRole('region', { name: 'Every cook' }).getByRole('listitem').last()).toContainText('Cooked on 10 Feb 2024')
 })
 
 test('the recipe page shows the photos of its reviews', async ({ page, api }) => {
@@ -183,11 +184,10 @@ test('a recipe goes into the favorites and a list', async ({ page, api, user }) 
   await page.keyboard.press('Escape')
 
   await page.goto(`/lists/${list.id}`)
-  await expect(page.getByText('1 recipe')).toBeVisible()
-  await page.getByRole('navigation', { name: 'Items of the list' }).getByRole('link', { name: 'Recipes' }).click()
+  await expect(page.getByText(/1 recipe ·/)).toBeVisible()
   await expect(page.getByRole('heading', { name: recipe.name })).toBeVisible()
   await page.getByRole('button', { name: `Remove ${recipe.name} from the list` }).click()
-  await expect(page.getByText('No recipes yet')).toBeVisible()
+  await expect(page.getByText(/No restaurants or recipes yet/)).toBeVisible()
 
   await page.goto(`/reviewers/${user.auth.user.id}`)
   await expect(page.getByRole('link', { name: /Favorites/ })).toContainText('1 recipe')
@@ -196,7 +196,7 @@ test('a recipe goes into the favorites and a list', async ({ page, api, user }) 
 test('the header fits on a 320px screen', async ({ page, user: _ }) => {
   await page.setViewportSize({ width: 320, height: 640 })
   await page.goto('/recipes')
-  await expect(page.getByRole('banner').getByRole('link', { name: 'Recipes' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name: 'Recipes' })).toBeVisible()
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBe(0)
   const menu = await page.getByRole('banner').getByRole('button').last().boundingBox()

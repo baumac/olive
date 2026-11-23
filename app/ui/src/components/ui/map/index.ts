@@ -6,6 +6,9 @@ export interface MapMarker {
   longitude: number
   // label is the accessible name of the marker.
   label: string
+  // score makes the pin a score stamp. null is a stamp without reviews.
+  // Without score, the marker is a plain pin. See decision 00008.
+  score?: number | null
 }
 
 export interface MapPoint {

@@ -20,7 +20,7 @@ test('a user favorites a restaurant from a card and sees it in the favorites lis
   await expect(page.getByRole('button', { name: 'Favorite Heart Kitchen' })).toHaveAttribute('aria-pressed', 'true')
 
   await page.getByRole('button', { name: /account menu/ }).click()
-  await page.getByRole('menuitem', { name: 'My lists' }).click()
+  await page.getByRole('menuitem', { name: 'You' }).click()
   await expect(page).toHaveURL(new RegExp(`/reviewers/${user.auth.user.id}$`))
   await page.getByRole('region', { name: 'Lists' }).getByRole('link', { name: /Favorites.*1 restaurant/ }).click()
 

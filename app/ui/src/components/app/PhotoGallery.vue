@@ -60,7 +60,7 @@ defineExpose({ openCover })
 
 <template>
   <section v-if="parent.cover" class="flex flex-col gap-4" aria-labelledby="photos-heading">
-    <h2 id="photos-heading" class="text-3xl font-semibold tracking-tight">Photos</h2>
+    <h2 id="photos-heading" class="font-serif text-2xl leading-[30px] font-semibold">Photos</h2>
     <PagedList
       :list="list"
       noun="photos"

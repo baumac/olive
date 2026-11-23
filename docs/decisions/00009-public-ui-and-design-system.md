@@ -1,6 +1,6 @@
 ---
 description: The Public UI is a Vue app with Vue Router and shadcn-vue on Tailwind CSS. Its design is "The Table", a shared food journal. Each visit and each cook is a dated entry, and restaurants and recipes are where the entries meet. The UI has warm paper colors, the Fraunces serif for names and scores, one brand, light and dark themes, and accessible components.
-status: proposed
+status: implemented
 ---
 
 # Motivation
@@ -184,7 +184,7 @@ A new component goes into the set only when a screen needs it.
 - the tokens are CSS custom properties in `app/ui/src/assets/main.css`. The light theme defines them on `:root`. The dark theme defines them on `.dark`.
 - Tailwind CSS uses them through `@theme`. Components use classes that refer to tokens, such as `bg-primary`, not fixed colors.
 - the names are the shadcn-vue names: `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, and `radius`. `saffron`, `saffron-foreground`, and `success` are the project names.
-- the table below has the values and their contrast ratios. `specs/design-system/tokens.json` gets them when this design is built.
+- the table below has the values and their contrast ratios. `specs/design-system/tokens.json` has the same values. The ui app gets them when this design is built.
 
 | Token | Light | Dark | Contrast |
 |---|---|---|---|

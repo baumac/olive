@@ -20,7 +20,7 @@ const hasDetails = computed(() => {
         <GlobeIcon class="text-muted-foreground mt-1 size-4 shrink-0" aria-hidden="true" />
         <span class="sr-only">Website</span>
       </dt>
-      <dd class="min-w-0 break-words">
+      <dd class="min-w-0 wrap-anywhere">
         <!-- A user typed the URL. -->
         <a :href="restaurant.website" target="_blank" rel="nofollow ugc noopener noreferrer" class="underline underline-offset-4">
           {{ websiteHost(restaurant.website) }}<span class="sr-only">, opens in a new tab</span>
@@ -39,7 +39,7 @@ const hasDetails = computed(() => {
         <ClockIcon class="text-muted-foreground mt-1 size-4 shrink-0" aria-hidden="true" />
         <span class="sr-only">Opening hours</span>
       </dt>
-      <dd class="min-w-0 break-words whitespace-pre-line">{{ restaurant.openingHours }}</dd>
+      <dd class="min-w-0 wrap-anywhere whitespace-pre-line">{{ restaurant.openingHours }}</dd>
     </div>
     <div v-if="priceLevel" class="flex items-start gap-2">
       <dt class="flex gap-2">

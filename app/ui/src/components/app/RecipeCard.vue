@@ -12,8 +12,8 @@ defineEmits<{ favorite: [favorite: boolean] }>()
 
 <template>
   <ParentCard :parent="recipe" kind="recipe" :heading="heading" @favorite="$emit('favorite', $event)">
-    <p v-if="recipe.totalTime" class="text-muted-foreground flex items-center gap-1.5 text-sm">
-      <ClockIcon class="size-4 shrink-0" aria-hidden="true" />
+    <p v-if="recipe.totalTime" class="text-muted-foreground flex items-center gap-1 text-[13px] leading-[18px]">
+      <ClockIcon class="size-3.5 shrink-0" aria-hidden="true" />
       <span><span class="sr-only">Total time: </span>{{ formatMinutes(recipe.totalTime) }}</span>
     </p>
   </ParentCard>

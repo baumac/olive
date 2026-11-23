@@ -1,32 +1,33 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import type { ReviewKind } from '@/lib/reviewKinds'
+import type { KindChoice } from '@/composables/useKindQuery'
 
-// KindSwitch selects the restaurant part or the recipe part of a page. The
-// kind is in the URL. A switch drops the filters of the other kind.
-defineProps<{ kind: ReviewKind; label: string }>()
+// KindSwitch selects all entries or the entries of one kind. The kind is in
+// the URL. A switch drops the filters of the other kind.
+withDefaults(
+  defineProps<{ kind: KindChoice; label: string; labels?: Record<KindChoice, string> }>(),
+  { labels: () => ({ all: 'All', restaurant: 'Restaurants', recipe: 'Recipes' }) },
+)
 
 const route = useRoute()
-const options: { kind: ReviewKind; label: string }[] = [
-  { kind: 'restaurant', label: 'Restaurants' },
-  { kind: 'recipe', label: 'Recipes' },
-]
+const options: KindChoice[] = ['all', 'restaurant', 'recipe']
+const queries: Record<KindChoice, string> = { all: '', restaurant: '?kind=restaurants', recipe: '?kind=recipes' }
 </script>
 
 <template>
-  <nav :aria-label="label" class="bg-muted flex w-fit gap-1 rounded-lg p-1">
+  <nav :aria-label="label" class="flex flex-wrap gap-2">
     <RouterLink
       v-for="o in options"
-      :key="o.kind"
-      :to="o.kind === 'recipe' ? `${route.path}?kind=recipes` : route.path"
+      :key="o"
+      :to="`${route.path}${queries[o]}`"
       replace
-      :aria-current="kind === o.kind ? 'page' : undefined"
+      :aria-current="kind === o ? 'page' : undefined"
       :class="[
-        'rounded-md px-3 py-1.5 text-sm font-medium',
-        kind === o.kind ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+        'inline-flex h-11 items-center rounded-full border px-4 text-sm font-semibold',
+        kind === o ? 'bg-primary border-primary text-primary-foreground' : 'bg-card border-input hover:bg-accent hover:text-accent-foreground',
       ]"
     >
-      {{ o.label }}
+      {{ labels[o] }}
     </RouterLink>
   </nav>
 </template>

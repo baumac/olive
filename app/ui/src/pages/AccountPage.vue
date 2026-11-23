@@ -159,7 +159,7 @@ async function deleteAccount() {
 <template>
   <main id="main" class="mx-auto grid w-full max-w-xl gap-6 px-4 pt-8 pb-12">
     <div>
-      <h1 class="text-2xl font-semibold">Account</h1>
+      <h1 class="font-serif text-[34px] leading-10 font-semibold">Account</h1>
       <p class="text-muted-foreground text-sm">{{ currentUser?.email }}</p>
     </div>
 

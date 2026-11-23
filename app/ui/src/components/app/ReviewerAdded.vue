@@ -25,8 +25,8 @@ watch(() => props.creator, () => void list.reload(), { immediate: true })
   <PagedList
     :list="list"
     :noun="kinds[kind].plural"
-    list-class="lg:grid-cols-3"
-    skeleton-class="h-36 rounded-xl"
+    list-class="gap-2.5 lg:grid-cols-2"
+    skeleton-class="h-[86px] rounded-xl"
     :skeleton-count="3"
     unfiltered
   >

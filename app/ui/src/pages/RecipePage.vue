@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Recipe } from '@reviews/sdk'
-import { HistoryIcon, PencilIcon } from 'lucide-vue-next'
+import { HistoryIcon, PencilIcon, PlusIcon } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -92,7 +92,7 @@ async function remove() {
       </button>
       <section class="flex min-w-0 flex-col gap-4">
         <div class="flex flex-wrap items-start justify-between gap-4">
-          <h1 class="text-4xl font-extrabold tracking-tight break-words">{{ recipe.data.value.name }}</h1>
+          <h1 class="font-serif text-[34px] leading-10 font-semibold tracking-[-0.01em] wrap-anywhere md:text-[46px] md:leading-[50px]">{{ recipe.data.value.name }}</h1>
           <div class="flex flex-wrap gap-2">
             <FavoriteButton
               :recipe-id="recipeId"
@@ -142,9 +142,9 @@ async function remove() {
 
       <section class="flex flex-col gap-6" aria-labelledby="reviews-heading">
         <div class="flex flex-wrap items-center justify-between gap-4">
-          <h2 id="reviews-heading" class="text-3xl font-semibold tracking-tight">Reviews</h2>
+          <h2 id="reviews-heading" class="font-serif text-2xl leading-[30px] font-semibold">Every cook</h2>
           <Button as-child>
-            <RouterLink :to="writePath">Write a review</RouterLink>
+            <RouterLink :to="writePath"><PlusIcon aria-hidden="true" />Add a cook</RouterLink>
           </Button>
         </div>
         <ReviewList :parent="recipe.data.value" kind="recipe" :write-path="writePath" />

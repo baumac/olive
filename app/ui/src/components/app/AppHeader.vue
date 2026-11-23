@@ -5,8 +5,11 @@ import lockupDark from '@/assets/logos/sponga47-reviews-lockup-dark.svg'
 import lockupLight from '@/assets/logos/sponga47-reviews-lockup-light.svg'
 import markDark from '@/assets/logos/sponga47-reviews-mark-dark.svg'
 import markLight from '@/assets/logos/sponga47-reviews-mark-light.svg'
+import { PlusIcon } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
 import { UserMenu } from '@/components/ui/user-menu'
 import { signInPath, signOut } from '@/composables/useAuth'
+import { isCurrentSection, sections } from '@/lib/sections'
 import { currentUser } from '@/lib/session'
 
 const route = useRoute()
@@ -25,14 +28,7 @@ const signIn = computed(() => {
   return router.resolve(signInPath(route.fullPath)).fullPath
 })
 
-// A section link is current on each page of its section. See decision 00004.
-const sections = [
-  { path: '/restaurants', label: 'Restaurants' },
-  { path: '/recipes', label: 'Recipes' },
-]
-function current(path: string): boolean {
-  return route.path === path || route.path.startsWith(`${path}/`)
-}
+const showAddReview = computed(() => !!currentUser.value && !route.path.startsWith('/reviews/new'))
 </script>
 
 <template>
@@ -43,38 +39,42 @@ function current(path: string): boolean {
     Skip to content
   </a>
   <header class="bg-background sticky top-0 z-40 border-b">
-    <!-- Below sm, the gaps are small. The row then fits on a 320px screen. -->
-    <div class="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
+    <div class="mx-auto flex h-15 max-w-6xl items-center gap-2 pr-2 pl-4 sm:px-6 md:h-18 md:gap-6">
       <RouterLink to="/" class="shrink-0 rounded-md">
         <span class="sr-only">Sponga47 Reviews, home</span>
-        <img :src="lockupLight" alt="" class="hidden h-9 md:block dark:md:hidden" />
-        <img :src="lockupDark" alt="" class="hidden h-9 dark:md:block" />
-        <img :src="markLight" alt="" class="h-9 md:hidden dark:hidden" />
-        <img :src="markDark" alt="" class="hidden h-9 dark:block dark:md:hidden" />
+        <img :src="lockupLight" alt="" class="hidden h-9 md:block dark:md:hidden">
+        <img :src="lockupDark" alt="" class="hidden h-9 dark:md:block">
+        <img :src="markLight" alt="" class="h-[30px] md:hidden dark:hidden">
+        <img :src="markDark" alt="" class="hidden h-[30px] dark:block dark:md:hidden">
       </RouterLink>
-      <nav aria-label="Sections" class="flex min-w-0 flex-1 items-center gap-1">
+      <!-- Below md, BottomNav has the sections. -->
+      <nav aria-label="Sections" class="hidden items-center gap-1 md:flex">
         <RouterLink
           v-for="s in sections"
           :key="s.path"
           :to="s.path"
-          :aria-current="current(s.path) ? 'page' : undefined"
+          :aria-current="isCurrentSection(s.path, route.path) ? 'page' : undefined"
           :class="[
-            'rounded-md px-2 py-2 text-sm font-medium whitespace-nowrap sm:px-3',
-            current(s.path) ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:text-foreground',
+            'inline-flex h-11 items-center rounded-full px-3.5 text-[15px] font-semibold whitespace-nowrap',
+            isCurrentSection(s.path, route.path) ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground',
           ]"
         >
           {{ s.label }}
         </RouterLink>
       </nav>
-      <UserMenu
-        :user="currentUser"
-        :sign-in-path="signIn"
-        my-reviews-path="/my-reviews"
-        :my-lists-path="currentUser ? `/reviewers/${currentUser.id}` : undefined"
-        account-path="/account"
-        :sign-in-current="route.path === '/sign-in'"
-        @sign-out="signOut(router)"
-      />
+      <div class="ml-auto flex items-center gap-3">
+        <Button v-if="showAddReview" as-child class="hidden md:inline-flex">
+          <RouterLink to="/reviews/new"><PlusIcon aria-hidden="true" />Add review</RouterLink>
+        </Button>
+        <UserMenu
+          :user="currentUser"
+          :sign-in-path="signIn"
+          :journal-path="currentUser ? `/reviewers/${currentUser.id}` : '/'"
+          account-path="/account"
+          :sign-in-current="route.path === '/sign-in'"
+          @sign-out="signOut(router)"
+        />
+      </div>
     </div>
   </header>
 </template>
