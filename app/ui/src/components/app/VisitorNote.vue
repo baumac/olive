@@ -17,7 +17,7 @@ const route = useRoute()
       {{ name }} keeps food notes here
     </h2>
     <p class="text-[15px] leading-[23px]">
-      Sponga47 Reviews is a food journal for a small group of friends and family. Each score goes from 1 to 10, and a
+      Sponga47 Food is a food journal for a small group of friends and family. Each score goes from 1 to 10, and a
       higher score is always better.
     </p>
     <div class="flex flex-wrap gap-2.5">

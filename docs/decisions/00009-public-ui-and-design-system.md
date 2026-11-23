@@ -70,7 +70,7 @@ Out of scope:
 Examples:
 - Ana opens the app. The table shows that Priya visited Kin Khao Noodle Bar two days ago and gave it 8.8.
 - Ana selects "Add review" in the bottom bar, then "I ate out". She selects Luigi's Trattoria, "Yesterday", four scores, and a title.
-- Ana sends the link of her review to a friend. The friend sees the photo, the score block, and the feedback. A note at the end tells what Sponga47 Reviews is.
+- Ana sends the link of her review to a friend. The friend sees the photo, the score block, and the feedback. A note at the end tells what Sponga47 Food is.
 
 ## The stack
 
@@ -91,7 +91,7 @@ A new component goes into the set only when a screen needs it.
 
 ## The brand
 
-- the product name is "Sponga47 Reviews". The UI is at reviews.sponga47.com.
+- the product name is "Sponga47 Food". The UI is at food.sponga47.com.
 - the logo is an olive with a leaf, next to the name. The name uses the TeX Gyre Bonum serif as outlines.
 - each logo file has a light and a dark version
 - the favicon, the home screen icons, and the share image come from the logo
@@ -283,6 +283,8 @@ A new component goes into the set only when a screen needs it.
 | A note about the price score on three pages | Removed. The label "Value" tells that a high score is good. |
 | A sign up without "Confirm password" | Removed. See decision 00003. |
 | An inline theme script | Not selected. The Content Security Policy refuses inline scripts. |
+| The name "Sponga47 Reviews" at reviews.sponga47.com | Removed. The app is a shared food journal, not only reviews. "Sponga47 Food" at food.sponga47.com tells this. |
+| The tagline "Find a restaurant. Score it. Say why." | Removed. It names only restaurants. The table has the cooks of recipes too. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions

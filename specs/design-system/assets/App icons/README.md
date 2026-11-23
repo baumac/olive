@@ -4,7 +4,7 @@ Favicons and home screen icons, made from the olive mark. Put the files in `app/
 
 - `favicon.svg`: the browser tab icon. It switches to the dark-theme olive when the system is dark, through a `prefers-color-scheme` rule inside the SVG.
 - `favicon-32.png`: a fallback for browsers without SVG favicons.
-- `apple-touch-icon.png` (180×180): the iPhone and iPad home screen icon. The olive sits on a solid `accent` tile (#ebf2dc), because iOS fills transparent areas with black.
+- `apple-touch-icon.png` (180×180): the iPhone and iPad home screen icon. The olive sits on a solid `accent` tile (#e8ecd4), because iOS fills transparent areas with black.
 - `icon-192.png`, `icon-512.png`: the web app manifest icons, same tile.
 - `icon-maskable-512.png`: the Android adaptive icon. The olive stays inside the central safe zone, so any mask shape keeps it whole.
 
@@ -13,20 +13,20 @@ Favicons and home screen icons, made from the olive mark. Put the files in `app/
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0c0c09" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f2e8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15140f" media="(prefers-color-scheme: dark)">
 ```
 
 `site.webmanifest`:
 
 ```json
 {
-  "name": "Sponga47 Reviews",
+  "name": "Sponga47 Food",
   "short_name": "Sponga47",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#546e0d",
+  "background_color": "#f6f2e8",
+  "theme_color": "#4b6113",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },

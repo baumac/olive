@@ -12,7 +12,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 - deploy to prod
 
 ## For the Future
-- Update docs to and root README.md to reflect the food journal concept
 - Support reviewing individual foods: for initial release reviewing individual foods won't be completed
   - reviewing cheeses
   - reviewing wines

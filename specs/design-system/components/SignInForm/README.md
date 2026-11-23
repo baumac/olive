@@ -12,6 +12,6 @@ Project component built from `Card`, `Form`, `Input`, `Button` and `Alert`. Live
 - `422` is a field problem. Show each `errors` item next to the field that its `property` names.
 - Any other error shows the destructive `Alert` "Sign in did not work" / "Try again in a moment."
 - With `notice="session-ended"`, show a default `Alert` above the fields: "Your session has ended" / "Sign in again to continue."
-- Below the button: "New to Sponga47 Reviews? Create an account", linking to the sign up page with the same `redirect` query.
+- Below the button: "New to Sponga47 Food? Create an account", linking to the sign up page with the same `redirect` query.
 - Let password managers fill the fields. Do not block paste.
-- Password reset is not in the Users API. Do not add a "Forgot password" link until it is.
+- Below the "Password" field: the link "Forgot your password?" to `/forgot-password`. The "User authentication" section has the password reset.

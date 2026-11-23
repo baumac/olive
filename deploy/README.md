@@ -49,12 +49,12 @@ Do these steps in this sequence. Do not let users sign up before step 10.
 
 8. Open `https://SITE_ADDRESS/_/` and sign in. Open Settings > Application and set:
 
-   - the Application name. The emails use it.
+   - the Application name: `Sponga47 Food`. The emails use it.
    - the Application URL: `https://SITE_ADDRESS`
    - the trusted proxy header: `X-Real-IP`
    - the superuser IP allow-list
 
-9. Open Settings > Mail settings. Set the sender address, turn on "Use SMTP mail server", and set the host, the port, the user name, and the password.
+9. Open Settings > Mail settings. Set the sender name to `Sponga47 Food` and set the sender address. Turn on "Use SMTP mail server", and set the host, the port, the user name, and the password.
 
 10. Select "Send test email" and check that the email arrives.
     Without a mail server, the app writes each email with its link to the log of the dashboard, and no person gets it.

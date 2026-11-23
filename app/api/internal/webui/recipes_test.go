@@ -57,8 +57,8 @@ func TestRecipeMeta(t *testing.T) {
 
 	t.Run("the recipe pages have their meta", func(t *testing.T) {
 		for path, want := range map[string][]string{
-			recipePath:             {`<title>Shakshuka · Sponga47 Reviews</title>`},
-			"/Recipes/" + plain.Id: {`<meta name="description" content="Reviews of Bread on Sponga47 Reviews." />`},
+			recipePath:             {`<title>Shakshuka · Sponga47 Food</title>`},
+			"/Recipes/" + plain.Id: {`<meta name="description" content="Reviews of Bread on Sponga47 Food." />`},
 			reviewPath:             {`<meta property="og:title" content="Quick · Shakshuka" />`},
 			"/recipes/" + plain.Id + "/reviews/" + review.Id: {`content="Default"`},
 			"/recipes/aaaaaaaaaaaaaaa":                       {`content="Default"`},
@@ -84,10 +84,10 @@ func TestRecipeMeta(t *testing.T) {
 
 		for path, want := range map[string][]string{
 			"/lists/" + recipes.Id: {
-				`<meta name="description" content="A list of 2 recipes by Ana on Sponga47 Reviews." />`,
+				`<meta name="description" content="A list of 2 recipes by Ana on Sponga47 Food." />`,
 			},
 			"/lists/" + mixed.Id: {
-				`<meta name="description" content="A list of 1 restaurant and 1 recipe by Ana on Sponga47 Reviews." />`,
+				`<meta name="description" content="A list of 1 restaurant and 1 recipe by Ana on Sponga47 Food." />`,
 			},
 		} {
 			body := get(path)

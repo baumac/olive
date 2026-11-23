@@ -84,7 +84,7 @@ func TestPageMetaDatabaseError(t *testing.T) {
 
 	for _, path := range []string{"/lists/" + list.Id, "/restaurants/" + restaurant.Id + "/reviews/aaaaaaaaaaaaaaa"} {
 		w := get(h, path)
-		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "<title>Sponga47 Reviews</title>") {
+		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "<title>Sponga47 Food</title>") {
 			t.Errorf("%s: status %d, want the default page:\n%s", path, w.Code, w.Body)
 		}
 	}

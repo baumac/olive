@@ -53,7 +53,7 @@ async function confirm() {
     saveSession(auth)
     void router.replace(takeRedirect())
     const next = auth.user.approved ? '' : ' An administrator must approve your account before you can add data.'
-    toast.success('Welcome to Sponga47 Reviews', { description: `You are signed in as ${auth.user.name}.${next}` })
+    toast.success('Welcome to Sponga47 Food', { description: `You are signed in as ${auth.user.name}.${next}` })
   } catch (e) {
     const { status, problem } = await apiFailure(e)
     if (status === 429 && problem?.code === 'wrong_password_limit') {

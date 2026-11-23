@@ -1,6 +1,7 @@
-# Sponga47 Reviews
+# Sponga47 Food
 
-Find a restaurant. Score it. Say why.
+A shared food journal for a small group of friends and family at food.sponga47.com.
+Each visit to a restaurant and each cook of a recipe is a dated entry with photos, four scores, and a few words.
 
 One Go binary serves the whole app:
 

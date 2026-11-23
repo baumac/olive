@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import lockupDark from '@/assets/logos/sponga47-reviews-lockup-dark.svg'
-import lockupLight from '@/assets/logos/sponga47-reviews-lockup-light.svg'
-import markDark from '@/assets/logos/sponga47-reviews-mark-dark.svg'
-import markLight from '@/assets/logos/sponga47-reviews-mark-light.svg'
+import lockupDark from '@/assets/logos/sponga47-food-lockup-dark.svg'
+import lockupLight from '@/assets/logos/sponga47-food-lockup-light.svg'
+import markDark from '@/assets/logos/sponga47-food-mark-dark.svg'
+import markLight from '@/assets/logos/sponga47-food-mark-light.svg'
 import { PlusIcon } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { UserMenu } from '@/components/ui/user-menu'
@@ -41,7 +41,7 @@ const showAddReview = computed(() => !!currentUser.value && !route.path.startsWi
   <header class="bg-background sticky top-0 z-40 border-b">
     <div class="mx-auto flex h-15 max-w-6xl items-center gap-2 pr-2 pl-4 sm:px-6 md:h-18 md:gap-6">
       <RouterLink to="/" class="shrink-0 rounded-md">
-        <span class="sr-only">Sponga47 Reviews, home</span>
+        <span class="sr-only">Sponga47 Food, home</span>
         <img :src="lockupLight" alt="" class="hidden h-9 md:block dark:md:hidden">
         <img :src="lockupDark" alt="" class="hidden h-9 dark:md:block">
         <img :src="markLight" alt="" class="h-[30px] md:hidden dark:hidden">
