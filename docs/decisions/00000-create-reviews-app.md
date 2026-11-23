@@ -59,7 +59,7 @@ They also find the errors of the AI coding tools early.
 The app has an API and a UI that users use.
 It also has an admin dashboard for admins.
 The app runs on our home server.
-It is reachable via the public internet at food.sponga47.com.
+It is reachable via the public internet at reviews.sponga47.com.
 
 Each page of the app is public.
 A person without an account can read each review, reviewer page, and list.

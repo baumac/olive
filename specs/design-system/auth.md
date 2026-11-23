@@ -40,7 +40,7 @@ How people sign up, sign in and stay signed in. The API is the Users API: the `u
    - A wrong password is a `422` with the property `password`. Show "The password is not correct. Enter the password of your sign up." next to the field and keep the form. The link still works.
    - A `429` with the `code` `wrong_password_limit` shows "Too many wrong passwords. Try again later." next to the field.
    - The field has the link "Forgot your password?" below it. A password reset also confirms the email address.
-6. The UI opens the `redirect` path of the sign up and shows the "Welcome to Sponga47 Food Reviews" `Toast`. For an account that is not approved, the `Toast` also tells that an administrator must approve it.
+6. The UI opens the `redirect` path of the sign up and shows the "Welcome to Sponga47 Reviews" `Toast`. For an account that is not approved, the `Toast` also tells that an administrator must approve it.
 7. A link that is not valid, is too old, or was used shows the destructive `Alert` "This link does not work" and a link to the sign in page.
 
 ## Sign in

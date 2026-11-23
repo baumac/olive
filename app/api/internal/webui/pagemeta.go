@@ -108,7 +108,6 @@ type indexPage struct {
 	whole, before, after []byte
 	siteName             string
 	siteImage            pageMeta
-	siteImageTag         string
 }
 
 // readIndex returns false if index.html has no page-meta block with a title
@@ -134,7 +133,6 @@ func readIndex(files fs.FS) (indexPage, bool) {
 		switch value := a["content"]; a["property"] {
 		case "og:image":
 			p.siteImage.Image = value
-			p.siteImageTag = tag
 		case "og:image:width":
 			p.siteImage.ImageWidth, _ = strconv.Atoi(value)
 		case "og:image:height":
@@ -154,26 +152,6 @@ func (p indexPage) render(meta pageMeta) ([]byte, error) {
 	}
 	b.Write(p.after)
 	return b.Bytes(), nil
-}
-
-// site makes a site image path of index.html absolute with baseURL.
-// og:image needs an absolute URL.
-func (p indexPage) site(baseURL string) pageMeta {
-	meta := p.siteImage
-	if baseURL != "" && strings.HasPrefix(meta.Image, "/") {
-		meta.Image = baseURL + meta.Image
-	}
-	return meta
-}
-
-// defaultPage is index.html with the og:image of site.
-func (p indexPage) defaultPage(baseURL string) []byte {
-	image := p.site(baseURL).Image
-	if image == p.siteImage.Image {
-		return p.whole
-	}
-	tag := `<meta property="og:image" content="` + html.EscapeString(image) + `" />`
-	return bytes.Replace(p.whole, []byte(p.siteImageTag), []byte(tag), 1)
 }
 
 // pageTitle has the format of usePageTitle in the UI.
@@ -297,7 +275,7 @@ func (p indexPage) parentMeta(kind reviewedKind, parent *core.Record, baseURL st
 	if description == "" {
 		description = "Reviews of " + name + " on " + p.siteName + "."
 	}
-	meta := p.site(baseURL)
+	meta := p.siteImage
 	meta.Title = p.pageTitle(name)
 	meta.OGTitle = name
 	meta.Description = description
@@ -334,7 +312,7 @@ func countOf(n int, noun string) string {
 // listMeta has only the public fields of the creator.
 func (p indexPage) listMeta(list, creator *core.Record, counts listItemCounts, baseURL string) pageMeta {
 	title := list.GetString("name") + " by " + creator.GetString("name")
-	meta := p.site(baseURL)
+	meta := p.siteImage
 	meta.Title = p.pageTitle(title)
 	meta.OGTitle = title
 	meta.Description = "A list of " + counts.items() + " by " + creator.GetString("name") + " on " + p.siteName + "."
@@ -346,7 +324,7 @@ func (p indexPage) listMeta(list, creator *core.Record, counts listItemCounts, b
 // reviewerMeta has only the public fields of the user.
 func (p indexPage) reviewerMeta(user *core.Record, baseURL string) pageMeta {
 	name := user.GetString("name")
-	meta := p.site(baseURL)
+	meta := p.siteImage
 	meta.Title = p.pageTitle(name)
 	meta.OGTitle = name
 	meta.Description = "Reviews by " + name + " on " + p.siteName + "."
@@ -363,7 +341,7 @@ func (p indexPage) reviewMeta(kind reviewedKind, parent, review, photo *core.Rec
 	if description == "" {
 		description = "A review of " + parent.GetString("name") + " on " + p.siteName + "."
 	}
-	meta := p.site(baseURL)
+	meta := p.siteImage
 	if photo != nil && baseURL != "" {
 		meta.Image = baseURL + kind.photoFilePath(parent.Id, review.Id, photo.Id, reviewsapi.Full)
 		meta.ImageWidth = photo.GetInt("width")

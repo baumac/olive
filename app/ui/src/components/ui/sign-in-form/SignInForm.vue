@@ -114,7 +114,7 @@ defineExpose({ clearPassword })
     </CardContent>
     <CardFooter class="text-muted-foreground justify-center text-sm">
       <p>
-        New to Sponga47 Food Reviews?
+        New to Sponga47 Reviews?
         <RouterLink :to="signUpPath" class="text-primary font-medium underline-offset-4 hover:underline">
           Create an account
         </RouterLink>

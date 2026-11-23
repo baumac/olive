@@ -84,15 +84,8 @@ func optionalNumber(name string) Property {
 	return Property{name, func(r *core.Record) any { return recordvalues.OptionalNumber(r, name) }}
 }
 
-// optionalList stores an empty list as null. A change between the two is
-// then not a version.
 func optionalList(name string) Property {
-	return Property{name, func(r *core.Record) any {
-		if items := recordvalues.OptionalList(r, name); items != nil && len(*items) > 0 {
-			return items
-		}
-		return nil
-	}}
+	return Property{name, func(r *core.Record) any { return recordvalues.OptionalList(r, name) }}
 }
 
 func list(name string) Property {

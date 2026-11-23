@@ -64,7 +64,7 @@ A new component goes into the set only when a screen needs it.
 
 ## The brand
 
-- the product name is "Sponga47 Food Reviews". The UI is at food.sponga47.com.
+- the product name is "Sponga47 Reviews". The UI is at reviews.sponga47.com.
 - the logo is an olive with a leaf, next to the name. The name uses the TeX Gyre Bonum serif as outlines. The UI text uses the system sans font.
 - each logo file has a light and a dark version
 - the favicon, the home screen icons, and the share image come from the logo

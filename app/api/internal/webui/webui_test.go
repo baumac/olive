@@ -67,7 +67,7 @@ func TestRegister(t *testing.T) {
 	for _, path := range []string{"/", "/.gitkeep"} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
-		if w.Code != 200 || !strings.Contains(w.Body.String(), "<title>Sponga47 Food Reviews</title>") {
+		if w.Code != 200 || !strings.Contains(w.Body.String(), "<title>Sponga47 Reviews</title>") {
 			t.Errorf("%s: %d %q", path, w.Code, w.Body.String())
 		}
 	}

@@ -21,7 +21,7 @@ Favicons and home screen icons, made from the olive mark. Put the files in `app/
 
 ```json
 {
-  "name": "Sponga47 Food Reviews",
+  "name": "Sponga47 Reviews",
   "short_name": "Sponga47",
   "start_url": "/",
   "display": "standalone",

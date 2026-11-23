@@ -11,7 +11,6 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
-	pathpkg "path"
 	"strings"
 	"sync"
 	"testing/fstest"
@@ -92,7 +91,7 @@ const maxReportBytes = 16 << 10
 
 var placeholder = fstest.MapFS{
 	"index.html": {Data: []byte(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Sponga47 Food Reviews</title></head>
+<html lang="en"><head><meta charset="utf-8"><title>Sponga47 Reviews</title></head>
 <body><p>The UI is not built. Run <code>make build-ui</code>, then start the app again.</p></body></html>
 `)},
 }
@@ -181,9 +180,6 @@ func register(app core.App, files fs.FS, opts Options) error {
 				if page, status, ok := renderPage(e, index, path); ok {
 					return e.HTML(status, string(page))
 				}
-				if fallsBackToIndex(files, path) {
-					return e.HTML(http.StatusOK, string(index.defaultPage(publicBaseURL(e.App.Settings().Meta.AppURL))))
-				}
 			}
 			return static(e)
 		}).Bind(apis.Gzip())
@@ -245,7 +241,7 @@ func renderPage(e *core.RequestEvent, index indexPage, path string) ([]byte, int
 		return nil, 0, false
 	}
 	if errors.Is(err, errNoRecord) {
-		return index.defaultPage(publicBaseURL(e.App.Settings().Meta.AppURL)), http.StatusNotFound, true
+		return index.whole, http.StatusNotFound, true
 	}
 	var page []byte
 	if err == nil {
@@ -256,12 +252,6 @@ func renderPage(e *core.RequestEvent, index indexPage, path string) ([]byte, int
 		return nil, 0, false
 	}
 	return page, http.StatusOK, true
-}
-
-// fallsBackToIndex tells that apis.Static serves index.html for name.
-func fallsBackToIndex(files fs.FS, name string) bool {
-	info, err := fs.Stat(files, strings.TrimPrefix(pathpkg.Clean("/"+name), "/"))
-	return err != nil || info.IsDir()
 }
 
 // cacheControl lets browsers keep the hashed files in assets/ for a year.
