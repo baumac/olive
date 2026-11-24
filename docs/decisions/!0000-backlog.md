@@ -9,6 +9,8 @@ Each sub-bullet point contains notes about the incomplete decision.
 ## For claude
 
 ## For Me
+- redesign or rename table concept
+- find way to apply ip whitelisting
 - deploy to prod
 
 ## For the Future
