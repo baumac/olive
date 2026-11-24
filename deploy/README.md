@@ -176,27 +176,6 @@ After a 524, wait some minutes and look for the new backup in the list.
 
 Cloudflare decrypts each request at its edge. It sees the passwords and the session cookies of the users.
 
-### Move from Caddy
-
-A server with the old Caddy setup moves to the tunnel with these steps:
-
-1. In the dashboard, set the trusted proxy header to `CF-Connecting-IP`.
-   Caddy does not set this header, so all clients share one address until step 5.
-   Do not wait until after the switch. Cloudflare sends the `X-Real-IP` of a client without a change.
-   The superuser IP allow-list then also sees this one address. The dashboard is closed until step 6.
-2. Make the tunnel with steps 1 and 2 of [Cloudflare Tunnel](#cloudflare-tunnel). Set `CLOUDFLARE_TUNNEL_TOKEN` in `deploy/.env` and remove `SITE_ADDRESS`.
-3. Get the new version with `git pull`.
-4. In the DNS settings of the zone, delete the old `A` or `AAAA` record of the host name.
-   Cloudflare refuses the public hostname of the tunnel while this record exists. The site is down from this step until step 6.
-5. Add the public hostname with step 3 of [Cloudflare Tunnel](#cloudflare-tunnel). The tunnel adds its own `CNAME` record.
-6. Start the new setup and remove the old container:
-
-   ```bash
-   docker compose -f deploy/compose.yaml up -d --build --remove-orphans
-   ```
-
-7. Close the ports 80 and 443 of the server. Delete the volumes `deploy_caddy_data` and `deploy_caddy_config`.
-
 ### Settings encryption
 
 The PocketBase settings have secrets, such as the SMTP password.
