@@ -167,6 +167,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectNoViolations(page)
     })
 
+    test('the tag picker and the tag page have no axe violations', async ({ page, api, user }) => {
+      const tag = uniqueTag('axe')
+      await api.createRestaurant(user, { name: uniqueTag('Tagged'), tags: [tag] })
+      await page.goto('/restaurants/new')
+      await page.getByLabel('Tags').fill(tag)
+      await expect(page.getByRole('option', { name: tag })).toBeVisible()
+      await expectNoViolations(page)
+      await page.goto(`/tags/${encodeURIComponent(tag)}`)
+      await expect(page.getByRole('heading', { name: tag, level: 1 })).toBeVisible()
+      await expect(page.getByRole('heading', { level: 3 })).toHaveCount(1)
+      await expectNoViolations(page)
+    })
+
     test('the journal and the table have no axe violations', async ({ page, api, user }) => {
       await restaurantWithReview(api, user)
       await page.goto('/my-reviews')

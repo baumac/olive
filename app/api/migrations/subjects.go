@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -93,7 +94,7 @@ func (k subjectKind) tables() []string {
 		scoreColumns += "[[" + name + "]] REAL, "
 	}
 	sortColumns := "[[overall_or_0]], [[reviewers]], " + parent
-	return []string{
+	return slices.Concat([]string{
 		// The overall column of the reviews is not a field of the collection.
 		// A migration that drops a score column must drop it first.
 		"ALTER TABLE {{" + k.reviews + "}} ADD COLUMN [[overall]] REAL AS " + k.overallColumn(),
@@ -112,16 +113,7 @@ func (k subjectKind) tables() []string {
 		"CREATE INDEX {{idx_" + overall + "_value}} ON {{" + overall + "}} ([[overall]])",
 		"CREATE TABLE {{" + tags + "}} ([[tag]] TEXT NOT NULL, " + parent + " TEXT NOT NULL, PRIMARY KEY ([[tag]], " + parent + ")) WITHOUT ROWID",
 		"CREATE INDEX {{idx_" + tags + "_" + k.parent + "}} ON {{" + tags + "}} (" + parent + ")",
-
-		"CREATE TRIGGER {{" + k.parent + "_index_insert}} AFTER INSERT ON {{" + k.parents + "}} BEGIN " +
-			"INSERT INTO {{" + overall + "}} (" + parent + ", " + k.overallColumns() + ") " + k.byReviewer("NEW.[[id]], ", "NEW.[[id]]") + "; " +
-			k.insertTags("NEW") + " END",
-		"CREATE TRIGGER {{" + k.parent + "_index_update}} AFTER UPDATE OF [[tags]] ON {{" + k.parents + "}} WHEN OLD.[[tags]] IS NOT NEW.[[tags]] BEGIN " +
-			"DELETE FROM {{" + tags + "}} WHERE " + parent + " = OLD.[[id]]; " +
-			k.insertTags("NEW") + " END",
-		"CREATE TRIGGER {{" + k.parent + "_index_delete}} AFTER DELETE ON {{" + k.parents + "}} BEGIN " +
-			"DELETE FROM {{" + overall + "}} WHERE " + parent + " = OLD.[[id]]; " +
-			"DELETE FROM {{" + tags + "}} WHERE " + parent + " = OLD.[[id]]; END",
+	}, k.parentTriggers(), []string{
 		"CREATE TRIGGER {{" + k.reviewTriggers + "_insert}} AFTER INSERT ON {{" + k.reviews + "}} BEGIN " + k.updateOverall("NEW") + " END",
 		"CREATE TRIGGER {{" + k.reviewTriggers + "_update}} AFTER UPDATE OF " + strings.Join(k.watchedColumns(), ", ") +
 			" ON {{" + k.reviews + "}} WHEN " + anyChanged(k.watchedColumns()) + " BEGIN " + k.updateOverall("NEW") + " " + k.updateOverall("OLD") + " END",
@@ -133,6 +125,43 @@ func (k subjectKind) tables() []string {
 			"tokenize = 'unicode61 remove_diacritics 2', prefix = '2 3')",
 		"CREATE VIRTUAL TABLE {{" + k.reviews + "_fts}} USING fts5(id UNINDEXED, title, feedback, " + k.parent + "_name, " +
 			"tokenize = 'unicode61 remove_diacritics 2', prefix = '2 3')",
+	})
+}
+
+// parentTriggers keep the overall row and the tag rows of each parent.
+func (k subjectKind) parentTriggers() []string {
+	overall, tags, parent := k.overallTable(), k.tagsTable(), "[["+k.parent+"]]"
+	return []string{
+		"CREATE TRIGGER {{" + k.parent + "_index_insert}} AFTER INSERT ON {{" + k.parents + "}} BEGIN " +
+			"INSERT INTO {{" + overall + "}} (" + parent + ", " + k.overallColumns() + ") " + k.byReviewer("NEW.[[id]], ", "NEW.[[id]]") + "; " +
+			k.insertTags("NEW") + " END",
+		"CREATE TRIGGER {{" + k.parent + "_index_update}} AFTER UPDATE OF [[tags]] ON {{" + k.parents + "}} WHEN OLD.[[tags]] IS NOT NEW.[[tags]] BEGIN " +
+			"DELETE FROM {{" + tags + "}} WHERE " + parent + " = OLD.[[id]]; " +
+			k.insertTags("NEW") + " END",
+		"CREATE TRIGGER {{" + k.parent + "_index_delete}} AFTER DELETE ON {{" + k.parents + "}} BEGIN " +
+			"DELETE FROM {{" + overall + "}} WHERE " + parent + " = OLD.[[id]]; " +
+			"DELETE FROM {{" + tags + "}} WHERE " + parent + " = OLD.[[id]]; END",
+	}
+}
+
+// dropParentTriggers lets a migration drop the tags column. SQLite refuses
+// the drop of a column that a trigger uses.
+func (k subjectKind) dropParentTriggers() []string {
+	out := make([]string, 0, 3)
+	for _, event := range []string{"insert", "update", "delete"} {
+		out = append(out, "DROP TRIGGER {{"+k.parent+"_index_"+event+"}}")
+	}
+	return out
+}
+
+// rebuildTags fills the tag table of k again from the tags of each parent.
+func (k subjectKind) rebuildTags() []string {
+	tags := "{{" + k.parents + "}}.[[tags]]"
+	return []string{
+		"DELETE FROM {{" + k.tagsTable() + "}}",
+		"INSERT OR IGNORE INTO {{" + k.tagsTable() + "}} ([[tag]], [[" + k.parent + "]]) SELECT [[value]], {{" + k.parents + "}}.[[id]] FROM {{" + k.parents + "}}, " +
+			"json_each(CASE WHEN json_valid(" + tags + ") AND json_type(" + tags + ") = 'array' THEN " + tags + " ELSE '[]' END) " +
+			"WHERE [[type]] = 'text'",
 	}
 }
 

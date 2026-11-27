@@ -124,6 +124,9 @@ func totalTimeComparisons(r *reviewsapi.TotalTimeRange) []comparison {
 func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRequestObject) (reviewsapi.CreateRecipeResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
+	if p := tooManyTags(createdTags(b.Tags)); p != nil {
+		return reviewsapi.CreateRecipe422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: *p}, nil
+	}
 	collection, err := s.app.FindCachedCollectionByNameOrId("recipes")
 	if err != nil {
 		return nil, err
@@ -131,9 +134,6 @@ func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRe
 	r := core.NewRecord(collection)
 	r.Set("name", b.Name)
 	setOptionalText(r, "description", b.Description)
-	if b.Tags != nil && len(*b.Tags) > 0 {
-		r.Set("tags", *b.Tags)
-	}
 	r.Set("ingredients", b.Ingredients)
 	r.Set("steps", b.Steps)
 	setOptionalText(r, "source", b.Source)
@@ -141,12 +141,15 @@ func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRe
 	setOptionalNumber(r, "servings", b.Servings)
 	r.Set("creator", user.Id)
 
-	conflict, err := s.saveRecipe(history.WithEditor(ctx, user.Id), r)
+	conflict, err := s.saveRecipe(history.WithEditor(ctx, user.Id), r, b.Tags)
 	if err != nil {
 		return nil, err
 	}
 	if conflict != nil {
 		return reviewsapi.CreateRecipe409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: *conflict}, nil
+	}
+	if err := recordvalues.ExpandTags(s.app, r); err != nil {
+		return nil, err
 	}
 	location := recipeSubject.path(r.Id)
 	return reviewsapi.CreateRecipe201JSONResponse{
@@ -158,10 +161,13 @@ func (s *Server) CreateRecipe(ctx context.Context, req reviewsapi.CreateRecipeRe
 // saveRecipe returns the conflict of a source that another recipe has. It
 // then does not save r. The unique index also blocks a second recipe with
 // the source.
-func (s *Server) saveRecipe(ctx context.Context, r *core.Record) (*reviewsapi.ConflictApplicationProblemPlusJSONResponse, error) {
+func (s *Server) saveRecipe(ctx context.Context, r *core.Record, tags *reviewsapi.Tags) (*reviewsapi.ConflictApplicationProblemPlusJSONResponse, error) {
 	var duplicate string
 	err := s.app.RunInTransaction(func(tx core.App) (err error) {
 		if duplicate, err = recipeWithSource(tx, r); err != nil || duplicate != "" {
+			return err
+		}
+		if err := setTags(tx, r, tags); err != nil {
 			return err
 		}
 		return tx.SaveWithContext(ctx, r)
@@ -282,6 +288,9 @@ func (s *Server) GetRecipe(ctx context.Context, req reviewsapi.GetRecipeRequestO
 func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRequestObject) (reviewsapi.UpdateRecipeResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
+	if p := tooManyTags(patchedTags(b.Tags)); p != nil {
+		return reviewsapi.UpdateRecipe422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: *p}, nil
+	}
 
 	var response reviewsapi.UpdateRecipeResponseObject
 	var saved, current *core.Record
@@ -309,7 +318,6 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 			}
 		}
 		ch.patchText("description", b.Description)
-		ch.patchTags(b.Tags)
 		oldSource := r.GetString("source")
 		ch.patchText("source", b.Source)
 		ch.patchNumber("total_time", b.TotalTime)
@@ -324,6 +332,11 @@ func (s *Server) UpdateRecipe(ctx context.Context, req reviewsapi.UpdateRecipeRe
 				response = reviewsapi.UpdateRecipe409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: sourceConflict(duplicate)}
 				return nil
 			}
+		}
+		// The tags come after the conflict check. A conflict then makes no
+		// tag.
+		if err := ch.patchTags(tx, b.Tags); err != nil {
+			return err
 		}
 		saved = r
 		if !ch.changed {
@@ -393,6 +406,9 @@ func (s *Server) recipeOf(user *core.Record, r *core.Record) (reviewsapi.Recipe,
 // recipeSummaries gets the creators, the ratings, the covers, the favorites,
 // and the own reviews of records. A nil user has none of the last two.
 func (s *Server) recipeSummaries(user *core.Record, records ...*core.Record) ([]reviewsapi.RecipeSummary, error) {
+	if err := recordvalues.ExpandTags(s.app, records...); err != nil {
+		return nil, err
+	}
 	users, err := s.creators(records...)
 	if err != nil {
 		return nil, err

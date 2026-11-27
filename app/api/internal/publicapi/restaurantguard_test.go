@@ -1,6 +1,7 @@
 package publicapi_test
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"testing"
@@ -41,8 +42,11 @@ func TestDashboardRestaurantEdit(t *testing.T) {
 	records := "/api/collections/restaurants/records"
 
 	t.Run("a superuser changes the fields of a restaurant of another user", func(t *testing.T) {
+		tags := "/api/collections/tags/records"
+		cafe := e.dashboard(request{method: http.MethodPost, path: tags, token: root, body: `{"name":"cafe\u0301"}`}, http.StatusOK).object(t)["id"]
+		brunch := e.dashboard(request{method: http.MethodPost, path: tags, token: root, body: `{"name":"brunch"}`}, http.StatusOK).object(t)["id"]
 		e.dashboard(request{method: http.MethodPatch, path: records + "/" + id, token: root,
-			body: `{"name":"  Café Nou ","tags":["cafe\u0301","brunch"],"address":" Carrer 2 ","website":"https://cafe.example"}`}, http.StatusOK)
+			body: fmt.Sprintf(`{"name":"  Café Nou ","tags":[%q,%q],"address":" Carrer 2 ","website":"https://cafe.example"}`, cafe, brunch)}, http.StatusOK)
 		got := e.expect(request{method: http.MethodGet, path: "/v1/restaurants/" + id, token: ana.Token}, http.StatusOK).object(t)
 		if got["name"] != "Café Nou" {
 			t.Errorf("name %q, want the trimmed name", got["name"])
@@ -59,10 +63,8 @@ func TestDashboardRestaurantEdit(t *testing.T) {
 	})
 
 	for name, tc := range map[string]struct{ body, field string }{
-		"an uppercase tag":     {`{"tags":["Pasta"]}`, "tags"},
-		"repeated tags":        {`{"tags":["pasta","pasta"]}`, "tags"},
+		"an unknown tag":       {`{"tags":["nosuchtag000000"]}`, "tags"},
 		"tags as a string":     {`{"tags":"pasta"}`, "tags"},
-		"a tag with a hyphen":  {`{"tags":["-pasta"]}`, "tags"},
 		"a blank name":         {`{"name":"   "}`, "name"},
 		"a zero-width space":   {`{"name":"Cafe\u200b"}`, "name"},
 		"a blank address":      {`{"address":"   "}`, "address"},
@@ -88,7 +90,7 @@ func TestDashboardRestaurantEdit(t *testing.T) {
 		if data, _ := res.object(t)["data"].(map[string]any); data["address"] == nil {
 			t.Errorf("errors %s, want an error of address", res.body)
 		}
-		got := e.dashboard(request{method: http.MethodPost, path: records, token: root, body: `{"name":" New ","tags":["new"],` + location + `}`}, http.StatusOK).object(t)
+		got := e.dashboard(request{method: http.MethodPost, path: records, token: root, body: `{"name":" New ",` + location + `}`}, http.StatusOK).object(t)
 		if got["name"] != "New" {
 			t.Errorf("name %q, want the trimmed name", got["name"])
 		}
@@ -99,12 +101,12 @@ func TestDashboardRestaurantEdit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		r.Set("tags", []string{"Old"})
+		r.Set("description", "a\u200eb")
 		if err := e.app.Save(r); err != nil {
 			t.Fatalf("a save outside the PocketBase API ran the checks: %v", err)
 		}
 		e.dashboard(request{method: http.MethodPatch, path: records + "/" + id, token: root, body: `{"price_level":2}`}, http.StatusOK)
-		e.dashboard(request{method: http.MethodPatch, path: records + "/" + id, token: root, body: `{"tags":["Old","new"]}`}, http.StatusBadRequest)
+		e.dashboard(request{method: http.MethodPatch, path: records + "/" + id, token: root, body: `{"description":"c\u200ed"}`}, http.StatusBadRequest)
 	})
 }
 

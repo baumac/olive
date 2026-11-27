@@ -120,6 +120,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - `REVIEWS_MAP_ATTRIBUTION` sets the credit of a tile server that is not from OpenStreetMap.
   - `REVIEWS_VALIDATE_RESPONSES=false` turns off the spec validation of responses. See decision 00001.
   - `REVIEWS_VALIDATE_REQUESTS=false` turns off the spec validation of parameters and body values. Invalid values can then be saved. Turn it off only with the response validation, or responses with these values get 500.
+    The tags keep their limit of 20. See decision 00011.
 
 ## Architecture
 
@@ -152,6 +153,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `places` tag has the place search for the location of a restaurant
     - the `lists` tag has the public lists of restaurants and recipes of users. Each user has a favorites list. See decisions 00006 and 00004.
     - `listRestaurants` and `listRecipes` with `list[eq]` search, sort, and filter the restaurants or the recipes of a list. See decisions 00006 and 00004.
+    - the `tags` tag has `listTags` and `getTag`. A tag is a record. A create or an update of a restaurant or a recipe makes its new tags. See decision 00011.
+    - a tag without a restaurant or a recipe does not exist for the Public API. A save that leaves a tag without a subject deletes it.
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/api/sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00001.
     - **`specs/api/sdk/client/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
@@ -164,7 +167,9 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00002.
   - **`app/api/main.go`** - the PocketBase app
-  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, `list_recipes`, `restaurant_versions`, and `recipe_versions` collections
+  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, `list_recipes`, `restaurant_versions`, `recipe_versions`, and `tags` collections
+    - `1795737600_tags.go` makes the `tags` collection. The `tags` field of `restaurants` and `recipes` is a relation to it. See decision 00011.
+    - The `restaurant_tags` and `recipe_tags` tables have the IDs of the tags. The tag filters find the IDs of the names first.
     - A migration that drops or renames a property of `restaurants` or `recipes` also changes the `snapshot` of their versions. See decision 00004.
     - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decisions 00004 and 00005.
     - `restaurant_overall` and `recipe_overall` have the rating of each restaurant or recipe. Each reviewer counts one time. The `overall` sort uses the overall and the number of reviewers. See decision 00005.
@@ -183,11 +188,14 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - A record hook gives each new user a favorites list. See decision 00006.
     - A record hook gives a restaurant or recipe save in the dashboard the checks of the spec. See decision 00004.
     - A record hook sets the `source_key` of each recipe save. Its unique index stops two recipes with one source. See decision 00004.
+    - Record hooks set the `name_key` of each tag, give a tag save in the dashboard the checks of the `Tag` schema, and delete the tags without a subject. See decision 00011.
     - `mail.go` sends the emails of the sign up, the password reset, and the approval. See decision 00003.
   - **`app/api/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00002.
   - **`app/api/internal/history`** - the record hooks that write a version of each save of a restaurant or a recipe. See decision 00004.
+    - A rename of a tag in the dashboard writes a version with the source `admin` for each subject with the tag. See decision 00011.
     - A Public API save of a restaurant or a recipe calls `SaveWithContext` with `history.WithEditor`. A save without it gets the source `admin`.
-  - **`app/api/internal/recordvalues`** - the API values of the fields of restaurants and recipes. The Public API and the history use them. See decision 00004.
+  - **`app/api/internal/recordvalues`** - the API values of the fields of restaurants and recipes. The Public API, the history, and the search index use them. See decision 00004.
+    - `ExpandTags` loads the tag records of a relation. `Tags` gives their names. See decision 00011.
   - **`app/api/internal/subjects`** - the table names of each kind of thing that users review. The Public API and the search index use them. See decision 00004.
   - **`app/api/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00007.
   - **`app/api/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00003.
@@ -196,7 +204,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - `testapp.LowCostDir` has the bcrypt cost 4 in the password fields. The `publicapi` tests use it. Production and `testapp.Dir` have the default cost 10.
     - `make test-coverage` does not count `testapp`.
   - **`app/api/internal/webui`** - embeds the UI build and serves it. See decision 00002.
-    - It writes the title and link preview tags of restaurant, review, reviewer, and list pages into `index.html`. See decision 00002.
+    - It writes the title and link preview tags of restaurant, review, reviewer, list, and tag pages into `index.html`. See decision 00002.
     - It serves `/robots.txt`. It disallows all paths for all crawlers. Link preview bots that obey it show no preview. See decision 00002.
     - The app has no structured data, no sitemap, and no canonical link. See decision 00002.
     - It serves `/map-config.json` with the tile server of the maps and allows its origin in the Content Security Policy. See decision 00008.
@@ -211,6 +219,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - `?kind=restaurants` or `?kind=recipes` selects one kind on the table and on a journal. `KindSwitch` sets it. Without it, both kinds show.
   - `/reviews/new` is "Add review" without a subject. `?kind=recipes` starts it with "I cooked". `NewReviewPage` embeds `ReviewFormPage`. See decision 00005.
   - The Fraunces font files and their license are in `app/ui/src/assets/fonts`. See decision 00009.
+  - `TagInput` suggests the existing tags from `listTags`. `TagPage.vue` at `/tags/{name}` shows the restaurants and the recipes of a tag. See decision 00011.
   - `HistoryPage.vue` shows the versions. `?undo=NUMBER` of the edit form undoes one version. `lib/history.ts` has the undo. See decision 00004.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00010.
   - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database

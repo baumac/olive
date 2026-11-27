@@ -170,6 +170,7 @@ The list operations:
 ## Tags
 
 - restaurants and recipes have tags. Reviews have no tags. See decision 00005.
+- each tag is a record of its own. Decision 00011 has the tag records, `listTags`, `getTag`, the tag input, and the tag page.
 - `tags` has at most 20 unique items
 - an empty list is no tags. The API stores and returns it as `null`, in a create, a patch, and a dashboard save. A patch from `null` to `[]` changes nothing and makes no version.
 - a tag has 1 to 63 characters. It has words with single hyphens between them.
@@ -294,10 +295,11 @@ Joe can change the values. The save makes version 4 with the editor Joe.
 
 ## Tags
 
-- `restaurant_tags` and `recipe_tags` have one row for each tag of a subject. Their primary key is `(tag, restaurant)` or `(tag, recipe)`, with an index on the subject.
+- the `tags` field is a relation to the `tags` collection. Decision 00011 has the collection and the tag tables.
+- `restaurant_tags` and `recipe_tags` have one row for each tag ID of a subject. Their primary key is `(tag, restaurant)` or `(tag, recipe)`, with an index on the subject.
 - SQLite triggers keep these tables equal to the records. A subject that is made, changed, or deleted changes its rows.
-- `tags[has_any]=a&tags[has_any]=b` adds `restaurants.id IN (SELECT restaurant FROM restaurant_tags WHERE tag IN ('a', 'b'))`. `tags[has]` and each `tags[has_all]` value add one such condition.
-- the tables keep only the strings of a JSON array. A tag that occurs two times has one row.
+- the tag filters find the IDs of the names in `tags` first. Decision 00011 has the query.
+- a tag that occurs two times has one row.
 - a migration that drops `tags` must drop the triggers first. SQLite refuses the drop.
 - the `Tag` pattern is `^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*(-[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*)*$`. Go `regexp` and JavaScript with the `u` flag both read it.
 - `\p{Lu}` and `\p{Lt}` are not in the classes, so the pattern refuses uppercase letters. `\p{Lm}` is in them for the `ー` of `ラーメン`.

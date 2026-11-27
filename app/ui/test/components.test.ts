@@ -1,5 +1,6 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FilterBar } from '@/components/ui/filter-bar'
 import { RatingDisplay } from '@/components/ui/rating-display'
@@ -103,6 +104,119 @@ describe('TagInput', () => {
     await input.trigger('keydown', { key: 'Enter' })
     expect(w.emitted('update:modelValue')).toBeUndefined()
     expect(w.emitted('error')?.at(-1)?.[0]).toContain('wood-fired')
+  })
+
+  describe('with suggestions', () => {
+    const suggestions = [
+      { name: 'wood-fired', label: '4 restaurants' },
+      { name: 'pizza', label: '2 restaurants' },
+    ]
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    // withSuggestions runs action and the debounce of the suggestions that
+    // it starts. A fake Date would make Vue ignore the later events. Axe
+    // needs the real timers after it.
+    async function withSuggestions(action: () => Promise<unknown>) {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      try {
+        await action()
+        await vi.runAllTimersAsync()
+        await flushPromises()
+      } finally {
+        vi.useRealTimers()
+      }
+    }
+
+    // open mounts the input with a label and waits for the suggestions.
+    async function open(props: Record<string, unknown> = {}) {
+      const suggest = vi.fn(async () => suggestions)
+      const page = mount(
+        defineComponent({
+          setup: () => () => [h('label', { for: 'tags' }, 'Tags'), h(TagInput, { modelValue: ['pizza'], id: 'tags', suggest, ...props })],
+        }),
+        { attachTo: attach() },
+      )
+      await withSuggestions(() => page.get('input').trigger('focus'))
+      return { w: page.findComponent(TagInput), page, suggest }
+    }
+
+    it('shows the most used tags on focus without the chosen tags', async () => {
+      const { w, page, suggest } = await open()
+      expect(suggest).toHaveBeenCalledWith('')
+      expect(w.get('input').attributes('aria-expanded')).toBe('true')
+      const options = w.findAll('[role=option]')
+      expect(options.map((o) => o.text())).toEqual(['wood-fired, 4 restaurants'])
+      await expectAccessible(page.element)
+    })
+
+    it('selects a suggestion with the arrow keys and Enter', async () => {
+      const { w } = await open()
+      const input = w.get('input')
+      await input.trigger('keydown', { key: 'ArrowDown' })
+      const option = w.get('[role=option]')
+      expect(option.attributes('aria-selected')).toBe('true')
+      expect(input.attributes('aria-activedescendant')).toBe(option.attributes('id'))
+      await input.trigger('keydown', { key: 'Enter' })
+      expect(w.emitted('update:modelValue')?.at(-1)).toEqual([['pizza', 'wood-fired']])
+    })
+
+    it('selects a suggestion with the mouse', async () => {
+      const { w } = await open()
+      await w.get('[role=option]').trigger('mousedown')
+      expect(w.emitted('update:modelValue')?.at(-1)).toEqual([['pizza', 'wood-fired']])
+    })
+
+    it('offers a new tag for a text without a match', async () => {
+      const { w } = await open()
+      await w.get('input').setValue('wood-oven')
+      await w.get('input').trigger('input')
+      expect(w.findAll('[role=option]').at(-1)?.text()).toBe('Add new tag ‘wood-oven’')
+      await w.get('input').trigger('keydown', { key: 'Escape' })
+      expect(w.get('input').attributes('aria-expanded')).toBe('false')
+    })
+
+    it('selects nothing while the suggestions of a new text load', async () => {
+      const { w } = await open()
+      const input = w.get('input')
+      await input.setValue('wood')
+      await input.trigger('input')
+      await input.trigger('keydown', { key: 'ArrowDown' })
+      expect(input.attributes('aria-activedescendant')).toBeUndefined()
+      await input.trigger('keydown', { key: 'Enter' })
+      expect(w.emitted('update:modelValue')?.at(-1)).toEqual([['pizza', 'wood']])
+    })
+
+    it('closes after a pick without openOnFocus', async () => {
+      const { w } = await open({ openOnFocus: false })
+      const input = w.get('input')
+      await withSuggestions(async () => {
+        await input.setValue('wood')
+        await input.trigger('input')
+      })
+      expect(input.attributes('aria-expanded')).toBe('true')
+      await w.get('[role=option]').trigger('mousedown')
+      expect(w.emitted('update:modelValue')?.at(-1)).toEqual([['pizza', 'wood-fired']])
+      expect(input.attributes('aria-expanded')).toBe('false')
+    })
+
+    it('opens on ArrowDown without openOnFocus', async () => {
+      const { w, suggest } = await open({ openOnFocus: false })
+      expect(suggest).not.toHaveBeenCalled()
+      expect(w.get('input').attributes('aria-expanded')).toBe('false')
+      await withSuggestions(() => w.get('input').trigger('keydown', { key: 'ArrowDown' }))
+      expect(w.get('input').attributes('aria-expanded')).toBe('true')
+      expect(suggest).toHaveBeenCalledWith('')
+    })
+
+    it('offers no new tag in a filter', async () => {
+      const { w } = await open({ allowNew: false })
+      await w.get('input').setValue('wood-oven')
+      await w.get('input').trigger('input')
+      expect(w.findAll('[role=option]').map((o) => o.text())).not.toContain('Add new tag ‘wood-oven’')
+    })
   })
 })
 

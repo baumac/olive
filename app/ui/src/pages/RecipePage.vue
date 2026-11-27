@@ -23,6 +23,7 @@ import { apiFailure, failureText, recipesApi } from '@/lib/api'
 import { formatCount } from '@/lib/format'
 import { ownReviewsText, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
+import { tagPath } from '@/lib/tags'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ recipeId: string }>()
@@ -123,7 +124,11 @@ async function remove() {
           {{ recipe.data.value.description }}
         </p>
         <ul v-if="tagList(recipe.data.value.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
-          <li v-for="tag in tagList(recipe.data.value.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
+          <li v-for="tag in tagList(recipe.data.value.tags)" :key="tag">
+            <Badge variant="secondary" as-child>
+              <RouterLink :to="tagPath(tag)" class="hover:bg-secondary/80 inline-flex min-h-6 items-center">{{ tag }}</RouterLink>
+            </Badge>
+          </li>
         </ul>
         <section v-if="recipe.data.value.rating" aria-label="Average scores">
           <ScoreSummary :scores="recipe.data.value.rating" kind="recipe">

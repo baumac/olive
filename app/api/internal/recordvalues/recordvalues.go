@@ -2,7 +2,12 @@
 // a recipe. The Public API and the history use it. See decision 00004.
 package recordvalues
 
-import "github.com/pocketbase/pocketbase/core"
+import (
+	"maps"
+
+	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
+)
 
 // OptionalText returns nil for the empty string that PocketBase stores for a
 // text without a value.
@@ -32,14 +37,6 @@ func OptionalList(r *core.Record, field string) *[]string {
 	return &items
 }
 
-// ClearEmptyList stores an empty JSON array as null. See OptionalList.
-func ClearEmptyList(r *core.Record, field string) {
-	var items []string
-	if err := r.UnmarshalJSONField(field, &items); err == nil && items != nil && len(items) == 0 {
-		r.Set(field, nil)
-	}
-}
-
 // List returns an empty list for a field that is not a JSON array of
 // strings.
 func List(r *core.Record, field string) []string {
@@ -60,4 +57,43 @@ type Location struct {
 // LocationOf gets the location of a restaurant.
 func LocationOf(r *core.Record) Location {
 	return Location{Latitude: r.GetFloat("latitude"), Longitude: r.GetFloat("longitude"), Address: r.GetString("address"), PlaceID: r.GetString("place_id")}
+}
+
+// ExpandTags loads the tag records of the tags relation of records. A record
+// that lost its tags then also loses the old expand.
+func ExpandTags(app core.App, records ...*core.Record) error {
+	if len(records) == 0 {
+		return nil
+	}
+	for _, r := range records {
+		e := maps.Clone(r.Expand())
+		delete(e, "tags")
+		r.SetExpand(e)
+	}
+	for _, err := range app.ExpandRecords(records, []string{"tags"}, nil) {
+		return err
+	}
+	return nil
+}
+
+// Tags returns the names of the tags that ExpandTags loaded, in the order of
+// the relation. It returns nil for a record without tags.
+func Tags(r *core.Record) *[]string {
+	tags := r.ExpandedAll("tags")
+	if len(tags) == 0 {
+		return nil
+	}
+	names := make([]string, len(tags))
+	for i, t := range tags {
+		names[i] = t.GetString("name")
+	}
+	return &names
+}
+
+// ParentsWithTag gets the records of the collection table that have the tag
+// with the ID tagID. The tag table tags has a row for each of them.
+func ParentsWithTag(app core.App, table, parent, tags, tagID string) ([]*core.Record, error) {
+	return app.FindAllRecords(table, dbx.NewExp(
+		"[[id]] IN (SELECT [["+parent+"]] FROM {{"+tags+"}} WHERE [[tag]] = {:tag})", dbx.Params{"tag": tagID},
+	))
 }

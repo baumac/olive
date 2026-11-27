@@ -149,7 +149,9 @@ func TestPageMeta(t *testing.T) {
 	restaurant := save(t, app, "restaurants", map[string]any{
 		"name": `Luigi's <script>alert(1)</script> & "Co"`, "description": "Pasta\nand pizza.", "address": "Carrer 1", "creator": user.Id,
 	})
-	plain := save(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Plain", "creator": user.Id})
+	cafe := save(t, app, "tags", map[string]any{"name": "café"})
+	save(t, app, "tags", map[string]any{"name": "unused"})
+	plain := save(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Plain", "creator": user.Id, "tags": []string{cafe.Id}})
 	scores := map[string]any{"space": 7, "service": 7, "food": 7, "price": 7}
 	review := save(t, app, "reviews", with(scores, map[string]any{
 		"restaurant": restaurant.Id, "creator": user.Id, "date": "2024-11-06", "title": "Great <b>food</b>", "feedback": "The best pasta.",
@@ -221,6 +223,14 @@ func TestPageMeta(t *testing.T) {
 			`<meta property="og:url" content="https://reviews.example.com/lists/` + list.Id + `" />`,
 		}},
 		{"GET", "/lists/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
+		{"GET", "/tags/caf%C3%A9", 200, []string{
+			`<title>Tag café · Sponga47 Food</title>`,
+			`<meta name="description" content="1 restaurant with the tag café on Sponga47 Food." />`,
+			`<meta property="og:url" content="https://reviews.example.com/tags/caf%C3%A9" />`,
+		}},
+		{"GET", "/tags/cafe%CC%81", 200, []string{`<title>Tag café · Sponga47 Food</title>`}},
+		{"GET", "/tags/unused", 404, []string{`content="Default"`}},
+		{"GET", "/tags/none", 404, []string{`content="Default"`}},
 	} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest(tc.method, tc.path, nil))

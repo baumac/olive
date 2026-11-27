@@ -19,6 +19,7 @@ import (
 	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"golang.org/x/text/unicode/norm"
 )
 
 // The page-meta block of index.html starts and ends with these comments.
@@ -200,6 +201,9 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		}
 		return p.listMeta(list, creator, counts, publicBaseURL(appURL)), true, nil
 	}
+	if len(parts) == 2 && strings.EqualFold(parts[0], "tags") && parts[1] != "" {
+		return p.tagPage(app, appURL, norm.NFC.String(parts[1]))
+	}
 	if len(parts) < 2 || !recordID.MatchString(parts[1]) {
 		return pageMeta{}, false, nil
 	}
@@ -318,6 +322,37 @@ func (p indexPage) listMeta(list, creator *core.Record, counts listItemCounts, b
 	meta.Description = "A list of " + counts.items() + " by " + creator.GetString("name") + " on " + p.siteName + "."
 	meta.Type = "website"
 	meta.URL = pageURL(baseURL, "/lists/"+list.Id)
+	return meta
+}
+
+// tagPage has no record for a tag without a restaurant or a recipe. The
+// Public API does the same. See decision 00011.
+func (p indexPage) tagPage(app core.App, appURL, name string) (pageMeta, bool, error) {
+	tag, err := app.FindFirstRecordByData(subjects.TagCollection, "name", name)
+	if err != nil {
+		return pageMeta{}, true, notFound(err)
+	}
+	var counts listItemCounts
+	err = app.DB().NewQuery("SELECT (SELECT COUNT(*) FROM {{" + subjects.Restaurants.Tags + "}} WHERE [[tag]] = {:id}) AS [[restaurants]], " +
+		"(SELECT COUNT(*) FROM {{" + subjects.Recipes.Tags + "}} WHERE [[tag]] = {:id}) AS [[recipes]]").
+		Bind(dbx.Params{"id": tag.Id}).One(&counts)
+	if err != nil {
+		return pageMeta{}, true, err
+	}
+	if counts.Restaurants == 0 && counts.Recipes == 0 {
+		return pageMeta{}, true, errNoRecord
+	}
+	return p.tagMeta(tag.GetString("name"), counts, publicBaseURL(appURL)), true, nil
+}
+
+func (p indexPage) tagMeta(name string, counts listItemCounts, baseURL string) pageMeta {
+	title := "Tag " + name
+	meta := p.siteImage
+	meta.Title = p.pageTitle(title)
+	meta.OGTitle = title
+	meta.Description = counts.items() + " with the tag " + name + " on " + p.siteName + "."
+	meta.Type = "website"
+	meta.URL = pageURL(baseURL, "/tags/"+url.PathEscape(name))
 	return meta
 }
 

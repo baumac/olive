@@ -10,8 +10,8 @@ import (
 )
 
 // recipeLists are the JSON fields of a recipe. The guard checks their stored
-// JSON.
-var recipeLists = []string{"tags", "ingredients", "steps"}
+// JSON. The tags are IDs of existing tags. PocketBase checks them.
+var recipeLists = []string{"ingredients", "steps"}
 
 var recipeGuard = fieldGuard{
 	collection: "recipes",
@@ -38,6 +38,7 @@ func recipeProperties(r *core.Record, schema *openapi3.Schema) (map[string]json.
 	if err != nil {
 		return nil, err
 	}
+	delete(all, "tags")
 	for _, name := range recipeLists {
 		all[name] = nil
 		if v, ok := r.Get(name).(types.JSONRaw); ok {

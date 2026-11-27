@@ -33,7 +33,8 @@ func TestRecipeTriggers(t *testing.T) {
 	app := newApp(t)
 	ana := newUser(t, app, "ana")
 	joe := newUser(t, app, "joe")
-	dal := newRecord(t, app, "recipes", map[string]any{"name": "Dal", "ingredients": []string{"lentils"}, "steps": []string{"Boil."}, "tags": []string{"dal", "dal", "vegan"}})
+	dalTag, vegan, lentils := newTag(t, app, "dal"), newTag(t, app, "vegan"), newTag(t, app, "lentils")
+	dal := newRecord(t, app, "recipes", map[string]any{"name": "Dal", "ingredients": []string{"lentils"}, "steps": []string{"Boil."}, "tags": []string{dalTag, dalTag, vegan}})
 
 	if overall, reviewers, ok := storedRecipeOverall(t, app, dal.Id); !ok || overall.Valid || reviewers != 0 {
 		t.Errorf("new recipe: overall %v, reviewers %d, row %v", overall, reviewers, ok)
@@ -70,15 +71,15 @@ func TestRecipeTriggers(t *testing.T) {
 	if err := app.DB().Select("tag").From("recipe_tags").Where(dbx.HashExp{"recipe": dal.Id}).OrderBy("tag").Column(&tags); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(tags, []string{"dal", "vegan"}) {
+	if want := sorted(dalTag, vegan); !slices.Equal(tags, want) {
 		t.Errorf("tags %v", tags)
 	}
-	dal.Set("tags", []string{"lentils"})
+	dal.Set("tags", []string{lentils})
 	if err := app.Save(dal); err != nil {
 		t.Fatal(err)
 	}
 	tags = nil
-	if err := app.DB().Select("tag").From("recipe_tags").Where(dbx.HashExp{"recipe": dal.Id}).Column(&tags); err != nil || !slices.Equal(tags, []string{"lentils"}) {
+	if err := app.DB().Select("tag").From("recipe_tags").Where(dbx.HashExp{"recipe": dal.Id}).Column(&tags); err != nil || !slices.Equal(tags, []string{lentils}) {
 		t.Errorf("changed tags %v, error %v", tags, err)
 	}
 

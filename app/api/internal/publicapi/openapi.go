@@ -25,8 +25,9 @@ type operation struct {
 	pattern string
 	route   *routers.Route
 	query   map[string]bool
-	// nfcQuery has the query parameters with the x-nfc extension.
+	// nfcQuery and nfcPath have the parameters with the x-nfc extension.
 	nfcQuery map[string]bool
+	nfcPath  map[string]bool
 	auth     authMode
 	// approval is true when the operation needs an approved user.
 	approval bool
@@ -96,7 +97,8 @@ func specOf(doc *openapi3.T) (*apiSpec, error) {
 				approval:     approval,
 				route:        &routers.Route{Spec: doc, Path: path, PathItem: item, Method: method, Operation: op},
 				query:        queryNames(item, op),
-				nfcQuery:     nfcQueryNames(item, op),
+				nfcQuery:     nfcNames(item, op, openapi3.ParameterInQuery),
+				nfcPath:      nfcNames(item, op, openapi3.ParameterInPath),
 				auth:         authOf(doc, op),
 				limit:        limit,
 				fileBody:     op.RequestBody != nil && !hasJSON(op.RequestBody.Value.Content),
@@ -307,11 +309,11 @@ func pathParams(pattern, escapedPath string) (map[string]string, error) {
 	return params, nil
 }
 
-func nfcQueryNames(item *openapi3.PathItem, op *openapi3.Operation) map[string]bool {
+func nfcNames(item *openapi3.PathItem, op *openapi3.Operation, in string) map[string]bool {
 	names := map[string]bool{}
 	for _, ref := range slices.Concat(item.Parameters, op.Parameters) {
 		p := ref.Value
-		if p.In != openapi3.ParameterInQuery || p.Style == openapi3.SerializationDeepObject {
+		if p.In != in || p.Style == openapi3.SerializationDeepObject {
 			continue
 		}
 		s := p.Schema.Value
@@ -347,6 +349,34 @@ func (op *operation) normalizeQuery(r *http.Request) {
 	if changed {
 		r.URL.RawQuery = query.Encode()
 	}
+}
+
+// normalizePath changes the values of nfcPath to Unicode normalization form
+// C. The validation and the handler then get the changed values.
+func (op *operation) normalizePath(r *http.Request, in *openapi3filter.RequestValidationInput) {
+	changed := false
+	for name := range op.nfcPath {
+		if v := in.PathParams[name]; norm.NFC.String(v) != v {
+			in.PathParams[name] = norm.NFC.String(v)
+			changed = true
+		}
+	}
+	if !changed {
+		return
+	}
+	_, pattern, _ := strings.Cut(op.pattern, " ")
+	segments := strings.Split(pattern, "/")
+	for i, s := range segments {
+		if strings.HasPrefix(s, "{") && strings.HasSuffix(s, "}") {
+			segments[i] = url.PathEscape(in.PathParams[strings.Trim(s, "{}")])
+		}
+	}
+	escaped := strings.Join(segments, "/")
+	path, err := url.PathUnescape(escaped)
+	if err != nil {
+		return
+	}
+	r.URL.Path, r.URL.RawPath = path, escaped
 }
 
 // checkQuery returns a detail for the 400 response. The spec does not

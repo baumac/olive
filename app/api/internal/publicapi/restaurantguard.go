@@ -7,13 +7,11 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/baumac/reviews-app/app/api/internal/recordvalues"
 	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/types"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -107,7 +105,6 @@ func (g fieldGuard) check(r, original *core.Record) error {
 			return err
 		}
 	}
-	recordvalues.ClearEmptyList(r, "tags")
 	return nil
 }
 
@@ -128,8 +125,6 @@ var restaurantGuard = fieldGuard{
 	properties: restaurantProperties,
 	set: func(r *core.Record, name string, value json.RawMessage) error {
 		switch name {
-		case "tags":
-			r.Set("tags", types.JSONRaw(value))
 		case "location":
 			var l reviewsapi.Location
 			if err := json.Unmarshal(value, &l); err != nil {
@@ -144,8 +139,8 @@ var restaurantGuard = fieldGuard{
 }
 
 // restaurantProperties gets the properties that a response would have. The
-// tags are the stored JSON. A stored string or object then gets an error.
-// A location without an address gets an error of the address.
+// tags are IDs of existing tags. PocketBase checks them. A location without
+// an address gets an error of the address.
 func restaurantProperties(r *core.Record, schema *openapi3.Schema) (map[string]json.RawMessage, error) {
 	raw, err := json.Marshal(toRestaurant(r, nil, nil, nil, viewerData{}))
 	if err != nil {
@@ -155,9 +150,7 @@ func restaurantProperties(r *core.Record, schema *openapi3.Schema) (map[string]j
 	if err != nil {
 		return nil, err
 	}
-	if tags, ok := r.Get("tags").(types.JSONRaw); ok {
-		all["tags"] = json.RawMessage(tags)
-	}
+	delete(all, "tags")
 	props := map[string]json.RawMessage{}
 	for name, value := range all {
 		if _, ok := schema.Properties[name]; ok && len(value) > 0 && string(value) != "null" {

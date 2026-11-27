@@ -124,6 +124,7 @@ func Register(app core.App, opts Options) {
 	reviewDateGuard(restaurantSubject, "RestaurantReviewCreate").register(app)
 	reviewDateGuard(recipeSubject, "RecipeReviewCreate").register(app)
 	registerSourceKey(app)
+	registerTags(app)
 	registerFavorites(app)
 	post := newPostman(app, opts)
 	notifyApproval(app, post)
@@ -415,6 +416,7 @@ func (s *Server) serveOperation(w http.ResponseWriter, mux *http.ServeMux, op *o
 	}
 
 	op.normalizeQuery(r)
+	op.normalizePath(r, in)
 	if detail := op.checkQuery(r); detail != "" {
 		writeProblem(w, newProblem(http.StatusBadRequest, detail))
 		return

@@ -53,6 +53,8 @@ export * from './SavedListCreate.js';
 export * from './SavedListPage.js';
 export * from './SavedListPatch.js';
 export * from './ScoreRange.js';
+export * from './TagList.js';
+export * from './TagSummary.js';
 export * from './TimestampRange.js';
 export * from './TotalTimeRange.js';
 export * from './User.js';

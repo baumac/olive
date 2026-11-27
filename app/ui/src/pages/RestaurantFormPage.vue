@@ -23,9 +23,11 @@ import { nearbyRadius, sameLocation } from '@/lib/places'
 import { normalizeWebsite, priceLevels } from '@/lib/restaurantDetails'
 import { changedPatch, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
+import { tagSuggester } from '@/lib/tags'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, checkOpeningHours, checkPhone, checkWebsite } from '@/lib/validation'
 
+const suggestTags = tagSuggester('restaurants')
 const props = defineProps<{ restaurantId?: string }>()
 const router = useRouter()
 const route = useRoute()
@@ -350,6 +352,7 @@ async function submit() {
         <TagInput
           id="restaurant-tags"
           v-model="fields.tags"
+          :suggest="suggestTags"
           :invalid="!!errors.tags"
           :described-by="`restaurant-tags-description${errors.tags ? ' restaurant-tags-message' : ''}`"
           @error="errors = { ...errors, tags: $event }"

@@ -188,12 +188,13 @@ func TestFailedSaveKeepsOverall(t *testing.T) {
 func TestRawInsertGetsOverallRow(t *testing.T) {
 	t.Parallel()
 	app := newApp(t)
-	if _, err := app.DB().Insert("restaurants", dbx.Params{"id": "rawrestaurant01", "name": "Raw", "tags": `["cheap"]`}).Execute(); err != nil {
+	cheap := newTag(t, app, "cheap")
+	if _, err := app.DB().Insert("restaurants", dbx.Params{"id": "rawrestaurant01", "name": "Raw", "tags": `["` + cheap + `"]`}).Execute(); err != nil {
 		t.Fatal(err)
 	}
 	wantNoOverall(t, app, "rawrestaurant01", "raw insert")
 	wantReviewers(t, app, "rawrestaurant01", 0)
-	if got := storedTags(t, app, "rawrestaurant01"); !slices.Equal(got, []string{"cheap"}) {
+	if got := storedTags(t, app, "rawrestaurant01"); !slices.Equal(got, []string{cheap}) {
 		t.Errorf("raw insert tags: %v", got)
 	}
 }
@@ -201,28 +202,29 @@ func TestRawInsertGetsOverallRow(t *testing.T) {
 func TestTagTriggers(t *testing.T) {
 	t.Parallel()
 	app := newApp(t)
-	a := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "A", "tags": []string{"pasta", "italian", "pasta"}})
-	if got := storedTags(t, app, a.Id); !slices.Equal(got, []string{"italian", "pasta"}) {
+	pasta, italian, pizza, cheap := newTag(t, app, "pasta"), newTag(t, app, "italian"), newTag(t, app, "pizza"), newTag(t, app, "cheap")
+	a := newRecord(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "A", "tags": []string{pasta, italian, pasta}})
+	if got := storedTags(t, app, a.Id); !slices.Equal(got, sorted(italian, pasta)) {
 		t.Errorf("create: %v", got)
 	}
 
-	a.Set("tags", []any{"pizza", 3, map[string]any{"x": "y"}})
+	a.Set("tags", []string{pizza})
 	if err := app.Save(a); err != nil {
 		t.Fatal(err)
 	}
-	if got := storedTags(t, app, a.Id); !slices.Equal(got, []string{"pizza"}) {
+	if got := storedTags(t, app, a.Id); !slices.Equal(got, []string{pizza}) {
 		t.Errorf("update: %v", got)
 	}
 
-	a.Set("tags", "pizza")
+	a.Set("tags", []string{})
 	if err := app.Save(a); err != nil {
 		t.Fatal(err)
 	}
 	if got := storedTags(t, app, a.Id); len(got) != 0 {
-		t.Errorf("tags that are not an array: %v", got)
+		t.Errorf("no tags: %v", got)
 	}
 
-	a.Set("tags", []string{"cheap"})
+	a.Set("tags", []string{cheap})
 	if err := app.Save(a); err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +232,7 @@ func TestTagTriggers(t *testing.T) {
 	if err := app.Save(a); err != nil {
 		t.Fatal(err)
 	}
-	if got := storedTags(t, app, a.Id); !slices.Equal(got, []string{"cheap"}) {
+	if got := storedTags(t, app, a.Id); !slices.Equal(got, []string{cheap}) {
 		t.Errorf("name update: %v", got)
 	}
 

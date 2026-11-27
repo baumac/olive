@@ -2,6 +2,10 @@
 // The Public API and the search index use them. See decision 00004.
 package subjects
 
+// TagCollection has the tags of all kinds. The tags field of each parent is
+// a relation to it. See decision 00011.
+const TagCollection = "tags"
+
 // Tables has the table names of one kind.
 type Tables struct {
 	// Table is the collection. Its name is also the plural noun of the
@@ -13,8 +17,9 @@ type Tables struct {
 	Photos    string
 	ListItems string
 	// Versions has the history of each record of Table. See decision 00004.
-	Versions   string
-	Overall    string
+	Versions string
+	Overall  string
+	// Tags has one row for each tag ID of each parent.
 	Tags       string
 	FTS        string
 	ReviewsFTS string

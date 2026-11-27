@@ -165,17 +165,13 @@ func TestEmptyTagsAreNull(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	root := e.superuserToken("root@example.com")
-	storedTags := func(collection, id string) any {
+	storedTags := func(collection, id string) []string {
 		t.Helper()
 		r, err := e.app.FindRecordById(collection, id)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var tags any
-		if err := r.UnmarshalJSONField("tags", &tags); err != nil {
-			t.Fatal(err)
-		}
-		return tags
+		return r.GetStringSlice("tags")
 	}
 
 	t.Run("a create with an empty list has no tags", func(t *testing.T) {
@@ -184,8 +180,8 @@ func TestEmptyTagsAreNull(t *testing.T) {
 		if restaurant["tags"] != nil || recipe["tags"] != nil {
 			t.Errorf("tags %v and %v, want null", restaurant["tags"], recipe["tags"])
 		}
-		if got := storedTags("restaurants", restaurant["id"].(string)); got != nil {
-			t.Errorf("stored tags %v, want null", got)
+		if got := storedTags("restaurants", restaurant["id"].(string)); len(got) != 0 {
+			t.Errorf("stored tags %v, want none", got)
 		}
 	})
 
@@ -207,13 +203,17 @@ func TestEmptyTagsAreNull(t *testing.T) {
 		}
 	})
 
-	t.Run("a dashboard save stores an empty list as null", func(t *testing.T) {
+	t.Run("a dashboard save of an empty list leaves no tags", func(t *testing.T) {
 		restaurant := e.createRestaurant(ana.Token, `{"name":"Dashboard","tags":["tapas"]}`)["id"].(string)
 		recipe := e.createRecipe(ana.Token, `{"name":"Dashboard","tags":["soup"]}`)["id"].(string)
 		for collection, id := range map[string]string{"restaurants": restaurant, "recipes": recipe} {
 			e.dashboard(request{method: http.MethodPatch, path: "/api/collections/" + collection + "/records/" + id, token: root, body: `{"tags":[]}`}, http.StatusOK)
-			if got := storedTags(collection, id); got != nil {
-				t.Errorf("%s: stored tags %v, want null", collection, got)
+			if got := storedTags(collection, id); len(got) != 0 {
+				t.Errorf("%s: stored tags %v, want none", collection, got)
+			}
+			got := e.expect(request{method: http.MethodGet, path: "/v1/" + collection + "/" + id}, http.StatusOK).object(t)
+			if got["tags"] != nil {
+				t.Errorf("%s: tags %v, want null", collection, got["tags"])
 			}
 		}
 	})

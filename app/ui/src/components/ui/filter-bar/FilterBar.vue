@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { TagInput } from '@/components/ui/tag-input'
+import { TagInput, type TagSuggestion } from '@/components/ui/tag-input'
 
 export interface Option {
   value: string
@@ -23,6 +23,8 @@ export interface FilterDef {
   options?: Option[]
   help?: string
   placeholder?: string
+  // suggest gets the existing tags of a tags filter.
+  suggest?: (text: string) => Promise<TagSuggestion[]>
   // chip gives the chip text for one value, such as "Food: 8 or more".
   chip: (value: string) => string
 }
@@ -152,6 +154,9 @@ function removeChip(chip: Chip) {
                 :model-value="(filters[def.key] as string[] | undefined) ?? []"
                 :invalid="!!tagError"
                 :described-by="tagError ? `filter-${def.key}-message` : undefined"
+                :suggest="def.suggest"
+                :allow-new="false"
+                :open-on-focus="false"
                 @update:model-value="set(def.key, $event)"
                 @error="tagError = $event"
               />

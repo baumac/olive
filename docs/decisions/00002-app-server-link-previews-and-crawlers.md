@@ -172,6 +172,7 @@ It has the title, the description, and the link preview tags of the site.
 | `/restaurants/{id}/reviews/{id}`, `/recipes/{id}/reviews/{id}` | `og:type` `article`, the title with the name of the subject, the feedback, and the first photo |
 | `/reviewers/{id}` | `og:type` `profile` and the name of the reviewer |
 | `/lists/{id}` | "NAME by CREATOR" and the number of restaurants and recipes |
+| `/tags/{name}` | "Tag NAME" and the number of restaurants and recipes. See decision 00011. |
 
 - `og:image` of a review with photos is the `full` file of its first photo, with its size and alt text. Other pages have the image of the site.
 - a missing record, a review of a different subject, and a reviewer without approval get `404` with the default `index.html`. The UI then shows its not found screen.
@@ -297,7 +298,7 @@ The `prepare` middleware runs before the generated strict handler. The spec give
 - PocketBase stores an empty string for a text field without a value. An empty `description` or `feedback` is not in the responses.
 - an update saves only when a value changes. A merge patch without changes keeps `updated`.
 - `creator` is a relation field. The API expands it and returns only the `id` and the `name` of the user.
-- `tags` is a `json` field. PocketBase has no field type for a list of free-form strings. Decision 00004 has the tag tables.
+- `tags` is a relation to the `tags` collection. Decision 00011 has the tag records and the tag tables.
 - PocketBase v0.40.6 needs Go 1.27. The app module and `go.work` use it.
 
 ## The UI build
@@ -358,6 +359,7 @@ Tests:
 
 - `pagemeta.go` of `app/api/internal/webui` has the page meta. `webui.Register` reads `index.html` one time and cuts it around the block. It also reads the site name and the default `og:image` tags of the block.
 - the UI route sends its own page only for the pages of the table in [The page-meta block](#the-page-meta-block), with an optional trailing slash. The path words ignore case, like Vue Router. Each ID must match `^[a-z0-9]{15}$`.
+  The name of a tag gets Unicode normalization form C. A tag without a restaurant or a recipe gets `404`.
   `/restaurants/new` does not match. The edit and new pages need an account and keep the default tags.
 - `html/template` writes the values. A name such as `<script>` stays text.
 - the description puts all whitespace on one line. A text of more than 200 characters is cut at the end of a word and ends with `…`.

@@ -114,6 +114,9 @@ func sortsBy(sort, field string) bool {
 func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRestaurantRequestObject) (reviewsapi.CreateRestaurantResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
+	if p := tooManyTags(createdTags(b.Tags)); p != nil {
+		return reviewsapi.CreateRestaurant422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: *p}, nil
+	}
 	collection, err := s.app.FindCachedCollectionByNameOrId("restaurants")
 	if err != nil {
 		return nil, err
@@ -122,9 +125,6 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 	r.Set("name", b.Name)
 	if b.Description != nil {
 		r.Set("description", *b.Description)
-	}
-	if b.Tags != nil && len(*b.Tags) > 0 {
-		r.Set("tags", *b.Tags)
 	}
 	setLocation(r, b.Location)
 	setOptionalText(r, "website", b.Website)
@@ -139,6 +139,9 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 		if duplicate, err = restaurantWithPlace(tx, r); err != nil || duplicate != "" {
 			return err
 		}
+		if err := setTags(tx, r, b.Tags); err != nil {
+			return err
+		}
 		return tx.SaveWithContext(history.WithEditor(ctx, user.Id), r)
 	})
 	if err != nil {
@@ -148,6 +151,9 @@ func (s *Server) CreateRestaurant(ctx context.Context, req reviewsapi.CreateRest
 		return reviewsapi.CreateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: placeConflict(duplicate)}, nil
 	}
 
+	if err := recordvalues.ExpandTags(s.app, r); err != nil {
+		return nil, err
+	}
 	location := basePath + "/restaurants/" + r.Id
 	return reviewsapi.CreateRestaurant201JSONResponse{
 		Body:    toRestaurant(r, map[string]*core.Record{user.Id: user}, nil, nil, viewerData{}),
@@ -175,6 +181,9 @@ func (s *Server) GetRestaurant(ctx context.Context, req reviewsapi.GetRestaurant
 func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRestaurantRequestObject) (reviewsapi.UpdateRestaurantResponseObject, error) {
 	user := stateFrom(ctx).user
 	b := req.Body
+	if p := tooManyTags(patchedTags(b.Tags)); p != nil {
+		return reviewsapi.UpdateRestaurant422ApplicationProblemPlusJSONResponse{UnprocessableContentApplicationProblemPlusJSONResponse: *p}, nil
+	}
 
 	var response reviewsapi.UpdateRestaurantResponseObject
 	var saved *core.Record
@@ -192,7 +201,6 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 			ch.set("name", *b.Name)
 		}
 		ch.patchText("description", b.Description)
-		ch.patchTags(b.Tags)
 		ch.patchText("website", b.Website)
 		ch.patchText("phone", b.Phone)
 		ch.patchText("opening_hours", b.OpeningHours)
@@ -211,6 +219,11 @@ func (s *Server) UpdateRestaurant(ctx context.Context, req reviewsapi.UpdateRest
 				response = reviewsapi.UpdateRestaurant409ApplicationProblemPlusJSONResponse{ConflictApplicationProblemPlusJSONResponse: placeConflict(duplicate)}
 				return nil
 			}
+		}
+		// The tags come after the conflict check. A conflict then makes no
+		// tag.
+		if err := ch.patchTags(tx, b.Tags); err != nil {
+			return err
 		}
 		saved = r
 		if !ch.changed {
@@ -380,6 +393,9 @@ func (s *Server) restaurantResponse(user, r *core.Record) (reviewsapi.Restaurant
 // restaurantsOf gets the creators, ratings, and covers of records. A nil
 // user has no favorite and no own review.
 func (s *Server) restaurantsOf(user *core.Record, records ...*core.Record) ([]reviewsapi.Restaurant, error) {
+	if err := recordvalues.ExpandTags(s.app, records...); err != nil {
+		return nil, err
+	}
 	users, err := s.creators(records...)
 	if err != nil {
 		return nil, err
@@ -458,8 +474,22 @@ func priceLevelOf(r *core.Record) *reviewsapi.PriceLevel {
 	return recordvalues.OptionalNumber(r, "price_level")
 }
 
+// tagsOf needs the tags of recordvalues.ExpandTags.
 func tagsOf(r *core.Record) *reviewsapi.Tags {
-	return recordvalues.OptionalList(r, "tags")
+	return recordvalues.Tags(r)
+}
+
+// setTags sets the IDs of the tags of names. It makes the missing tags.
+func setTags(app core.App, r *core.Record, names *reviewsapi.Tags) error {
+	if names == nil || len(*names) == 0 {
+		return nil
+	}
+	ids, err := resolveTags(app, *names)
+	if err != nil {
+		return err
+	}
+	r.Set("tags", ids)
+	return nil
 }
 
 // changes sets only the fields that get a different value. A merge patch
@@ -497,25 +527,33 @@ func (c *changes) patchNumber(field string, v nullable.Nullable[int]) {
 	}
 }
 
-func (c *changes) patchTags(v nullable.Nullable[reviewsapi.Tags]) {
+func (c *changes) patchTags(app core.App, v nullable.Nullable[reviewsapi.Tags]) error {
 	if !v.IsSpecified() {
-		return
+		return nil
+	}
+	if err := recordvalues.ExpandTags(app, c.r); err != nil {
+		return err
 	}
 	// An empty list is no tags, like null. See decision 00004.
-	next, _ := v.Get()
+	next := nfcTags(patchedTags(v))
 	old := tagsOf(c.r)
 	if len(next) == 0 {
 		if old == nil {
-			return
+			return nil
 		}
-		c.r.Set("tags", nil)
+		c.r.Set("tags", []string{})
 	} else {
 		if old != nil && slices.Equal(*old, next) {
-			return
+			return nil
 		}
-		c.r.Set("tags", next)
+		ids, err := resolveTags(app, next)
+		if err != nil {
+			return err
+		}
+		c.r.Set("tags", ids)
 	}
 	c.changed = true
+	return nil
 }
 
 // priceLevelColumn is NULL for a restaurant without a price level. The

@@ -61,12 +61,12 @@ type Kind struct {
 var (
 	// Restaurants has the properties of RestaurantCreate.
 	Restaurants = Kind{subjects.Restaurants, []Property{
-		text("name"), optionalText("description"), optionalList("tags"), {"location", location},
+		text("name"), optionalText("description"), {"tags", tags}, {"location", location},
 		optionalText("website"), optionalText("phone"), optionalText("opening_hours"), optionalNumber("price_level"),
 	}}
 	// Recipes has the properties of RecipeCreate.
 	Recipes = Kind{subjects.Recipes, []Property{
-		text("name"), optionalText("description"), optionalList("tags"), list("ingredients"), list("steps"),
+		text("name"), optionalText("description"), {"tags", tags}, list("ingredients"), list("steps"),
 		optionalText("source"), optionalNumber("total_time"), optionalNumber("servings"),
 	}}
 	kinds = []Kind{Restaurants, Recipes}
@@ -84,12 +84,12 @@ func optionalNumber(name string) Property {
 	return Property{name, func(r *core.Record) any { return recordvalues.OptionalNumber(r, name) }}
 }
 
-func optionalList(name string) Property {
-	return Property{name, func(r *core.Record) any { return recordvalues.OptionalList(r, name) }}
-}
-
 func list(name string) Property {
 	return Property{name, func(r *core.Record) any { return recordvalues.List(r, name) }}
+}
+
+func tags(r *core.Record) any {
+	return recordvalues.Tags(r)
 }
 
 func location(r *core.Record) any {
@@ -98,7 +98,10 @@ func location(r *core.Record) any {
 
 // Snapshot gets the values of the properties of k from r. The values have
 // the types of a JSON decode. They then compare with a stored snapshot.
-func (k Kind) Snapshot(r *core.Record) (map[string]any, error) {
+func (k Kind) Snapshot(app core.App, r *core.Record) (map[string]any, error) {
+	if err := recordvalues.ExpandTags(app, r); err != nil {
+		return nil, err
+	}
 	values := make(map[string]any, len(k.Properties))
 	for _, p := range k.Properties {
 		values[p.Name] = p.value(r)
@@ -136,6 +139,42 @@ func Register(app core.App) {
 	})
 	app.OnRecordUpdateExecute(names...).BindFunc(func(e *core.RecordEvent) error {
 		return inTransaction(e, ActionUpdate)
+	})
+	app.OnRecordUpdateExecute(subjects.TagCollection).BindFunc(writeRenames)
+}
+
+// writeRenames writes a version with the source admin for each parent of a
+// renamed tag. Without it, the next version of a user shows a tags change.
+func writeRenames(e *core.RecordEvent) error {
+	renamed := e.Record.Original().GetString("name") != e.Record.GetString("name")
+	app := e.App
+	defer func() { e.App = app }()
+	return app.RunInTransaction(func(tx core.App) error {
+		e.App = tx
+		if err := e.Next(); err != nil || !renamed {
+			return err
+		}
+		for _, k := range kinds {
+			parents, err := recordvalues.ParentsWithTag(tx, k.Table, k.Parent, k.Tags, e.Record.Id)
+			if err != nil {
+				return err
+			}
+			for _, r := range parents {
+				last, err := newest(tx, k, r.Id)
+				if err != nil {
+					return err
+				}
+				if last == nil {
+					if last, err = writeBaseline(tx, k, r.Id); err != nil {
+						return err
+					}
+				}
+				if err := write(tx, k, context.Background(), r, ActionUpdate, last); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
 	})
 }
 
@@ -206,7 +245,7 @@ func writeBaseline(app core.App, k Kind, parentID string) (*version, error) {
 	if err != nil {
 		return nil, err
 	}
-	snapshot, err := k.Snapshot(stored)
+	snapshot, err := k.Snapshot(app, stored)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +254,7 @@ func writeBaseline(app core.App, k Kind, parentID string) (*version, error) {
 }
 
 func write(app core.App, k Kind, ctx context.Context, r *core.Record, action string, last *version) error {
-	snapshot, err := k.Snapshot(r)
+	snapshot, err := k.Snapshot(app, r)
 	if err != nil {
 		return err
 	}

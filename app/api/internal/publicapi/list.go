@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/baumac/reviews-app/app/api/internal/subjects"
 	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
@@ -171,8 +172,8 @@ func (w *where) hasTags(sub subject, tags []string) {
 	for i, t := range tags {
 		ps[i] = w.param(t)
 	}
-	w.add(fmt.Sprintf("%s IN (SELECT [[%s]] FROM {{%s}} WHERE [[tag]] IN (%s))",
-		column(sub.Table, "id"), sub.Parent, sub.Tags, strings.Join(ps, ", ")))
+	w.add(fmt.Sprintf("%s IN (SELECT [[%s]] FROM {{%s}} WHERE [[tag]] IN (SELECT [[id]] FROM {{%s}} WHERE [[name]] IN (%s)))",
+		column(sub.Table, "id"), sub.Parent, sub.Tags, subjects.TagCollection, strings.Join(ps, ", ")))
 }
 
 func (w *where) tagFilters(sub subject, has *string, hasAny, hasAll *[]string) {

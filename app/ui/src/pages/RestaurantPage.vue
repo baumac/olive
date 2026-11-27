@@ -27,6 +27,7 @@ import { useMapConfig } from '@/lib/mapConfig'
 import { directionsLink, osmLink } from '@/lib/places'
 import { ownReviewsText, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
+import { tagPath } from '@/lib/tags'
 import { currentUser } from '@/lib/session'
 
 const props = defineProps<{ restaurantId: string }>()
@@ -186,7 +187,11 @@ async function remove() {
           />
           <RestaurantDetails :restaurant="restaurant.data.value" />
           <ul v-if="tagList(restaurant.data.value.tags).length" class="flex flex-wrap gap-1.5" aria-label="Tags">
-            <li v-for="tag in tagList(restaurant.data.value.tags)" :key="tag"><Badge variant="secondary">{{ tag }}</Badge></li>
+            <li v-for="tag in tagList(restaurant.data.value.tags)" :key="tag">
+            <Badge variant="secondary" as-child>
+              <RouterLink :to="tagPath(tag)" class="hover:bg-secondary/80 inline-flex min-h-6 items-center">{{ tag }}</RouterLink>
+            </Badge>
+          </li>
           </ul>
           <section v-if="restaurant.data.value.rating" aria-label="Average scores">
             <ScoreSummary :scores="restaurant.data.value.rating" kind="restaurant">

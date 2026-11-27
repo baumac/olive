@@ -632,7 +632,7 @@ func TestDashboardRecipeEdit(t *testing.T) {
 
 	t.Run("a superuser changes a recipe with the checks of the API", func(t *testing.T) {
 		e.dashboard(request{method: http.MethodPatch, path: records + id, token: root,
-			body: `{"name":"  Tarka dal ","ingredients":["  1 cup of lentils "],"steps":[" Boil. "],"tags":["dal"]}`}, http.StatusOK)
+			body: `{"name":"  Tarka dal ","ingredients":["  1 cup of lentils "],"steps":[" Boil. "]}`}, http.StatusOK)
 		got := e.expect(request{method: "GET", path: "/v1/recipes/" + id}, http.StatusOK).object(t)
 		if got["name"] != "Tarka dal" || got["ingredients"].([]any)[0] != "1 cup of lentils" || got["steps"].([]any)[0] != "Boil." {
 			t.Errorf("recipe %v, want the trimmed values", got)

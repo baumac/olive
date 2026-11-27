@@ -38,6 +38,12 @@ func newRecord(t *testing.T, app core.App, collection string, fields map[string]
 	return r
 }
 
+// newTag gets the ID of a new tag. The tags field of a parent has tag IDs.
+func newTag(t *testing.T, app core.App, name string) string {
+	t.Helper()
+	return newRecord(t, app, "tags", map[string]any{"name": name}).Id
+}
+
 func saveAs(t *testing.T, app core.App, userID string, r *core.Record) {
 	t.Helper()
 	if err := app.SaveWithContext(history.WithEditor(context.Background(), userID), r); err != nil {
@@ -116,7 +122,7 @@ func TestVersionsOfSaves(t *testing.T) {
 
 	t.Run("an update writes only the changed properties", func(t *testing.T) {
 		r.Set("phone", "931 111 111")
-		r.Set("tags", []string{"tapas"})
+		r.Set("tags", []string{newTag(t, app, "tapas")})
 		saveAs(t, app, joe.Id, r)
 		vs := versions(t, app, history.Restaurants, r.Id)
 		if len(vs) != 2 {
@@ -238,5 +244,34 @@ func TestEmptyTagsAreNoTags(t *testing.T) {
 	}
 	if tags := snapshotOf(t, vs[0])["tags"]; tags != nil {
 		t.Errorf("snapshot tags %v, want nil", tags)
+	}
+}
+
+func TestRenameOfTagWritesAdminVersions(t *testing.T) {
+	t.Parallel()
+	app := newApp(t)
+	history.Register(app)
+	tapas, cheap := newTag(t, app, "tapas"), newTag(t, app, "cheap")
+	r := newRecord(t, app, "restaurants", map[string]any{"name": "Can Solé", "address": "Carrer 1", "tags": []string{tapas, cheap}})
+	other := newRecord(t, app, "restaurants", map[string]any{"name": "Bar", "address": "Carrer 2", "tags": []string{cheap}})
+
+	tag, err := app.FindRecordById("tags", tapas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tag.Set("name", "tapes")
+	if err := app.Save(tag); err != nil {
+		t.Fatal(err)
+	}
+	vs := versions(t, app, history.Restaurants, r.Id)
+	if len(vs) != 2 {
+		t.Fatalf("%d versions, want 2", len(vs))
+	}
+	wantVersion(t, vs[1], 2, history.ActionUpdate, history.SourceAdmin, "", "tags")
+	if got := snapshotOf(t, vs[1])["tags"]; !reflect.DeepEqual(got, []any{"tapes", "cheap"}) {
+		t.Errorf("snapshot tags %v, want [tapes cheap]", got)
+	}
+	if n := len(versions(t, app, history.Restaurants, other.Id)); n != 1 {
+		t.Errorf("the restaurant without the tag has %d versions, want 1", n)
 	}
 }

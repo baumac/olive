@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/baumac/reviews-app/app/api/internal/recordvalues"
 	"github.com/baumac/reviews-app/app/api/internal/subjects"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -59,6 +60,15 @@ func Register(app core.App) {
 			return nil
 		})
 	})
+	app.OnRecordUpdateExecute(subjects.TagCollection).BindFunc(func(e *core.RecordEvent) error {
+		renamed := e.Record.Original().GetString("name") != e.Record.GetString("name")
+		return inTransaction(e, nil, func(tx core.App) error {
+			if !renamed {
+				return nil
+			}
+			return putParentsWithTag(tx, e.Record.Id)
+		})
+	})
 	app.OnRecordDeleteExecute(collections...).BindFunc(func(e *core.RecordEvent) error {
 		return inTransaction(e, nil, func(tx core.App) error {
 			k, isParent, err := kindOf(e.Record)
@@ -98,13 +108,32 @@ func indexedFields(k subjects.Tables, isParent bool) []string {
 	return []string{"title", "feedback", k.Parent}
 }
 
+// changed also compares the string slices. GetString of a relation with
+// many IDs is empty.
 func changed(original, r *core.Record, fields ...string) bool {
 	for _, f := range fields {
-		if original.GetString(f) != r.GetString(f) {
+		if original.GetString(f) != r.GetString(f) || !slices.Equal(original.GetStringSlice(f), r.GetStringSlice(f)) {
 			return true
 		}
 	}
 	return false
+}
+
+// putParentsWithTag puts the rows of the parents with the tag again. Their
+// tags column has the names.
+func putParentsWithTag(app core.App, tagID string) error {
+	for _, k := range subjects.All {
+		parents, err := recordvalues.ParentsWithTag(app, k.Table, k.Parent, k.Tags, tagID)
+		if err != nil {
+			return err
+		}
+		for _, r := range parents {
+			if err := Put(app, r); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // kindOf returns the kind of a parent or a review record. The bool is false
@@ -138,7 +167,14 @@ func Put(app core.App, r *core.Record) error {
 	}
 	row := dbx.Params{"id": r.Id}
 	if isParent {
-		row["tags"] = listText(r, "tags")
+		if err := recordvalues.ExpandTags(app, r); err != nil {
+			return err
+		}
+		if tags := recordvalues.Tags(r); tags != nil {
+			row["tags"] = strings.Join(*tags, " ")
+		} else {
+			row["tags"] = ""
+		}
 		for _, f := range k.IndexedFields {
 			row[f] = r.GetString(f)
 		}

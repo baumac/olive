@@ -1,5 +1,5 @@
 import type { Problem } from '@reviews/sdk'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import spec from '../../../specs/api/public-openapi.yaml?raw'
 import { apiFailure, failureText, fieldErrors, notApprovedText, notCreatorText } from '@/lib/api'
 import { listFailureText } from '@/lib/lists'
@@ -10,6 +10,8 @@ import { changedPatch, ownReviewsText, parentAccess } from '@/lib/parents'
 import { directionsLink } from '@/lib/places'
 import { overallOf, scoreFields } from '@/lib/reviews'
 import { checkLongText, checkName, checkPassword, checkReviewDay, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
+import { tagCountText, tagPath, tagSuggester } from '@/lib/tags'
+import { tagsApi } from '@/lib/api'
 import { rejectWith } from './problem'
 
 describe('format', () => {
@@ -286,5 +288,32 @@ describe('problem codes', () => {
       expect(await listFailureText(rejectWith(code.startsWith('list_') ? 409 : 403, problem), fallback)).toBe(text)
     }
     expect(await listFailureText(rejectWith(409), fallback)).toBe(fallback)
+  })
+})
+
+describe('tags', () => {
+  const tag = { name: 'café', restaurantCount: 1, recipeCount: 3, created: '2026-11-27T09:12:44.318Z' }
+
+  it('counts the restaurants and the recipes of a tag', () => {
+    expect(tagCountText(tag)).toBe('1 restaurant and 3 recipes')
+    expect(tagCountText({ ...tag, recipeCount: 0 })).toBe('1 restaurant')
+    expect(tagCountText(tag, 'recipes')).toBe('3 recipes')
+  })
+
+  it('encodes the name in the path', () => {
+    expect(tagPath('café')).toBe('/tags/caf%C3%A9')
+  })
+
+  it('drops the tags of the other kind in a filter', async () => {
+    const created = '2026-11-27T09:12:44.318Z'
+    const items = [
+      { name: 'soup', restaurantCount: 0, recipeCount: 3, created },
+      { name: 'soup-bar', restaurantCount: 2, recipeCount: 0, created },
+    ]
+    const list = vi.spyOn(tagsApi, 'listTags').mockResolvedValue({ items, nextCursor: null })
+    expect((await tagSuggester('restaurants')(' soup ')).map((t) => t.name)).toEqual(['soup', 'soup-bar'])
+    expect(list).toHaveBeenCalledWith({ kind: 'restaurants', search: 'soup', limit: 8 })
+    expect(await tagSuggester('restaurants', { onlyUsed: true })('soup')).toEqual([{ name: 'soup-bar', label: '2 restaurants' }])
+    vi.restoreAllMocks()
   })
 })

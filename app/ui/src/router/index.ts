@@ -27,6 +27,7 @@ export const router = createRouter({
     { path: '/recipes', component: () => import('@/pages/RecipesPage.vue') },
     { path: '/reviewers/:reviewerId', component: () => import('@/pages/ReviewerPage.vue'), props: true },
     { path: '/lists/:listId', component: () => import('@/pages/ListPage.vue'), props: true },
+    { path: '/tags/:name', component: () => import('@/pages/TagPage.vue'), props: true },
     // The journal of the user replaces My reviews. See decision 00006.
     { path: '/my-reviews', redirect: () => (currentUser.value ? `/reviewers/${currentUser.value.id}` : signInPath('/my-reviews')) },
     {

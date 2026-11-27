@@ -7,10 +7,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## For claude
-- tags should be a standalone entity with its own set of APIs
-  - restaurants and recipes should reference the tags entity
-  - users should be able to search across all restaurants and recipes by tag
-  - in the UI, when adding a tag to a restaurant or recipe, users should be shown a drop down list that is pre-populated with data from the tags API
 
 ## For Me
 - redesign or rename table concept

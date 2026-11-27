@@ -322,3 +322,13 @@ func TestRestaurantDetails(t *testing.T) {
 		r.Set(field, "")
 	}
 }
+
+func newTag(t *testing.T, app core.App, name string) string {
+	t.Helper()
+	return newRecord(t, app, "tags", map[string]any{"name": name}).Id
+}
+
+func sorted(values ...string) []string {
+	slices.Sort(values)
+	return values
+}

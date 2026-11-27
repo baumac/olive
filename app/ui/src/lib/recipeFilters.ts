@@ -1,5 +1,6 @@
 import type { FilterDef, FilterValue, Option } from '@/components/ui/filter-bar'
 import { formatMinutes } from '@/lib/format'
+import { tagSuggester } from '@/lib/tags'
 
 // The filters and the sorts of the recipes page. See decision 00004.
 
@@ -7,7 +8,7 @@ const totalTimes = [15, 30, 45, 60, 120]
 
 export const recipeFilterDefs: FilterDef[] = [
   { key: 'search', label: 'Search recipes', type: 'search', placeholder: 'Search recipes', chip: (v) => `Search: ${v}` },
-  { key: 'tags', label: 'Tags', type: 'tags', help: 'Shows recipes with at least one of the tags.', chip: (v) => `Tag: ${v}` },
+  { key: 'tags', label: 'Tags', type: 'tags', help: 'Shows recipes with at least one of the tags.', suggest: tagSuggester('recipes', { onlyUsed: true }), chip: (v) => `Tag: ${v}` },
   {
     key: 'overall',
     label: 'Overall',

@@ -20,6 +20,7 @@ import { type Undo, findUndo, undoNumber } from '@/lib/history'
 import { normalizeWebsite } from '@/lib/restaurantDetails'
 import { changedPatch, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
+import { tagSuggester } from '@/lib/tags'
 import { currentUser } from '@/lib/session'
 import {
   checkIngredients,
@@ -32,6 +33,7 @@ import {
   maxSteps,
 } from '@/lib/validation'
 
+const suggestTags = tagSuggester('recipes')
 const props = defineProps<{ recipeId?: string }>()
 const router = useRouter()
 const route = useRoute()
@@ -330,6 +332,7 @@ async function submit() {
         <TagInput
           id="recipe-tags"
           v-model="fields.tags"
+          :suggest="suggestTags"
           :invalid="!!errors.tags"
           :described-by="`recipe-tags-description${errors.tags ? ' recipe-tags-message' : ''}`"
           @error="errors = { ...errors, tags: $event }"

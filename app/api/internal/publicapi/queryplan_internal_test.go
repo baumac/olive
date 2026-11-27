@@ -32,6 +32,9 @@ func TestRestaurantListsUseIndexes(t *testing.T) {
 		{name: "tags has", sort: "name", filter: func(w *where) {
 			w.tagFilters(restaurantSubject, new("italian"), nil, nil)
 		}, want: "SEARCH restaurant_tags USING PRIMARY KEY (tag=?)"},
+		{name: "tags has finds the name", sort: "name", filter: func(w *where) {
+			w.tagFilters(restaurantSubject, new("italian"), nil, nil)
+		}, want: "INDEX idx_tags_name (name=?)"},
 		{name: "tags has any and all", sort: "-created", filter: func(w *where) {
 			w.tagFilters(restaurantSubject, nil, &[]string{"italian", "pizza"}, &[]string{"cheap", "late"})
 		}, want: "SEARCH restaurant_tags USING PRIMARY KEY (tag=?)"},

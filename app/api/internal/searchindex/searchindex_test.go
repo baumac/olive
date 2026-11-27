@@ -3,6 +3,7 @@ package searchindex_test
 import (
 	"database/sql"
 	"errors"
+	"maps"
 	"slices"
 	"testing"
 
@@ -44,8 +45,29 @@ func (e *env) trySave(t *testing.T, collection string, fields map[string]any) (*
 		t.Fatal(err)
 	}
 	r := core.NewRecord(c)
-	r.Load(fields)
+	r.Load(e.withTagIDs(t, fields))
 	return r, e.app.Save(r)
+}
+
+// withTagIDs changes the tag names of fields to the IDs of tags. It makes
+// the missing tags.
+func (e *env) withTagIDs(t *testing.T, fields map[string]any) map[string]any {
+	t.Helper()
+	names, ok := fields["tags"].([]string)
+	if !ok {
+		return fields
+	}
+	ids := make([]string, len(names))
+	for i, name := range names {
+		tag, err := e.app.FindFirstRecordByData("tags", "name", name)
+		if err != nil {
+			tag = e.save(t, "tags", map[string]any{"name": name})
+		}
+		ids[i] = tag.Id
+	}
+	out := maps.Clone(fields)
+	out["tags"] = ids
+	return out
 }
 
 func (e *env) save(t *testing.T, collection string, fields map[string]any) *core.Record {
@@ -80,7 +102,7 @@ func (e *env) review(t *testing.T, restaurant *core.Record, title, feedback stri
 
 func (e *env) update(t *testing.T, r *core.Record, fields map[string]any) {
 	t.Helper()
-	r.Load(fields)
+	r.Load(e.withTagIDs(t, fields))
 	if err := e.app.Save(r); err != nil {
 		t.Fatalf("update %s: %v", r.Id, err)
 	}
@@ -186,7 +208,7 @@ func TestCreate(t *testing.T) {
 		tags any
 	}{
 		{"restaurant without tags", nil},
-		{"restaurant with tags that are not a list of strings", map[string]any{"a": 1}},
+		{"restaurant with an empty list of tags", []string{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := e.restaurant(t, tc.name, "", tc.tags)
@@ -255,8 +277,8 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
-	t.Run("tags that are not a list of strings", func(t *testing.T) {
-		e.update(t, cafe, map[string]any{"tags": map[string]any{"a": 1}})
+	t.Run("a restaurant without its tags", func(t *testing.T) {
+		e.update(t, cafe, map[string]any{"tags": []string{}})
 		var row restaurantRow
 		e.mustRow(t, searchindex.Restaurants, cafe.Id, &row)
 		if row.Tags != "" {
@@ -553,5 +575,29 @@ func TestRecipeRows(t *testing.T) {
 	}
 	if e.row(t, "recipe_reviews_fts", rv.Id, &review) {
 		t.Error("the row of the deleted review stays")
+	}
+}
+
+func TestRenameOfTag(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	pepe := e.restaurant(t, "Casa Pepe", "", []string{"date-night", "cheap"})
+	dal := e.save(t, "recipes", map[string]any{"name": "Dal", "ingredients": []string{"lentils"}, "steps": []string{"Cook."}, "tags": []string{"cheap"}})
+	tag, err := e.app.FindFirstRecordByData("tags", "name", "cheap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tag.Set("name", "budget")
+	if err := e.app.Save(tag); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.match(t, searchindex.Restaurants, "budget"); !slices.Equal(got, []string{pepe.Id}) {
+		t.Errorf("restaurants with budget: %v", got)
+	}
+	if got := e.match(t, searchindex.Restaurants, "cheap"); got != nil {
+		t.Errorf("restaurants with the old name: %v", got)
+	}
+	if got := e.match(t, "recipes_fts", "budget"); !slices.Equal(got, []string{dal.Id}) {
+		t.Errorf("recipes with budget: %v", got)
 	}
 }

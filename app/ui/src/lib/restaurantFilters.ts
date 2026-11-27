@@ -1,6 +1,7 @@
 import type { FilterDef, FilterValue, Option } from '@/components/ui/filter-bar'
 import type { PriceLevelRange } from '@reviews/sdk'
 import { priceLevelLabel } from '@/lib/restaurantDetails'
+import { tagSuggester } from '@/lib/tags'
 
 // priceLevelRanges are the ranges of the price level filter. A link has
 // the value, such as 1-2 for moderate or less.
@@ -23,7 +24,7 @@ const priceLevelRanges = new Map<string, { label: string; range: PriceLevelRange
 
 export const restaurantFilterDefs: FilterDef[] = [
   { key: 'search', label: 'Search restaurants', type: 'search', placeholder: 'Search restaurants', chip: (v) => `Search: ${v}` },
-  { key: 'tags', label: 'Tags', type: 'tags', help: 'Shows restaurants with at least one of the tags.', chip: (v) => `Tag: ${v}` },
+  { key: 'tags', label: 'Tags', type: 'tags', help: 'Shows restaurants with at least one of the tags.', suggest: tagSuggester('restaurants', { onlyUsed: true }), chip: (v) => `Tag: ${v}` },
   {
     key: 'overall',
     label: 'Overall',

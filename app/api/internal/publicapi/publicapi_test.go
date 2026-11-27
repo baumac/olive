@@ -590,6 +590,23 @@ func TestSkipRequestValidation(t *testing.T) {
 	e = newEnv(t, opts)
 	ana = e.signUp("ana@example.com", "Ana")
 	e.createRestaurant(ana.Token, `{"name":"Luigi's","tags":["Italian"]}`)
+	// The tags relation keeps its limit of 20 without the spec validation.
+	many := make([]string, 21)
+	for i := range many {
+		many[i] = fmt.Sprintf(`"t%d"`, i)
+	}
+	tooMany := `{"name":"Many","tags":[` + strings.Join(many, ",") + `],"location":` + testLocation + `}`
+	res = e.expect(request{method: http.MethodPost, path: "/v1/restaurants", token: ana.Token, body: tooMany}, http.StatusUnprocessableEntity)
+	if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
+		t.Errorf("properties %q, want tags", got)
+	}
+	e.expect(request{method: http.MethodPost, path: "/v1/recipes", token: ana.Token,
+		body: `{"name":"Many","ingredients":["egg"],"steps":["Cook."],"tags":[` + strings.Join(many, ",") + `]}`}, http.StatusUnprocessableEntity)
+	// One tag in two Unicode forms is one tag.
+	same := e.createRecipe(ana.Token, `{"name":"Same","tags":["café","cafe\u0301"]}`)
+	if tags := same["tags"].([]any); len(tags) != 1 || tags[0] != "café" {
+		t.Errorf("tags %v, want one café", tags)
+	}
 
 	// The handlers stay safe with values that the spec refuses.
 	e.createRestaurant(ana.Token, `{"name":"Second"}`)

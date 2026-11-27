@@ -4,6 +4,7 @@ apis/PlacesApi.ts
 apis/RecipesApi.ts
 apis/RestaurantsApi.ts
 apis/ReviewersApi.ts
+apis/TagsApi.ts
 apis/UsersApi.ts
 apis/index.ts
 index.ts
@@ -60,6 +61,8 @@ models/SavedListCreate.ts
 models/SavedListPage.ts
 models/SavedListPatch.ts
 models/ScoreRange.ts
+models/TagList.ts
+models/TagSummary.ts
 models/TimestampRange.ts
 models/TotalTimeRange.ts
 models/User.ts
