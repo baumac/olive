@@ -7,7 +7,6 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## For claude
-- in the UI add ability to auto-fill a new restaurant from a Google Maps link
 - tags should be a standalone entity with its own set of APIs
   - restaurants and recipes should reference the tags entity
   - users should be able to search across all restaurants and recipes by tag
@@ -29,6 +28,10 @@ Each sub-bullet point contains notes about the incomplete decision.
 - Replace the public Photon server of Komoot and the tile server of OpenStreetMap with self-hosted options
   - `REVIEWS_PLACES_URL` and `REVIEWS_MAP_TILE_URL` already change the servers. The move needs no code change, only the servers on the home server.
   - The tile server of OpenStreetMap has no guarantee and can block heavy use. See decision 00008.
+- in the UI add ability to auto-fill a new restaurant from a Google Maps link
+  - The Terms of Service of Google forbid scraping Google Maps. The app must not read the address, phone, website, or opening hours from Google.
+  - The Places API is legal, but its terms forbid storing its data except the `place_id`. They also forbid showing it on a map that is not from Google. See decision 00008.
+  - A link holds only the name, the point, or a search text. The app can get the address and the `place_id` from Photon with them. A short `maps.app.goo.gl` link needs the server to follow its redirect.
 
 ## Won't do
 - Allow directly uploading photos to restaurants or recipes: all photos must be uploaded via a review to force photos being associated to a review
