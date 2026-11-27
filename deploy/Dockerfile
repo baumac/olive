@@ -11,6 +11,8 @@ COPY tests/package.json tests/
 RUN npm ci --workspace @reviews/sdk --workspace @reviews/ui
 COPY specs/api/sdk/client/typescript specs/api/sdk/client/typescript
 COPY app/ui app/ui
+# vue-tsc also checks the UI tests. They import this file.
+COPY specs/api/tag-names.json specs/api/
 RUN npm run build --workspace @reviews/sdk && npm run build --workspace @reviews/ui
 
 FROM golang:1.27.4-alpine3.24 AS build
