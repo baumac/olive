@@ -10,7 +10,10 @@ Each sub-bullet point contains notes about the incomplete decision.
 
 ## For Me
 - redesign or rename table concept
-- find way to apply ip whitelisting in prod
+- next prod deploy
+  - set the PocketBase Application name and mail sender name to "Olive"
+  - find way to apply ip whitelisting in prod
+  - deploy latest code
 - Rename repo from "reviews-app" to "food-journal"
   - Rename repo in GitHub
   - Regenerate docs and READMEs
