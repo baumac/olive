@@ -9,16 +9,16 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/baumac/reviews-app/app/api/internal/testapp"
-	_ "github.com/baumac/reviews-app/app/api/migrations"
+	"github.com/baumac/olive/app/api/internal/testapp"
+	_ "github.com/baumac/olive/app/api/migrations"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 )
 
-const testIndex = `<!doctype html><html><head><meta property="og:site_name" content="Sponga47 Food" />
-<!-- page-meta --><title>Sponga47 Food</title><meta name="description" content="Default" />
+const testIndex = `<!doctype html><html><head><meta property="og:site_name" content="Olive" />
+<!-- page-meta --><title>Olive, a food journal</title><meta name="description" content="Default" />
 <meta property="og:image" content="https://site.example.com/og-image.png" /><meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" /><meta property="og:image:alt" content="Logo &amp; tagline" /><!-- /page-meta -->
 </head><body><div id="app"></div></body></html>`
@@ -40,7 +40,7 @@ func TestIndexHasMetaBlock(t *testing.T) {
 			t.Errorf("the page-meta block has no %s", tag)
 		}
 	}
-	if index.siteName != "Sponga47 Food" || index.siteImage.ImageWidth != 1200 || index.siteImage.ImageHeight != 630 ||
+	if index.siteName != "Olive" || index.siteImage.ImageWidth != 1200 || index.siteImage.ImageHeight != 630 ||
 		!strings.HasSuffix(index.siteImage.Image, "/og-image.png") || index.siteImage.ImageAlt == "" {
 		t.Errorf("the default tags are %q %+v", index.siteName, index.siteImage)
 	}
@@ -87,6 +87,11 @@ func TestReadIndexAttributes(t *testing.T) {
 	index, ok := readIndex(fstest.MapFS{"index.html": {Data: []byte(data)}})
 	if !ok || index.siteName != "Site & Co" || index.siteImage.Image != "https://site.example.com/a.png" || index.siteImage.ImageWidth != 640 {
 		t.Errorf("%v %q %+v", ok, index.siteName, index.siteImage)
+	}
+	inBlock := strings.Replace(testIndex, `<meta property="og:site_name" content="Olive" />
+<!-- page-meta -->`, `<!-- page-meta --><meta property="og:site_name" content="Olive" />`, 1)
+	if index, ok := readIndex(fstest.MapFS{"index.html": {Data: []byte(inBlock)}}); !ok || index.siteName != "Olive" {
+		t.Errorf("og:site_name in the block: %v %q", ok, index.siteName)
 	}
 }
 
@@ -172,21 +177,21 @@ func TestPageMeta(t *testing.T) {
 		want         []string
 	}{
 		{"GET", restaurantPath, 200, []string{
-			`<title>Luigi&#39;s &lt;script&gt;alert(1)&lt;/script&gt; &amp; &#34;Co&#34; · Sponga47 Food</title>`,
+			`<title>Luigi&#39;s &lt;script&gt;alert(1)&lt;/script&gt; &amp; &#34;Co&#34; · Olive</title>`,
 			`<meta name="description" content="Pasta and pizza." />`,
 			`<meta property="og:url" content="https://reviews.example.com` + restaurantPath + `" />`,
 			`<meta property="og:type" content="website" />`,
 			`<meta property="og:image" content="https://site.example.com/og-image.png" />`,
 			`<meta property="og:image:alt" content="Logo &amp; tagline" />`,
-			`<meta property="og:site_name" content="Sponga47 Food" />`,
+			`<meta property="og:site_name" content="Olive" />`,
 		}},
 		{"GET", restaurantPath + "/", 200, []string{`content="https://reviews.example.com` + restaurantPath + `"`}},
 		{"HEAD", restaurantPath, 200, nil},
 		{"GET", "/restaurants/" + plain.Id, 200, []string{
-			`<meta name="description" content="Reviews of Plain on Sponga47 Food." />`,
+			`<meta name="description" content="Reviews of Plain on Olive." />`,
 		}},
 		{"GET", reviewPath, 200, []string{
-			`<title>Great &lt;b&gt;food&lt;/b&gt; · Sponga47 Food</title>`,
+			`<title>Great &lt;b&gt;food&lt;/b&gt; · Olive</title>`,
 			`<meta property="og:title" content="Great &lt;b&gt;food&lt;/b&gt; · Luigi&#39;s`,
 			`<meta name="twitter:description" content="The best pasta." />`,
 			`<meta property="og:type" content="article" />`,
@@ -195,10 +200,10 @@ func TestPageMeta(t *testing.T) {
 			`<meta property="og:image:alt" content="A plate of pasta" />`,
 		}},
 		{"GET", otherPath, 200, []string{
-			`<meta name="description" content="A review of Plain on Sponga47 Food." />`,
+			`<meta name="description" content="A review of Plain on Olive." />`,
 			`<meta property="og:image" content="https://site.example.com/og-image.png" />`,
 		}},
-		{"GET", "/Restaurants/" + plain.Id, 200, []string{`<title>Plain · Sponga47 Food</title>`}},
+		{"GET", "/Restaurants/" + plain.Id, 200, []string{`<title>Plain · Olive</title>`}},
 		{"GET", "/restaurants/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
 		{"GET", restaurantPath + "/reviews/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
 		{"GET", restaurantPath + "/reviews/" + other.Id, 404, []string{`content="Default"`}},
@@ -207,29 +212,29 @@ func TestPageMeta(t *testing.T) {
 		{"GET", reviewPath + "/edit", 200, []string{`content="Default"`}},
 		{"GET", "/restaurants", 200, []string{`content="Default"`}},
 		{"GET", "/reviewers/" + user.Id, 200, []string{
-			`<title>Ana · Sponga47 Food</title>`,
-			`<meta name="description" content="Reviews by Ana on Sponga47 Food." />`,
+			`<title>Ana · Olive</title>`,
+			`<meta name="description" content="Reviews by Ana on Olive." />`,
 			`<meta property="og:type" content="profile" />`,
 			`<meta property="og:url" content="https://reviews.example.com/reviewers/` + user.Id + `" />`,
 			`<meta property="og:image" content="https://site.example.com/og-image.png" />`,
 		}},
-		{"GET", "/Reviewers/" + user.Id + "/", 200, []string{`<title>Ana · Sponga47 Food</title>`}},
+		{"GET", "/Reviewers/" + user.Id + "/", 200, []string{`<title>Ana · Olive</title>`}},
 		{"GET", "/reviewers/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
 		{"GET", "/reviewers/BAD", 200, []string{`content="Default"`}},
 		{"GET", "/lists/" + list.Id, 200, []string{
-			`<title>Date &lt;i&gt;night&lt;/i&gt; by Ana · Sponga47 Food</title>`,
-			`<meta name="description" content="A list of 1 restaurant by Ana on Sponga47 Food." />`,
+			`<title>Date &lt;i&gt;night&lt;/i&gt; by Ana · Olive</title>`,
+			`<meta name="description" content="A list of 1 restaurant by Ana on Olive." />`,
 			`<meta property="og:type" content="website" />`,
 			`<meta property="og:url" content="https://reviews.example.com/lists/` + list.Id + `" />`,
 		}},
 		{"GET", "/lists/aaaaaaaaaaaaaaa", 404, []string{`content="Default"`}},
 		{"GET", "/tags/caf%C3%A9", 200, []string{
-			`<title>Tag café · Sponga47 Food</title>`,
-			`<meta name="description" content="1 restaurant with the tag café on Sponga47 Food." />`,
+			`<title>Tag café · Olive</title>`,
+			`<meta name="description" content="1 restaurant with the tag café on Olive." />`,
 			`<meta property="og:url" content="https://reviews.example.com/tags/caf%C3%A9" />`,
 		}},
-		{"GET", "/tags/cafe%CC%81", 200, []string{`<title>Tag café · Sponga47 Food</title>`}},
-		{"GET", "/tags/%20Caf%C3%A9!", 200, []string{`<title>Tag café · Sponga47 Food</title>`, `content="https://reviews.example.com/tags/caf%C3%A9" />`}},
+		{"GET", "/tags/cafe%CC%81", 200, []string{`<title>Tag café · Olive</title>`}},
+		{"GET", "/tags/%20Caf%C3%A9!", 200, []string{`<title>Tag café · Olive</title>`, `content="https://reviews.example.com/tags/caf%C3%A9" />`}},
 		{"GET", "/tags/unused", 404, []string{`content="Default"`}},
 		{"GET", "/tags/none", 404, []string{`content="Default"`}},
 	} {
@@ -272,7 +277,7 @@ func TestPageMeta(t *testing.T) {
 		t.Errorf("default Application URL: %d\n%s", w.Code, body)
 	}
 	if !strings.Contains(body, `<meta property="og:image" content="https://site.example.com/og-image.png" />`) ||
-		!strings.Contains(body, `<title>Great &lt;b&gt;food&lt;/b&gt; · Sponga47 Food</title>`) {
+		!strings.Contains(body, `<title>Great &lt;b&gt;food&lt;/b&gt; · Olive</title>`) {
 		t.Errorf("default Application URL: no site image or title\n%s", body)
 	}
 }

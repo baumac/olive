@@ -85,7 +85,7 @@ Out of scope:
 ```bash
 make run-app    # Serve on 127.0.0.1:8090 with data in app/api/pb_data
 make build-ui   # Build the UI into app/api/internal/webui/dist
-make build-app  # Build the UI, then the binary ./bin/reviews-app
+make build-app  # Build the UI, then the binary ./bin/olive
 make dev-ui     # Run the Vite dev server. It sends /v1 to make run-app.
 make test-app   # Run the Go tests of the app
 ```
@@ -112,7 +112,7 @@ For UI work, run `make run-app` and `make dev-ui` at the same time, and open the
 
 ```
 app/api/
-  go.mod                       # module github.com/baumac/reviews-app/app/api
+  go.mod                       # module github.com/baumac/olive/app/api
   main.go                      # the PocketBase app
   migrations/                  # the Go migrations of the collections
   internal/
@@ -156,7 +156,7 @@ It has the title, the description, and the link preview tags of the site.
 `GET /restaurants/k3x9m2p7q1w8z4a` for the restaurant "Casa Pepe" sends:
 
 ```html
-<title>Casa Pepe · Sponga47 Food</title>
+<title>Casa Pepe · Olive</title>
 <meta name="description" content="Tapas and wine." />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Casa Pepe" />
@@ -357,13 +357,15 @@ Tests:
 
 ### The route
 
-- `pagemeta.go` of `app/api/internal/webui` has the page meta. `webui.Register` reads `index.html` one time and cuts it around the block. It also reads the site name and the default `og:image` tags of the block.
+- `pagemeta.go` of `app/api/internal/webui` has the page meta. `webui.Register` reads `index.html` one time and cuts it around the block. It also reads the default `og:image` tags of the block.
+- the site name is the `og:site_name` before or in the block, such as "Olive". Without it, the site name is the default `<title>` of the block. The home page title "Olive, a food journal" is longer than the site name.
+- a UI test checks that `usePageTitle` uses the `og:site_name` and the `<title>` of `index.html`
 - the UI route sends its own page only for the pages of the table in [The page-meta block](#the-page-meta-block), with an optional trailing slash. The path words ignore case, like Vue Router. Each ID must match `^[a-z0-9]{15}$`.
   The name of a tag gets Unicode normalization form C. A tag without a restaurant or a recipe gets `404`.
   `/restaurants/new` does not match. The edit and new pages need an account and keep the default tags.
 - `html/template` writes the values. A name such as `<script>` stays text.
 - the description puts all whitespace on one line. A text of more than 200 characters is cut at the end of a word and ends with `…`.
-- without a description or feedback, the description is `Reviews of NAME on Sponga47 Food.` or `A review of NAME on Sponga47 Food.`
+- without a description or feedback, the description is `Reviews of NAME on Olive.` or `A review of NAME on Olive.`
 - the `<title>` has the format of `usePageTitle` in the UI. The end-to-end tests compare the two titles.
 - on a database error other than a missing record, the app logs the error and sends the default `index.html` with `200`
 - `publicapi.PhotoFilePath` makes the photo path. The API responses use the same function.

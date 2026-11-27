@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 )
 
 type patternRecorder struct {

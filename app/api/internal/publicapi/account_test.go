@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baumac/reviews-app/app/api/internal/publicapi"
+	"github.com/baumac/olive/app/api/internal/publicapi"
 	"github.com/pocketbase/pocketbase/core"
 )
 

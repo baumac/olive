@@ -14,15 +14,10 @@ Each sub-bullet point contains notes about the incomplete decision.
   - set the PocketBase Application name and mail sender name to "Olive"
   - find way to apply ip whitelisting in prod
   - deploy latest code
-- Rename repo from "reviews-app" to "food-journal"
-  - Rename repo in GitHub
-  - Regenerate docs and READMEs
-  - Sponga47 should not appear in branding or designs anywhere, only in the domain name
-    - the app just happens to be hosted on the website food.sponga47.com
 
 ## For the Future
 - Support reviewing products
-  - see https://github.com/baumac/reviews-app/pull/5
+  - see https://github.com/baumac/olive/pull/5
   - needs to be refreshed once the tags changes are mades
 - Replace the public Photon server of Komoot and the tile server of OpenStreetMap with self-hosted options
   - `REVIEWS_PLACES_URL` and `REVIEWS_MAP_TILE_URL` already change the servers. The move needs no code change, only the servers on the home server.

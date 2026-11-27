@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baumac/reviews-app/app/api/internal/publicapi"
+	"github.com/baumac/olive/app/api/internal/publicapi"
 )
 
 // webp1x1 is a lossless WebP image of one pixel. The Go libraries cannot

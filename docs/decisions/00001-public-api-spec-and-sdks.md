@@ -238,7 +238,7 @@ const page = await restaurants.listRestaurantReviews({
 A response with a status that is not `2xx` throws a `ResponseError`. The UI reads the problem from `error.response`.
 Each method has a `Raw` form that gives the response headers.
 
-The Go SDK is the module `github.com/baumac/reviews-app/specs/api/sdk/server/go`. Its package `reviewsapi` has the Go types and the strict server interface.
+The Go SDK is the module `github.com/baumac/olive/specs/api/sdk/server/go`. Its package `reviewsapi` has the Go types and the strict server interface.
 The strict server interface has one method for each operation. Each method gets a typed request and returns a typed response.
 The compiler fails when the app does not implement an operation. It also fails when a handler returns a status or a body that the operation does not define.
 

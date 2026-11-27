@@ -14,10 +14,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/baumac/reviews-app/app/api/internal/publicapi"
-	"github.com/baumac/reviews-app/app/api/internal/subjects"
-	"github.com/baumac/reviews-app/app/api/internal/tagname"
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	"github.com/baumac/olive/app/api/internal/publicapi"
+	"github.com/baumac/olive/app/api/internal/subjects"
+	"github.com/baumac/olive/app/api/internal/tagname"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"golang.org/x/text/unicode/norm"
@@ -104,8 +104,9 @@ var metaTemplate = template.Must(template.New("meta").Parse(`<title>{{.Title}}</
     <meta name="twitter:title" content="{{.OGTitle}}" />
     <meta name="twitter:description" content="{{.Description}}" />`))
 
-// indexPage is index.html cut around the page-meta block. siteName and
-// siteImage come from the default tags of the block.
+// indexPage is index.html cut around the page-meta block. siteImage comes
+// from the default tags of the block. siteName comes from og:site_name or
+// from the default title.
 type indexPage struct {
 	whole, before, after []byte
 	siteName             string
@@ -130,6 +131,11 @@ func readIndex(files fs.FS) (indexPage, bool) {
 		return indexPage{}, false
 	}
 	p := indexPage{whole: data, before: data[:start], after: data[end+len(metaEnd):], siteName: html.UnescapeString(strings.TrimSpace(title[1]))}
+	for _, tag := range metaTag.FindAllString(string(data[:end]), -1) {
+		if a := metaAttrs(tag); a["property"] == "og:site_name" && strings.TrimSpace(a["content"]) != "" {
+			p.siteName = strings.TrimSpace(a["content"])
+		}
+	}
 	for _, tag := range metaTag.FindAllString(block, -1) {
 		a := metaAttrs(tag)
 		switch value := a["content"]; a["property"] {

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baumac/reviews-app/app/api/internal/testapp"
+	"github.com/baumac/olive/app/api/internal/testapp"
 	"github.com/pocketbase/pocketbase/tests"
 	"golang.org/x/crypto/bcrypt"
 )

@@ -7,7 +7,7 @@ import (
 	"slices"
 	"sync"
 
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"

@@ -325,7 +325,7 @@ func TestSearchPlaces(t *testing.T) {
 	if city := list.Items[2]; *city.Name != "Berlin" || city.Location.Address != "Berlin, Germany" || city.Location.PlaceID != nil {
 		t.Errorf("city %+v", city)
 	}
-	if got := lastQuery.Load().(string); !strings.HasPrefix(got, "/api?lat=41.4&limit=10&lon=2.2&q=Can+Sole reviews-app (") {
+	if got := lastQuery.Load().(string); !strings.HasPrefix(got, "/api?lat=41.4&limit=10&lon=2.2&q=Can+Sole olive (") {
 		t.Errorf("geocoder request %q", got)
 	}
 

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/baumac/reviews-app/app/api/internal/tagname"
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	"github.com/baumac/olive/app/api/internal/tagname"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"

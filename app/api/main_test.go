@@ -4,10 +4,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/baumac/reviews-app/app/api/internal/photocleanup"
-	"github.com/baumac/reviews-app/app/api/internal/publicapi"
-	"github.com/baumac/reviews-app/app/api/internal/usercleanup"
-	"github.com/baumac/reviews-app/app/api/internal/webui"
+	"github.com/baumac/olive/app/api/internal/photocleanup"
+	"github.com/baumac/olive/app/api/internal/publicapi"
+	"github.com/baumac/olive/app/api/internal/usercleanup"
+	"github.com/baumac/olive/app/api/internal/webui"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/tools/cron"
 )

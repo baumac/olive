@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/baumac/reviews-app/app/api/internal/subjects"
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	"github.com/baumac/olive/app/api/internal/subjects"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 )
 
 // subject has the tables of one kind of thing that users review. The review,

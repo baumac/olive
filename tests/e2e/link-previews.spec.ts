@@ -17,8 +17,8 @@ test('a restaurant page has its own link preview', async ({ page, api }) => {
   await expect(head.locator('meta[property="og:url"]')).toHaveAttribute('content', `${appURL}${path}`)
   await expect(head.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og-image\.png$/)
   await expect(page.getByRole('heading', { name: 'Casa <Pepe> & "Co"' })).toBeVisible()
-  await expect(page).toHaveTitle('Casa <Pepe> & "Co" · Sponga47 Food')
-  expect(served).toContain('<title>Casa &lt;Pepe&gt; &amp; &#34;Co&#34; · Sponga47 Food</title>')
+  await expect(page).toHaveTitle('Casa <Pepe> & "Co" · Olive')
+  expect(served).toContain('<title>Casa &lt;Pepe&gt; &amp; &#34;Co&#34; · Olive</title>')
 })
 
 test('a review page shows its first photo in the link preview', async ({ page, api, user }) => {
@@ -40,8 +40,8 @@ test('a review page shows its first photo in the link preview', async ({ page, a
   await expect(head.locator('meta[property="og:image"]')).toHaveAttribute('content', `${appURL}${photo.urls.full}`)
   await expect(head.locator('meta[property="og:image:width"]')).toHaveAttribute('content', String(photo.width))
   await expect(head.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', 'Ribs on a plate')
-  await expect(page).toHaveTitle('Great grill · Sponga47 Food')
-  expect(served).toContain('<title>Great grill · Sponga47 Food</title>')
+  await expect(page).toHaveTitle('Great grill · Olive')
+  expect(served).toContain('<title>Great grill · Olive</title>')
 
   const file = await page.request.get(photo.urls.full)
   expect(file.status()).toBe(200)
@@ -51,7 +51,7 @@ test('a review page shows its first photo in the link preview', async ({ page, a
 test('a missing restaurant gets 404 and the not found screen', async ({ page }) => {
   const response = await page.goto('/restaurants/aaaaaaaaaaaaaaa')
   expect(response?.status()).toBe(404)
-  await expect(page.locator('head meta[property="og:title"]')).toHaveAttribute('content', 'Sponga47 Food')
+  await expect(page.locator('head meta[property="og:title"]')).toHaveAttribute('content', 'Olive, a food journal')
   await expect(page.getByRole('heading', { name: 'We cannot find this page' })).toBeVisible()
 })
 

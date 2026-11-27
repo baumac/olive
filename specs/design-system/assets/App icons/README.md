@@ -21,8 +21,9 @@ Favicons and home screen icons, made from the olive mark. Put the files in `app/
 
 ```json
 {
-  "name": "Sponga47 Food",
-  "short_name": "Sponga47",
+  "name": "Olive, a food journal",
+  "short_name": "Olive",
+  "description": "A food journal for friends and family.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f6f2e8",

@@ -87,14 +87,14 @@ Out of scope:
 
 | Service | Image | Use |
 |---|---|---|
-| `app` | `reviews-app:local` | the app server on port 8090 with the `pb_data` volume |
+| `app` | `olive:local` | the app server on port 8090 with the `pb_data` volume |
 | `cloudflared` | `cloudflare/cloudflared` | the Cloudflare Tunnel. It sends the requests of the public host name to `app:8090`. |
 
 - `deploy/.env` has `CLOUDFLARE_TUNNEL_TOKEN`, `PB_ENCRYPTION_KEY`, and the `REVIEWS_` variables of the app
 - `compose.yaml` names each `REVIEWS_` variable. A new variable of the app needs a line there.
-- `make build-image` builds the image `reviews-app:local` from `deploy/Dockerfile`
+- `make build-image` builds the image `olive:local` from `deploy/Dockerfile`
 - the app applies the migrations when it starts
-- to make the first superuser, run `reviews-app superuser create EMAIL PASSWORD` with `--encryptionEnv=PB_ENCRYPTION_KEY`
+- to make the first superuser, run `olive superuser create EMAIL PASSWORD` with `--encryptionEnv=PB_ENCRYPTION_KEY`
 
 ## One instance
 
@@ -276,7 +276,7 @@ make renovate         # Open or update the pull request. Needs RENOVATE_TOKEN an
 
 - the start command has `--encryptionEnv=PB_ENCRYPTION_KEY`. `compose.yaml` stops without the variable.
 - the app does not start with a key that does not have 32 characters. The example value of `.env.example` is such a key.
-- a `reviews-app` command with `docker compose exec` does not use the start command. It needs the flag, or it cannot read the settings.
+- a `olive` command with `docker compose exec` does not use the start command. It needs the flag, or it cannot read the settings.
 
 ## Limits
 
@@ -343,7 +343,7 @@ make renovate         # Open or update the pull request. Needs RENOVATE_TOKEN an
 
 ### The end-to-end app
 
-- `make test-e2e` runs `make build-app` first. The tests use `./bin/reviews-app` with the embedded UI build, as a release does.
+- `make test-e2e` runs `make build-app` first. The tests use `./bin/olive` with the embedded UI build, as a release does.
 - `global-setup.ts` calls `startApp` of `app.ts`. It starts the binary on `127.0.0.1:8097` with a new folder and waits for `/api/health`. The fake geocoder runs on port 8096.
 - `startApp` makes a folder with the `reviews-e2e-` prefix in the temp folder. `stop` deletes only this folder.
 - each app has a superuser. `startApp` signs it in, and `global-setup.ts` gives the token to the test workers. `tests/app.ts` sets the Application URL `https://reviews.example.com`.
@@ -405,7 +405,7 @@ make renovate         # Open or update the pull request. Needs RENOVATE_TOKEN an
 | `install-browsers` | `cd tests && npx playwright install $(BROWSER)`. An empty `BROWSER` installs all browsers. |
 | `install-browser-deps` | `cd tests && npx playwright install-deps $(BROWSER)`. It needs sudo on Linux. |
 | `check-ci-matrix` | `node tests/check-ci-matrix.mjs` |
-| `build-image` | `docker build -f deploy/Dockerfile -t reviews-app:local .` |
+| `build-image` | `docker build -f deploy/Dockerfile -t olive:local .` |
 | `security-scan` | `govulncheck` on the Go modules |
 
 `test-e2e` takes `PROJECT` and `E2E_FILE`. See [Tests](#tests).

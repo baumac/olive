@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 )

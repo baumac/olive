@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/baumac/reviews-app/app/api/internal/testapp"
+	"github.com/baumac/olive/app/api/internal/testapp"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"

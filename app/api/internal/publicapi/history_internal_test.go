@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/baumac/reviews-app/app/api/internal/history"
+	"github.com/baumac/olive/app/api/internal/history"
 )
 
 // TestHistoryHasTheCreateProperties fails when a create schema gets a
