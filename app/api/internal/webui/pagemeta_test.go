@@ -88,6 +88,11 @@ func TestReadIndexAttributes(t *testing.T) {
 	if !ok || index.siteName != "Site & Co" || index.siteImage.Image != "https://site.example.com/a.png" || index.siteImage.ImageWidth != 640 {
 		t.Errorf("%v %q %+v", ok, index.siteName, index.siteImage)
 	}
+	inBlock := strings.Replace(testIndex, `<meta property="og:site_name" content="Olive" />
+<!-- page-meta -->`, `<!-- page-meta --><meta property="og:site_name" content="Olive" />`, 1)
+	if index, ok := readIndex(fstest.MapFS{"index.html": {Data: []byte(inBlock)}}); !ok || index.siteName != "Olive" {
+		t.Errorf("og:site_name in the block: %v %q", ok, index.siteName)
+	}
 }
 
 func TestPublicBaseURL(t *testing.T) {

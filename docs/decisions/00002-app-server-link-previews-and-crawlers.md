@@ -358,7 +358,8 @@ Tests:
 ### The route
 
 - `pagemeta.go` of `app/api/internal/webui` has the page meta. `webui.Register` reads `index.html` one time and cuts it around the block. It also reads the default `og:image` tags of the block.
-- the site name is the `og:site_name` before the block, such as "Olive". Without it, the site name is the default `<title>` of the block. The home page title "Olive, a food journal" is longer than the site name.
+- the site name is the `og:site_name` before or in the block, such as "Olive". Without it, the site name is the default `<title>` of the block. The home page title "Olive, a food journal" is longer than the site name.
+- a UI test checks that `usePageTitle` uses the `og:site_name` and the `<title>` of `index.html`
 - the UI route sends its own page only for the pages of the table in [The page-meta block](#the-page-meta-block), with an optional trailing slash. The path words ignore case, like Vue Router. Each ID must match `^[a-z0-9]{15}$`.
   The name of a tag gets Unicode normalization form C. A tag without a restaurant or a recipe gets `404`.
   `/restaurants/new` does not match. The edit and new pages need an account and keep the default tags.

@@ -131,7 +131,7 @@ func readIndex(files fs.FS) (indexPage, bool) {
 		return indexPage{}, false
 	}
 	p := indexPage{whole: data, before: data[:start], after: data[end+len(metaEnd):], siteName: html.UnescapeString(strings.TrimSpace(title[1]))}
-	for _, tag := range metaTag.FindAllString(string(p.before), -1) {
+	for _, tag := range metaTag.FindAllString(string(data[:end]), -1) {
 		if a := metaAttrs(tag); a["property"] == "og:site_name" && strings.TrimSpace(a["content"]) != "" {
 			p.siteName = strings.TrimSpace(a["content"])
 		}
