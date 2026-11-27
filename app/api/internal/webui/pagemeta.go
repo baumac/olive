@@ -16,6 +16,7 @@ import (
 
 	"github.com/baumac/reviews-app/app/api/internal/publicapi"
 	"github.com/baumac/reviews-app/app/api/internal/subjects"
+	"github.com/baumac/reviews-app/app/api/internal/tagname"
 	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -325,10 +326,11 @@ func (p indexPage) listMeta(list, creator *core.Record, counts listItemCounts, b
 	return meta
 }
 
-// tagPage has no record for a tag without a restaurant or a recipe. The
-// Public API does the same. See decision 00011.
+// tagPage has no record for a tag without a restaurant or a recipe. It
+// changes free text to a tag name. The Public API does the same. See
+// decision 00011.
 func (p indexPage) tagPage(app core.App, appURL, name string) (pageMeta, bool, error) {
-	tag, err := app.FindFirstRecordByData(subjects.TagCollection, "name", name)
+	tag, err := app.FindFirstRecordByData(subjects.TagCollection, "name", tagname.Of(name))
 	if err != nil {
 		return pageMeta{}, true, notFound(err)
 	}

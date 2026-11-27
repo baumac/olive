@@ -9,17 +9,14 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"unicode"
 
 	"github.com/baumac/reviews-app/app/api/internal/subjects"
+	"github.com/baumac/reviews-app/app/api/internal/tagname"
 	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-	"golang.org/x/text/runes"
-	"golang.org/x/text/transform"
-	"golang.org/x/text/unicode/norm"
 )
 
 const tagNotFound = "The tag does not exist."
@@ -31,29 +28,13 @@ const maxTags = 20
 // tooManyTags gets the 422 problem of more than maxTags unique tags. Only a
 // request without the spec validation gets it. The relation keeps the limit.
 func tooManyTags(tags []string) *reviewsapi.UnprocessableContentApplicationProblemPlusJSONResponse {
-	unique := map[string]bool{}
-	for _, t := range nfcTags(tags) {
-		unique[t] = true
-	}
-	if len(unique) <= maxTags {
+	if len(tagname.List(tags)) <= maxTags {
 		return nil
 	}
 	var errs fieldErrors
 	errs.add("tags", fmt.Sprintf("must have at most %d items", maxTags))
 	p := unprocessable(errs)
 	return &p
-}
-
-// nfcTags changes each name to Unicode normalization form C and drops the
-// repeats. The spec validation does the same, but it can be off.
-func nfcTags(names []string) []string {
-	out := make([]string, 0, len(names))
-	for _, n := range names {
-		if n = norm.NFC.String(n); !slices.Contains(out, n) {
-			out = append(out, n)
-		}
-	}
-	return out
 }
 
 // patchedTags gets the tags of a patch. Null and a missing value give nil.
@@ -71,8 +52,8 @@ func createdTags(v *reviewsapi.Tags) []string {
 }
 
 // ListTags lists only the tags with at least one parent of the kinds. A tag
-// with the exact name of the search comes first. It needs a parent of any
-// kind.
+// with the exact name of the search comes first. A tag with the same key
+// comes next. These two need a parent of any kind.
 func (s *Server) ListTags(_ context.Context, req reviewsapi.ListTagsRequestObject) (reviewsapi.ListTagsResponseObject, error) {
 	p := req.Params
 	bad := func(detail string) (reviewsapi.ListTagsResponseObject, error) {
@@ -95,11 +76,17 @@ func (s *Server) ListTags(_ context.Context, req reviewsapi.ListTagsRequestObjec
 	}
 	w := newWhere()
 	inUse := tagInUse(tagKinds(p.Kind))
+	var search, isMatch string
 	if p.Search != nil {
-		if exact := strings.TrimSpace(*p.Search); exact != "" {
+		search = tagname.SearchKey(*p.Search)
+		if exact := tagname.Of(*p.Search); exact != "" {
+			// One key ranks the exact name 2 and the same key 1. A cursor then
+			// has as many keys as before the key match.
 			isExact := "(" + column(subjects.TagCollection, "name") + " = " + w.param(exact) + ")"
-			keys = append([]sortKey{{expr: isExact, desc: true}}, keys...)
-			inUse = "(" + inUse + " OR (" + isExact + " AND " + tagInUse(tagKinds(nil)) + "))"
+			isKey := "(" + column(subjects.TagCollection, "name_key") + " = " + w.param(tagname.Key(exact)) + ")"
+			keys = append([]sortKey{{expr: "(" + isExact + " * 2 + " + isKey + ")", desc: true}}, keys...)
+			isMatch = "(" + isExact + " OR " + isKey + ")"
+			inUse = "(" + inUse + " OR (" + isMatch + " AND " + tagInUse(tagKinds(nil)) + "))"
 		}
 	}
 	limit := limitOf(p.Limit)
@@ -114,12 +101,14 @@ func (s *Server) ListTags(_ context.Context, req reviewsapi.ListTagsRequestObjec
 		return bad(detail)
 	}
 
-	if p.Search != nil {
-		if key := searchKey(*p.Search); key != "" {
-			key = escapeLike(key)
-			nameKey := column(subjects.TagCollection, "name_key")
-			w.add("(" + nameKey + " LIKE " + w.param(key+"%") + ` ESCAPE '\' OR ` + nameKey + " LIKE " + w.param("%-"+key+"%") + ` ESCAPE '\')`)
-		}
+	if p.Search != nil && search == "" {
+		return reviewsapi.ListTags200JSONResponse{Items: []reviewsapi.TagSummary{}}, nil
+	}
+	if search != "" {
+		like := escapeLike(search)
+		nameKey := column(subjects.TagCollection, "name_key")
+		// The exact match can miss the prefix. Its last σ became ς.
+		w.add("(" + isMatch + " OR " + nameKey + " LIKE " + w.param(like+"%") + ` ESCAPE '\' OR ` + nameKey + " LIKE " + w.param("%-"+like+"%") + ` ESCAPE '\')`)
 	}
 	w.add(inUse)
 	if after != nil {
@@ -225,7 +214,7 @@ func (s *Server) tagSummaries(records []*core.Record) ([]reviewsapi.TagSummary, 
 // resolveTags gets the IDs of the tags of names in their order. It makes a
 // tag for each missing name. The spec validation already checked the names.
 func resolveTags(app core.App, names []string) ([]string, error) {
-	names = nfcTags(names)
+	names = tagname.List(names)
 	values := make([]any, len(names))
 	for i, n := range names {
 		values[i] = n
@@ -265,7 +254,9 @@ func resolveTags(app core.App, names []string) ([]string, error) {
 // registerTags adds the record hooks of decision 00011.
 func registerTags(app core.App) {
 	setKey := func(e *core.RecordEvent) error {
-		e.Record.Set("name_key", tagKey(e.Record.GetString("name")))
+		name := tagname.Of(e.Record.GetString("name"))
+		e.Record.Set("name", name)
+		e.Record.Set("name_key", tagname.Key(name))
 		return e.Next()
 	}
 	app.OnRecordValidate(subjects.TagCollection).BindFunc(setKey)
@@ -315,22 +306,6 @@ func removeUnusedAfter(e *core.RecordEvent, old []string, kept func() []string) 
 		_, err := tx.DB().Delete(subjects.TagCollection, dbx.And(dbx.In("id", removed...), dbx.NewExp(strings.Join(unused, " AND ")))).Execute()
 		return err
 	})
-}
-
-// tagKey is the name without case and accents. The search of ListTags
-// compares it.
-func tagKey(name string) string {
-	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
-	key, _, err := transform.String(t, strings.ToLower(name))
-	if err != nil {
-		return strings.ToLower(name)
-	}
-	return key
-}
-
-// searchKey changes the spaces of a search to the hyphens of a tag.
-func searchKey(search string) string {
-	return tagKey(strings.Join(strings.Fields(search), "-"))
 }
 
 func escapeLike(s string) string {

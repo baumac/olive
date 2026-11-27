@@ -143,7 +143,9 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - each write operation has an `x-rate-limit`. An operation with it must have a `429` response. Sign out and the token refresh are the exceptions. See decision 00003.
     - each `403` and `409` problem has a `code`. A new reason needs a value in the `code` enum of `Problem`. See decision 00001.
     - a schema with `x-trim: true` loses the ASCII spaces, tabs, and line breaks around its value. Names, titles, addresses, alt texts, ingredients, and steps have it. See decision 00001.
-    - a `Tag` has the lowercase letters and digits of all scripts. A schema with `x-nfc: true` gets Unicode normalization form C before the validation, in the body and in the query. See decision 00004.
+    - a `Tag` has the lowercase letters and digits of all scripts. A request can send free text. A schema with `x-tag: true` gets the change of `tagname.Of` before the validation, in the body, the query, and the path. `x-tags: true` then removes the repeats. See decision 00011.
+    - `specs/api/tag-names.json` has the texts and the tags of `tagname.Of` and `toTag` of the UI. The Go tests and the UI tests both read it.
+    - A schema with `x-nfc: true` gets Unicode normalization form C before the validation. See decision 00004.
     - each approved user can change each property of each restaurant and recipe. The reviews of other users do not lock a property. See decision 00004.
     - only the creator can delete a restaurant or a recipe. The reviews of other users block the delete. See decision 00004.
     - `listRestaurantVersions` and `listRecipeVersions` list the history of each change. Only approved users can read them. An undo is a normal update. See decision 00004.
@@ -169,6 +171,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - **`app/api/main.go`** - the PocketBase app
   - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, `list_recipes`, `restaurant_versions`, `recipe_versions`, and `tags` collections
     - `1795737600_tags.go` makes the `tags` collection. The `tags` field of `restaurants` and `recipes` is a relation to it. See decision 00011.
+    - `1796342400_tag_names.go` changes the old tag names to the rules of decision 00011. It has a copy of `tagname.Of`.
     - The `restaurant_tags` and `recipe_tags` tables have the IDs of the tags. The tag filters find the IDs of the names first.
     - A migration that drops or renames a property of `restaurants` or `recipes` also changes the `snapshot` of their versions. See decision 00004.
     - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decisions 00004 and 00005.
@@ -196,6 +199,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - A Public API save of a restaurant or a recipe calls `SaveWithContext` with `history.WithEditor`. A save without it gets the source `admin`.
   - **`app/api/internal/recordvalues`** - the API values of the fields of restaurants and recipes. The Public API, the history, and the search index use them. See decision 00004.
     - `ExpandTags` loads the tag records of a relation. `Tags` gives their names. See decision 00011.
+  - **`app/api/internal/tagname`** - the change of free text to a tag name. The Public API and `webui` use it. See decision 00011.
   - **`app/api/internal/subjects`** - the table names of each kind of thing that users review. The Public API and the search index use them. See decision 00004.
   - **`app/api/internal/photocleanup`** - the daily job that deletes the photo files without a record. See decision 00007.
   - **`app/api/internal/usercleanup`** - the daily job that deletes the users without approval and without data after 30 days. See decision 00003.

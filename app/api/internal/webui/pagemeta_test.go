@@ -229,6 +229,7 @@ func TestPageMeta(t *testing.T) {
 			`<meta property="og:url" content="https://reviews.example.com/tags/caf%C3%A9" />`,
 		}},
 		{"GET", "/tags/cafe%CC%81", 200, []string{`<title>Tag café · Sponga47 Food</title>`}},
+		{"GET", "/tags/%20Caf%C3%A9!", 200, []string{`<title>Tag café · Sponga47 Food</title>`, `content="https://reviews.example.com/tags/caf%C3%A9" />`}},
 		{"GET", "/tags/unused", 404, []string{`content="Default"`}},
 		{"GET", "/tags/none", 404, []string{`content="Default"`}},
 	} {

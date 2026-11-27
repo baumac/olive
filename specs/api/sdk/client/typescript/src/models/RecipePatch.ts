@@ -35,7 +35,7 @@ export interface RecipePatch {
      */
     description?: string | null;
     /**
-     * Unique tags.
+     * Tags. The API removes the repeats after it changes the tags. The first copy keeps its place.
      */
     tags?: Set<string> | null;
     /**

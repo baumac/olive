@@ -337,7 +337,7 @@ async function submit() {
           :described-by="`recipe-tags-description${errors.tags ? ' recipe-tags-message' : ''}`"
           @error="errors = { ...errors, tags: $event }"
         />
-        <FormDescription>Optional. Press Enter or comma after each tag, for example breakfast.</FormDescription>
+        <FormDescription>Optional. Press Enter or comma after each tag, for example breakfast. Tags are saved in lowercase with hyphens.</FormDescription>
         <FormMessage />
       </FormItem>
       <FormItem id="recipe-ingredients" :error="errors.ingredients" description>

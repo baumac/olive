@@ -2,6 +2,7 @@
 import type { RecipeSummary, Restaurant, TagSummary } from '@reviews/sdk'
 import { SlidersHorizontalIcon, TagIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import KindSwitch from '@/components/app/KindSwitch.vue'
 import PagedList from '@/components/app/PagedList.vue'
@@ -14,38 +15,54 @@ import { useLoad } from '@/composables/useLoad'
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { recipesApi, restaurantsApi, tagsApi } from '@/lib/api'
-import { tagCountText } from '@/lib/tags'
+import { tagCountText, tagPath } from '@/lib/tags'
+import { toTag } from '@/lib/validation'
 
 const props = defineProps<{ name: string }>()
 const kind = useKindQuery()
+const route = useRoute()
+const router = useRouter()
 
-const tag = useLoad<TagSummary>(() => tagsApi.getTag({ tagName: props.name }))
+// A link can have free text, such as /tags/Wood%20Fired. The page then uses
+// the stored name. Text without a letter stays for the not found page.
+const name = computed(() => toTag(props.name) || props.name)
+watch(
+  () => props.name,
+  (text) => {
+    if (name.value !== text) {
+      void router.replace({ path: tagPath(name.value), query: route.query, hash: route.hash })
+    }
+  },
+  { immediate: true },
+)
+
+const tag = useLoad<TagSummary>(() => tagsApi.getTag({ tagName: name.value }))
 
 // Each kind has its own section. The overall sort of the API also counts the
 // reviewers. The UI then cannot merge the two lists. See decision 00011.
 const restaurants = usePagedList<Restaurant>(async (cursor) => {
-  const page = await restaurantsApi.listRestaurants({ tagsHas: props.name, cursor, sort: '-overall' })
+  const page = await restaurantsApi.listRestaurants({ tagsHas: name.value, cursor, sort: '-overall' })
   return { items: page.items, nextCursor: page.nextCursor }
 })
 const recipes = usePagedList<RecipeSummary>(async (cursor) => {
-  const page = await recipesApi.listRecipes({ tagsHas: props.name, cursor, sort: '-overall' })
+  const page = await recipesApi.listRecipes({ tagsHas: name.value, cursor, sort: '-overall' })
   return { items: page.items, nextCursor: page.nextCursor }
 })
 
 const showRestaurants = computed(() => kind.value !== 'recipe')
 const showRecipes = computed(() => kind.value !== 'restaurant')
 
-watch(() => props.name, () => void tag.load(), { immediate: true })
+watch(name, () => void tag.load(), { immediate: true })
 
 // A list loads when its section shows, one time for each tag. A switch back
 // to the kind keeps the loaded pages.
 function loadWhenShown(list: { reload: () => Promise<void> }, shown: () => boolean) {
   let loadedFor: string | null = null
   watch(
-    [() => props.name, shown],
-    ([name, show]) => {
-      if (show && loadedFor !== name) {
-        loadedFor = name
+    [name, shown],
+    ([n, show]) => {
+      if (show && loadedFor !== n) {
+        loadedFor = n
         void list.reload()
       }
     },
@@ -56,7 +73,7 @@ loadWhenShown(restaurants, () => showRestaurants.value)
 loadWhenShown(recipes, () => showRecipes.value)
 
 usePageTitle(() => (tag.data.value ? `Tag ${tag.data.value.name}` : ''))
-const filterQuery = computed(() => `?tags=${encodeURIComponent(props.name)}`)
+const filterQuery = computed(() => `?tags=${encodeURIComponent(name.value)}`)
 
 // The API gives 400 for a name that is not a tag. The link then has a typo.
 const failedStatus = computed(() => {

@@ -171,23 +171,12 @@ The list operations:
 
 - restaurants and recipes have tags. Reviews have no tags. See decision 00005.
 - each tag is a record of its own. Decision 00011 has the tag records, `listTags`, `getTag`, the tag input, and the tag page.
-- `tags` has at most 20 unique items
+- `tags` has at most 20 items after the change of the texts
 - an empty list is no tags. The API stores and returns it as `null`, in a create, a patch, and a dashboard save. A patch from `null` to `[]` changes nothing and makes no version.
-- a tag has 1 to 63 characters. It has words with single hyphens between them.
-- each word starts with a lowercase letter, a letter without case, or a digit of any script. Combining marks, such as the vowel signs of Devanagari, can follow.
-- the API changes each tag to Unicode normalization form C first. `cafe` with a separate accent U+0301 becomes `café`.
-
-| Tag | Result |
-|---|---|
-| `café`, `2-für-1`, `ψάρι`, `ラーメン`, `चाय` | valid |
-| `café` and `cafe` + U+0301 in one request | `422`. The two values are the same tag. |
-| `Café`, `Ψάρι` | `422`. Uppercase letters are not allowed. |
-| `pasta` + U+FE0F, U+3164 | `422`. A default ignorable code point is invisible. |
-| `dim` + U+00A0 + `sum` | `422`. A no-break space is not a letter. |
-
-- the tag filters change their values in the same way. A filter with an invalid tag gets `400`.
+- a request can send free text, such as `Wood Fired`. The API changes it to a tag name. Decision 00011 has the rules of a tag name.
+- a repeat in one request is one tag, such as `Pizza` and `pizza`. The first copy keeps its place.
+- the tag filters change their values in the same way. A filter value without a letter or a digit gets `400`.
 - the search finds `café` with `cafe`. The tag filters compare whole tags, so `tags[has]=cafe` does not find `café`.
-- the UI suggests a valid form for an invalid tag, such as `crème-brûlée` for `Crème Brûlée`, or `istanbul` for `İstanbul`
 
 ## One restaurant for one place
 
@@ -301,12 +290,11 @@ Joe can change the values. The save makes version 4 with the editor Joe.
 - the tag filters find the IDs of the names in `tags` first. Decision 00011 has the query.
 - a tag that occurs two times has one row.
 - a migration that drops `tags` must drop the triggers first. SQLite refuses the drop.
-- the `Tag` pattern is `^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*(-[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*)*$`. Go `regexp` and JavaScript with the `u` flag both read it.
+- the `Tag` pattern is `^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*(-[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*)*$`. Go `regexp` and JavaScript with the `u` flag both read it. It is the stored form.
 - `\p{Lu}` and `\p{Lt}` are not in the classes, so the pattern refuses uppercase letters. `\p{Lm}` is in them for the `ー` of `ラーメン`.
-- `Tag` has `format: tag`. `checkTagFormat` of `openapi.go` refuses the code points with the property `Default_Ignorable_Code_Point`. Go has no table of this property, so it uses `Other_Default_Ignorable_Code_Point` and `Variation_Selector`. The pattern refuses the rest, which are in `Cf`.
-- the validation comes after the normalization. `uniqueItems` and `maxLength` then count the changed tags.
-- `normalizeQuery` changes the query values of a schema with `x-nfc`. The validation and the handler read the changed query.
-- the UI uses `\p{Default_Ignorable_Code_Point}`. `maxLength` counts code points in the UI too. `suggestTag` removes the combining dot that `toLowerCase` adds to `i` for `İ`.
+- `x-tag` removes the code points with the property `Default_Ignorable_Code_Point` before the validation. `Tag` therefore has no format check for them.
+- `x-tag` changes the text of a `Tag` before the validation, and `x-tags` removes the repeats. Decision 00011 has them. `uniqueItems`, `maxItems`, and `maxLength` then count the changed tags.
+- `normalizeQuery` and `normalizePath` change the values of a schema with `x-nfc` or `x-tag`. The validation and the handler read the changed values.
 
 ## The subject pattern
 
@@ -407,6 +395,8 @@ Joe can change the values. The save makes version 4 with the editor Joe.
 | A `recipe` relation in `list_items` | Not selected. PocketBase stores an empty relation as `''`. The unique index and each query would need a condition for the kind. |
 | Tags from the `json_each` of each record | Removed. SQLite cannot index the items of a JSON array, so a tag filter read all subjects. |
 | Tags of only ASCII letters and digits | Removed. Users could not add `café` or `ラーメン`. |
+| `422` for a tag that is not in the stored form, with a suggestion of that form in the UI | Removed. Users had to type the stored form again. Decision 00011 has the change of free text. |
+| `422` for a repeated tag | Removed. The user meant one tag. |
 | Tags on reviews | Removed. They repeated the job of the tags of the subject and made the review form longer. |
 | A restaurant without a location | Removed. Two restaurants with one name looked the same, and the maps had no point. |
 | A duplicate rule on the name and the distance | Not selected. It would refuse real restaurants, such as two bars in one food court. |

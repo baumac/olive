@@ -12,7 +12,6 @@ import (
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
-	"golang.org/x/text/unicode/norm"
 )
 
 // createSchema gets a create schema of the spec. Its properties have no null
@@ -43,7 +42,7 @@ type fieldGuard struct {
 	// required adds the errors of a create without a required property.
 	// The schema check sees only the properties that the record has.
 	required func(props map[string]json.RawMessage, errs validation.Errors)
-	// set stores a property that x-nfc or x-trim changed.
+	// set stores a property that x-nfc, x-tag, or x-trim changed.
 	set func(r *core.Record, name string, value json.RawMessage) error
 }
 
@@ -63,8 +62,8 @@ func (g fieldGuard) register(app core.App) {
 }
 
 // check changes the record like the Public API changes a body. It applies
-// x-nfc before the checks and x-trim after them. With an original record, it
-// checks only the changed properties.
+// x-nfc and x-tag before the checks and x-trim after them. With an original
+// record, it checks only the changed properties.
 func (g fieldGuard) check(r, original *core.Record) error {
 	schema, err := g.schema()
 	if err != nil {
@@ -85,7 +84,7 @@ func (g fieldGuard) check(r, original *core.Record) error {
 		}
 	}
 
-	changeProperties(schema, props, "x-nfc", norm.NFC.String)
+	normalizeBody(schema, props)
 	errs := schemaFieldErrors(schema, props, func(name string) bool {
 		return original == nil || !bytes.Equal(stored[name], old[name])
 	})

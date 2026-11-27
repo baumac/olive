@@ -10,8 +10,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"unicode"
 
+	"github.com/baumac/reviews-app/app/api/internal/tagname"
 	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -25,10 +25,10 @@ type operation struct {
 	pattern string
 	route   *routers.Route
 	query   map[string]bool
-	// nfcQuery and nfcPath have the parameters with the x-nfc extension.
-	nfcQuery map[string]bool
-	nfcPath  map[string]bool
-	auth     authMode
+	// normQuery and normPath change the parameters with x-nfc or x-tag.
+	normQuery map[string]func(string) string
+	normPath  map[string]func(string) string
+	auth      authMode
 	// approval is true when the operation needs an approved user.
 	approval bool
 	limit    *rateLimit
@@ -97,8 +97,8 @@ func specOf(doc *openapi3.T) (*apiSpec, error) {
 				approval:     approval,
 				route:        &routers.Route{Spec: doc, Path: path, PathItem: item, Method: method, Operation: op},
 				query:        queryNames(item, op),
-				nfcQuery:     nfcNames(item, op, openapi3.ParameterInQuery),
-				nfcPath:      nfcNames(item, op, openapi3.ParameterInPath),
+				normQuery:    normalizers(item, op, openapi3.ParameterInQuery),
+				normPath:     normalizers(item, op, openapi3.ParameterInPath),
 				auth:         authOf(doc, op),
 				limit:        limit,
 				fileBody:     op.RequestBody != nil && !hasJSON(op.RequestBody.Value.Content),
@@ -206,7 +206,6 @@ var validationOptions = &openapi3filter.Options{
 	AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
 	SchemaValidationOptions: []openapi3.SchemaValidationOption{
 		openapi3.WithStringFormatValidator("email", openapi3.NewCallbackValidator(checkEmailFormat)),
-		openapi3.WithStringFormatValidator("tag", openapi3.NewCallbackValidator(checkTagFormat)),
 		openapi3.WithStringFormatValidator("review-date", openapi3.NewCallbackValidator(checkReviewDate)),
 	},
 }
@@ -263,17 +262,6 @@ func checkEmailFormat(s string) error {
 	return errors.New("not a bare email address")
 }
 
-// checkTagFormat refuses the default ignorable code points. A tag with one
-// looks like the tag without it. The tag pattern refuses the ones in Cf.
-func checkTagFormat(s string) error {
-	if strings.ContainsFunc(s, func(r rune) bool {
-		return unicode.In(r, unicode.Other_Default_Ignorable_Code_Point, unicode.Variation_Selector)
-	}) {
-		return errors.New("has a default ignorable code point")
-	}
-	return nil
-}
-
 // input makes the validation input of r. The ServeMux pattern gives the
 // path parameters.
 func (op *operation) input(r *http.Request) (*openapi3filter.RequestValidationInput, error) {
@@ -309,8 +297,20 @@ func pathParams(pattern, escapedPath string) (map[string]string, error) {
 	return params, nil
 }
 
-func nfcNames(item *openapi3.PathItem, op *openapi3.Operation, in string) map[string]bool {
-	names := map[string]bool{}
+// normalizer gets the change of a schema with x-nfc or x-tag. A schema
+// without them gets nil.
+func normalizer(s *openapi3.Schema) func(string) string {
+	switch {
+	case s.Extensions["x-tag"] == true:
+		return tagname.Of
+	case s.Extensions["x-nfc"] == true:
+		return norm.NFC.String
+	}
+	return nil
+}
+
+func normalizers(item *openapi3.PathItem, op *openapi3.Operation, in string) map[string]func(string) string {
+	changes := map[string]func(string) string{}
 	for _, ref := range slices.Concat(item.Parameters, op.Parameters) {
 		p := ref.Value
 		if p.In != in || p.Style == openapi3.SerializationDeepObject {
@@ -320,27 +320,28 @@ func nfcNames(item *openapi3.PathItem, op *openapi3.Operation, in string) map[st
 		if s.Items != nil {
 			s = s.Items.Value
 		}
-		if s.Extensions["x-nfc"] == true {
-			names[p.Name] = true
+		if change := normalizer(s); change != nil {
+			changes[p.Name] = change
 		}
 	}
-	return names
+	return changes
 }
 
-// normalizeQuery changes the values of nfcQuery to Unicode normalization
-// form C. The validation and the handler then get the changed values.
+// normalizeQuery changes the values of normQuery. The validation and the
+// handler then get the changed values.
 func (op *operation) normalizeQuery(r *http.Request) {
-	if len(op.nfcQuery) == 0 {
+	if len(op.normQuery) == 0 {
 		return
 	}
 	query := r.URL.Query()
 	changed := false
 	for name, values := range query {
-		if !op.nfcQuery[name] {
+		change := op.normQuery[name]
+		if change == nil {
 			continue
 		}
 		for i, v := range values {
-			if n := norm.NFC.String(v); n != v {
+			if n := change(v); n != v {
 				values[i] = n
 				changed = true
 			}
@@ -351,13 +352,13 @@ func (op *operation) normalizeQuery(r *http.Request) {
 	}
 }
 
-// normalizePath changes the values of nfcPath to Unicode normalization form
-// C. The validation and the handler then get the changed values.
+// normalizePath changes the values of normPath. The validation and the
+// handler then get the changed values.
 func (op *operation) normalizePath(r *http.Request, in *openapi3filter.RequestValidationInput) {
 	changed := false
-	for name := range op.nfcPath {
-		if v := in.PathParams[name]; norm.NFC.String(v) != v {
-			in.PathParams[name] = norm.NFC.String(v)
+	for name, change := range op.normPath {
+		if v := in.PathParams[name]; change(v) != v {
+			in.PathParams[name] = change(v)
 			changed = true
 		}
 	}

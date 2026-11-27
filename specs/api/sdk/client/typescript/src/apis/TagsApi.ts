@@ -31,7 +31,7 @@ import {
 
 export interface GetTagRequest {
     /**
-     * The name of the tag.
+     * The name of the tag. The API changes free text to a tag. `Wood%20Fired` gets `wood-fired`.
      */
     tagName: string;
 }
@@ -60,15 +60,15 @@ export interface ListTagsRequest {
      * The name or a word of the name starts with the search.
      * The words of a name are the parts between its hyphens. `fired` matches `wood-fired`.
      * The search ignores case and accents. `Cafe` matches `café`.
-     * Spaces in the search match hyphens. `wood f` matches `wood-fired`.
-     * A tag with exactly the name of the search comes first in each sort.
+     * The API changes the search like a `Tag`. Spaces and punctuation then match hyphens. `wood f` matches `wood-fired`.
+     * A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next.
      * It is in the list also without a restaurant or a recipe of `kind`. A client then finds an existing tag before it adds a new one.
      * 
      */
     search?: string;
     /**
      * Lists only the tags of restaurants or only the tags of recipes.
-     * A tag with exactly the name of `search` is the one exception.
+     * A tag with exactly the name of the changed `search`, or the same name without accents, is the one exception.
      * 
      */
     kind?: ListTagsKindEnum;
@@ -83,7 +83,7 @@ export interface ListTagsRequest {
 export interface TagsApiInterface {
     /**
      * Creates request options for getTag without sending the request
-     * @param {string} tagName The name of the tag.
+     * @param {string} tagName The name of the tag. The API changes free text to a tag. &#x60;Wood%20Fired&#x60; gets &#x60;wood-fired&#x60;.
      * @throws {RequiredError}
      * @memberof TagsApiInterface
      */
@@ -92,7 +92,7 @@ export interface TagsApiInterface {
     /**
      * A tag without a restaurant or a recipe causes `404 Not Found`. `listRestaurants` and `listRecipes` with `tags[has]` list the restaurants and the recipes of the tag. 
      * @summary Get a tag
-     * @param {string} tagName The name of the tag.
+     * @param {string} tagName The name of the tag. The API changes free text to a tag. &#x60;Wood%20Fired&#x60; gets &#x60;wood-fired&#x60;.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof TagsApiInterface
@@ -110,8 +110,8 @@ export interface TagsApiInterface {
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {'count' | '-count' | 'name' | '-name'} [sort] &#x60;-count&#x60; puts the tags with the most restaurants and recipes first. With &#x60;kind&#x60;, it counts only that kind. &#x60;count&#x60; puts the fewest first. Equal counts sort by &#x60;name&#x60;. The &#x60;name&#x60; sort compares the code points of the names. The API always adds the ID of the tag as the last sort key. 
-     * @param {string} [search] The name or a word of the name starts with the search. The words of a name are the parts between its hyphens. &#x60;fired&#x60; matches &#x60;wood-fired&#x60;. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;café&#x60;. Spaces in the search match hyphens. &#x60;wood f&#x60; matches &#x60;wood-fired&#x60;. A tag with exactly the name of the search comes first in each sort. It is in the list also without a restaurant or a recipe of &#x60;kind&#x60;. A client then finds an existing tag before it adds a new one. 
-     * @param {'restaurants' | 'recipes'} [kind] Lists only the tags of restaurants or only the tags of recipes. A tag with exactly the name of &#x60;search&#x60; is the one exception. 
+     * @param {string} [search] The name or a word of the name starts with the search. The words of a name are the parts between its hyphens. &#x60;fired&#x60; matches &#x60;wood-fired&#x60;. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;café&#x60;. The API changes the search like a &#x60;Tag&#x60;. Spaces and punctuation then match hyphens. &#x60;wood f&#x60; matches &#x60;wood-fired&#x60;. A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next. It is in the list also without a restaurant or a recipe of &#x60;kind&#x60;. A client then finds an existing tag before it adds a new one. 
+     * @param {'restaurants' | 'recipes'} [kind] Lists only the tags of restaurants or only the tags of recipes. A tag with exactly the name of the changed &#x60;search&#x60;, or the same name without accents, is the one exception. 
      * @throws {RequiredError}
      * @memberof TagsApiInterface
      */
@@ -123,8 +123,8 @@ export interface TagsApiInterface {
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {'count' | '-count' | 'name' | '-name'} [sort] &#x60;-count&#x60; puts the tags with the most restaurants and recipes first. With &#x60;kind&#x60;, it counts only that kind. &#x60;count&#x60; puts the fewest first. Equal counts sort by &#x60;name&#x60;. The &#x60;name&#x60; sort compares the code points of the names. The API always adds the ID of the tag as the last sort key. 
-     * @param {string} [search] The name or a word of the name starts with the search. The words of a name are the parts between its hyphens. &#x60;fired&#x60; matches &#x60;wood-fired&#x60;. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;café&#x60;. Spaces in the search match hyphens. &#x60;wood f&#x60; matches &#x60;wood-fired&#x60;. A tag with exactly the name of the search comes first in each sort. It is in the list also without a restaurant or a recipe of &#x60;kind&#x60;. A client then finds an existing tag before it adds a new one. 
-     * @param {'restaurants' | 'recipes'} [kind] Lists only the tags of restaurants or only the tags of recipes. A tag with exactly the name of &#x60;search&#x60; is the one exception. 
+     * @param {string} [search] The name or a word of the name starts with the search. The words of a name are the parts between its hyphens. &#x60;fired&#x60; matches &#x60;wood-fired&#x60;. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;café&#x60;. The API changes the search like a &#x60;Tag&#x60;. Spaces and punctuation then match hyphens. &#x60;wood f&#x60; matches &#x60;wood-fired&#x60;. A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next. It is in the list also without a restaurant or a recipe of &#x60;kind&#x60;. A client then finds an existing tag before it adds a new one. 
+     * @param {'restaurants' | 'recipes'} [kind] Lists only the tags of restaurants or only the tags of recipes. A tag with exactly the name of the changed &#x60;search&#x60;, or the same name without accents, is the one exception. 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof TagsApiInterface

@@ -83,8 +83,9 @@ describe('TagInput', () => {
   it('clears the error when the person types again', async () => {
     const w = mount(TagInput, { props: { modelValue: [] } })
     const input = w.get('input')
-    await input.setValue('Bad Tag')
+    await input.setValue('!!!')
     await input.trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('error')?.at(-1)).toEqual(['Use a letter or a digit.'])
     await input.setValue('')
     expect(w.emitted('error')?.at(-1)).toEqual([''])
   })
@@ -97,13 +98,17 @@ describe('TagInput', () => {
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([['café']])
   })
 
-  it('does not change an invalid tag and suggests the valid form', async () => {
+  it('adds the stored form of free text and announces it', async () => {
     const w = mount(TagInput, { props: { modelValue: [] } })
     const input = w.get('input')
-    await input.setValue('Wood Fired')
+    await input.setValue('Wood Fired!')
     await input.trigger('keydown', { key: 'Enter' })
-    expect(w.emitted('update:modelValue')).toBeUndefined()
-    expect(w.emitted('error')?.at(-1)?.[0]).toContain('wood-fired')
+    expect(w.emitted('update:modelValue')?.at(-1)).toEqual([['wood-fired']])
+    expect(w.get('[aria-live=polite]').text()).toBe('Added wood-fired')
+    await w.setProps({ modelValue: ['wood-fired'] })
+    await input.setValue('WOOD_FIRED')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('error')?.at(-1)?.[0]).toContain('already added')
   })
 
   describe('with suggestions', () => {
@@ -209,6 +214,34 @@ describe('TagInput', () => {
       await withSuggestions(() => w.get('input').trigger('keydown', { key: 'ArrowDown' }))
       expect(w.get('input').attributes('aria-expanded')).toBe('true')
       expect(suggest).toHaveBeenCalledWith('')
+    })
+
+    it('offers the stored form of free text as a new tag', async () => {
+      const { w } = await open()
+      await w.get('input').setValue('Wood Oven!')
+      await w.get('input').trigger('input')
+      expect(w.findAll('[role=option]').at(-1)?.text()).toBe('Add new tag ‘wood-oven’')
+    })
+
+    it('offers no new tag for a name of more than 63 characters', async () => {
+      const { w } = await open()
+      await w.get('input').setValue('a'.repeat(64))
+      await w.get('input').trigger('input')
+      expect(w.findAll('[role=option]').map((o) => o.text())).not.toContain(`Add new tag ‘${'a'.repeat(64)}’`)
+    })
+
+    it('adds a suggestion with its stored name', async () => {
+      // Ab is not the toTag form. The input still adds the name of the API.
+      const { w } = await open({ suggest: async () => [{ name: 'Ab', label: '1 restaurant' }] })
+      await w.get('[role=option]').trigger('mousedown')
+      expect(w.emitted('update:modelValue')?.at(-1)).toEqual([['pizza', 'Ab']])
+    })
+
+    it('offers no new tag for free text with the name of a suggestion', async () => {
+      const { w } = await open()
+      await w.get('input').setValue('Wood Fired')
+      await w.get('input').trigger('input')
+      expect(w.findAll('[role=option]').map((o) => o.text())).toEqual(['wood-fired, 4 restaurants'])
     })
 
     it('offers no new tag in a filter', async () => {

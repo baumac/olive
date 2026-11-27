@@ -1,6 +1,7 @@
 import type { Problem } from '@reviews/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import spec from '../../../specs/api/public-openapi.yaml?raw'
+import tagNames from '../../../specs/api/tag-names.json'
 import { apiFailure, failureText, fieldErrors, notApprovedText, notCreatorText } from '@/lib/api'
 import { listFailureText } from '@/lib/lists'
 import { restaurantFilterDefs, restaurantFilterParams } from '@/lib/restaurantFilters'
@@ -9,7 +10,7 @@ import { formatCount, formatDate, formatDay, formatScore, initials, localDay, pa
 import { changedPatch, ownReviewsText, parentAccess } from '@/lib/parents'
 import { directionsLink } from '@/lib/places'
 import { overallOf, scoreFields } from '@/lib/reviews'
-import { checkLongText, checkName, checkPassword, checkReviewDay, checkTag, safeRedirect, suggestTag } from '@/lib/validation'
+import { checkLongText, checkName, checkPassword, checkReviewDay, checkTag, isTag, safeRedirect, toTag } from '@/lib/validation'
 import { tagCountText, tagPath, tagSuggester } from '@/lib/tags'
 import { tagsApi } from '@/lib/api'
 import { rejectWith } from './problem'
@@ -46,29 +47,23 @@ describe('format', () => {
 })
 
 describe('validation', () => {
-  it('checks tags like the API', () => {
-    expect(checkTag('wood-fired', [])).toBe('')
-    expect(checkTag('Wood Fired', [])).toContain('wood-fired')
-    expect(checkTag('pasta', ['pasta'])).toContain('already')
-    expect(checkTag('x', Array.from({ length: 20 }, (_, i) => `t${i}`))).toContain('at most 20')
-    expect(suggestTag('  Date Night!! ')).toBe('date-night')
+  it('changes free text to a tag like the API', () => {
+    for (const { text, tag } of tagNames) {
+      expect(toTag(text), JSON.stringify(text)).toBe(tag)
+      expect(toTag(tag)).toBe(tag)
+    }
+    expect(Array.from(toTag('a '.repeat(40)))).toHaveLength(79)
   })
 
-  it('accepts the letters and digits of all scripts in tags', () => {
-    for (const tag of ['café', 'ラーメン', 'चाय', '2-für-1', 'ψάρι']) {
-      expect(checkTag(tag, [])).toBe('')
-    }
-    // The API changes a separate accent to the composed form.
-    expect(checkTag('cafe\u0301', [])).toBe('')
-    expect(checkTag('pasta\ufe0f', [])).toContain('pasta')
-    expect(checkTag('pasta\u17b4', [])).toContain('pasta')
-    expect(checkTag('Ψάρι', [])).toContain('ψάρι')
-    expect(checkTag('\u3164', [])).not.toBe('')
-    expect(suggestTag('Crème Brûlée')).toBe('crème-brûlée')
-    expect(suggestTag('İstanbul')).toBe('istanbul')
-    expect(suggestTag('\u0301a-\u0301b')).toBe('a-b')
-    expect(suggestTag('😀'.repeat(70))).toBe('')
-    expect(Array.from(suggestTag('é'.repeat(70)))).toHaveLength(63)
+  it('checks the changed tags', () => {
+    expect(checkTag('wood-fired', [])).toBe('')
+    expect(checkTag('', [])).toContain('letter or a digit')
+    expect(checkTag('a'.repeat(64), [])).toContain('at most 63')
+    expect(checkTag('pasta', ['pasta'])).toContain('already')
+    expect(checkTag('x', Array.from({ length: 20 }, (_, i) => `t${i}`))).toContain('at most 20')
+    expect(isTag('wood-fired')).toBe(true)
+    expect(isTag('Wood Fired')).toBe(false)
+    expect(isTag('')).toBe(false)
   })
 
   it('refuses hidden characters like the API', () => {

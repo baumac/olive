@@ -23,8 +23,17 @@ export interface TagSummary {
      * A lowercase tag. Words are separated by single hyphens.
      * Letters and digits of all scripts are allowed, for example `café` or `ラーメン`.
      * Each word starts with a lowercase letter, a letter without case, or a digit. Combining marks can follow.
-     * The API changes the tag to Unicode normalization form C before the other checks.
-     * Characters with the Unicode property `Default_Ignorable_Code_Point`, such as variation selectors, are not allowed.
+     * 
+     * A request can send free text. The API changes it to a tag before the other checks:
+     * 1. It changes the text to Unicode normalization form NFKC. `ＰＡＳＴＡ` becomes `PASTA`.
+     * 2. It changes the text to lowercase.
+     * 3. It removes the characters with the Unicode property `Default_Ignorable_Code_Point`, such as variation selectors.
+     * 4. It changes each run of other characters that are not letters, marks, or digits to one hyphen. These are spaces, punctuation, symbols, and emoji.
+     * 5. It removes the marks at the start of each word and the hyphens at the start and the end. A `σ` at the end of a word becomes `ς`.
+     * 
+     * `Wood Fired` becomes `wood-fired`, and `Kid's menu` becomes `kid-s-menu`.
+     * Accents stay. `café` and `cafe` are two tags.
+     * A text without a letter or a digit, such as `!!!`, is invalid.
      * 
      */
     name: string;

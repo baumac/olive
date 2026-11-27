@@ -451,7 +451,7 @@ func TestValidationMessages(t *testing.T) {
 	e := newEnv(t, testOptions)
 	ana := e.signUp("ana@example.com", "Ana")
 	res := e.expect(request{method: "POST", path: "/v1/restaurants", token: ana.Token,
-		body: `{"name":"   ","description":"Tab\tand\u0007bell","tags":["Bad"]}`}, http.StatusUnprocessableEntity)
+		body: `{"name":"   ","description":"Tab\tand\u0007bell","tags":["!!!","` + strings.Repeat("a", 64) + `"]}`}, http.StatusUnprocessableEntity)
 	var p struct {
 		Errors []struct{ Property, Message string } `json:"errors"`
 	}
@@ -463,7 +463,8 @@ func TestValidationMessages(t *testing.T) {
 	want := map[string]string{
 		"name":        "must have a character that is not whitespace, and no control, direction, or invisible characters",
 		"description": "must not have control, direction, or invisible characters other than line breaks and tabs",
-		"tags[0]":     "must have words of lowercase letters, digits, and marks with single hyphens between them, and each word must start with a letter or a digit",
+		"tags[0]":     "must have a letter or a digit",
+		"tags[1]":     "must have 1 to 63 characters",
 	}
 	for property, message := range want {
 		if got[property] != message {
@@ -519,37 +520,30 @@ func TestUnicodeTags(t *testing.T) {
 		t.Errorf("patched tags %s, want [ψάρι]", got)
 	}
 
-	pattern := "must have words of lowercase letters, digits, and marks with single hyphens between them, and each word must start with a letter or a digit"
-	invisible := "must not have invisible characters"
-	invalid := map[string]string{
-		"Café":             pattern,
-		"\u0301a":          pattern,
-		"caf\u00e9-\u0301": pattern,
-		"dim\u00a0sum":     pattern,
-		"pasta\ufe0f":      invisible,
-		"pasta\u17b4":      invisible,
-		"pasta\u034f":      invisible,
-		"\u3164":           invisible,
+	// The API changes free text to a tag. Two texts of one tag give one tag.
+	free := e.createRestaurant(ana.Token, `{"name":"Third","tags":["Café","\u0301a","caf\u00e9-\u0301","dim\u00a0sum",`+
+		`"pasta\ufe0f","pasta\u17b4","pasta\u034f","\u3164Pasta","cafe\u0301"]}`)
+	if got := fmt.Sprint(free["tags"]); got != "[café a dim-sum pasta]" {
+		t.Errorf("free text tags %s, want [café a dim-sum pasta]", got)
 	}
-	for tag, message := range invalid {
+	for _, tag := range []string{"\u3164", "!!!", "🍕"} {
 		res := e.expect(request{method: "POST", path: "/v1/restaurants", token: ana.Token,
 			body: `{"name":"A","location":` + testLocation + `,"tags":["` + tag + `"]}`}, http.StatusUnprocessableEntity)
 		var p struct {
 			Errors []struct{ Property, Message string } `json:"errors"`
 		}
 		res.decode(t, &p)
-		if len(p.Errors) != 1 || p.Errors[0].Message != message {
-			t.Errorf("%q: errors %+v, want %q", tag, p.Errors, message)
+		if len(p.Errors) != 1 || p.Errors[0].Message != "must have a letter or a digit" {
+			t.Errorf("%q: errors %+v", tag, p.Errors)
 		}
 	}
-
-	// Two forms of one tag are the same tag after the change.
-	res := e.expect(request{method: "POST", path: "/v1/restaurants", token: ana.Token,
-		body: `{"name":"A","location":` + testLocation + `,"tags":["café","cafe\u0301"]}`}, http.StatusUnprocessableEntity)
-	if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
-		t.Errorf("errors of a repeated tag: %s", got)
+	for _, query := range []string{"tags[has]=Dim%20Sum", "tags[has]=pasta%E1%9E%B4", "tags[has_any]=x&tags[has_any]=DIM_SUM"} {
+		items := e.expect(request{method: "GET", path: "/v1/restaurants?" + query}, http.StatusOK).object(t)["items"].([]any)
+		if len(items) != 1 {
+			t.Errorf("%s: %d items, want 1", query, len(items))
+		}
 	}
-	e.expect(request{method: "GET", path: "/v1/restaurants?tags[has]=pasta%E1%9E%B4"}, http.StatusBadRequest)
+	e.expect(request{method: "GET", path: "/v1/restaurants?tags[has]=%21%21%21"}, http.StatusBadRequest)
 }
 
 func TestSkipRequestValidation(t *testing.T) {
@@ -559,10 +553,12 @@ func TestSkipRequestValidation(t *testing.T) {
 	e := newEnv(t, opts)
 	ana := e.signUp("ana@example.com", "Ana")
 
-	// The spec allows only lowercase tags. The handler gets the value.
-	e.expect(request{method: "GET", path: "/v1/restaurants?tags[has]=Italian"}, http.StatusOK)
-	// The response validation still refuses the saved tag.
-	e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"Luigi's","tags":["Italian"]}`, token: ana.Token}, http.StatusInternalServerError)
+	// The spec refuses an empty tag. The handler gets the value and finds no
+	// subject.
+	e.expect(request{method: "GET", path: "/v1/restaurants?tags[has]=%21%21%21"}, http.StatusOK)
+	// The response validation still refuses a saved tag of 64 characters.
+	e.expect(request{method: "POST", path: "/v1/restaurants", token: ana.Token,
+		body: `{"name":"Luigi's","location":` + testLocation + `,"tags":["` + strings.Repeat("a", 64) + `"]}`}, http.StatusInternalServerError)
 
 	// The checks that the strict handler needs stay.
 	e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","extra":1}`, token: ana.Token}, http.StatusBadRequest)
@@ -606,6 +602,11 @@ func TestSkipRequestValidation(t *testing.T) {
 	same := e.createRecipe(ana.Token, `{"name":"Same","tags":["café","cafe\u0301"]}`)
 	if tags := same["tags"].([]any); len(tags) != 1 || tags[0] != "café" {
 		t.Errorf("tags %v, want one café", tags)
+	}
+	// The handlers change free text and drop an empty tag.
+	free := e.createRecipe(ana.Token, `{"name":"Free","tags":["Wood Fired","wood_fired","!!!"]}`)
+	if got := fmt.Sprint(free["tags"]); got != "[wood-fired]" {
+		t.Errorf("tags %s, want [wood-fired]", got)
 	}
 
 	// The handlers stay safe with values that the spec refuses.
@@ -833,11 +834,15 @@ func TestRestaurants(t *testing.T) {
 		e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A"}`}, http.StatusUnauthorized)
 		e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","id":"k3x9m2p7q1w8z4a"}`, token: ana.Token}, http.StatusBadRequest)
 		res := e.expect(request{method: "POST", path: "/v1/restaurants",
-			body: `{"description":null,"tags":["ok","Bad","ok"]}`, token: ana.Token}, http.StatusUnprocessableEntity)
-		if got := strings.Join(errorProperties(t, res), ","); got != "description,location,name,tags,tags[1]" {
+			body: `{"description":null,"tags":["ok","!!!"]}`, token: ana.Token}, http.StatusUnprocessableEntity)
+		if got := strings.Join(errorProperties(t, res), ","); got != "description,location,name,tags[1]" {
 			t.Errorf("properties %q", got)
 		}
-		many := `["` + strings.Repeat(`Bad","`, 999) + `Bad"]`
+		distinct := make([]string, 1000)
+		for i := range distinct {
+			distinct[i] = fmt.Sprintf(`"t%d"`, i)
+		}
+		many := "[" + strings.Join(distinct, ",") + "]"
 		res = e.expect(request{method: "POST", path: "/v1/restaurants", body: `{"name":"A","location":` + testLocation + `,"tags":` + many + `}`, token: ana.Token}, http.StatusUnprocessableEntity)
 		if got := strings.Join(errorProperties(t, res), ","); got != "tags" {
 			t.Errorf("properties %q", got)
@@ -1324,7 +1329,7 @@ func TestListRestaurants(t *testing.T) {
 	t.Run("invalid query parameters", func(t *testing.T) {
 		for _, query := range []string{
 			"limit=0", "limit=101", "limit=x", "sort=name,name", "sort=title",
-			"name[eq]=Zebra", "created[foo]=x", "created[gte]=2024-11-04", "tags[has]=Italian",
+			"name[eq]=Zebra", "created[foo]=x", "created[gte]=2024-11-04", "tags[has]=%21",
 			"creator[eq]=short", "limit=1&limit=2", "cursor=not-a-cursor",
 			strings.Repeat("tags[has_any]=a&", 21) + "sort=name",
 		} {

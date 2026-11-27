@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/baumac/reviews-app/app/api/internal/tagname"
 	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -93,7 +94,7 @@ func readBody(ctx context.Context, in *openapi3filter.RequestValidationInput, va
 		return nil, &p
 	}
 
-	if changeProperties(schema, props, "x-nfc", norm.NFC.String) {
+	if normalizeBody(schema, props) {
 		raw, _ = json.Marshal(props)
 		r.Body = io.NopCloser(bytes.NewReader(raw))
 	}
@@ -122,9 +123,30 @@ func trimWhitespace(s string) string {
 	return strings.Trim(s, " \t\n\r")
 }
 
+// normalizeBody changes the values with x-nfc and x-tag. Then it removes the
+// repeats of the arrays with x-tags. It returns true when a value changes.
+func normalizeBody(schema *openapi3.Schema, props map[string]json.RawMessage) bool {
+	nfc := changeProperties(schema, props, "x-nfc", norm.NFC.String)
+	tags := changeProperties(schema, props, "x-tag", tagname.Of)
+	repeats := changeValues(schema, props, "x-tags", removeRepeats)
+	return nfc || tags || repeats
+}
+
 // changeProperties uses change on each string of a schema with the extension
 // ext. It returns true when a value changes.
 func changeProperties(schema *openapi3.Schema, props map[string]json.RawMessage, ext string, change func(string) string) bool {
+	return changeValues(schema, props, ext, func(raw json.RawMessage) json.RawMessage {
+		var text string
+		if json.Unmarshal(raw, &text) != nil || change(text) == text {
+			return raw
+		}
+		next, _ := json.Marshal(change(text))
+		return next
+	})
+}
+
+// changeValues uses change on each value of a schema with the extension ext.
+func changeValues(schema *openapi3.Schema, props map[string]json.RawMessage, ext string, change func(json.RawMessage) json.RawMessage) bool {
 	changed := false
 	for name, value := range props {
 		property := schema.Properties[name]
@@ -139,17 +161,12 @@ func changeProperties(schema *openapi3.Schema, props map[string]json.RawMessage,
 	return changed
 }
 
-func changeValue(schema *openapi3.Schema, raw json.RawMessage, ext string, change func(string) string) json.RawMessage {
+func changeValue(schema *openapi3.Schema, raw json.RawMessage, ext string, change func(json.RawMessage) json.RawMessage) json.RawMessage {
 	for _, option := range schema.OneOf {
 		raw = changeValue(option.Value, raw, ext, change)
 	}
 	if schema.Extensions[ext] == true {
-		var text string
-		if json.Unmarshal(raw, &text) != nil || change(text) == text {
-			return raw
-		}
-		next, _ := json.Marshal(change(text))
-		return next
+		return change(raw)
 	}
 	if schema.Items != nil {
 		var items []json.RawMessage
@@ -173,10 +190,36 @@ func changeValue(schema *openapi3.Schema, raw json.RawMessage, ext string, chang
 		return raw
 	}
 	props, err := decodeObject(raw)
-	if err != nil || !changeProperties(schema, props, ext, change) {
+	if err != nil || !changeValues(schema, props, ext, change) {
 		return raw
 	}
 	next, _ := json.Marshal(props)
+	return next
+}
+
+// removeRepeats removes the repeated strings of a JSON array. The first copy
+// keeps its place. Other values stay for the validation.
+func removeRepeats(raw json.RawMessage) json.RawMessage {
+	var items []json.RawMessage
+	if json.Unmarshal(raw, &items) != nil {
+		return raw
+	}
+	seen := map[string]bool{}
+	kept := items[:0:0]
+	for _, item := range items {
+		var text string
+		if json.Unmarshal(item, &text) == nil {
+			if seen[text] {
+				continue
+			}
+			seen[text] = true
+		}
+		kept = append(kept, item)
+	}
+	if len(kept) == len(items) {
+		return raw
+	}
+	next, _ := json.Marshal(kept)
 	return next
 }
 
@@ -307,6 +350,10 @@ func schemaMessage(e *openapi3.SchemaError) string {
 	case "type":
 		return "must be " + typeName(s)
 	case "minLength", "maxLength":
+		// The Tag schema gets an empty name from text without a letter.
+		if m, ok := s.Extensions["x-pattern-message"].(string); ok && s.Extensions["x-tag"] == true && e.SchemaField == "minLength" {
+			return m
+		}
 		return lengthMessage(s)
 	case "pattern":
 		if m, ok := s.Extensions["x-pattern-message"].(string); ok {
@@ -315,9 +362,6 @@ func schemaMessage(e *openapi3.SchemaError) string {
 	case "format":
 		if s.Format == "email" {
 			return "must be an email address"
-		}
-		if s.Format == "tag" {
-			return "must not have invisible characters"
 		}
 		if s.Format == "review-date" {
 			return "must be a date from " + firstReviewDate + " to today"

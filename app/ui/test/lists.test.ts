@@ -34,8 +34,8 @@ async function queryAt(url: string, filterDefs: FilterDef[] | (() => FilterDef[]
 
 describe('useListQuery', () => {
   it('ignores values that the filters do not allow', async () => {
-    const q = await queryAt('/r?tags=italian,Bad,pasta&rating=abc&sort=-nope&other=1')
-    expect(q.filters.value).toEqual({ tags: ['italian', 'pasta'] })
+    const q = await queryAt('/r?tags=italian,Wood%20Fired,!!!,Pasta,pasta&rating=abc&sort=-nope&other=1')
+    expect(q.filters.value).toEqual({ tags: ['italian', 'wood-fired', 'pasta'] })
     expect(q.sort.value).toBe('-created')
   })
 

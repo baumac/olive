@@ -2759,7 +2759,7 @@ components:
     TagName:
       name: tagName
       in: path
-      description: The name of the tag.
+      description: The name of the tag. The API changes free text to a tag. `Wood%20Fired` gets `wood-fired`.
       required: true
       schema:
         $ref: '#/components/schemas/Tag'
@@ -2782,8 +2782,8 @@ components:
         The name or a word of the name starts with the search.
         The words of a name are the parts between its hyphens. `fired` matches `wood-fired`.
         The search ignores case and accents. `Cafe` matches `café`.
-        Spaces in the search match hyphens. `wood f` matches `wood-fired`.
-        A tag with exactly the name of the search comes first in each sort.
+        The API changes the search like a `Tag`. Spaces and punctuation then match hyphens. `wood f` matches `wood-fired`.
+        A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next.
         It is in the list also without a restaurant or a recipe of `kind`. A client then finds an existing tag before it adds a new one.
       schema:
         type: string
@@ -2796,7 +2796,7 @@ components:
       in: query
       description: |
         Lists only the tags of restaurants or only the tags of recipes.
-        A tag with exactly the name of `search` is the one exception.
+        A tag with exactly the name of the changed `search`, or the same name without accents, is the one exception.
       schema:
         type: string
         enum: [restaurants, recipes]
@@ -3318,18 +3318,27 @@ components:
         A lowercase tag. Words are separated by single hyphens.
         Letters and digits of all scripts are allowed, for example `café` or `ラーメン`.
         Each word starts with a lowercase letter, a letter without case, or a digit. Combining marks can follow.
-        The API changes the tag to Unicode normalization form C before the other checks.
-        Characters with the Unicode property `Default_Ignorable_Code_Point`, such as variation selectors, are not allowed.
+
+        A request can send free text. The API changes it to a tag before the other checks:
+        1. It changes the text to Unicode normalization form NFKC. `ＰＡＳＴＡ` becomes `PASTA`.
+        2. It changes the text to lowercase.
+        3. It removes the characters with the Unicode property `Default_Ignorable_Code_Point`, such as variation selectors.
+        4. It changes each run of other characters that are not letters, marks, or digits to one hyphen. These are spaces, punctuation, symbols, and emoji.
+        5. It removes the marks at the start of each word and the hyphens at the start and the end. A `σ` at the end of a word becomes `ς`.
+
+        `Wood Fired` becomes `wood-fired`, and `Kid's menu` becomes `kid-s-menu`.
+        Accents stay. `café` and `cafe` are two tags.
+        A text without a letter or a digit, such as `!!!`, is invalid.
       type: string
-      format: tag
-      x-nfc: true
+      x-tag: true
       minLength: 1
       maxLength: 63
       pattern: '^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*(-[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*)*$'
-      x-pattern-message: must have words of lowercase letters, digits, and marks with single hyphens between them, and each word must start with a letter or a digit
+      x-pattern-message: must have a letter or a digit
     Tags:
-      description: Unique tags.
+      description: Tags. The API removes the repeats after it changes the tags. The first copy keeps its place.
       type: array
+      x-tags: true
       maxItems: 20
       uniqueItems: true
       items:

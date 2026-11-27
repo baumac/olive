@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"database/sql"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -130,5 +131,86 @@ func TestTagNames(t *testing.T) {
 	r.Set("name", "ラーメン")
 	if err := app.Save(r); err == nil {
 		t.Error("a second tag with one name is saved")
+	}
+}
+
+func TestTagNamesMigration(t *testing.T) {
+	t.Parallel()
+	app := newApp(t)
+	for _, row := range []dbx.Params{
+		{"id": "tag000000000001", "name": "ｐａｓｔａ", "created": "2024-01-01 00:00:00.000Z"},
+		{"id": "tag000000000002", "name": "pasta", "created": "2024-02-01 00:00:00.000Z"},
+		{"id": "tag000000000003", "name": "οδοσ", "created": "2024-03-01 00:00:00.000Z"},
+		{"id": "tag000000000004", "name": "pizza", "created": "2024-01-01 00:00:00.000Z"},
+	} {
+		row["name_key"] = tagKey(row["name"].(string))
+		if _, err := app.DB().Insert("tags", row).Execute(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const updated = "2024-11-04 01:26:55.002Z"
+	inserts := []struct {
+		table string
+		row   dbx.Params
+	}{
+		{"restaurants", dbx.Params{"id": "restaurant00001", "name": "A", "address": "Carrer 1", "updated": updated,
+			"tags": `["tag000000000002","tag000000000001","tag000000000004"]`}},
+		{"recipes", dbx.Params{"id": "recipe000000001", "name": "Dal", "ingredients": `["lentils"]`, "steps": `["Cook."]`,
+			"tags": `["tag000000000003"]`}},
+		{"restaurants_fts", dbx.Params{"id": "restaurant00001", "name": "A", "tags": "pasta ｐａｓｔａ pizza"}},
+		{"recipes_fts", dbx.Params{"id": "recipe000000001", "name": "Dal", "tags": "οδοσ"}},
+	}
+	for _, in := range inserts {
+		if _, err := app.DB().Insert(in.table, in.row).Execute(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for range 2 {
+		if err := tagNamesUp(app); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var tags []struct {
+		ID      string `db:"id"`
+		Name    string `db:"name"`
+		NameKey string `db:"name_key"`
+	}
+	if err := app.DB().Select("id", "name", "name_key").From("tags").OrderBy("id").All(&tags); err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprint(tags); got != "[{tag000000000001 pasta pasta} {tag000000000003 οδος οδος} {tag000000000004 pizza pizza}]" {
+		t.Errorf("tags %s", got)
+	}
+	a, err := app.FindRecordById("restaurants", "restaurant00001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := a.GetStringSlice("tags"); !slices.Equal(got, []string{"tag000000000001", "tag000000000004"}) {
+		t.Errorf("restaurant tags %v", got)
+	}
+	if a.GetString("updated") != updated {
+		t.Errorf("updated %q, want the old time", a.GetString("updated"))
+	}
+	if got := storedTags(t, app, a.Id); !slices.Equal(got, []string{"tag000000000001", "tag000000000004"}) {
+		t.Errorf("restaurant_tags %v", got)
+	}
+	for table, want := range map[string]string{"restaurants_fts": "pasta pizza", "recipes_fts": "οδος"} {
+		var text string
+		if err := app.DB().Select("tags").From(table).Row(&text); err != nil {
+			t.Fatal(err)
+		}
+		if text != want {
+			t.Errorf("%s tags %q, want %q", table, text, want)
+		}
+	}
+}
+
+func TestTagNameOf(t *testing.T) {
+	t.Parallel()
+	for text, want := range map[string]string{"ｐａｓｔａ": "pasta", "οδοσ": "οδος", "ﬁsh": "fish", "wood-fired": "wood-fired", "café": "café"} {
+		if got := tagNameOf(text); got != want {
+			t.Errorf("tagNameOf(%q) = %q, want %q", text, got, want)
+		}
 	}
 }

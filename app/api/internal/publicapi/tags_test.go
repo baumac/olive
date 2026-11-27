@@ -63,6 +63,24 @@ func TestTagsOfSaves(t *testing.T) {
 		}
 	})
 
+	t.Run("a repeat is one tag in the place of the first copy", func(t *testing.T) {
+		got := e.createRecipe(ana.Token, `{"name":"Repeats","tags":["Pizza","pasta","pizza","PASTA","pizza"]}`)
+		if fmt.Sprint(got["tags"]) != "[pizza pasta]" {
+			t.Errorf("tags %v", got["tags"])
+		}
+		texts := make([]string, 21)
+		for i := range 20 {
+			texts[i] = fmt.Sprintf(`"T%d"`, i)
+		}
+		texts[20] = `"t0"`
+		patched := e.expect(request{method: http.MethodPatch, path: "/v1/recipes/" + got["id"].(string), token: ana.Token,
+			body: `{"tags":[` + strings.Join(texts, ",") + `]}`}, http.StatusOK).object(t)
+		if tags := patched["tags"].([]any); len(tags) != 20 || tags[0] != "t0" || tags[19] != "t19" {
+			t.Errorf("tags %v", tags)
+		}
+		e.expect(request{method: http.MethodDelete, path: "/v1/recipes/" + got["id"].(string), token: ana.Token}, http.StatusNoContent)
+	})
+
 	t.Run("a conflict makes no tag", func(t *testing.T) {
 		e.expect(request{method: http.MethodPost, path: "/v1/restaurants", token: ana.Token,
 			body: `{"name":"Forno 2","tags":["second"],` + place + `}`}, http.StatusConflict)
@@ -114,6 +132,10 @@ func TestListTags(t *testing.T) {
 		"a search of another script":        {"?search=" + url.QueryEscape("ラー"), "ラーメン"},
 		"a search of the middle of a word":  {"?search=ood", ""},
 		"a search with a LIKE wildcard":     {"?search=%25", ""},
+		"a search with punctuation":         {"?search=Wood_F", "wood-fired"},
+		"a search without a letter":         {"?search=%21%21", ""},
+		"a search that ends in a space":     {"?search=" + url.QueryEscape("wood "), "wood-fired"},
+		"a search that ends after a word":   {"?search=cafe-", "café,cafe-bar"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := e.tags(tc.query).names(); got != tc.want {
@@ -164,10 +186,57 @@ func TestListTags(t *testing.T) {
 		e.expect(request{method: http.MethodGet, path: "/v1/tags?kind=recipes&limit=1&cursor=" + cursor}, http.StatusBadRequest)
 	})
 
-	for _, query := range []string{"?sort=created", "?kind=wines", "?limit=0", "?search="} {
+	for _, query := range []string{"?sort=created", "?kind=wines", "?limit=0", "?search=", "?search=%21&cursor=bad"} {
 		t.Run(query+" gets 400", func(t *testing.T) {
 			e.expect(request{method: http.MethodGet, path: "/v1/tags" + query}, http.StatusBadRequest)
 		})
+	}
+}
+
+func TestListTagsKey(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	e.createRestaurant(ana.Token, `{"name":"A","tags":["café","cafe-bar","cafés"]}`)
+	e.createRestaurant(ana.Token, `{"name":"B","tags":["café","cafe-bar"]}`)
+	e.createRecipe(ana.Token, `{"name":"C","tags":["cafe"]}`)
+
+	for query, want := range map[string]string{
+		"?search=cafe":                   "cafe,café,cafe-bar,cafés",
+		"?search=Caf%C3%A9":              "café,cafe,cafe-bar,cafés",
+		"?search=cafe&kind=recipes":      "cafe,café",
+		"?search=cafe&kind=restaurants":  "cafe,café,cafe-bar,cafés",
+		"?search=cafe&sort=-name":        "cafe,café,cafés,cafe-bar",
+		"?search=cafes&kind=restaurants": "cafés",
+	} {
+		if got := e.tags(query).names(); got != want {
+			t.Errorf("%s: %s, want %s", query, got, want)
+		}
+	}
+	var names []string
+	query := "?search=cafe&limit=1"
+	for range 5 {
+		page := e.tags(query)
+		names = append(names, page.names())
+		if page.NextCursor == nil {
+			break
+		}
+		query = "?search=cafe&limit=1&cursor=" + *page.NextCursor
+	}
+	if got := strings.Join(names, ","); got != "cafe,café,cafe-bar,cafés" {
+		t.Errorf("pages %s", got)
+	}
+}
+
+func TestListTagsGreek(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, testOptions)
+	ana := e.signUp("ana@example.com", "Ana")
+	e.createRestaurant(ana.Token, `{"name":"A","tags":["οδοσημανση","οδος"]}`)
+	for search, want := range map[string]string{"οδοσ": "οδος,οδοσημανση", "ΟΔΟΣ": "οδος,οδοσημανση", "οδος": "οδος", "οδοσ%20": "οδος"} {
+		if got := e.tags("?search=" + search).names(); got != want {
+			t.Errorf("%s: %s, want %s", search, got, want)
+		}
 	}
 }
 
@@ -178,13 +247,14 @@ func TestGetTag(t *testing.T) {
 	e.createRestaurant(ana.Token, `{"name":"A","tags":["café"]}`)
 	e.createRecipe(ana.Token, `{"name":"B","tags":["café"]}`)
 
-	for _, path := range []string{"/v1/tags/caf%C3%A9", "/v1/tags/cafe%CC%81"} {
+	for _, path := range []string{"/v1/tags/caf%C3%A9", "/v1/tags/cafe%CC%81", "/v1/tags/Caf%C3%A9", "/v1/tags/%20CAF%C3%89!"} {
 		got := e.expect(request{method: http.MethodGet, path: path}, http.StatusOK).object(t)
 		if got["name"] != "café" || got["restaurant_count"] != 1.0 || got["recipe_count"] != 1.0 {
 			t.Errorf("%s: %v", path, got)
 		}
 	}
-	e.expect(request{method: http.MethodGet, path: "/v1/tags/Caf%C3%A9"}, http.StatusBadRequest)
+	e.expect(request{method: http.MethodGet, path: "/v1/tags/%21%21%21"}, http.StatusBadRequest)
+	e.expect(request{method: http.MethodGet, path: "/v1/tags/cafe"}, http.StatusNotFound)
 	e.expect(request{method: http.MethodGet, path: "/v1/tags/pasta"}, http.StatusNotFound)
 	restaurants := e.expect(request{method: http.MethodGet, path: "/v1/restaurants?tags[has]=cafe%CC%81"}, http.StatusOK).object(t)
 	if n := len(restaurants["items"].([]any)); n != 1 {
@@ -202,10 +272,10 @@ func TestDashboardTags(t *testing.T) {
 	path := "/v1/restaurants/" + id
 
 	for name, body := range map[string]string{
-		"an uppercase tag":     `{"name":"Pasta"}`,
-		"a tag with a hyphen":  `{"name":"-pasta"}`,
-		"a variation selector": `{"name":"pasta️"}`,
-		"a name that exists":   `{"name":"pizza"}`,
+		"a name without a letter":        `{"name":"!!!"}`,
+		"a name that exists":             `{"name":"pizza"}`,
+		"a text with the name of a tag":  `{"name":" Pizza️ "}`,
+		"a name of more than 63 letters": `{"name":"` + strings.Repeat("a", 64) + `"}`,
 	} {
 		t.Run("the dashboard refuses "+name, func(t *testing.T) {
 			res := e.dashboard(request{method: http.MethodPost, path: records, token: root, body: body}, http.StatusBadRequest)
@@ -218,6 +288,13 @@ func TestDashboardTags(t *testing.T) {
 	t.Run("the dashboard changes a name to normalization form C", func(t *testing.T) {
 		got := e.dashboard(request{method: http.MethodPost, path: records, token: root, body: `{"name":"café"}`}, http.StatusOK).object(t)
 		if got["name"] != "café" || got["name_key"] != "cafe" {
+			t.Errorf("tag %v", got)
+		}
+	})
+
+	t.Run("the dashboard changes free text to a tag", func(t *testing.T) {
+		got := e.dashboard(request{method: http.MethodPost, path: records, token: root, body: `{"name":"Dim Sum"}`}, http.StatusOK).object(t)
+		if got["name"] != "dim-sum" || got["name_key"] != "dim-sum" {
 			t.Errorf("tag %v", got)
 		}
 	})

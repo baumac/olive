@@ -4,9 +4,10 @@ import { parseDay } from './format'
 // errors before a request.
 
 const space = /^[\t\n\v\f\r ]*$/
-const tagPattern =
-  /^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*(-[\p{Ll}\p{Lm}\p{Lo}\p{Nd}][\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]*)*$/u
-const ignorable = /\p{Default_Ignorable_Code_Point}/gu
+const tagLetter = /^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}]$/u
+const tagMark = /^[\p{Mn}\p{Mc}]$/u
+const ignorable = /^\p{Default_Ignorable_Code_Point}$/u
+const letter = /^\p{L}$/u
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const maxTags = 20
@@ -75,37 +76,61 @@ export function checkPassword(v: string): string {
   return ''
 }
 
-// suggestTag gives the valid form of a tag, such as "wood-fired" for
-// "Wood Fired".
-export function suggestTag(v: string): string {
-  const words = v
-    .toLowerCase()
-    // toLowerCase changes İ to i and a combining dot above.
-    .replace(/i\u0307/g, 'i')
-    .replace(ignorable, '')
-    .normalize('NFC')
-    .split(/[^\p{Ll}\p{Lm}\p{Lo}\p{Mn}\p{Mc}\p{Nd}]+/u)
-    .map((w) => w.replace(/^[\p{Mn}\p{Mc}]+/u, ''))
-    .filter((w) => w !== '')
-  return Array.from(words.join('-')).slice(0, 63).join('').replace(/-+$/, '')
+// toTag changes free text to a tag name, such as "wood-fired" for "Wood
+// Fired". The API has the same steps. See decision 00011.
+export function toTag(text: string): string {
+  let out = ''
+  let inWord = false
+  let gap = false
+  for (const char of text.normalize('NFKC')) {
+    // The API changes each code point to lowercase. toLowerCase of the whole
+    // text changes Σ by its place in the word. It also adds a dot to İ.
+    for (const c of char === 'İ' ? 'i' : char.toLowerCase()) {
+      if (ignorable.test(c)) {
+        continue
+      }
+      if (tagLetter.test(c)) {
+        out += gap && out !== '' ? `-${c}` : c
+        inWord = true
+        gap = false
+      } else if (tagMark.test(c)) {
+        out += inWord ? c : ''
+      } else {
+        inWord = false
+        gap = true
+      }
+    }
+  }
+  return out.normalize('NFC').split('-').map(finalSigma).join('-')
 }
 
+function finalSigma(word: string): string {
+  const chars = Array.from(word)
+  const n = chars.length
+  if (n < 2 || chars[n - 1] !== 'σ' || !letter.test(chars[n - 2]!)) {
+    return word
+  }
+  return chars.slice(0, -1).join('') + 'ς'
+}
+
+// isTag is true for a name that the API stores without a change.
 export function isTag(v: string): boolean {
-  return length(v) <= 63 && tagPattern.test(v) && v.search(ignorable) === -1
+  return v !== '' && length(v) <= 63 && toTag(v) === v
 }
 
+// checkTag checks a name of toTag before the input adds it.
 export function checkTag(tag: string, tags: string[]): string {
+  if (tag === '') {
+    return 'Use a letter or a digit.'
+  }
+  if (length(tag) > 63) {
+    return 'Use at most 63 characters.'
+  }
   if (tags.includes(tag)) {
     return `The tag ${tag} is already added.`
   }
   if (tags.length >= maxTags) {
     return `Use at most ${maxTags} tags.`
-  }
-  if (!isTag(tag)) {
-    const suggestion = suggestTag(tag)
-    return suggestion
-      ? `Use lowercase letters, digits and single hyphens, for example ${suggestion}.`
-      : 'Use lowercase letters, digits and single hyphens.'
   }
   return ''
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/baumac/reviews-app/app/api/internal/history"
 	"github.com/baumac/reviews-app/app/api/internal/recordvalues"
+	"github.com/baumac/reviews-app/app/api/internal/tagname"
 	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
@@ -535,7 +536,7 @@ func (c *changes) patchTags(app core.App, v nullable.Nullable[reviewsapi.Tags]) 
 		return err
 	}
 	// An empty list is no tags, like null. See decision 00004.
-	next := nfcTags(patchedTags(v))
+	next := tagname.List(patchedTags(v))
 	old := tagsOf(c.r)
 	if len(next) == 0 {
 		if old == nil {

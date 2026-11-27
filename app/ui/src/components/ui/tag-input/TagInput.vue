@@ -2,7 +2,7 @@
 import { PlusIcon, XIcon } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, ref, useId } from 'vue'
 import { cn } from '@/lib/utils'
-import { checkTag, maxTags } from '@/lib/validation'
+import { checkTag, maxTags, toTag } from '@/lib/validation'
 
 export interface TagSuggestion {
   name: string
@@ -46,9 +46,9 @@ interface Option {
 }
 
 const options = computed<Option[]>(() => {
-  const typed = text.value.trim().normalize('NFC')
+  const typed = toTag(text.value)
   const found = suggestions.value.filter((s) => !tags.value.includes(s.name)).map((s) => ({ ...s, isNew: false }))
-  if (props.allowNew && typed !== '' && !tags.value.includes(typed) && !found.some((s) => s.name === typed)) {
+  if (props.allowNew && checkTag(typed, tags.value) === '' && !found.some((s) => s.name === typed)) {
     found.push({ name: typed, label: '', isNew: true })
   }
   return found
@@ -93,11 +93,12 @@ function loadSuggestions() {
 
 onBeforeUnmount(() => clearTimeout(timer))
 
-function add(value = text.value) {
-  const tag = value.trim().normalize('NFC')
-  if (tag === '') {
+// add changes typed text with toTag. A suggestion already has its stored name.
+function add(value = text.value, stored = false) {
+  if (value.trim() === '') {
     return
   }
+  const tag = stored ? value : toTag(value)
   const error = checkTag(tag, tags.value.slice(0, props.max))
   emit('error', error)
   if (error) {
@@ -143,7 +144,11 @@ function onKeydown(e: KeyboardEvent) {
   } else if (e.key === 'Enter' || e.key === ',') {
     e.preventDefault()
     const option = expanded.value && e.key === 'Enter' ? options.value[active.value] : undefined
-    add(option?.name)
+    if (option) {
+      add(option.name, true)
+    } else {
+      add()
+    }
   } else if (e.key === 'Backspace' && text.value === '' && tags.value.length > 0) {
     remove(tags.value[tags.value.length - 1]!)
   }
@@ -231,7 +236,7 @@ function onBlur() {
         role="option"
         :aria-selected="i === active ? 'true' : 'false'"
         :class="cn('flex min-h-11 cursor-pointer items-center gap-2 rounded-sm px-2 text-sm', i === active && 'bg-accent text-accent-foreground')"
-        @mousedown.prevent="add(option.name)"
+        @mousedown.prevent="add(option.name, true)"
         @mousemove="active = i"
       >
         <template v-if="option.isNew">
