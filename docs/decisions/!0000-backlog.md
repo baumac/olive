@@ -7,19 +7,25 @@ Each sub-bullet point contains notes about the incomplete decision.
 # Backlog
 
 ## For claude
+- in the UI add ability to auto-fill a new restaurant from a Google Maps link
+- tags should be a standalone entity with its own set of APIs
+  - restaurants and recipes should reference the tags entity
+  - users should be able to search across all restaurants and recipes by tag
+  - in the UI, when adding a tag to a restaurant or recipe, users should be shown a drop down list that is pre-populated with data from the tags API
 
 ## For Me
 - redesign or rename table concept
-- find way to apply ip whitelisting
-- deploy to prod
-
-## For the Future
+- find way to apply ip whitelisting in prod
 - Rename repo from "reviews-app" to "food-journal"
   - Rename repo in GitHub
   - Regenerate docs and READMEs
-- Support reviewing individual foods: for initial release reviewing individual foods won't be completed
-  - reviewing cheeses
-  - reviewing wines
+  - Sponga47 should not appear in branding or designs anywhere, only in the domain name
+    - the app just happens to be hosted on the website food.sponga47.com
+
+## For the Future
+- Support reviewing products
+  - see https://github.com/baumac/reviews-app/pull/5
+  - needs to be refreshed once the tags changes are mades
 - Replace the public Photon server of Komoot and the tile server of OpenStreetMap with self-hosted options
   - `REVIEWS_PLACES_URL` and `REVIEWS_MAP_TILE_URL` already change the servers. The move needs no code change, only the servers on the home server.
   - The tile server of OpenStreetMap has no guarantee and can block heavy use. See decision 00008.
