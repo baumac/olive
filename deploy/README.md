@@ -43,19 +43,19 @@ Do these steps in this sequence. Do not let users sign up before step 10.
 7. Make the first superuser:
 
    ```bash
-   docker compose -f deploy/compose.yaml exec app reviews-app superuser create EMAIL PASSWORD --dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY
+   docker compose -f deploy/compose.yaml exec app olive superuser create EMAIL PASSWORD --dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY
    ```
 
-   Each `reviews-app` command in the container needs `--dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY`.
+   Each `olive` command in the container needs `--dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY`.
 
 8. Open `https://HOST/_/` and sign in. Open Settings > Application and set:
 
-   - the Application name: `Sponga47 Food`. The emails use it.
+   - the Application name: `Olive`. The emails use it.
    - the Application URL: `https://HOST`
    - the trusted proxy header: `CF-Connecting-IP`
    - the superuser IP allow-list
 
-9. Open Settings > Mail settings. Set the sender name to `Sponga47 Food` and set the sender address. Turn on "Use SMTP mail server", and set the host, the port, the user name, and the password.
+9. Open Settings > Mail settings. Set the sender name to `Olive` and set the sender address. Turn on "Use SMTP mail server", and set the host, the port, the user name, and the password.
 
 10. Select "Send test email" and check that the email arrives.
     Without a mail server, the app writes each email with its link to the log of the dashboard, and no person gets it.
@@ -190,7 +190,7 @@ Each superuser needs an email address that gets mail.
 When the mail server does not work, make a code on the server:
 
 ```bash
-docker compose -f deploy/compose.yaml exec app reviews-app superuser otp EMAIL --dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY
+docker compose -f deploy/compose.yaml exec app olive superuser otp EMAIL --dir /pb_data --encryptionEnv PB_ENCRYPTION_KEY
 ```
 
 ### Limits of the containers

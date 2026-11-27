@@ -138,7 +138,7 @@ test('my reviews lists the reviews of the user at all restaurants', async ({ pag
 test('the header has the home link and the page has one sections navigation', async ({ page }) => {
   await page.goto('/restaurants')
   const header = page.getByRole('banner')
-  await expect(header.getByRole('link', { name: 'Sponga47 Food, home' })).toBeVisible()
+  await expect(header.getByRole('link', { name: 'Olive, home' })).toBeVisible()
   // Below md, the sections are in the bottom bar.
   // From md, they are in the header.
   await expect(page.getByRole('navigation', { name: 'Sections' })).toHaveCount(1)

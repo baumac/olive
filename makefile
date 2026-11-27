@@ -25,7 +25,7 @@ RENOVATE_REPORT := $(BIN)/renovate-report.json
 COVERAGE_APP := $(BIN)/coverage-app.out
 COVERAGE_MIN_APP := 90
 
-APP_BIN := $(BIN)/reviews-app
+APP_BIN := $(BIN)/olive
 APP_DATA := app/api/pb_data
 UI_DIST := app/api/internal/webui/dist
 
@@ -142,7 +142,7 @@ test-coverage-app:
 test-coverage-ui: build-sdk-ts
 	npm run coverage --workspace @reviews/ui
 
-# The end-to-end tests start ./bin/reviews-app. See decision 00010.
+# The end-to-end tests start ./bin/olive. See decision 00010.
 # PROJECT runs one Playwright project, such as make test-e2e PROJECT=webkit.
 # E2E_FILE runs the spec files that match it, such as
 # E2E_FILE=e2e/auth.spec.ts. Make also reads it from the environment.
@@ -185,7 +185,7 @@ build-app: build-ui
 # The docker job of CI and developers build the image the same way. See
 # decision 00010.
 build-image:
-	docker build -f deploy/Dockerfile -t reviews-app:local .
+	docker build -f deploy/Dockerfile -t olive:local .
 
 run-app:
 	go run ./app/api serve --dir $(APP_DATA)

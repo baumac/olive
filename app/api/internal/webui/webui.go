@@ -91,7 +91,7 @@ const maxReportBytes = 16 << 10
 
 var placeholder = fstest.MapFS{
 	"index.html": {Data: []byte(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Sponga47 Food</title></head>
+<html lang="en"><head><meta charset="utf-8"><title>Olive, a food journal</title></head>
 <body><p>The UI is not built. Run <code>make build-ui</code>, then start the app again.</p></body></html>
 `)},
 }

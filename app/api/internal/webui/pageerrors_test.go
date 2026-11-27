@@ -9,7 +9,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/baumac/reviews-app/app/api/internal/testapp"
+	"github.com/baumac/olive/app/api/internal/testapp"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 )
@@ -84,7 +84,7 @@ func TestPageMetaDatabaseError(t *testing.T) {
 
 	for _, path := range []string{"/lists/" + list.Id, "/restaurants/" + restaurant.Id + "/reviews/aaaaaaaaaaaaaaa"} {
 		w := get(h, path)
-		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "<title>Sponga47 Food</title>") {
+		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "<title>Olive, a food journal</title>") {
 			t.Errorf("%s: status %d, want the default page:\n%s", path, w.Code, w.Body)
 		}
 	}

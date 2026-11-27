@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baumac/reviews-app/app/api/internal/photocleanup"
-	"github.com/baumac/reviews-app/app/api/internal/testapp"
-	_ "github.com/baumac/reviews-app/app/api/migrations"
+	"github.com/baumac/olive/app/api/internal/photocleanup"
+	"github.com/baumac/olive/app/api/internal/testapp"
+	_ "github.com/baumac/olive/app/api/migrations"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"

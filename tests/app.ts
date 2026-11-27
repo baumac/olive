@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // The path does not depend on the folder that runs Playwright.
-const binary = fileURLToPath(new URL('../bin/reviews-app', import.meta.url))
+const binary = fileURLToPath(new URL('../bin/olive', import.meta.url))
 
 export interface RunningApp {
   baseURL: string

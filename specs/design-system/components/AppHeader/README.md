@@ -6,7 +6,7 @@ Project component. Lives in `@/components/app/AppHeader.vue`, outside `component
 
 - Below `md`: the olive mark alone at 30px, linking to the table, and `UserMenu` at the right end. The sections are in `BottomNav`. The height is `header-height` (60px).
 - From `md`: the logo lockup at 36px, a `nav` with the name "Sections" and the links "Table", "Restaurants" and "Recipes", then "Add review" as the default `Button` and `UserMenu`. The height is `header-height-md` (72px). See decision 00009.
-- Use the light or dark logo file from the Logos group to match the theme. The link's accessible name is "Sponga47 Food, home". It opens `/`, the table.
+- Use the light or dark logo file from the Logos group to match the theme. The link's accessible name is "Olive, home". It opens `/`, the table.
 - A section link is current on each page of its section, such as `/recipes/{id}/reviews/new`. The current link has `aria-current="page"` and the `accent` fill with `accent-foreground` text. The others are `muted-foreground` and turn `foreground` on hover.
 - The section links are pills at least 44px high, with 14px side padding.
 - A signed out visitor has no "Add review". `UserMenu` shows "Sign in". The theme is in the page footer for a signed out person, and in `UserMenu` for a signed in person.

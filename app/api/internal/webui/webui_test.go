@@ -7,7 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/baumac/reviews-app/app/api/internal/testapp"
+	"github.com/baumac/olive/app/api/internal/testapp"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -67,7 +67,7 @@ func TestRegister(t *testing.T) {
 	for _, path := range []string{"/", "/.gitkeep"} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
-		if w.Code != 200 || !strings.Contains(w.Body.String(), "<title>Sponga47 Food</title>") {
+		if w.Code != 200 || !strings.Contains(w.Body.String(), "<title>Olive, a food journal</title>") {
 			t.Errorf("%s: %d %q", path, w.Code, w.Body.String())
 		}
 	}

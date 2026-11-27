@@ -2,7 +2,7 @@
 # See decision 00010 and deploy/README.md.
 services:
   app:
-    image: reviews-app:local
+    image: olive:local
     build:
       context: ..
       dockerfile: deploy/Dockerfile

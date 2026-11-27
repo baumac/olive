@@ -59,6 +59,7 @@ They also find the errors of the AI coding tools early.
 The app has an API and a UI that users use.
 It also has an admin dashboard for admins.
 The app runs on our home server.
+The app is named Olive, a food journal. See decision 00009.
 It is reachable via the public internet at food.sponga47.com.
 
 Each page of the app is public.

@@ -125,7 +125,7 @@ describe('ReviewerPage', () => {
     expect(w.text()).toContain("Luigi's Trattoria")
     expect(w.get('time[datetime="2024-11-06"]').element.parentElement!.textContent).toBe('Visited on 6 Nov 2024')
     expect(list.mock.calls[0]![0]).toMatchObject({ reviewerId: 'u5n1c8r3t6y0b2e', sort: '-date' })
-    expect(document.title).toBe('Ana · Sponga47 Food')
+    expect(document.title).toBe('Ana · Olive')
     await expectAccessible(w.element)
   })
 

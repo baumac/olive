@@ -3,7 +3,7 @@ package publicapi
 import (
 	"testing"
 
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 )
 
 func TestSpecHasTheSessionCookie(t *testing.T) {

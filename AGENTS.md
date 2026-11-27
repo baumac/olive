@@ -4,7 +4,7 @@ Guide for Coding Agents.
 
 ## Project Overview
 
-This project allows users to review a variety of things. It is composed of the following surfaces:
+This project is Olive, a food journal for friends and family. It allows users to review a variety of things. It is composed of the following surfaces:
 - **Public API** for reviewing things with token auth
   - this is implemented and served by the app in the `app/api` directory
 - **Public UI** to interact with the Public API
@@ -38,8 +38,8 @@ make test-ui          # Run the UI tests. Needs Node.js.
 make test-coverage    # Run the Go and UI tests with coverage. Fail below the minimum. Needs Node.js and a C compiler.
 make build-sdk-ts     # Build the TypeScript SDK into specs/api/sdk/client/typescript/dist. Needs Node.js.
 make build-ui         # Build the UI into app/api/internal/webui/dist. Needs Node.js.
-make build-app        # Build the UI, then the app server to ./bin/reviews-app
-make build-image      # Build the Docker image reviews-app:local from deploy/Dockerfile. Needs Docker.
+make build-app        # Build the UI, then the app server to ./bin/olive
+make build-image      # Build the Docker image olive:local from deploy/Dockerfile. Needs Docker.
 make run-app          # Run the app server on 127.0.0.1:8090 with data in app/api/pb_data
 make dev-ui           # Run the Vite dev server. It sends /v1 to make run-app.
 make test-e2e         # Build the app, then run the end-to-end tests in tests/. PROJECT=webkit runs one project. E2E_FILE=e2e/auth.spec.ts runs one file.
@@ -226,7 +226,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - `TagInput` suggests the existing tags from `listTags`. `TagPage.vue` at `/tags/{name}` shows the restaurants and the recipes of a tag. See decision 00011.
   - `HistoryPage.vue` shows the versions. `?undo=NUMBER` of the edit form undoes one version. `lib/history.ts` has the undo. See decision 00004.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00010.
-  - Playwright runs the specs in `tests/e2e` against `./bin/reviews-app` with a new database
+  - Playwright runs the specs in `tests/e2e` against `./bin/olive` with a new database
   - Tests make their data through `@reviews/sdk` and find elements by role and accessible name
   - `api.signUp` confirms and approves the user with the superuser of the test app. `api.signUpPending` only confirms.
   - `api.emailLink` reads the link of an email from the log of the test app. The test app has no mail server.

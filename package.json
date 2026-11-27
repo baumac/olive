@@ -1,5 +1,5 @@
 {
-  "name": "reviews-app",
+  "name": "olive",
   "private": true,
   "workspaces": [
     "app/ui",

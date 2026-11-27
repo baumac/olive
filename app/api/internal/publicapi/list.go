@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/baumac/reviews-app/app/api/internal/subjects"
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	"github.com/baumac/olive/app/api/internal/subjects"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 	"github.com/oapi-codegen/nullable"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"

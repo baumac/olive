@@ -1,4 +1,4 @@
-The design system of the Public UI at food.sponga47.com. Its design is "The Table", a shared food journal: each visit to a restaurant and each cook of a recipe is a dated entry with photos, four scores and a few words. Restaurants and recipes are where the entries meet. Later releases can review other things, so keep restaurant words out of components and put them in screens.
+The design system of Olive, a food journal for friends and family. Its Public UI is at food.sponga47.com. Its design is "The Table", a shared food journal: each visit to a restaurant and each cook of a recipe is a dated entry with photos, four scores and a few words. Restaurants and recipes are where the entries meet. Later releases can review other things, so keep restaurant words out of components and put them in screens.
 
 The system is shadcn-vue with Tailwind CSS v4, as decision 00009 decides. The tokens use the shadcn-vue names on warm paper neutrals. The brand color is an olive green on `primary`, `ring` and `accent`. A saffron disc, the score stamp, shows the overall on photos and on the map. A blue `success` marks confirmations. The ui app has these tokens in `app/ui/src/assets/main.css`.
 
@@ -69,6 +69,6 @@ No icon set of our own. Use `lucide-vue-next`, which shadcn-vue uses: 16px, 2px 
 
 ## Logo
 
-The logo is an olive with a leaf in `primary`, beside the name "Sponga47 Food" in a serif. The files and rules are in the Logos asset group. Use the light or dark file to match the theme. Use the full logo in the page header from `md`. Below `md`, and for the favicon and small spaces, use the mark alone. Do not set the name in Fraunces next to the mark: the logo files have the name as outlines. In running text, write the name as "Sponga47 Food".
+The logo is an olive with a leaf in `primary`, beside the name "Olive" in a serif. The files and rules are in the Logos asset group. Use the light or dark file to match the theme. Use the full logo in the page header from `md`. Below `md`, and for the favicon and small spaces, use the mark alone. Do not set the name in Fraunces next to the mark: the logo files have the name as outlines. In running text, write the name as "Sponga47 Food".
 
 The App icons group has the favicons and home screen icons, made from the mark on a light green tile. The Social group has the share image that shows when someone posts a link. Its README has the `<head>` tags to copy.

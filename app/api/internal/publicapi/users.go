@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"

@@ -1,4 +1,4 @@
-module github.com/baumac/reviews-app/specs/api/sdk/server/go
+module github.com/baumac/olive/specs/api/sdk/server/go
 
 go 1.26.8
 

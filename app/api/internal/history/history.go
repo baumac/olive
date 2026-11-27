@@ -9,8 +9,8 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/baumac/reviews-app/app/api/internal/recordvalues"
-	"github.com/baumac/reviews-app/app/api/internal/subjects"
+	"github.com/baumac/olive/app/api/internal/recordvalues"
+	"github.com/baumac/olive/app/api/internal/subjects"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )

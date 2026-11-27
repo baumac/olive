@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baumac/reviews-app/app/api/internal/subjects"
+	"github.com/baumac/olive/app/api/internal/subjects"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/list"

@@ -176,7 +176,7 @@ A key in the tile URL of a paid server is visible to all users.
 `app/api/internal/publicapi/places.go` has the search.
 - it sends `GET <url>/api?q=<search>&limit=10` to Photon, with `lat` and `lon` for the point
 - the point has one decimal, about 11 km. Users in one city then share the cache entries.
-- the `User-Agent` is `reviews-app` with the Application URL of the PocketBase settings. The operator of the geocoder can then find the operator of the app.
+- the `User-Agent` is `olive` with the Application URL of the PocketBase settings. The operator of the geocoder can then find the operator of the app.
 - the request has a timeout of 5 seconds. The app reads at most 1 MB of the answer.
 - the address is the street with the house number, the postcode with the city, the state, and the country. Missing parts are left out.
 - the app removes the characters that `Address` refuses and cuts the text to 255 characters. A value that fails its schema is left out. The response then cannot fail the validation.

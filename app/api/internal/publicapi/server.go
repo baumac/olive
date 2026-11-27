@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	reviewsapi "github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	reviewsapi "github.com/baumac/olive/specs/api/sdk/server/go"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/pocketbase/pocketbase/core"
 	"golang.org/x/crypto/bcrypt"
@@ -185,7 +185,7 @@ func newServer(app core.App, opts Options, post *postman) (*Server, error) {
 	var places *placeSearch
 	if opts.PlacesURL != "" {
 		// The geocoder can use the URL to contact the operator of the app.
-		userAgent := func() string { return "reviews-app (" + app.Settings().Meta.AppURL + ")" }
+		userAgent := func() string { return "olive (" + app.Settings().Meta.AppURL + ")" }
 		places = newPlaceSearch(opts.PlacesURL, userAgent,
 			cmp.Or(opts.PlaceUpstreamLimit, DefaultOptions.PlaceUpstreamLimit),
 			cmp.Or(opts.PlaceSearchWindow, DefaultOptions.PlaceSearchWindow))

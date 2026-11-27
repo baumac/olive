@@ -23,18 +23,18 @@ COPY app/api app/api
 COPY specs/api/sdk/server/go specs/api/sdk/server/go
 COPY --from=ui /src/app/api/internal/webui/dist app/api/internal/webui/dist
 # PocketBase uses a SQLite driver in Go. The build needs no C compiler.
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/reviews-app ./app/api
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/olive ./app/api
 
 FROM alpine:3.24.4
 RUN apk add --no-cache ca-certificates tzdata \
     && adduser -D -u 10001 reviews \
     && mkdir /pb_data \
     && chown reviews:reviews /pb_data
-COPY --from=build /out/reviews-app /usr/local/bin/reviews-app
+COPY --from=build /out/olive /usr/local/bin/olive
 USER reviews
 VOLUME /pb_data
 EXPOSE 8090
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
     CMD wget -q -O /dev/null http://127.0.0.1:8090/api/health || exit 1
-ENTRYPOINT ["reviews-app"]
+ENTRYPOINT ["olive"]
 CMD ["serve", "--http=0.0.0.0:8090", "--dir=/pb_data", "--encryptionEnv=PB_ENCRYPTION_KEY"]

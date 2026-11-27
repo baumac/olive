@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/baumac/reviews-app/specs/api/sdk/server/go"
+	"github.com/baumac/olive/specs/api/sdk/server/go"
 	"github.com/oapi-codegen/nullable"
 )
 

@@ -1,6 +1,6 @@
-# Sponga47 Food
+# Olive
 
-A shared food journal for a small group of friends and family at food.sponga47.com.
+Olive is a shared food journal for a small group of friends and family. It is hosted at food.sponga47.com.
 Each visit to a restaurant and each cook of a recipe is a dated entry with photos, four scores, and a few words.
 
 One Go binary serves the whole app:
@@ -18,7 +18,7 @@ You need Go, Node.js 22, and Docker.
 
 ```bash
 make install-tools   # vacuum and oapi-codegen into ./bin/tools-<TOOLS_GO of the makefile>
-make build-app       # build the UI and the app to ./bin/reviews-app
+make build-app       # build the UI and the app to ./bin/olive
 make run-app         # serve on http://127.0.0.1:8090 with data in app/api/pb_data
 ```
 

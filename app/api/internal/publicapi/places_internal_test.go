@@ -29,7 +29,7 @@ func TestPlaceSearchCache(t *testing.T) {
 	defer photon.Close()
 
 	url := "https://one.example.com"
-	p := newPlaceSearch(photon.URL, func() string { return "reviews-app (" + url + ")" }, 100, time.Minute)
+	p := newPlaceSearch(photon.URL, func() string { return "olive (" + url + ")" }, 100, time.Minute)
 	now := time.Unix(0, 0)
 	p.now = func() time.Time { return now }
 
@@ -54,7 +54,7 @@ func TestPlaceSearchCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	<-agents
-	if got := <-agents; got != "reviews-app (https://two.example.com)" {
+	if got := <-agents; got != "olive (https://two.example.com)" {
 		t.Errorf("User-Agent %q after a settings change", got)
 	}
 
@@ -143,7 +143,7 @@ func TestPlaceFetchErrors(t *testing.T) {
 	closed := httptest.NewServer(http.NotFoundHandler())
 	closed.Close()
 	for name, base := range map[string]string{"cut JSON": broken.URL, "closed server": closed.URL, "bad URL": "http://bad host"} {
-		p := newPlaceSearch(base, func() string { return "reviews-app" }, 100, time.Minute)
+		p := newPlaceSearch(base, func() string { return "olive" }, 100, time.Minute)
 		if _, err := p.fetch(context.Background(), url.Values{"q": {"cafe"}}); err == nil {
 			t.Errorf("%s: no error", name)
 		}
@@ -160,7 +160,7 @@ func TestPlaceFetchKeepsAtMostMaxPlaces(t *testing.T) {
 		fmt.Fprintf(w, `{"features":[%s]}`, strings.Join(features, ","))
 	}))
 	defer photon.Close()
-	p := newPlaceSearch(photon.URL, func() string { return "reviews-app" }, 100, time.Minute)
+	p := newPlaceSearch(photon.URL, func() string { return "olive" }, 100, time.Minute)
 	places, err := p.fetch(context.Background(), url.Values{"q": {"cafe"}})
 	if err != nil || len(places) != maxPlaces {
 		t.Errorf("%d places, error %v, want %d places", len(places), err, maxPlaces)
