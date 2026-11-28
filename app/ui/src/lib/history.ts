@@ -1,11 +1,12 @@
-import type { Creator, RecipeVersion, RestaurantVersion } from '@reviews/sdk'
+import type { Creator } from '@reviews/sdk'
 import { formatMinutes } from './format'
+import { categoryLabel } from './pantry'
 import { priceLevels } from './restaurantDetails'
-import { type ReviewKind, kinds } from './reviewKinds'
+import { type AnyVersion, type ReviewKind, kinds } from './reviewKinds'
 import { tagList } from './reviews'
 
-// The history of restaurants and recipes. See decision 00004.
-export type AnyVersion = RestaurantVersion | RecipeVersion
+// The history of restaurants, recipes, and pantry items. See decision 00004.
+export type { AnyVersion }
 
 // The properties have the camel case names of the SDK.
 const labels: Record<ReviewKind, Record<string, string>> = {
@@ -29,12 +30,22 @@ const labels: Record<ReviewKind, Record<string, string>> = {
     totalTime: 'Total time',
     servings: 'Servings',
   },
+  pantryItem: {
+    name: 'Name',
+    category: 'Category',
+    producer: 'Producer',
+    origin: 'Origin',
+    style: 'Style',
+    description: 'Description',
+    tags: 'Tags',
+  },
 }
 
 // required has the properties that a patch cannot clear.
 const required: Record<ReviewKind, string[]> = {
   restaurant: ['name', 'location'],
   recipe: ['name', 'ingredients', 'steps'],
+  pantryItem: ['name', 'category'],
 }
 
 export function propertyLabel(kind: ReviewKind, property: string): string {
@@ -67,6 +78,8 @@ export function valueText(property: string, value: unknown): string | string[] |
       return priceLevels.find((l) => l.value === value)?.label ?? String(value)
     case 'totalTime':
       return formatMinutes(value as number)
+    case 'category':
+      return categoryLabel(value as string)
     case 'ingredients':
     case 'steps':
       return value as string[]

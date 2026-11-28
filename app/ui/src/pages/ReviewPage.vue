@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RecipeSummary, Restaurant } from '@reviews/sdk'
+import type { PantryItem, RecipeSummary, Restaurant } from '@reviews/sdk'
 import { ChefHatIcon, PencilIcon, UtensilsIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -7,6 +7,7 @@ import { toast } from 'vue-sonner'
 import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import DateText from '@/components/app/DateText.vue'
 import EntryCard from '@/components/app/EntryCard.vue'
+import PantryItemCard from '@/components/app/PantryItemCard.vue'
 import RecipeCard from '@/components/app/RecipeCard.vue'
 import RestaurantCard from '@/components/app/RestaurantCard.vue'
 import ReviewDate from '@/components/app/ReviewDate.vue'
@@ -21,15 +22,17 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, failureText } from '@/lib/api'
-import { type AnyReview, type Parent, kinds } from '@/lib/reviewKinds'
+import { pantryIcon } from '@/lib/pantry'
+import { type AnyReview, type Parent, type ReviewKind, kinds, subjectKindOf } from '@/lib/reviewKinds'
 import { currentUser } from '@/lib/session'
 
-// The route gives a restaurantId or a recipeId.
-const props = defineProps<{ restaurantId?: string; recipeId?: string; reviewId: string }>()
+// The route gives a restaurantId, a recipeId, or a pantryItemId.
+const props = defineProps<{ restaurantId?: string; recipeId?: string; pantryItemId?: string; reviewId: string }>()
 const router = useRouter()
 
-const kind = computed(() => (props.recipeId !== undefined ? kinds.recipe : kinds.restaurant))
-const parentId = computed(() => (props.recipeId ?? props.restaurantId)!)
+const kind = computed(() => kinds[subjectKindOf(props)])
+const parentId = computed(() => (props.pantryItemId ?? props.recipeId ?? props.restaurantId)!)
+const icons: Record<ReviewKind, typeof UtensilsIcon> = { restaurant: UtensilsIcon, recipe: ChefHatIcon, pantryItem: pantryIcon }
 
 const page = useLoad<{ restaurant: Parent; review: AnyReview }>(async () => {
   const [restaurant, review] = await Promise.all([
@@ -80,7 +83,7 @@ async function remove() {
       <CoverPhoto v-if="firstPhoto" :photo="firstPhoto" size="hero" :alt="firstPhoto.alt ?? ''" class="rounded-2xl" />
       <div class="flex flex-col gap-2">
         <RouterLink :to="restaurantPath" class="kicker flex w-fit items-center gap-1.5 rounded-sm hover:underline">
-          <component :is="kind.kind === 'recipe' ? ChefHatIcon : UtensilsIcon" class="size-4" aria-hidden="true" />{{ page.data.value.restaurant.name }}
+          <component :is="icons[kind.kind]" class="size-4" aria-hidden="true" />{{ page.data.value.restaurant.name }}
         </RouterLink>
         <h1 class="font-serif text-[34px] leading-10 font-semibold tracking-[-0.01em] wrap-anywhere">{{ review.title }}</h1>
         <p class="text-muted-foreground text-sm">
@@ -105,6 +108,7 @@ async function remove() {
       <section class="flex flex-col gap-3" aria-labelledby="subject-heading">
         <h2 id="subject-heading" class="sr-only">The {{ kind.noun }}</h2>
         <RecipeCard v-if="kind.kind === 'recipe'" :recipe="page.data.value.restaurant as RecipeSummary" heading="h3" />
+        <PantryItemCard v-else-if="kind.kind === 'pantryItem'" :item="page.data.value.restaurant as PantryItem" heading="h3" />
         <RestaurantCard v-else :restaurant="page.data.value.restaurant as Restaurant" heading="h3" />
       </section>
       <section v-if="more.data.value?.length" class="flex flex-col gap-3" aria-labelledby="more-heading">

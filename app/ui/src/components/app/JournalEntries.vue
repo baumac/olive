@@ -8,18 +8,18 @@ import { LoadMore } from '@/components/ui/load-more'
 import { Skeleton } from '@/components/ui/skeleton'
 import { type EntryFetch, loadMoreAndFocus, useEntries } from '@/composables/useEntries'
 import { groupByMonth } from '@/lib/entries'
-import { type AnyReview, kinds } from '@/lib/reviewKinds'
+import { type AnyReview, kinds, reviewKinds } from '@/lib/reviewKinds'
 import EntryTile from './EntryTile.vue'
 
-// JournalEntries shows the reviews of both kinds by the month of their date.
-// With both kinds, the order is always the newest date first. See decision
+// JournalEntries shows the reviews of all kinds by the month of their date.
+// With all kinds, the order is always the newest date first. See decision
 // 00006.
 const props = defineProps<{ reviewerId: string; reviewerName?: string }>()
 
 const limit = 20
 const fetchers = (): EntryFetch[] =>
-  [kinds.restaurant, kinds.recipe].map((k) => async (cursor) => {
-    const page = await k.listReviewerReviews(props.reviewerId, { limit, cursor, sort: '-date' })
+  reviewKinds.map((k) => async (cursor) => {
+    const page = await kinds[k].listReviewerReviews(props.reviewerId, { limit, cursor, sort: '-date' })
     return { items: page.items, nextCursor: page.nextCursor }
   })
 
@@ -46,7 +46,7 @@ const entryId = (review: AnyReview) => `entries-${review.id}`
     v-else-if="entries.items.value.length === 0"
     :icon="MessageSquareIcon"
     :title="reviewerName ? 'No reviews yet' : 'You have no reviews yet'"
-    :description="reviewerName ? `${reviewerName} has not written a review yet.` : 'Add your first visit or cook.'"
+    :description="reviewerName ? `${reviewerName} has not written a review yet.` : 'Add your first visit, cook, or tasting.'"
   >
     <template v-if="!reviewerName" #action>
       <Button as-child><RouterLink to="/reviews/new">Add review</RouterLink></Button>

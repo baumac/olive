@@ -15,9 +15,10 @@ import EntryTile from './EntryTile.vue'
 import PagedList from './PagedList.vue'
 import ReviewCard from './ReviewCard.vue'
 
-// Give a parent or a creator. A parent is a restaurant or a recipe of the
-// kind. Its reviews show as a timeline of visits or cooks. Without a parent,
-// the list has the reviews of the creator of the kind as journal tiles.
+// Give a parent or a creator. A parent is a restaurant, a recipe, or a
+// pantry item of the kind. Its reviews show as a timeline of occasions.
+// Without a parent, the list has the reviews of the creator of the kind as
+// journal tiles.
 const props = withDefaults(
   defineProps<{
     parent?: Parent

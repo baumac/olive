@@ -10,28 +10,28 @@ import { signInPath } from '@/composables/useAuth'
 import { listsApi } from '@/lib/api'
 import { tellPendingApproval } from '@/lib/approval'
 import { forgetOwnLists, listFailureText } from '@/lib/lists'
-import { kinds } from '@/lib/reviewKinds'
+import { kinds, subjectKindOf } from '@/lib/reviewKinds'
 import { currentUser } from '@/lib/session'
 
 // The favorites list is not in the menu. The heart of FavoriteButton
-// changes it. Give a restaurantId or a recipeId.
-const props = defineProps<{ restaurantId?: string; recipeId?: string }>()
+// changes it. Give a restaurantId, a recipeId, or a pantryItemId.
+const props = defineProps<{ restaurantId?: string; recipeId?: string; pantryItemId?: string }>()
 
-const kind = computed(() => (props.recipeId !== undefined ? kinds.recipe : kinds.restaurant))
-const itemId = computed(() => (props.recipeId ?? props.restaurantId)!)
+const kindName = computed(() => subjectKindOf(props))
+const kind = computed(() => kinds[kindName.value])
+const itemId = computed(() => (props.pantryItemId ?? props.recipeId ?? props.restaurantId)!)
 
-// has tells if the list has the item. The flag of the kind comes with the
-// parameter of the kind.
+// hasKey is the flag of the kind in a list. It comes with the parameter of
+// the kind.
+const hasKey = computed(() => ({ restaurant: 'hasRestaurant', recipe: 'hasRecipe', pantryItem: 'hasPantryItem' }) as const)
+
+// has tells if the list has the item.
 function has(list: SavedList): boolean {
-  return (props.recipeId !== undefined ? list.hasRecipe : list.hasRestaurant) ?? false
+  return list[hasKey.value[kindName.value]] ?? false
 }
 
 function setHas(list: SavedList, value: boolean) {
-  if (props.recipeId !== undefined) {
-    list.hasRecipe = value
-  } else {
-    list.hasRestaurant = value
-  }
+  list[hasKey.value[kindName.value]] = value
 }
 
 const route = useRoute()
@@ -51,9 +51,12 @@ async function load() {
   }
   state.value = 'loading'
   try {
-    const page = await listsApi.listReviewerLists(
-      props.recipeId !== undefined ? { reviewerId: user.id, recipeEq: props.recipeId } : { reviewerId: user.id, restaurantEq: props.restaurantId },
-    )
+    const page = await listsApi.listReviewerLists({
+      reviewerId: user.id,
+      restaurantEq: props.restaurantId,
+      recipeEq: props.recipeId,
+      pantryItemEq: props.pantryItemId,
+    })
     lists.value = page.items.filter((l) => l.kind === 'custom')
     state.value = 'done'
   } catch {
@@ -97,7 +100,7 @@ async function create() {
     const list = await listsApi.createList({ savedListCreate: { name: name.value.trim() } })
     forgetOwnLists()
     name.value = ''
-    lists.value = [{ ...list, hasRestaurant: false, hasRecipe: false }, ...lists.value]
+    lists.value = [{ ...list, hasRestaurant: false, hasRecipe: false, hasPantryItem: false }, ...lists.value]
     // The list exists also when the add fails. Its checkbox is the retry.
     await toggle(lists.value[0]!, true)
   } catch (e) {

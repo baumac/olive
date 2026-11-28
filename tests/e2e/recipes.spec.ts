@@ -120,7 +120,7 @@ test('a signed in user reviews a recipe', async ({ page, api, user }) => {
   await page.goto(`/reviewers/${user.auth.user.id}?kind=restaurants`)
   await expect(page.getByRole('heading', { name: 'Your journal' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Smooth and quick/ })).toHaveCount(0)
-  await page.getByRole('navigation', { name: 'Restaurants or recipes' }).getByRole('link', { name: 'Recipes' }).click()
+  await page.getByRole('navigation', { name: 'Restaurants, recipes, or the pantry' }).getByRole('link', { name: 'Recipes' }).click()
   await expect(page).toHaveURL(new RegExp(`/reviewers/${user.auth.user.id}\\?kind=recipes$`))
   await expect(page.getByRole('link', { name: `${recipe.name}: Smooth and quick` })).toBeVisible()
 
@@ -187,7 +187,7 @@ test('a recipe goes into the favorites and a list', async ({ page, api, user }) 
   await expect(page.getByText(/1 recipe ·/)).toBeVisible()
   await expect(page.getByRole('heading', { name: recipe.name })).toBeVisible()
   await page.getByRole('button', { name: `Remove ${recipe.name} from the list` }).click()
-  await expect(page.getByText(/No restaurants or recipes yet/)).toBeVisible()
+  await expect(page.getByText(/No restaurants, recipes, or pantry items yet/)).toBeVisible()
 
   await page.goto(`/reviewers/${user.auth.user.id}`)
   await expect(page.getByRole('link', { name: /Favorites/ })).toContainText('1 recipe')

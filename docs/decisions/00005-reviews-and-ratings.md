@@ -103,7 +103,7 @@ A review of a pantry item is a tasting. See decision 00012.
 - a create needs it. A patch can change it.
 - the date must exist. `2026-02-30` gets `422`.
 - the date must be `1900-01-01` or later. It must not be after the current date in UTC+14, the latest time zone. A user anywhere can then use the local date of today.
-- the UI shows "Visited on 14 Nov 2026" or "Cooked on 14 Nov 2026"
+- the UI shows "Visited on 14 Nov 2026", "Cooked on 14 Nov 2026", or "Tasted on 14 Nov 2026"
 
 ## Operations
 
@@ -165,7 +165,7 @@ Two equal values sort by the number of reviewers. More reviewers come first.
 ## The UI
 
 - the restaurant page always has "Add a visit". The recipe page always has "Add a cook". Each opens a new review of the subject.
-- "Add review" of the navigation opens `/reviews/new`, a new review without a subject. The form starts with "What did you eat?" and the choices "I ate out" and "I cooked".
+- "Add review" of the navigation opens `/reviews/new`, a new review without a subject. The form starts with "What did you have?" and the choices "I ate out", "I cooked", and "I tasted". `?kind=recipes` starts with "I cooked", and `?kind=pantry` starts with "I tasted".
 - the restaurant or recipe field searches the existing subjects. With a preferred location, the nearest restaurants come first. See decision 00008.
 - "Add a new restaurant" or "Add a new recipe" below the field saves a draft of the review, then opens the form of decision 00004. After the save, the UI goes back to `/reviews/new` with the new subject and restores the draft.
 - when the place or the source already has a subject, the form of decision 00004 links "Review this restaurant" or "Review this recipe". "Cancel" also goes back to `/reviews/new`.

@@ -7,7 +7,7 @@ export interface AddedPhoto {
   altSaved: boolean
 }
 
-// addPhoto adds a photo to the review of a restaurant or a recipe.
+// addPhoto adds a photo to a review of any kind.
 export async function addPhoto(
   parentId: string,
   reviewId: string,

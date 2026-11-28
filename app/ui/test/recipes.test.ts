@@ -9,7 +9,7 @@ import RecipeCard from '@/components/app/RecipeCard.vue'
 import RecipeDetails from '@/components/app/RecipeDetails.vue'
 import ReviewCard from '@/components/app/ReviewCard.vue'
 import SaveToListMenu from '@/components/app/SaveToListMenu.vue'
-import { listsApi, recipesApi, restaurantsApi, reviewersApi } from '@/lib/api'
+import { listsApi, pantryApi, recipesApi, restaurantsApi, reviewersApi } from '@/lib/api'
 import { formatMinutes, formatScore } from '@/lib/format'
 import { listCountText } from '@/lib/lists'
 import { recipeFilterParams } from '@/lib/recipeFilters'
@@ -125,9 +125,9 @@ describe('recipe helpers', () => {
   })
 
   it('names the items of a list', () => {
-    expect(listCountText({ restaurantCount: 2, recipeCount: 0 })).toBe('2 restaurants')
-    expect(listCountText({ restaurantCount: 0, recipeCount: 1 })).toBe('1 recipe')
-    expect(listCountText({ restaurantCount: 1, recipeCount: 3 })).toBe('1 restaurant, 3 recipes')
+    expect(listCountText({ restaurantCount: 2, recipeCount: 0, pantryItemCount: 0 })).toBe('2 restaurants')
+    expect(listCountText({ restaurantCount: 0, recipeCount: 1, pantryItemCount: 0 })).toBe('1 recipe')
+    expect(listCountText({ restaurantCount: 1, recipeCount: 3, pantryItemCount: 0 })).toBe('1 restaurant, 3 recipes')
   })
 })
 
@@ -177,11 +177,12 @@ describe('KindSwitch and AppHeader', () => {
     const router = await routerAt(`/reviewers/${ana.id}?kind=recipes`)
     const w = mount(KindSwitch, { props: { kind: 'recipe', label: 'Reviews of' }, global: { plugins: [router] }, attachTo: attach() })
     const links = w.findAll('a')
-    expect(links.map((a) => a.text())).toEqual(['All', 'Restaurants', 'Recipes'])
+    expect(links.map((a) => a.text())).toEqual(['All', 'Restaurants', 'Recipes', 'Pantry'])
     expect(links[2]!.attributes('aria-current')).toBe('page')
     expect(links[0]!.attributes('href')).toBe(`/reviewers/${ana.id}`)
     expect(links[1]!.attributes('href')).toBe(`/reviewers/${ana.id}?kind=restaurants`)
     expect(links[2]!.attributes('href')).toBe(`/reviewers/${ana.id}?kind=recipes`)
+    expect(links[3]!.attributes('href')).toBe(`/reviewers/${ana.id}?kind=pantry`)
     await expectAccessible(w.element)
   })
 
@@ -192,6 +193,7 @@ describe('KindSwitch and AppHeader', () => {
       ['Table', undefined],
       ['Restaurants', undefined],
       ['Recipes', 'page'],
+      ['Pantry', undefined],
     ])
   })
 })
@@ -287,6 +289,7 @@ describe('recipe parts of the list and reviewer pages', () => {
     vi.spyOn(listsApi, 'getList').mockResolvedValue(list)
     vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [], nextCursor: null })
     const recipes = vi.spyOn(recipesApi, 'listRecipes').mockResolvedValue({ items: [recipe], nextCursor: null })
+    vi.spyOn(pantryApi, 'listPantryItems').mockResolvedValue({ items: [], nextCursor: null })
     const remove = vi.spyOn(listsApi, 'removeListRecipe').mockResolvedValue()
     const w = mount(ListPage, { props: { listId: list.id }, global: { plugins: [await routerAt(`/lists/${list.id}`)] }, attachTo: attach() })
     await flushPromises()
@@ -298,7 +301,7 @@ describe('recipe parts of the list and reviewer pages', () => {
     await w.get(`button[aria-label="Remove ${recipe.name} from the list"]`).trigger('click')
     await flushPromises()
     expect(remove).toHaveBeenCalledWith({ listRef: list.id, recipeId: recipe.id })
-    expect(w.text()).toContain('No restaurants or recipes yet')
+    expect(w.text()).toContain('No restaurants, recipes, or pantry items yet')
   })
 
   it('shows the recipe average and the recipes of a reviewer', async () => {
@@ -323,7 +326,7 @@ describe('recipe parts of the list and reviewer pages', () => {
     const w = mount(ReviewerPage, { props: { reviewerId: ana.id }, global: { plugins: [await routerAt(`/reviewers/${ana.id}?kind=recipes`)] }, attachTo: attach() })
     await flushPromises()
     expect(w.find('[aria-label="Average recipe score: 7.5 out of 10"]').exists()).toBe(true)
-    expect(w.text()).toContain('0 visits · 2 cooks · 1 list')
+    expect(w.text()).toContain('0 visits · 2 cooks · 0 tastings · 1 list')
     expect(w.findAll('h2').map((h) => h.text())).toContain('Recipes added')
     expect(added.mock.calls[0]![0]).toMatchObject({ creatorEq: ana.id, sort: '-created' })
     expect(w.get('h3 a').attributes('href')).toBe(`/recipes/${recipe.id}`)

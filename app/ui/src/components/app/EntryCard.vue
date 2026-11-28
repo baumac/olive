@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChefHatIcon, UtensilsIcon } from 'lucide-vue-next'
+import { pantryIcon } from '@/lib/pantry'
 import { computed } from 'vue'
 import { CoverPhoto } from '@/components/ui/cover-photo'
 import { RatingDisplay } from '@/components/ui/rating-display'
@@ -16,7 +17,8 @@ const props = withDefaults(defineProps<{ review: AnyReview; variant?: 'photo' | 
 
 const photo = computed(() => props.review.photos[0] ?? null)
 const shape = computed(() => props.variant ?? (photo.value ? 'photo' : 'row'))
-const icon = computed(() => (kindOf(props.review) === 'recipe' ? ChefHatIcon : UtensilsIcon))
+const icons = { restaurant: UtensilsIcon, recipe: ChefHatIcon, pantryItem: pantryIcon }
+const icon = computed(() => icons[kindOf(props.review)])
 const subject = computed(() => parentNameOf(props.review))
 </script>
 

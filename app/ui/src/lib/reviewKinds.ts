@@ -1,4 +1,9 @@
 import type {
+  PantryItem,
+  PantryItemPhoto,
+  PantryItemReview,
+  PantryItemReviewCreate,
+  PantryItemVersion,
   Photo,
   Recipe,
   RecipePhoto,
@@ -12,15 +17,17 @@ import type {
   RestaurantReviewCreate,
   RestaurantVersion,
 } from '@reviews/sdk'
-import { listsApi, recipesApi, restaurantsApi, reviewersApi } from './api'
-import { type ScoreField, recipeScoreFields, scoreFields } from './reviews'
+import { listsApi, pantryApi, recipesApi, restaurantsApi, reviewersApi } from './api'
+import { type ScoreField, pantryItemScoreFields, recipeScoreFields, scoreFields } from './reviews'
 
-// A review kind is a kind of thing that users review. See decision 00004.
-export type ReviewKind = 'restaurant' | 'recipe'
-export type AnyReview = RestaurantReview | RecipeReview
-export type Parent = Restaurant | Recipe
-export type ParentSummary = Restaurant | RecipeSummary
-export type ParentPhoto = RestaurantPhoto | RecipePhoto
+// A review kind is a kind of thing that users review. See decisions 00004
+// and 00012.
+export type ReviewKind = 'restaurant' | 'recipe' | 'pantryItem'
+export type AnyReview = RestaurantReview | RecipeReview | PantryItemReview
+export type Parent = Restaurant | Recipe | PantryItem
+export type ParentSummary = Restaurant | RecipeSummary | PantryItem
+export type ParentPhoto = RestaurantPhoto | RecipePhoto | PantryItemPhoto
+export type AnyVersion = RestaurantVersion | RecipeVersion | PantryItemVersion
 
 export interface ReviewFields {
   // date is the day of the visit or the cook, such as 2024-11-04.
@@ -43,18 +50,23 @@ export interface KindInfo {
   kind: ReviewKind
   noun: string
   plural: string
+  // label is the noun at the start of a label, such as "Pantry item".
+  label: string
   // path is the path of the list page, such as /restaurants.
   path: string
+  // query is the value of kind in the URL of the table, the journal, and
+  // the tag page.
+  query: string
   // dateLabel names the date of a review. See decision 00005.
   dateLabel: string
-  // occasion is the noun of one visit or one cook.
+  // occasion is the noun of one visit, one cook, or one tasting.
   occasion: string
   scoreFields: ScoreField[]
   getParent(id: string): Promise<Parent>
   getReview(parentId: string, reviewId: string): Promise<AnyReview>
   listReviews(parentId: string, params: ListParams): Promise<Page<AnyReview>>
   listReviewerReviews(reviewerId: string, params: ListParams): Promise<Page<AnyReview>>
-  // listAdded lists the restaurants or the recipes that a user created.
+  // listAdded lists the parents that a user created.
   listAdded(creatorId: string, params: { limit?: number; cursor?: string; sort?: string }): Promise<Page<ParentSummary>>
   createReview(parentId: string, review: ReviewFields): Promise<AnyReview>
   updateReview(parentId: string, reviewId: string, review: ReviewFields): Promise<AnyReview>
@@ -68,7 +80,7 @@ export interface KindInfo {
   addToList(listRef: string, id: string): Promise<void>
   removeFromList(listRef: string, id: string): Promise<void>
   // listVersions lists the history, the newest first. See decision 00004.
-  listVersions(parentId: string, params: { limit?: number; cursor?: string }): Promise<Page<RestaurantVersion | RecipeVersion>>
+  listVersions(parentId: string, params: { limit?: number; cursor?: string }): Promise<Page<AnyVersion>>
 }
 
 // The score fields of the SDK have the type any. These builders name each
@@ -81,6 +93,10 @@ function recipeScores(s: Record<string, number>): Omit<RecipeReviewCreate, 'date
   return { taste: s.taste, ease: s.ease, instructions: s.instructions, value: s.value }
 }
 
+function pantryItemScores(s: Record<string, number>): Omit<PantryItemReviewCreate, 'date' | 'title'> {
+  return { taste: s.taste, aroma: s.aroma, texture: s.texture, value: s.value }
+}
+
 function contentType(file: File) {
   return async ({ init }: { init: RequestInit }) => ({ headers: { ...(init.headers as Record<string, string>), 'Content-Type': file.type } })
 }
@@ -89,7 +105,9 @@ const restaurant: KindInfo = {
   kind: 'restaurant',
   noun: 'restaurant',
   plural: 'restaurants',
+  label: 'Restaurant',
   path: '/restaurants',
+  query: 'restaurants',
   dateLabel: 'Visited on',
   occasion: 'visit',
   scoreFields,
@@ -120,7 +138,9 @@ const recipe: KindInfo = {
   kind: 'recipe',
   noun: 'recipe',
   plural: 'recipes',
+  label: 'Recipe',
   path: '/recipes',
+  query: 'recipes',
   dateLabel: 'Cooked on',
   occasion: 'cook',
   scoreFields: recipeScoreFields,
@@ -144,17 +164,77 @@ const recipe: KindInfo = {
   listVersions: (recipeId, params) => recipesApi.listRecipeVersions({ recipeId, ...params }),
 }
 
-export const kinds: Record<ReviewKind, KindInfo> = { restaurant, recipe }
+const pantryItem: KindInfo = {
+  kind: 'pantryItem',
+  noun: 'pantry item',
+  plural: 'pantry items',
+  label: 'Pantry item',
+  path: '/pantry',
+  query: 'pantry',
+  dateLabel: 'Tasted on',
+  occasion: 'tasting',
+  scoreFields: pantryItemScoreFields,
+  getParent: (pantryItemId) => pantryApi.getPantryItem({ pantryItemId }),
+  getReview: (pantryItemId, reviewId) => pantryApi.getPantryItemReview({ pantryItemId, reviewId }),
+  listReviews: (pantryItemId, params) => pantryApi.listPantryItemReviews({ pantryItemId, ...params }),
+  listReviewerReviews: (reviewerId, params) => reviewersApi.listReviewerPantryItemReviews({ reviewerId, ...params }),
+  listAdded: (creatorEq, params) => pantryApi.listPantryItems({ creatorEq, ...params }),
+  createReview: (pantryItemId, { date, scores, title, feedback }) =>
+    pantryApi.createPantryItemReview({
+      pantryItemId,
+      pantryItemReviewCreate: { date, ...pantryItemScores(scores), title, feedback: feedback ?? undefined },
+    }),
+  updateReview: (pantryItemId, reviewId, { date, scores, title, feedback }) =>
+    pantryApi.updatePantryItemReview({ pantryItemId, reviewId, pantryItemReviewPatch: { date, ...pantryItemScores(scores), title, feedback } }),
+  deleteReview: (pantryItemId, reviewId) => pantryApi.deletePantryItemReview({ pantryItemId, reviewId }),
+  addPhoto: (pantryItemId, reviewId, file) => pantryApi.addPantryItemReviewPhoto({ pantryItemId, reviewId, body: file }, contentType(file)),
+  updatePhoto: (pantryItemId, reviewId, photoId, alt) =>
+    pantryApi.updatePantryItemReviewPhoto({ pantryItemId, reviewId, photoId, photoPatch: { alt } }),
+  deletePhoto: (pantryItemId, reviewId, photoId) => pantryApi.deletePantryItemReviewPhoto({ pantryItemId, reviewId, photoId }),
+  listPhotos: (pantryItemId, params) => pantryApi.listPantryItemPhotos({ pantryItemId, ...params }),
+  addToList: (listRef, pantryItemId) => listsApi.addListPantryItem({ listRef, pantryItemId }),
+  removeFromList: (listRef, pantryItemId) => listsApi.removeListPantryItem({ listRef, pantryItemId }),
+  listVersions: (pantryItemId, params) => pantryApi.listPantryItemVersions({ pantryItemId, ...params }),
+}
+
+export const kinds: Record<ReviewKind, KindInfo> = { restaurant, recipe, pantryItem }
+
+// reviewKinds has the kinds in the order of the navigation.
+export const reviewKinds: ReviewKind[] = ['restaurant', 'recipe', 'pantryItem']
+
+// kindOfQuery reads the kind of a kind parameter in the URL, such as
+// kind=pantry. Other values give undefined.
+export function kindOfQuery(value: unknown): ReviewKind | undefined {
+  return reviewKinds.find((k) => kinds[k].query === value)
+}
+
+// subjectKindOf gives the kind of the ID prop of a component. A component
+// gets one of the three.
+export function subjectKindOf(ids: { restaurantId?: string; recipeId?: string; pantryItemId?: string }): ReviewKind {
+  if (ids.pantryItemId !== undefined) {
+    return 'pantryItem'
+  }
+  return ids.recipeId !== undefined ? 'recipe' : 'restaurant'
+}
 
 export function kindOf(review: AnyReview): ReviewKind {
+  if ('pantryItem' in review) {
+    return 'pantryItem'
+  }
   return 'recipe' in review ? 'recipe' : 'restaurant'
 }
 
 export function parentIdOf(review: AnyReview): string {
+  if ('pantryItem' in review) {
+    return review.pantryItem
+  }
   return 'recipe' in review ? review.recipe : review.restaurant
 }
 
 export function parentNameOf(review: AnyReview): string {
+  if ('pantryItem' in review) {
+    return review.pantryItemName
+  }
   return 'recipe' in review ? review.recipeName : review.restaurantName
 }
 

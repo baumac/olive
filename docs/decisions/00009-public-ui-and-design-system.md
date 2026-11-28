@@ -116,18 +116,18 @@ A new component goes into the set only when a screen needs it.
 
 ## Navigation
 
-- below the `md` breakpoint, a bottom bar has "Table", "Restaurants", "Add review", "Recipes", and "You". "Add review" is a round olive button in the middle.
-- below `md`, the header has the logo and the account menu. The account menu has the account page, the theme, and "Sign out".
-- from `md`, the header has the logo, "Table", "Restaurants", "Recipes", the "Add review" button, and the account menu. The account menu has "You".
+- below the `md` breakpoint, a bottom bar has "Table", "Restaurants", "Add review", "Recipes", and "Pantry". "Add review" is a round olive button in the middle. "You" is in the account menu. Five slots then fit at 375px. See decision 00012.
+- below `md`, the header has the logo and the account menu. The account menu has "You", the account page, the theme, and "Sign out".
+- from `md`, the header has the logo, "Table", "Restaurants", "Recipes", "Pantry", the "Add review" button, and the account menu. The account menu has "You".
 - a signed out visitor has no "Add review" and no "You". The header has "Sign in".
-- `/` opens the table. `/restaurants` and `/recipes` open the lists of the subjects.
+- `/` opens the table. `/restaurants`, `/recipes`, and `/pantry` open the lists of the subjects.
 - "You" opens the journal of the signed in user. See decision 00006.
 - each screen has one `h1`. The heading of a list screen can be visually hidden.
 
 ## The table
 
-- the heading is "On the table", with the day above it and "What everyone ate and cooked lately." below it
-- "All", "Ate out", and "Cooked" select the kinds. `?kind=restaurants` and `?kind=recipes` keep the selection in the URL.
+- the heading is "On the table", with the day above it and "What everyone ate, cooked, and tasted lately." below it
+- "All", "Ate out", "Cooked", and "Tasted" select the kinds. `?kind=restaurants`, `?kind=recipes`, and `?kind=pantry` keep the selection in the URL.
 - the groups are "Past week", then the months, such as "Earlier in November" and "October 2026". The group comes from `created`, the time the review was written. A late review of an old dinner is then at the top, with its own "Visited on" date.
 - an entry with photos shows the first photo with the score stamp. An entry without photos is a short row with the overall on the right.
 - an entry shows the subject, the title, the reviewer, and "Visited on 20 Nov 2026" or "Cooked on 22 Nov 2026"
@@ -240,7 +240,8 @@ A new component goes into the set only when a screen needs it.
 - `RatingInput` links the description and the ends to the group. Hidden words make "1 means poor value. 10 means great value." for a screen reader. Each of the ten segments is at least 32 by 44 px.
 - `ScoreSummary` is the score block. It is a `dl` with a `dt` and a `dd` for each score. The leader is an `aria-hidden` element between them.
 - `VisitorNote` is the note for a signed out visitor on shared pages
-- `KindSwitch` has the values "All", restaurants, and recipes. Each value is a link, so each has its own URL.
+- `KindSwitch` has the values "All", restaurants, recipes, and the pantry. Each value is a link, so each has its own URL.
+- the Pantry has a row of category chips above `FilterBar`. Each chip is a link with `?category=`. A filter change keeps the category.
 - `ParentCard` makes the link cover the row with an `after` element. The heart has `z-10` above it.
 - `ReviewCard` is an `article`
 - `FilterBar` has an `end` slot. The label of the sort is `sr-only`.
@@ -252,7 +253,7 @@ A new component goes into the set only when a screen needs it.
 
 ## The table
 
-- `useEntries` loads `listAllRestaurantReviews` and `listAllRecipeReviews` with `sort=-created`. Each source keeps its own cursor.
+- `useEntries` loads `listAllRestaurantReviews`, `listAllRecipeReviews`, and `listAllPantryItemReviews` with `sort=-created`. Each source keeps its own cursor.
 - it merges the loaded entries by the key of the sort, the newest first. The table uses `-created`. The journal uses `-date`, which sorts by `date`, then `created`.
 - with both sources, the order is always this key. The sort control and the score filters need one kind.
 - the merged list ends where a source runs out of loaded entries but has more pages. Each shown entry is then in its final place.

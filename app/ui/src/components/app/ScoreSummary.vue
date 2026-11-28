@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { RecipeRating, RestaurantRating } from '@reviews/sdk'
+import type { PantryItemRating, RecipeRating, RestaurantRating } from '@reviews/sdk'
 import { computed } from 'vue'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { type AnyReview, type ReviewKind, kinds, scoreOf } from '@/lib/reviewKinds'
 
 // The default slot adds a line under "out of 10", such as the review count.
 // A rating does not tell its kind. Each caller gives it.
-const props = defineProps<{ scores: AnyReview | RestaurantRating | RecipeRating; kind: ReviewKind }>()
+const props = defineProps<{ scores: AnyReview | RestaurantRating | RecipeRating | PantryItemRating; kind: ReviewKind }>()
 
 const max = 10
 const fields = computed(() => kinds[props.kind].scoreFields)

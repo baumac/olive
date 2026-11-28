@@ -11,10 +11,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { type EntryFetch, loadMoreAndFocus, useEntries } from '@/composables/useEntries'
 import { useKindQuery } from '@/composables/useKindQuery'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { recipesApi, restaurantsApi } from '@/lib/api'
+import { pantryApi, recipesApi, restaurantsApi } from '@/lib/api'
 import { groupByWritten } from '@/lib/entries'
 import { formatCount } from '@/lib/format'
-import type { AnyReview } from '@/lib/reviewKinds'
+import type { AnyReview, ReviewKind } from '@/lib/reviewKinds'
 import { currentUser } from '@/lib/session'
 
 usePageTitle('On the table')
@@ -32,9 +32,14 @@ const recipeReviews: EntryFetch = async (cursor) => {
   const page = await recipesApi.listAllRecipeReviews({ limit, cursor, sort: '-created' })
   return { items: page.items, nextCursor: page.nextCursor }
 }
+const pantryItemReviews: EntryFetch = async (cursor) => {
+  const page = await pantryApi.listAllPantryItemReviews({ limit, cursor, sort: '-created' })
+  return { items: page.items, nextCursor: page.nextCursor }
+}
+const sources: Record<ReviewKind, EntryFetch> = { restaurant: restaurantReviews, recipe: recipeReviews, pantryItem: pantryItemReviews }
 
 const entries = useEntries(
-  () => (kind.value === 'restaurant' ? [restaurantReviews] : kind.value === 'recipe' ? [recipeReviews] : [restaurantReviews, recipeReviews]),
+  () => (kind.value === 'all' ? Object.values(sources) : [sources[kind.value]]),
   () => 'created',
 )
 watch(kind, () => void entries.reload(), { immediate: true })
@@ -57,15 +62,15 @@ const status = computed(() => {
     <header class="flex flex-col gap-1.5">
       <p class="text-muted-foreground text-sm font-semibold [font-variant-caps:all-small-caps] tracking-[0.08em]">{{ today }}</p>
       <h1 class="font-serif text-[34px] leading-10 font-semibold tracking-[-0.01em] md:text-[46px] md:leading-[50px]">On the table</h1>
-      <p class="text-muted-foreground text-[15px] leading-[22px] md:text-[17px]">What everyone ate and cooked lately.</p>
+      <p class="text-muted-foreground text-[15px] leading-[22px] md:text-[17px]">What everyone ate, cooked, and tasted lately.</p>
     </header>
     <p v-if="!currentUser" class="text-muted-foreground max-w-2xl">
-      These are the latest visits and cooks of a small group of friends and family. Each score goes from 1 to 10, and a higher
+      These are the latest visits, cooks, and tastings of a small group of friends and family. Each score goes from 1 to 10, and a higher
       score is always better.
       <RouterLink to="/sign-up" class="text-foreground font-medium underline underline-offset-4">Sign up</RouterLink>
       to add your own.
     </p>
-    <KindSwitch :kind="kind" label="Show" :labels="{ all: 'All', restaurant: 'Ate out', recipe: 'Cooked' }" />
+    <KindSwitch :kind="kind" label="Show" :labels="{ all: 'All', restaurant: 'Ate out', recipe: 'Cooked', pantryItem: 'Tasted' }" />
     <p role="status" class="sr-only">{{ status }}</p>
 
     <Alert v-if="entries.failed.value" variant="destructive">
@@ -83,7 +88,7 @@ const status = computed(() => {
       v-else-if="entries.items.value.length === 0"
       :icon="MessageSquareIcon"
       title="Nothing on the table yet"
-      description="The first visit or cook shows here."
+      description="The first visit, cook, or tasting shows here."
     >
       <template v-if="currentUser" #action>
         <Button as-child><RouterLink to="/reviews/new">Add review</RouterLink></Button>

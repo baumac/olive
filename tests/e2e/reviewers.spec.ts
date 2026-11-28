@@ -17,7 +17,7 @@ test('a review card shows the overall score and links the reviewer page', async 
   await expect(page).toHaveURL(new RegExp(`/reviewers/${ana.auth.user.id}$`))
   await expect(page.getByRole('heading', { name: 'Ana', level: 1 })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Average restaurant score: 4.8 out of 10' })).toBeVisible()
-  await expect(page.getByText('2 visits · 0 cooks · 1 list', { exact: true })).toBeVisible()
+  await expect(page.getByText('2 visits · 0 cooks · 0 tastings · 1 list', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Restaurants added' })).toHaveCount(0)
   const tiles = page.getByRole('region', { name: 'Journal' }).getByRole('heading', { level: 4 })
   await expect(tiles).toHaveText([/^Overall Grill: Ana does not/, /^Overall Kitchen: Ana likes it/])
@@ -51,7 +51,7 @@ test('a reviewer page lists the restaurants or the recipes that the reviewer add
   await api.createReview(ana, first.id, { space: 7, service: 9, food: 8, price: 6, title: 'Ana likes it' })
 
   await page.goto(`/reviewers/${joe.auth.user.id}`)
-  await expect(page.getByText('0 visits · 0 cooks · 1 list', { exact: true })).toBeVisible()
+  await expect(page.getByText('0 visits · 0 cooks · 0 tastings · 1 list', { exact: true })).toBeVisible()
   const headings = page.getByRole('heading', { level: 2 })
   await expect(headings).toHaveText(['Lists', 'Restaurants added', 'Recipes added', 'Journal', 'Joe keeps food notes here'])
   const section = page.getByRole('region', { name: 'Restaurants added' })

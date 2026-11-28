@@ -35,7 +35,6 @@ In scope:
 Out of scope:
 - The choice of technology. Later decisions cover it. See [Implementation Details](#implementation-details).
 - Specifying the exact things that can be reviewed
-- Wines and cheeses in the first release. The first release has restaurants and recipes. A later decision can add them. The backlog has them under "For the Future".
 - Self-hosted maps and place search in the first release. The first release uses the free public Photon server of Komoot and the tile server of OpenStreetMap. These servers get the search text and the IP address of users. A later decision can move them to our home server. The backlog has this under "For the Future".
 - Private or unlisted reviews and lists. All data is public, so a shared link works for each person. A user who wants less exposure can use a nickname as the name.
 - Social features, such as comments, likes, follows, and messages. The users are few and talk to each other in other ways.
@@ -69,7 +68,7 @@ Only approved users can write.
 Search engines and AI crawlers that obey robots.txt do not get the pages. See decision 00002.
 
 New concepts:
-- **Subjects**: a thing that users review. The first release has restaurants and recipes. Decision 00004 gives the pattern for more kinds, such as wines and cheeses.
+- **Subjects**: a thing that users review. The first release has restaurants and recipes. Decision 00004 gives the pattern for more kinds. Decision 00012 adds pantry items: wines, beers, cheeses, and chocolates.
 - **Review**: the scores, the text, and the photos of one user for one subject.
 - **Reviewer**: a user who writes reviews. Each reviewer has a public profile page.
 - **List**: a named group of subjects. Each user has a favorites list.

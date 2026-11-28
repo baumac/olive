@@ -64,7 +64,8 @@ Out of scope:
 
 - the profile has no email address and no timestamps
 - an average is the average of the `overall` values of the reviews of the user, rounded to one decimal. It is `null` without reviews.
-- `restaurant_count`, `recipe_count`, and `pantry_item_count` count the subjects with the user as their creator. `listRestaurants` with `creator[eq]` lists them. The pantry items are the subjects of decision 00012.
+- `restaurant_count`, `recipe_count`, and `pantry_item_count` count the subjects with the user as their creator. `listRestaurants` with `creator[eq]` lists them.
+- the journal reads like "12 visits · 4 cooks · 3 tastings · 2 lists". The pantry items are the subjects of decision 00012.
 - an unknown user, a deleted user, and a user who waits for approval get `404`
 
 | Operation | Route |

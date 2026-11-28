@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import type { KindChoice } from '@/composables/useKindQuery'
+import { kinds, reviewKinds } from '@/lib/reviewKinds'
 
 // KindSwitch selects all entries or the entries of one kind. The kind is in
-// the URL. A switch drops the filters of the other kind.
+// the URL. A switch drops the filters of the other kinds.
 withDefaults(
   defineProps<{ kind: KindChoice; label: string; labels?: Record<KindChoice, string> }>(),
-  { labels: () => ({ all: 'All', restaurant: 'Restaurants', recipe: 'Recipes' }) },
+  { labels: () => ({ all: 'All', restaurant: 'Restaurants', recipe: 'Recipes', pantryItem: 'Pantry' }) },
 )
 
 const route = useRoute()
-const options: KindChoice[] = ['all', 'restaurant', 'recipe']
-const queries: Record<KindChoice, string> = { all: '', restaurant: '?kind=restaurants', recipe: '?kind=recipes' }
+const options: KindChoice[] = ['all', ...reviewKinds]
+
+function queryOf(choice: KindChoice): string {
+  return choice === 'all' ? '' : `?kind=${kinds[choice].query}`
+}
 </script>
 
 <template>
@@ -19,7 +23,7 @@ const queries: Record<KindChoice, string> = { all: '', restaurant: '?kind=restau
     <RouterLink
       v-for="o in options"
       :key="o"
-      :to="`${route.path}${queries[o]}`"
+      :to="`${route.path}${queryOf(o)}`"
       replace
       :aria-current="kind === o ? 'page' : undefined"
       :class="[

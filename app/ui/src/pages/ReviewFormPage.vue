@@ -18,20 +18,27 @@ import { apiFailure, fieldErrors, notApprovedText, writeLimitText } from '@/lib/
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { addPhoto, keepPendingPhotos, takePendingPhotos } from '@/lib/photos'
 import { formatDay, formatScore, localDay, parseDay } from '@/lib/format'
-import { type AnyReview, type Parent, kinds, scoreOf } from '@/lib/reviewKinds'
+import { type AnyReview, type Parent, type ReviewKind, kinds, scoreOf, subjectKindOf } from '@/lib/reviewKinds'
 import { overallOf } from '@/lib/reviews'
 import { currentUser } from '@/lib/session'
 import { checkLongText, checkName, checkReviewDay, firstReviewDay, maxPhotos } from '@/lib/validation'
 
-// The route gives a restaurantId or a recipeId. NewReviewPage embeds the
-// form with its own draft key. See decision 00005.
-const props = defineProps<{ restaurantId?: string; recipeId?: string; reviewId?: string; embedded?: boolean; draftName?: string }>()
+// The route gives a restaurantId, a recipeId, or a pantryItemId.
+// NewReviewPage embeds the form with its own draft key. See decision 00005.
+const props = defineProps<{
+  restaurantId?: string
+  recipeId?: string
+  pantryItemId?: string
+  reviewId?: string
+  embedded?: boolean
+  draftName?: string
+}>()
 // busyRetryAfter is the longest Retry-After in seconds of a busy server.
 const busyRetryAfter = 10
 const router = useRouter()
 
-const kind = props.recipeId !== undefined ? kinds.recipe : kinds.restaurant
-const parentId = (props.recipeId ?? props.restaurantId)!
+const kind = kinds[subjectKindOf(props)]
+const parentId = (props.pantryItemId ?? props.recipeId ?? props.restaurantId)!
 const scoreFields = kind.scoreFields
 
 const editing = computed(() => props.reviewId !== undefined)
@@ -73,8 +80,15 @@ const photoCount = computed(() => (saved.value?.photos.length ?? 0) + queued.val
 
 const overall = computed(() => overallOf(fields.value.scores, scoreFields))
 
-// A restaurant draft keeps its old key. A recipe draft has the kind.
-const draftKey = computed(() => props.draftName ?? `${kind.kind === 'recipe' ? 'recipe-review' : 'review'}:${parentId}:${props.reviewId ?? 'new'}`)
+// A restaurant draft keeps its old key. The drafts of other kinds have the
+// kind.
+const draftPrefixes: Record<ReviewKind, string> = { restaurant: 'review', recipe: 'recipe-review', pantryItem: 'pantry-item-review' }
+const draftKey = computed(() => props.draftName ?? `${draftPrefixes[kind.kind]}:${parentId}:${props.reviewId ?? 'new'}`)
+const titlePlaceholders: Record<ReviewKind, string> = {
+  restaurant: 'Best carbonara in town',
+  recipe: 'A quick weekend breakfast',
+  pantryItem: 'A light white for a warm evening',
+}
 const restaurantPath = computed(() => `${kind.path}/${parentId}`)
 
 onMounted(async () => {
@@ -382,7 +396,7 @@ async function submit() {
             name="title"
             maxlength="255"
             required
-            :placeholder="kind.kind === 'recipe' ? 'A quick weekend breakfast' : 'Best carbonara in town'"
+            :placeholder="titlePlaceholders[kind.kind]"
           />
         </FormControl>
         <FormMessage />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RecipeSummary, Restaurant, SavedList } from '@reviews/sdk'
+import type { PantryItem, RecipeSummary, Restaurant, SavedList } from '@reviews/sdk'
 import { ChevronRightIcon } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input'
 import { RatingDisplay } from '@/components/ui/rating-display'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
-import { listsApi, recipesApi, restaurantsApi } from '@/lib/api'
-import { forgetOwnLists, listCountText, listFailureText } from '@/lib/lists'
+import { listsApi, pantryApi, recipesApi, restaurantsApi } from '@/lib/api'
+import { forgetOwnLists, itemCountOf, listCountText, listFailureText } from '@/lib/lists'
 import { pendingApproval } from '@/lib/session'
 
 // JournalLists shows the favorites as cards and the other lists as rows.
@@ -24,7 +24,7 @@ watch(() => props.reviewerId, () => void lists.load(), { immediate: true })
 
 const favorites = computed(() => lists.data.value?.find((l) => l.kind === 'favorites') ?? null)
 const others = computed(() => lists.data.value?.filter((l) => l.kind !== 'favorites') ?? [])
-const favoriteCount = computed(() => (favorites.value ? favorites.value.restaurantCount + favorites.value.recipeCount : 0))
+const favoriteCount = computed(() => (favorites.value ? itemCountOf(favorites.value) : 0))
 
 interface FavoriteItem {
   id: string
@@ -38,13 +38,15 @@ const favoriteItems = useLoad<FavoriteItem[]>(async () => {
   if (!list || favoriteCount.value === 0) {
     return []
   }
-  const [restaurants, recipes] = await Promise.all([
+  const [restaurants, recipes, pantry] = await Promise.all([
     list.restaurantCount ? restaurantsApi.listRestaurants({ listEq: list.id, limit: favoritesShown, sort: '-overall' }) : null,
     list.recipeCount ? recipesApi.listRecipes({ listEq: list.id, limit: favoritesShown, sort: '-overall' }) : null,
+    list.pantryItemCount ? pantryApi.listPantryItems({ listEq: list.id, limit: favoritesShown, sort: '-overall' }) : null,
   ])
   const items: FavoriteItem[] = [
     ...(restaurants?.items ?? []).map((r: Restaurant) => ({ id: r.id, path: `/restaurants/${r.id}`, name: r.name, cover: r.cover, overall: r.rating?.overall ?? null })),
     ...(recipes?.items ?? []).map((r: RecipeSummary) => ({ id: r.id, path: `/recipes/${r.id}`, name: r.name, cover: r.cover, overall: r.rating?.overall ?? null })),
+    ...(pantry?.items ?? []).map((p: PantryItem) => ({ id: p.id, path: `/pantry/${p.id}`, name: p.name, cover: p.cover, overall: p.rating?.overall ?? null })),
   ]
   return items.sort((a, b) => (b.overall ?? -1) - (a.overall ?? -1)).slice(0, favoritesShown)
 })

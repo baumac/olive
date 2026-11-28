@@ -1,20 +1,21 @@
 <script setup lang="ts">
-import { BookOpenIcon, ChefHatIcon, HouseIcon, PlusIcon, UtensilsIcon } from 'lucide-vue-next'
+import { ChefHatIcon, HouseIcon, PlusIcon, UtensilsIcon } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { pantryIcon } from '@/lib/pantry'
 import { isCurrentSection } from '@/lib/sections'
 import { currentUser } from '@/lib/session'
 
-// BottomNav has the sections below md. AppHeader has them from md.
+// BottomNav has the sections below md. The journal is in UserMenu. Five
+// slots then fit at 375px.
 const route = useRoute()
 
-const journalPath = computed(() => (currentUser.value ? `/reviewers/${currentUser.value.id}` : null))
 const items = computed(() => [
   { path: '/', label: 'Table', icon: HouseIcon },
   { path: '/restaurants', label: 'Restaurants', icon: UtensilsIcon },
   ...(currentUser.value ? [{ path: '/reviews/new', label: 'Add review', icon: PlusIcon, add: true }] : []),
   { path: '/recipes', label: 'Recipes', icon: ChefHatIcon },
-  ...(journalPath.value ? [{ path: journalPath.value, label: 'You', icon: BookOpenIcon }] : []),
+  { path: '/pantry', label: 'Pantry', icon: pantryIcon },
 ])
 </script>
 

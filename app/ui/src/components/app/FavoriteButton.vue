@@ -7,24 +7,25 @@ import { Button } from '@/components/ui/button'
 import { signInPath } from '@/composables/useAuth'
 import { apiFailure, failureText } from '@/lib/api'
 import { tellPendingApproval } from '@/lib/approval'
-import { kinds } from '@/lib/reviewKinds'
+import { kinds, subjectKindOf } from '@/lib/reviewKinds'
 import { currentUser } from '@/lib/session'
 
-// Give a restaurantId or a recipeId.
+// Give a restaurantId, a recipeId, or a pantryItemId.
 const props = withDefaults(
   defineProps<{
     restaurantId?: string
     recipeId?: string
+    pantryItemId?: string
     name: string
     favorite: boolean
     // labeled shows the text "Favorite" next to the heart.
     labeled?: boolean
   }>(),
-  { restaurantId: undefined, recipeId: undefined, labeled: false },
+  { restaurantId: undefined, recipeId: undefined, pantryItemId: undefined, labeled: false },
 )
 
-const kind = computed(() => (props.recipeId !== undefined ? kinds.recipe : kinds.restaurant))
-const itemId = computed(() => (props.recipeId ?? props.restaurantId)!)
+const kind = computed(() => kinds[subjectKindOf(props)])
+const itemId = computed(() => (props.pantryItemId ?? props.recipeId ?? props.restaurantId)!)
 
 const emit = defineEmits<{ change: [favorite: boolean] }>()
 
@@ -32,13 +33,11 @@ const route = useRoute()
 const router = useRouter()
 
 const on = ref(props.favorite)
-// A card can get a different restaurant or recipe with the same favorite
-// value.
+// A card can get a different parent with the same favorite value.
 watch([itemId, () => props.favorite], () => (on.value = props.favorite))
 const busy = ref(false)
 
-// A restaurant or a recipe that loaded before a sign out can still have the
-// flag.
+// A parent that loaded before a sign out can still have the flag.
 const pressed = computed(() => on.value && currentUser.value !== null)
 
 async function toggle() {
@@ -60,7 +59,9 @@ async function toggle() {
     on.value = !next
     const failure = await apiFailure(error)
     const description =
-      failure.problem?.code === 'list_restaurant_limit' || failure.problem?.code === 'list_recipe_limit'
+      failure.problem?.code === 'list_restaurant_limit' ||
+      failure.problem?.code === 'list_recipe_limit' ||
+      failure.problem?.code === 'list_pantry_item_limit'
         ? 'Your favorites list is full.'
         : failure.status === 404
           ? `The ${kind.value.noun} does not exist now.`

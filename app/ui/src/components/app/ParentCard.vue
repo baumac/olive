@@ -6,8 +6,9 @@ import { type ParentSummary, type ReviewKind, kinds } from '@/lib/reviewKinds'
 import { tagList } from '@/lib/reviews'
 import FavoriteButton from './FavoriteButton.vue'
 
-// ParentCard is the row of a restaurant or a recipe in a list. The default
-// slot has the details of the kind, such as the distance. See decision 00009.
+// ParentCard is the row of a restaurant, a recipe, or a pantry item in a
+// list. The default slot has the details of the kind, such as the distance.
+// See decision 00009.
 // heading is the element of the name. A list below an h2 uses h3.
 withDefaults(defineProps<{ parent: ParentSummary; kind: ReviewKind; heading?: 'h2' | 'h3' }>(), { heading: 'h2' })
 
@@ -38,6 +39,7 @@ defineEmits<{ favorite: [favorite: boolean] }>()
     <FavoriteButton
       :restaurant-id="kind === 'restaurant' ? parent.id : undefined"
       :recipe-id="kind === 'recipe' ? parent.id : undefined"
+      :pantry-item-id="kind === 'pantryItem' ? parent.id : undefined"
       :name="parent.name"
       :favorite="parent.favorite"
       class="relative z-10 shrink-0"
