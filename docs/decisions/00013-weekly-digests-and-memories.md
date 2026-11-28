@@ -44,7 +44,7 @@ Out of scope:
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
 
-The design canvas "Weekly issue mockup" has the five screens of this decision.
+The design canvas "Weekly digest mockup" has the five screens of this decision.
 They are the home on a Saturday and on a Monday, the digest page, the archive, and a link preview.
 
 ## The concepts
