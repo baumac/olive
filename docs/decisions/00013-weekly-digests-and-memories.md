@@ -1,5 +1,5 @@
 ---
-description: The home of the UI shows a weekly digest. A digest gathers the entries that the group wrote in one week, from Monday to Sunday in CET. It has a lead, the top scores, the new subjects, and the counts. Memories show the entries of the same week in earlier years. The UI builds the digest from the review lists. The Public API only gets a `date` filter.
+description: The home of the UI shows a weekly digest. A digest gathers the entries that the group wrote in one week. The week runs from Monday to Sunday in the zone of the reader. It has a lead, the top scores, the new subjects, and the counts. Memories show the entries of the same week in earlier years. The UI builds the digest from the review lists. The Public API only gets a `date` filter.
 status: proposed
 ---
 
@@ -11,7 +11,8 @@ A small group writes few entries. A quiet week then looks empty. An endless feed
 The backlog has the item "redesign or rename table concept".
 
 A weekly digest gathers the entries of one week on one page, like a small newspaper.
-A quiet week then looks planned, not empty. A finished digest does not change. A person can then share its link in the chat of the group.
+A quiet week then looks planned, not empty. A finished digest rarely changes. A person can then share its link in the chat of the group.
+Readers in the time zone of the group see the same digest.
 A food journal also remembers. The entries of the same week in earlier years come back as memories.
 
 Expected outcome:
@@ -19,14 +20,14 @@ Expected outcome:
 - each week has a page at `/weeks/{date}` with its digest and every entry
 - the archive at `/weeks` lists the weeks with entries
 - the link of a digest shows a preview with the counts
-- the weeks start on Monday at 00:00 in CET
+- the weeks start on Monday at 00:00 in the time zone of the browser
 - the Public API keeps its operations and schemas. The review lists only get a `date` filter.
 
 # Scope
 [scope]: #scope
 
 In scope:
-- the week, its time zone, and `/digest-config.json`
+- the week and its time zone
 - the `date` filter of the review lists
 - the rules of the lead, the top scores, the new subjects, and the memories in the UI
 - the home, the digest page, and the archive of the UI
@@ -39,7 +40,8 @@ Out of scope:
 - memories of one month or six months ago. Memories are whole years.
 - the memories of one reviewer on the journal
 - a digest that a person edits or curates
-- a week that starts on Sunday, and a time zone for each user
+- a week that starts on Sunday
+- a setting for the time zone of the weeks. The browser gives it.
 - comments, likes, or reactions on a digest. Decision 00000 puts social features out of scope.
 - an average score of a week
 
@@ -51,18 +53,19 @@ They are the home on a Saturday and on a Monday, the digest page, the archive, a
 
 ## The concepts
 
-- **Week**: Monday 00:00 to the next Monday 00:00 in the time zone of the site. The date of its Monday identifies it, such as `2026-11-16`.
+- **Week**: Monday 00:00 to the next Monday 00:00 in the time zone of the reader. The date of its Monday identifies it, such as `2026-11-16`.
 - **Digest**: the page of one week. It shows the entries that were written in the week. A week that ended has a finished digest. The current week has a digest in progress.
 - **Lead**: the first story of a digest. It is a subject that two or more people reviewed in the week, or the best entry.
 - **Top scores**: the best entry of each kind after the lead.
 - **New on the table**: the restaurants, recipes, and pantry items that users added in the week.
 - **Memory**: an entry with a `date` in the same days of an earlier year. "On this day" marks a memory with the month and the day of today.
 - **Archive**: the list of the weeks with entries at `/weeks`.
+- **Time zone**: the zone of the weeks. It is the zone of the browser of the reader.
 
 Examples:
 - On Monday 23 November 2026, Ana opens Olive. "This week so far" says "Nothing yet this week". Below it is the digest of last week. Its lead is "Priya and Marco both went to Luigi's Trattoria" with the photo of Priya.
 - Priya copies the link `/weeks/2026-11-16` into the chat of the family. The preview shows "Week of 16 November 2026" and "14 entries from 6 people".
-- Marco writes a review on Monday 23 November at 00:30 CET about the dinner of Sunday. It is in the week of 23 November. The week of an entry comes from the time it was written. Its card still shows "Visited on 22 Nov 2026".
+- Marco writes a review on Monday 23 November at 00:30 CET about the dinner of Sunday. For a reader in CET, it is in the week of 23 November. The week of an entry comes from the time it was written. Its card still shows "Visited on 22 Nov 2026".
 - On Saturday 28 November, Jules opens the home. The memories show the pho that Ana ate on 28 November 2025 with "On this day". They also show the banana bread that Marco cooked on 24 November 2023.
 - Jules opens `/weeks/2026-08-03`, a week without entries. The page says "A quiet week" and links to the weeks before and after it.
 
@@ -150,6 +153,7 @@ The home and the digest page show the parts of a digest in the same way.
 - they open the weeks before and after with entries, and the archive
 - a week without entries says "A quiet week". It still has the links.
 - a week after the current week shows the not found screen
+- a date that does not exist, such as `2026-02-30` or `abc`, also shows it. So does a date before `1900-01-01`.
 
 ## The archive
 
@@ -166,14 +170,15 @@ The home and the digest page show the parts of a digest in the same way.
 
 ## The time zone
 
-- `REVIEWS_TIME_ZONE` sets the time zone of the weeks. It is an IANA name. The default is `CET`.
-- `CET` has the summer time CEST from the last Sunday of March to the last Sunday of October
+- the weeks of the UI use the zone of the browser from `Intl.DateTimeFormat().resolvedOptions().timeZone`
+- the UI reads the zone and the current week when a route loads. It reads them again when the tab becomes visible.
+- a new current week then reloads the data of the page. A tab open across Monday 00:00 moves to the new week.
+- a device that moves to another zone gets the new weeks at the same moments
+- `REVIEWS_TIME_ZONE` sets the zone of the link previews only. It is an IANA name. The default is `CET`.
 - an unknown name stops the app at start with an error, like the other environment variables
 - the Docker image has the `tzdata` package. `time.LoadLocation` finds the zone files there.
-- the UI route serves `/digest-config.json` with `time_zone`, such as `{"time_zone": "CET"}`. This file is not part of the Public API.
-- the UI and the page meta then use the same zone. The UI build is the same for all zones.
-- the UI gets `/digest-config.json` one time. A failed request shows the error of the page. The next load tries again.
-- the week of 23 to 29 March 2026 has 167 hours. The week of 19 to 25 October 2026 has 169 hours.
+- `CET` has the summer time CEST from the last Sunday of March to the last Sunday of October
+- the week of 23 to 29 March 2026 has 167 hours in `CET`. The week of 19 to 25 October 2026 has 169 hours.
 - only the weeks and today use the zone. The `date` check of decision 00005 keeps UTC+14.
 
 ## The `date` filter
@@ -200,15 +205,17 @@ The UI calls the Public API only through `@reviews/sdk`, as before.
 | the nearest earlier week with entries | 3 | `listAll*Reviews` with `created[lt]` of the start, `sort=-created`, and `limit=1` |
 | the nearest later week with entries | 3 | `listAll*Reviews` with `created[gte]` of the end, `sort=created`, and `limit=1` |
 | the oldest entry | 3 | `listAll*Reviews` with `sort=date` and `limit=1` |
-| the memories of one earlier year | 3 | `listAll*Reviews` with the `date` range of the week in that year, `sort=-overall`, and `limit=20` |
+| the memories of one earlier year | 3 | `listAll*Reviews` with the `date` range of the week in that year, all pages |
 
 - the requests of one step run at the same time
-- the home loads the entries from the Monday before the current week in one request of each kind. It splits them into the two weeks.
+- the home loads the entries from the Monday before the current week. It loads one list of each kind, with all pages. It splits them into the two weeks.
 - the home looks for an older week only when last week has no entries
-- the UI keeps the oldest entry until the next load of the app
+- the UI keeps the oldest entry until the next load of the app. A save of a review with an older `date` replaces it.
 - the memories look back from the year before to the year of the oldest entry. They look back at most five years.
-- a home in the first year makes about 10 requests. A home with three earlier years makes about 19.
+- a home in the first year makes about 9 requests. A home with three earlier years makes about 18.
+- these numbers count one page of each list. A list with more than 100 entries needs one more request for each page.
 - the digest page loads the entries, the new subjects, the weeks before and after, and the memories of its week
+- the page of the current week does not ask for a later week. Its link to a later week is not there.
 - "Every entry" shows the loaded entries of the week. `KindSwitch` filters them in the UI. They need no more requests.
 - "Load more entries" shows the next 20 loaded entries
 
@@ -216,7 +223,9 @@ The UI calls the Public API only through `@reviews/sdk`, as before.
 
 - `lib/weeks.ts` changes between instants and the dates of the zone with `Intl.DateTimeFormat` and its `timeZone`
 - the UI has no date library
-- the start of a week is Monday 00:00 in the zone. The UI finds its UTC instant from the offset of the zone at that time.
+- the start of a week is the first instant on or after Monday 00:00 in the zone. The UI finds it from the offset of the zone at that time.
+- in a few zones the clocks jump at midnight. Monday 00:00 then does not exist, and the week starts at the first instant after the jump.
+- `webui` uses the same rule for `REVIEWS_TIME_ZONE`
 - the `created` filters get the start and the end as RFC 3339 timestamps
 - today is the date of now in the zone
 
@@ -257,10 +266,11 @@ The memories:
 - the memories come from at most three years, the nearest first. Each year has at most two memories.
 - in the current week, a memory with the month and the day of today goes first in its year
 - then a memory with photos goes first, then the higher overall, then the newest `created`
+- the UI ranks all entries of the week in that year. The requests load each page, so no memory falls out before the ranking.
 - the UI shows "On this day" on these memories of the current week. On a finished week, no memory has it.
 - the memories use `date`, not `created`. A memory is about the meal.
 - a user writes a review today of a dinner of 2023. It is a memory of the week of that dinner.
-- the memories are the same for all readers. The digest has no part for one reader.
+- the memories have no part for one person. "On this day" uses the date of today in the zone of the reader.
 
 ## The archive in the UI
 
@@ -275,14 +285,17 @@ The memories:
 ## Link previews
 
 - `webui` writes the page meta of `/weeks/{date}`. See decision 00002.
-- it uses `REVIEWS_TIME_ZONE` for the start and the end of the week
-- it counts the reviews and the reviewers of each kind with one query of each kind. It has no copy of the rules.
+- it uses `REVIEWS_TIME_ZONE` for the start and the end of the week. A crawler has no browser zone.
+- a reader in another zone can see counts that differ from the preview. Only entries near Monday 00:00 move.
+- it counts the reviews of each kind with one query of each kind. It has no copy of the rules.
+- it gets the creator IDs of the three kinds and counts each ID one time. A person with entries of two kinds is one person, as in the UI.
 - the title is "Week of 16 November 2026". `og:type` is `article`.
 - the description has the counts, such as "14 entries from 6 people: 6 visits, 5 cooks, and 3 tastings."
 - the description of the current week starts with "So far". A week without entries has "A quiet week on Olive."
 - `og:image` is the image of the site
 - `og:url` has the Monday of the week
 - a week after the current week gets `404` with the default `index.html`
+- a date that does not exist or is before `1900-01-01` gets the same `404`
 - `/weeks` keeps the tags of the site, like the other list screens
 - the `<title>` of the page meta has the format of `usePageTitle`, as for the other pages
 
@@ -305,8 +318,10 @@ The memories:
 - the first week of an install has no finished digest. The home then shows only "This week so far".
 - an edit of a score after the end of a week can change its lead. A delete can remove the lead. The next load shows the new result.
 - an edit does not move a review to another week. `created` does not change.
-- an entry written on Monday at 00:30 CET is in the new week. In UTC, it is 23:30 on Sunday.
-- a person in New York sees the new week from Sunday 18:00 of their time. The weeks are the same for each reader.
+- for a reader in CET, an entry written on Monday at 00:30 CET is in the new week. In UTC, it is 23:30 on Sunday.
+- a person in New York sees the weeks of New York. A review written at 00:30 CET on Monday is then in the week before.
+- the same link can then show other entries to that person near the start or the end of the week
+- a device with a wrong clock shows the wrong current week
 - the week of 28 December 2026 to 3 January 2027 has memories of two months. They are from December and January.
 - the first year of an install has no memories. Old reviews that a superuser adds in the dashboard can fill it. See the backlog.
 - a week with more than 100 entries of a kind needs more pages. `loadAll` gets them.
@@ -318,30 +333,41 @@ When this decision is implemented, these decisions change with it:
 
 | Decision | Change |
 |---|---|
-| 00002 | the page meta of `/weeks/{date}`, its row in the table of the pages, and `/digest-config.json` |
+| 00002 | the page meta of `/weeks/{date}` and its row in the table of the pages |
 | 00005 | the `date` filter of the review lists |
 | 00009 | the concept "Table", the home, the two sections "The table", and `?kind=` on the home. The table sections point here. |
 
-`AGENTS.md` gets `REVIEWS_TIME_ZONE`, `/digest-config.json`, the `date` filter, and the pages.
+`AGENTS.md` gets `REVIEWS_TIME_ZONE`, the `date` filter, and the pages.
 The design system README gets the new words and components.
 The backlog item "redesign or rename table concept" is done.
 
 ## Work order
 
-1. the `date` filter, the generated SDKs, `REVIEWS_TIME_ZONE`, `/digest-config.json`, and the page meta. One pull request.
+1. the `date` filter, the generated SDKs, `REVIEWS_TIME_ZONE`, and the page meta. One pull request.
 2. the home, the digest page, the archive, and the design system. A second pull request.
+
+The second pull request also moves the end-to-end tests of the table.
+
+- `tests/e2e/pantry.spec.ts` opens `/?kind=pantry` today. Its check moves to "Every entry" of the week of its review with `?kind=pantry`.
+- each test that looks for its entry on `/` looks for it in "Every entry" of the week of its `created`. The home shows only five entries.
+- the test gets that week from the `created` of the saved review. A run across Monday 00:00 then still finds the entry.
+- the checks of the note for visitors and of the heading "On the table" stay on `/`
+- `tests/e2e/accessibility.spec.ts` waits until the status of `/` is not "Loading entries". The home keeps this status text.
 
 Each pull request has its Go, unit, and end-to-end tests.
 
 - the Go tests check each operator of the `date` filter on a review list of each kind
 - they check the page meta of a finished week, of the current week, and of a quiet week
-- they check the `404` of a week after the current week
-- they check `/digest-config.json` and an unknown time zone
+- they check the `404` of a week after the current week, of `2026-02-30`, and of a date before 1900
+- they check that a person with entries of two kinds counts one time
+- they check an unknown name in `REVIEWS_TIME_ZONE`
 - the unit tests of `lib/weeks.ts` check the rules with fixed data and a fixed time of now
 - they check the ties of the lead and the top scores
 - they check the memories of 29 February and of the turn of the year
-- they check the weeks of the summer time changes
-- they run in the time zone `America/Los_Angeles`. They then show that the code does not use the zone of the browser.
+- they check that a memory with a low overall and the date of today still goes first
+- they check the weeks of the summer time changes in `Europe/Berlin`
+- they check a zone with a jump at midnight, such as `America/Santiago`. Go and TypeScript then give the same start.
+- they run in the time zone `America/Los_Angeles` and give the zone `Europe/Berlin` to the week code. They then show that the code uses the given zone.
 - all projects of one end-to-end run share one app and one week. The end-to-end tests check only their own entries.
 - an end-to-end test finds its entry in "Every entry" by a name from `uniqueTag`
 
@@ -353,11 +379,12 @@ Each pull request has its Go, unit, and end-to-end tests.
 | A `weeks` tag with `getCurrentWeek`, `getWeek`, and `listWeeks` | Not selected. It adds three operations and the first `discriminator` of the spec. The review lists already have the data. |
 | A filter of the month and the day of `date` | Not selected. It is a new kind of filter. The `date` range works like the `created` range. |
 | Memories from more than five years back | Not selected. Each year costs three requests. |
+| The 20 best memories of each kind and year | Not selected. An entry of today with a low overall could fall out before the ranking. |
 | The photo of the lead in the link preview | Not selected. `webui` would need a copy of the lead rule. |
-| The time zone as a constant of the UI | Not selected. The page meta and the UI must use the same zone. |
-| The time zone of the browser | Not selected. A shared link must show the same digest to each reader. |
+| One time zone for the site in `/digest-config.json` | Not selected. The group lives in one zone. Its browsers already agree. The file was one more request that can fail. |
+| A setting for the time zone in the UI | Not selected. The group lives in one zone. The weeks of a traveller differ only near Monday 00:00. |
+| A link preview in the zone of the reader | Not selected. A crawler has no zone. The preview uses `REVIEWS_TIME_ZONE`. |
 | Weeks in UTC | Not selected. An entry of Monday at 00:30 CET would be in the week before. |
-| A time zone for each user | Not selected. The group lives in one time zone. |
 | The live digest of the current week as the home | Not selected. Its lead would change all week. The home shows the last finished digest. |
 | Saved digests from a weekly job | Not selected. Each edit and each delete of a review would need to change them. |
 | A weekly email | Not selected. The group talks in its own chats. A person shares the link of a digest there. |
@@ -372,7 +399,7 @@ Each pull request has its Go, unit, and end-to-end tests.
 | Memories of one exact day | Not selected. A small group has few entries on one day. A week has about seven times more. |
 | Memories of one month or six months ago | Not selected. Memories are whole years. |
 | Memories by `created` | Not selected. A memory is about the meal. It uses `date`. |
-| The own memories of the reader first | Not selected. The digest is the same for all readers. |
+| The own memories of the reader first | Not selected. The digest has no part for one person. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
