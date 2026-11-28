@@ -1,5 +1,5 @@
 ---
-description: The home of the UI shows a weekly issue. An issue gathers the entries that the group wrote in one week, from Monday to Sunday in CET. It has a lead, the top scores, the new subjects, and the counts. Memories show the entries of the same week in earlier years.
+description: The home of the UI shows a weekly digest. A digest gathers the entries that the group wrote in one week, from Monday to Sunday in CET. It has a lead, the top scores, the new subjects, and the counts. Memories show the entries of the same week in earlier years.
 status: proposed
 ---
 
@@ -10,15 +10,15 @@ The table of decision 00009 lists all entries by the time they were written, the
 A small group writes few entries. A quiet week then looks empty. An endless feed also reads like social media.
 The backlog has the item "redesign or rename table concept".
 
-A weekly issue gathers the entries of one week on one page, like a small newspaper.
-A quiet week then looks planned, not empty. A finished issue does not change. A person can then share its link in the chat of the group.
+A weekly digest gathers the entries of one week on one page, like a small newspaper.
+A quiet week then looks planned, not empty. A finished digest does not change. A person can then share its link in the chat of the group.
 A food journal also remembers. The entries of the same week in earlier years come back as memories.
 
 Expected outcome:
-- the home shows the entries of this week so far, the issue of the last finished week, and the memories
-- each week has a page at `/weeks/{date}` with its issue and every entry
+- the home shows the entries of this week so far, the digest of the last finished week, and the memories
+- each week has a page at `/weeks/{date}` with its digest and every entry
 - the archive at `/weeks` lists the weeks with entries
-- the link of an issue shows a preview with the photo of the lead and the counts
+- the link of a digest shows a preview with the photo of the lead and the counts
 - the weeks start on Monday at 00:00 in CET
 
 # Scope
@@ -28,37 +28,37 @@ In scope:
 - the week and its time zone
 - the operations `getCurrentWeek`, `getWeek`, and `listWeeks` of the new tag `weeks`
 - the rules of the lead, the top scores, the new subjects, and the memories
-- the home, the issue page, and the archive of the UI
-- the link previews of the issue pages
-- the words and the components of the design system for the issue
+- the home, the digest page, and the archive of the UI
+- the link previews of the digest pages
+- the words and the components of the design system for the digest
 
 Out of scope:
-- an email digest. The group talks in its own chats. See "Won't do" in the backlog.
+- a weekly email. The group talks in its own chats. See "Won't do" in the backlog.
 - memories of one month or six months ago. Memories are whole years.
 - the memories of one reviewer on the journal
-- an issue that a person edits or curates
+- a digest that a person edits or curates
 - a week that starts on Sunday, and a time zone for each user
-- comments, likes, or reactions on an issue. Decision 00000 puts social features out of scope.
+- comments, likes, or reactions on a digest. Decision 00000 puts social features out of scope.
 - an average score of a week
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
 
 The design canvas "Weekly issue mockup" has the five screens of this decision.
-They are the home on a Saturday and on a Monday, the issue page, the archive, and a link preview.
+They are the home on a Saturday and on a Monday, the digest page, the archive, and a link preview.
 
 ## The concepts
 
 - **Week**: Monday 00:00 to the next Monday 00:00 in the time zone of the site. The date of its Monday identifies it, such as `2026-11-16`.
-- **Issue**: the page of one week. It shows the entries that were written in the week. A week that ended has a finished issue. The current week has an issue in progress.
-- **Lead**: the first story of an issue. It is a subject that two or more people reviewed in the week, or the best entry.
+- **Digest**: the page of one week. It shows the entries that were written in the week. A week that ended has a finished digest. The current week has a digest in progress.
+- **Lead**: the first story of a digest. It is a subject that two or more people reviewed in the week, or the best entry.
 - **Top scores**: the best entry of each kind after the lead.
 - **New on the table**: the restaurants, recipes, and pantry items that users added in the week.
 - **Memory**: an entry with a `date` in the same days of an earlier year. "On this day" marks a memory with the month and the day of today.
 - **Archive**: the list of the weeks with entries at `/weeks`.
 
 Examples:
-- On Monday 23 November 2026, Ana opens Olive. "This week so far" says "Nothing yet this week". Below it is the issue of last week. Its lead is "Priya and Marco both went to Luigi's Trattoria" with the photo of Priya.
+- On Monday 23 November 2026, Ana opens Olive. "This week so far" says "Nothing yet this week". Below it is the digest of last week. Its lead is "Priya and Marco both went to Luigi's Trattoria" with the photo of Priya.
 - Priya copies the link `/weeks/2026-11-16` into the chat of the family. The preview shows the photo of the lead and "14 entries from 6 people".
 - Marco writes a review on Monday 23 November at 00:30 CET about the dinner of Sunday. It is in the week of 23 November. The week of an entry comes from the time it was written. Its card still shows "Visited on 22 Nov 2026".
 - On Saturday 28 November, Jules opens the home. The memories show the pho that Ana ate on 28 November 2025 with "On this day". They also show the banana bread that Marco cooked on 24 November 2023.
@@ -95,7 +95,7 @@ Top scores
            Sam · Soft tannins, ripe cherry
 New on the table
   (Luigi's Trattoria) (Miso cod) (Rioja Reserva)
-  Read the issue    All weeks
+  Read the digest    All weeks
 
 Memories
 A YEAR AGO THIS WEEK
@@ -106,20 +106,20 @@ A YEAR AGO THIS WEEK
 
 - "This week so far" shows the five newest entries of the current week as short rows. Its link "Open this week" opens the page of the current week.
 - without entries in the current week, it says "Nothing yet this week". Below it is "The first visit, cook, or tasting shows here." A signed in user then sees "Add review".
-- the issue is the last finished week with entries. Its heading is "Last week" for the week before the current week. An older week has "Week of 2 November".
-- a double rule in `foreground` starts the issue, like the masthead of a newspaper
-- "Read the issue" opens the page of the week. "All weeks" opens the archive.
+- the digest is the last finished week with entries. Its heading is "Last week" for the week before the current week. An older week has "Week of 2 November".
+- a double rule in `foreground` starts the digest, like the masthead of a newspaper
+- "Read the digest" opens the page of the week. "All weeks" opens the archive.
 - the memories are the memories of the current week. Without memories, the section is not there.
 - the heading of the memories is "Memories". The groups are "A year ago this week" and "3 years ago this week".
 - a signed out visitor sees the note of decision 00009 above "This week so far"
-- the home has no `KindSwitch`. The issue shows all kinds on purpose.
+- the home has no `KindSwitch`. The digest shows all kinds on purpose.
 - without any entries, the home shows the empty state "Nothing on the table yet" of decision 00009
-- without a finished week with entries, the home has no issue section
+- without a finished week with entries, the home has no digest section
 - `BottomNav` and `AppHeader` keep "Table". It opens the home.
 
-## The parts of an issue
+## The parts of a digest
 
-The home and the issue page show the parts of an issue in the same way.
+The home and the digest page show the parts of a digest in the same way.
 
 - the lead is a photo card, like the photo form of `EntryCard`. The score stamp sits on its photo.
 - the kicker of a shared lead is the subject and the count, such as "Luigi's Trattoria · 2 visits". The words are "visits", "cooks", and "tastings".
@@ -135,13 +135,13 @@ The home and the issue page show the parts of an issue in the same way.
 - "New on the table" is a row of chips with the icon of the kind and the `accent` fill. More than six subjects add the text "and 2 more".
 - "On this day" is a tag with the `accent` fill above the subject of a memory. `saffron` stays only for the score stamp. See decision 00009.
 
-## The issue page
+## The digest page
 
 - the page of a week is at `/weeks/{date}`. A date that is not a Monday opens the week of the date. The URL then changes to its Monday.
 - the heading is "Week of 16 November 2026". The current week has "In progress" below it.
 - the page has the counts, the lead, the top scores, "New on the table", the memories, and "Every entry"
 - the counts have the kinds below them, such as "6 visits · 5 cooks · 3 tastings"
-- the memories of an issue page have the dates of their year as group headings, such as "16–22 November 2025"
+- the memories of a digest page have the dates of their year as group headings, such as "16–22 November 2025"
 - "Every entry" lists all entries of the week as short rows, the newest written first
 - the `KindSwitch` of "Every entry" has "All", "Ate out", "Cooked", and "Tasted". `?kind=` keeps the selection.
 - the links at the end are "Week of 9 November", "Week of 23 November", and "All weeks"
@@ -157,7 +157,7 @@ The home and the issue page show the parts of an issue in the same way.
 - a lead without a photo shows the icon of its kind. A row has no score.
 - the row of the current week has the tag "In progress". Its counts end with "so far".
 - "Load more weeks" loads the next weeks
-- the issue page and the home link to it
+- the digest page and the home link to it
 
 # Implementation Details
 [implementation-details]: #implementation-details
@@ -307,17 +307,17 @@ The memories:
 - the UI shows "On this day" on these memories of the current week. On a finished week, no memory has it.
 - the memories use `date`, not `created`. A memory is about the meal.
 - a user writes a review today of a dinner of 2023. It is a memory of the week of that dinner.
-- the memories are the same for all readers. The issue has no part for one reader.
+- the memories are the same for all readers. The digest has no part for one reader.
 
 ## The server
 
 - the new package `app/api/internal/weeks` has the week, the counts, and the rules. `publicapi` and `webui` use it.
 - its functions get the time of now as a parameter. The Go tests then use fixed weeks.
-- `weeks` reads the reviews and the subjects of all kinds through `subjects.All`. A new kind then joins the issue.
+- `weeks` reads the reviews and the subjects of all kinds through `subjects.All`. A new kind then joins the digest.
 - `listWeeks` reads the `created` of all reviews and groups them by week in Go. SQLite has no time zones.
 - this grouping is fast for a few thousand reviews. The backlog expects a low number of users.
 - the memories use one query of each kind with the ranges of the earlier years
-- the server makes each week on each request. It has no cache. The issue then shows each edit and each delete at once.
+- the server makes each week on each request. It has no cache. The digest then shows each edit and each delete at once.
 - `publicapi` changes the result to the types of `specs/api/sdk/server/go`. The spec validation of responses checks it. See decision 00001.
 
 ## Link previews
@@ -334,7 +334,7 @@ The memories:
 
 ## The UI
 
-- `TablePage.vue` at `/` loads `getCurrentWeek`. It then loads `getWeek` with `previous` for the issue.
+- `TablePage.vue` at `/` loads `getCurrentWeek`. It then loads `getWeek` with `previous` for the digest.
 - `WeekPage.vue` is at `/weeks/:date`. `WeeksPage.vue` is at `/weeks`.
 - "Every entry" uses `useEntries` with `created[gte]` of `starts_at`, `created[lt]` of `ends_at`, and `sort=-created`
 - the short rows use `EntryCard` with `variant="row"`
@@ -345,12 +345,12 @@ The memories:
 - `specs/design-system` gets the lead, the top scores, "New on the table", the memories, and the week rows
 - the words of the design system change. "Past week" and the month groups go away.
 - the home gets "This week so far", "Last week", and "A year ago this week"
-- the issue page gets "Week of 16 November" and "Every entry"
+- the digest page gets "Week of 16 November" and "Every entry"
 
 ## Corner cases
 
-- the first week of an install has no finished issue. The home then shows only "This week so far".
-- an edit of a score after the end of a week can change its lead. A delete can remove the lead. The issue shows the new result.
+- the first week of an install has no finished digest. The home then shows only "This week so far".
+- an edit of a score after the end of a week can change its lead. A delete can remove the lead. The digest shows the new result.
 - an edit does not move a review to another week. `created` does not change.
 - an entry written on Monday at 00:30 CET is in the new week. In UTC, it is 23:30 on Sunday.
 - the week of 28 December 2026 to 3 January 2027 has memories of two months. They are from December and January.
@@ -372,7 +372,7 @@ The backlog item "redesign or rename table concept" is done.
 ## Work order
 
 1. the spec, the generated SDKs, the package `weeks`, the operations, the time zone, and the page meta. One pull request.
-2. the home, the issue page, the archive, and the design system. A second pull request.
+2. the home, the digest page, the archive, and the design system. A second pull request.
 
 Each pull request has its Go, unit, and end-to-end tests.
 
@@ -389,25 +389,25 @@ Each pull request has its Go, unit, and end-to-end tests.
 
 | Alternative | Result |
 |---|---|
-| The issue in the browser from the review lists | Not selected. The memories need a `date` filter and nine requests. The link previews need the lead rule in Go. |
-| The time zone of the browser | Not selected. A shared link must show the same issue to each reader. |
+| The digest in the browser from the review lists | Not selected. The memories need a `date` filter and nine requests. The link previews need the lead rule in Go. |
+| The time zone of the browser | Not selected. A shared link must show the same digest to each reader. |
 | Weeks in UTC | Not selected. An entry of Monday at 00:30 CET would be in the week before. |
 | A time zone for each user | Not selected. The group lives in one time zone. |
-| The live issue of the current week as the home | Not selected. Its lead would change all week. The home shows the last finished issue. |
-| Saved issues from a weekly job | Not selected. Each edit and each delete of a review would need to change them. |
-| An email digest | Not selected. The group talks in its own chats. A person shares the link of an issue there. |
+| The live digest of the current week as the home | Not selected. Its lead would change all week. The home shows the last finished digest. |
+| Saved digests from a weekly job | Not selected. Each edit and each delete of a review would need to change them. |
+| A weekly email | Not selected. The group talks in its own chats. A person shares the link of a digest there. |
 | The ISO week in the URL, such as `2026-W47` | Not selected. A date is easier to read. ISO week years also have corner cases. |
 | The top score first as the lead rule | Not selected. A shared subject tells more about the group. |
 | The overall of one entry on the stamp of a shared lead | Not selected. The stamp would show one entry as the score of the subject. |
 | A headline only for a shared lead | Not selected. Each row of the archive needs a headline. |
 | `saffron` for the tag "On this day" | Not selected. The design system keeps `saffron` for the score stamp. |
-| Rank numbers on the top scores | Not selected. They make the issue a leaderboard. People then avoid honest low scores. |
+| Rank numbers on the top scores | Not selected. They make the digest a leaderboard. People then avoid honest low scores. |
 | An average score of the week | Not selected. A low average would read like a bad week. |
-| `KindSwitch` for the whole issue | Not selected. The issue shows all kinds on purpose. "Every entry" has it. |
+| `KindSwitch` for the whole digest | Not selected. The digest shows all kinds on purpose. "Every entry" has it. |
 | Memories of one exact day | Not selected. A small group has few entries on one day. A week has about seven times more. |
 | Memories of one month or six months ago | Not selected. Memories are whole years. |
 | Memories by `created` | Not selected. A memory is about the meal. It uses `date`. |
-| The own memories of the reader first | Not selected. The issue is the same for all readers. |
+| The own memories of the reader first | Not selected. The digest is the same for all readers. |
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
