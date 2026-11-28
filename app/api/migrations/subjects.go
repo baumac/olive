@@ -39,8 +39,8 @@ var (
 	}
 	subjectKinds = []subjectKind{restaurantKind, recipeKind}
 	// pantryItemKind is not in subjectKinds. The migrations before
-	// 1796947200_pantry_items.go loop over subjectKinds. Its newParent needs
-	// the tags collection. The pantry migration sets it.
+	// 1796947200_pantry_items.go loop over subjectKinds. The pantry migration
+	// sets its newParent with the tags collection.
 	pantryItemKind = subjectKind{
 		parent: "pantry_item", parents: "pantry_items", reviews: "pantry_item_reviews", photos: "pantry_item_review_photos",
 		listItems: "list_pantry_items", versions: "pantry_item_versions", reviewTriggers: "pantry_item_review_overall",
