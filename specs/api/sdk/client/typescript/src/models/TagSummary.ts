@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants and recipes are the exception. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
+ * The Public API lets users sign up, sign in, and review restaurants, recipes, and pantry items.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants, recipes, and pantry items are the exception. Create, update, and delete operations of restaurants, recipes, pantry items, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime.js';
 /**
- * A tag and the number of restaurants and recipes with it.
+ * A tag and the number of restaurants, recipes, and pantry items with it.
  * @export
  * @interface TagSummary
  */
@@ -46,6 +46,10 @@ export interface TagSummary {
      */
     recipeCount: number;
     /**
+     * The number of pantry items with the tag.
+     */
+    pantryItemCount: number;
+    /**
      * An RFC 3339 timestamp in UTC with millisecond precision.
      */
     created: string;
@@ -58,6 +62,7 @@ export function instanceOfTagSummary(value: object): value is TagSummary {
     if (!('name' in value) || value['name'] === undefined) return false;
     if ((!('restaurantCount' in (value as Record<string, any>)) && !('restaurant_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['restaurantCount'] === undefined && (value as Record<string, any>)['restaurant_count'] === undefined)) return false;
     if ((!('recipeCount' in (value as Record<string, any>)) && !('recipe_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['recipeCount'] === undefined && (value as Record<string, any>)['recipe_count'] === undefined)) return false;
+    if ((!('pantryItemCount' in (value as Record<string, any>)) && !('pantry_item_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['pantryItemCount'] === undefined && (value as Record<string, any>)['pantry_item_count'] === undefined)) return false;
     if (!('created' in value) || value['created'] === undefined) return false;
     return true;
 }
@@ -75,6 +80,7 @@ export function TagSummaryFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         'name': json['name'],
         'restaurantCount': json['restaurant_count'],
         'recipeCount': json['recipe_count'],
+        'pantryItemCount': json['pantry_item_count'],
         'created': json['created'],
     };
 }
@@ -93,6 +99,7 @@ export function TagSummaryToJSONTyped(value?: TagSummary | null, ignoreDiscrimin
         'name': value['name'],
         'restaurant_count': value['restaurantCount'],
         'recipe_count': value['recipeCount'],
+        'pantry_item_count': value['pantryItemCount'],
         'created': value['created'],
     };
 }

@@ -102,7 +102,8 @@ func TestReviewers(t *testing.T) {
 		got := e.expect(request{method: "GET", path: "/v1/reviewers/" + ana.User.ID}, http.StatusOK).object(t)
 		// The overall values of Ana are 4.25 and 7.5.
 		want := map[string]any{"id": ana.User.ID, "name": "Ana", "restaurant_review_count": 2.0, "restaurant_average_overall": 5.9, "restaurant_count": 1.0,
-			"recipe_review_count": 0.0, "recipe_average_overall": nil, "recipe_count": 0.0, "list_count": 1.0}
+			"recipe_review_count": 0.0, "recipe_average_overall": nil, "recipe_count": 0.0,
+			"pantry_item_review_count": 0.0, "pantry_item_average_overall": nil, "pantry_item_count": 0.0, "list_count": 1.0}
 		if len(got) != len(want) {
 			t.Errorf("profile %v, want only %v", got, want)
 		}

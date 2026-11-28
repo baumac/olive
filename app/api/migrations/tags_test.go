@@ -13,6 +13,11 @@ import (
 func TestTagsMigration(t *testing.T) {
 	t.Parallel()
 	app := newApp(t)
+	// The pantry items have a relation to the tags. Their migration comes
+	// after the tags migration.
+	if err := pantryItemsDown(app); err != nil {
+		t.Fatal(err)
+	}
 	if err := tagsDown(app); err != nil {
 		t.Fatal(err)
 	}

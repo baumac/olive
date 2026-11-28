@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from './ListsApi.js';
+export * from './PantryApi.js';
 export * from './PlacesApi.js';
 export * from './RecipesApi.js';
 export * from './RestaurantsApi.js';

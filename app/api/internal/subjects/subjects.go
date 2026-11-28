@@ -8,9 +8,10 @@ const TagCollection = "tags"
 
 // Tables has the table names of one kind.
 type Tables struct {
-	// Table is the collection. Its name is also the plural noun of the
-	// problem details.
+	// Table is the collection.
 	Table string
+	// Path is the first segment of the API and UI paths of a parent.
+	Path string
 	// Parent is the relation field of a review and of a list item.
 	Parent    string
 	Reviews   string
@@ -35,6 +36,7 @@ type Tables struct {
 
 var Restaurants = Tables{
 	Table:         "restaurants",
+	Path:          "restaurants",
 	Parent:        "restaurant",
 	Reviews:       "reviews",
 	Photos:        "review_photos",
@@ -50,6 +52,7 @@ var Restaurants = Tables{
 
 var Recipes = Tables{
 	Table:         "recipes",
+	Path:          "recipes",
 	Parent:        "recipe",
 	Reviews:       "recipe_reviews",
 	Photos:        "recipe_review_photos",
@@ -64,5 +67,23 @@ var Recipes = Tables{
 	Scores:        []string{"taste", "ease", "instructions", "value"},
 }
 
+// PantryItems are the wines, beers, cheeses, and chocolates of decision
+// 00012.
+var PantryItems = Tables{
+	Table:         "pantry_items",
+	Path:          "pantry",
+	Parent:        "pantry_item",
+	Reviews:       "pantry_item_reviews",
+	Photos:        "pantry_item_review_photos",
+	ListItems:     "list_pantry_items",
+	Versions:      "pantry_item_versions",
+	Overall:       "pantry_item_overall",
+	Tags:          "pantry_item_tags",
+	FTS:           "pantry_items_fts",
+	ReviewsFTS:    "pantry_item_reviews_fts",
+	IndexedFields: []string{"name", "description", "producer", "style", "origin"},
+	Scores:        []string{"taste", "aroma", "texture", "value"},
+}
+
 // All has each kind. The search index adds its hooks for each one.
-var All = []Tables{Restaurants, Recipes}
+var All = []Tables{Restaurants, Recipes, PantryItems}

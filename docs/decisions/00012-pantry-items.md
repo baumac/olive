@@ -1,6 +1,6 @@
 ---
 description: Pantry items are a third kind of subject. A pantry item is a wine, a beer, a cheese, or a chocolate that users taste and review. One kind with a category holds all of them, with the subject pattern of decision 00004 and four tasting scores. Pantry items share the tag records of decision 00011 with restaurants and recipes.
-status: proposed
+status: in progress
 ---
 
 # Motivation

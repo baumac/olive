@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants and recipes are the exception. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
+ * The Public API lets users sign up, sign in, and review restaurants, recipes, and pantry items.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants, recipes, and pantry items are the exception. Create, update, and delete operations of restaurants, recipes, pantry items, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -22,7 +22,7 @@ import {
 } from './Creator.js';
 
 /**
- * A public list of restaurants and recipes of a user. The `favorites` list of a user always exists.
+ * A public list of restaurants, recipes, and pantry items of a user. The `favorites` list of a user always exists.
  * @export
  * @interface SavedList
  */
@@ -59,6 +59,12 @@ export interface SavedList {
      */
     recipeCount: number;
     /**
+     * The number of pantry items of the list.
+     * `listListPantryItems` and `listPantryItems` with `list[eq]` list them.
+     * 
+     */
+    pantryItemCount: number;
+    /**
      * `true` if the list has the restaurant of `restaurant[eq]`.
      * Only `listReviewerLists` with `restaurant[eq]` gives this property.
      * 
@@ -70,6 +76,12 @@ export interface SavedList {
      * 
      */
     hasRecipe?: boolean;
+    /**
+     * `true` if the list has the pantry item of `pantry_item[eq]`.
+     * Only `listReviewerLists` with `pantry_item[eq]` gives this property.
+     * 
+     */
+    hasPantryItem?: boolean;
     /**
      * An RFC 3339 timestamp in UTC with millisecond precision.
      */
@@ -101,6 +113,7 @@ export function instanceOfSavedList(value: object): value is SavedList {
     if (!('creator' in value) || value['creator'] === undefined) return false;
     if ((!('restaurantCount' in (value as Record<string, any>)) && !('restaurant_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['restaurantCount'] === undefined && (value as Record<string, any>)['restaurant_count'] === undefined)) return false;
     if ((!('recipeCount' in (value as Record<string, any>)) && !('recipe_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['recipeCount'] === undefined && (value as Record<string, any>)['recipe_count'] === undefined)) return false;
+    if ((!('pantryItemCount' in (value as Record<string, any>)) && !('pantry_item_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['pantryItemCount'] === undefined && (value as Record<string, any>)['pantry_item_count'] === undefined)) return false;
     if (!('created' in value) || value['created'] === undefined) return false;
     if (!('updated' in value) || value['updated'] === undefined) return false;
     return true;
@@ -122,8 +135,10 @@ export function SavedListFromJSONTyped(json: any, ignoreDiscriminator: boolean):
         'creator': CreatorFromJSON(json['creator']),
         'restaurantCount': json['restaurant_count'],
         'recipeCount': json['recipe_count'],
+        'pantryItemCount': json['pantry_item_count'],
         'hasRestaurant': json['has_restaurant'] == null ? undefined : json['has_restaurant'],
         'hasRecipe': json['has_recipe'] == null ? undefined : json['has_recipe'],
+        'hasPantryItem': json['has_pantry_item'] == null ? undefined : json['has_pantry_item'],
         'created': json['created'],
         'updated': json['updated'],
     };
@@ -146,8 +161,10 @@ export function SavedListToJSONTyped(value?: SavedList | null, ignoreDiscriminat
         'creator': CreatorToJSON(value['creator']),
         'restaurant_count': value['restaurantCount'],
         'recipe_count': value['recipeCount'],
+        'pantry_item_count': value['pantryItemCount'],
         'has_restaurant': value['hasRestaurant'],
         'has_recipe': value['hasRecipe'],
+        'has_pantry_item': value['hasPantryItem'],
         'created': value['created'],
         'updated': value['updated'],
     };

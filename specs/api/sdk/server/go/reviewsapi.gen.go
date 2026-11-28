@@ -25,12 +25,37 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for PantryItemCategory.
+const (
+	Beer      PantryItemCategory = "beer"
+	Cheese    PantryItemCategory = "cheese"
+	Chocolate PantryItemCategory = "chocolate"
+	Wine      PantryItemCategory = "wine"
+)
+
+// Valid indicates whether the value is a known member of the PantryItemCategory enum.
+func (e PantryItemCategory) Valid() bool {
+	switch e {
+	case Beer:
+		return true
+	case Cheese:
+		return true
+	case Chocolate:
+		return true
+	case Wine:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProblemCode.
 const (
 	ProblemCodeEmailNotConfirmed   ProblemCode = "email_not_confirmed"
 	ProblemCodeFavoritesList       ProblemCode = "favorites_list"
 	ProblemCodeListLimit           ProblemCode = "list_limit"
 	ProblemCodeListNameTaken       ProblemCode = "list_name_taken"
+	ProblemCodeListPantryItemLimit ProblemCode = "list_pantry_item_limit"
 	ProblemCodeListRecipeLimit     ProblemCode = "list_recipe_limit"
 	ProblemCodeListRestaurantLimit ProblemCode = "list_restaurant_limit"
 	ProblemCodeNotApproved         ProblemCode = "not_approved"
@@ -52,6 +77,8 @@ func (e ProblemCode) Valid() bool {
 	case ProblemCodeListLimit:
 		return true
 	case ProblemCodeListNameTaken:
+		return true
+	case ProblemCodeListPantryItemLimit:
 		return true
 	case ProblemCodeListRecipeLimit:
 		return true
@@ -150,6 +177,7 @@ func (e PhotoVariant) Valid() bool {
 
 // Defines values for TagKind.
 const (
+	TagKindPantry      TagKind = "pantry"
 	TagKindRecipes     TagKind = "recipes"
 	TagKindRestaurants TagKind = "restaurants"
 )
@@ -157,6 +185,8 @@ const (
 // Valid indicates whether the value is a known member of the TagKind enum.
 func (e TagKind) Valid() bool {
 	switch e {
+	case TagKindPantry:
+		return true
 	case TagKindRecipes:
 		return true
 	case TagKindRestaurants:
@@ -216,6 +246,7 @@ func (e ListTagsParamsSort) Valid() bool {
 
 // Defines values for ListTagsParamsKind.
 const (
+	ListTagsParamsKindPantry      ListTagsParamsKind = "pantry"
 	ListTagsParamsKindRecipes     ListTagsParamsKind = "recipes"
 	ListTagsParamsKindRestaurants ListTagsParamsKind = "restaurants"
 )
@@ -223,6 +254,8 @@ const (
 // Valid indicates whether the value is a known member of the ListTagsParamsKind enum.
 func (e ListTagsParamsKind) Valid() bool {
 	switch e {
+	case ListTagsParamsKindPantry:
+		return true
 	case ListTagsParamsKindRecipes:
 		return true
 	case ListTagsParamsKindRestaurants:
@@ -240,6 +273,9 @@ type Address = string
 // The API removes the ASCII spaces at the start and the end.
 // Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
 type AltText = string
+
+// AromaScore How good the smell is.
+type AromaScore = Score
 
 // AuthToken An auth token and the user that it belongs to.
 //
@@ -447,6 +483,426 @@ type NextCursor = string
 // Examples: Tu-Sa 13:00-16:00, 20:00-23:00
 // Su 13:00-16:00
 type OpeningHours = string
+
+// PantryItem A wine, a beer, a cheese, or a chocolate that users taste and review.
+//
+// Examples: {"category":"wine","cover":null,"created":"2026-11-23T18:20:11.410Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"description":"Off-dry, with green apple and slate.","favorite":false,"id":"p2k7m4q9s1v6x3z","name":"Wehlener Sonnenuhr Kabinett","origin":"Mosel, Germany","own_review_count":1,"producer":"Weingut Example","rating":{"aroma":8,"overall":8.1,"taste":8.5,"texture":7.5,"value":8.5},"review_count":2,"style":"Riesling","tags":["off-dry","white"],"updated":"2026-11-23T18:20:11.410Z"}
+type PantryItem struct {
+	// Category The kind of a pantry item: `wine`, `beer`, `cheese`, or `chocolate`.
+	// A later version can add values. A client must show an unknown value as text.
+	Category PantryItemCategory `json:"category"`
+
+	// Cover The first photo of `listPantryItemPhotos`. It is `null` for a pantry item without photos.
+	// It changes when a review gets photos or new scores.
+	Cover nullable.Nullable[PantryItemPhoto] `json:"cover"`
+
+	// Created An RFC 3339 timestamp in UTC with millisecond precision.
+	//
+	// Examples: 2024-11-04T01:26:55.002Z
+	Created Timestamp `json:"created"`
+
+	// Creator The user who created the pantry item. It is `null` after that user is deleted.
+	Creator nullable.Nullable[Creator] `json:"creator"`
+
+	// Description A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Description *LongText `json:"description,omitempty"`
+
+	// Favorite `true` if the favorites list of the user of the token has the pantry item.
+	// It is `false` for a request without a token.
+	Favorite bool `json:"favorite"`
+
+	// Id A record ID of 15 characters.
+	//
+	// Examples: k3x9m2p7q1w8z4a
+	Id RecordId `json:"id"`
+
+	// Name A name with at least one character that is not ASCII whitespace.
+	// The API removes the ASCII spaces at the start and the end.
+	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Name Name `json:"name"`
+
+	// Origin The place of origin, such as `Mosel, Germany`.
+	Origin *Name `json:"origin,omitempty"`
+
+	// OwnReviewCount The number of reviews of the user of the token for the pantry item. Each tasting has its own review.
+	// It is `0` for a request without a token.
+	OwnReviewCount int `json:"own_review_count"`
+
+	// Producer The maker, such as the winery, the brewery, the dairy, or the chocolate maker.
+	Producer *Name `json:"producer,omitempty"`
+
+	// Rating The average scores of the reviews. It is `null` for a pantry item without reviews.
+	Rating nullable.Nullable[PantryItemRating] `json:"rating"`
+
+	// ReviewCount The number of reviews of the pantry item. Each tasting of a user has its own review.
+	ReviewCount int `json:"review_count"`
+
+	// Style The style, such as the grape, the beer style, the type of cheese, or the cocoa content.
+	Style *Name `json:"style,omitempty"`
+
+	// Tags Tags. The API removes the repeats after it changes the tags. The first copy keeps its place.
+	//
+	// Examples: ["italian","pasta"]
+	Tags *Tags `json:"tags,omitempty"`
+
+	// Updated An RFC 3339 timestamp in UTC with millisecond precision.
+	//
+	// Examples: 2024-11-04T01:26:55.002Z
+	Updated Timestamp `json:"updated"`
+}
+
+// PantryItemCategory The kind of a pantry item: `wine`, `beer`, `cheese`, or `chocolate`.
+// A later version can add values. A client must show an unknown value as text.
+type PantryItemCategory string
+
+// PantryItemCreate The properties of a new pantry item.
+//
+// Examples: {"category":"wine","name":"Wehlener Sonnenuhr Kabinett","origin":"Mosel, Germany","producer":"Weingut Example","style":"Riesling","tags":["off-dry","white"]}
+type PantryItemCreate struct {
+	// Category The kind of a pantry item: `wine`, `beer`, `cheese`, or `chocolate`.
+	// A later version can add values. A client must show an unknown value as text.
+	Category PantryItemCategory `json:"category"`
+
+	// Description A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Description *LongText `json:"description,omitempty"`
+
+	// Name A name with at least one character that is not ASCII whitespace.
+	// The API removes the ASCII spaces at the start and the end.
+	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Name Name `json:"name"`
+
+	// Origin The place of origin, such as `Mosel, Germany`.
+	Origin *Name `json:"origin,omitempty"`
+
+	// Producer The maker, such as the winery, the brewery, the dairy, or the chocolate maker.
+	Producer *Name `json:"producer,omitempty"`
+
+	// Style The style, such as the grape, the beer style, the type of cheese, or the cocoa content.
+	Style *Name `json:"style,omitempty"`
+
+	// Tags Tags. The API removes the repeats after it changes the tags. The first copy keeps its place.
+	//
+	// Examples: ["italian","pasta"]
+	Tags *Tags `json:"tags,omitempty"`
+}
+
+// PantryItemList A page of pantry items.
+//
+// Examples: {"items":[{"category":"wine","cover":null,"created":"2026-11-23T18:20:11.410Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"favorite":false,"id":"p2k7m4q9s1v6x3z","name":"Wehlener Sonnenuhr Kabinett","own_review_count":0,"rating":null,"review_count":0,"updated":"2026-11-23T18:20:11.410Z"}],"next_cursor":null}
+type PantryItemList struct {
+	Items []PantryItem `json:"items"`
+
+	// NextCursor The cursor for the next page. It is `null` on the last page.
+	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
+}
+
+// PantryItemPatch A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+// `category` cannot be `null`.
+//
+// Examples: {"origin":null,"style":"Riesling"}
+type PantryItemPatch struct {
+	// Category The kind of a pantry item: `wine`, `beer`, `cheese`, or `chocolate`.
+	// A later version can add values. A client must show an unknown value as text.
+	Category    *PantryItemCategory         `json:"category,omitempty"`
+	Description nullable.Nullable[LongText] `json:"description,omitempty"`
+
+	// Name A name with at least one character that is not ASCII whitespace.
+	// The API removes the ASCII spaces at the start and the end.
+	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Name     *Name                   `json:"name,omitempty"`
+	Origin   nullable.Nullable[Name] `json:"origin,omitempty"`
+	Producer nullable.Nullable[Name] `json:"producer,omitempty"`
+	Style    nullable.Nullable[Name] `json:"style,omitempty"`
+	Tags     nullable.Nullable[Tags] `json:"tags,omitempty"`
+}
+
+// PantryItemPhoto A photo of a review of a pantry item. It has the properties of `Photo`, the review, and the creator of the review.
+type PantryItemPhoto struct {
+	// Alt A text that describes the photo for screen readers. It is `null` without a description.
+	Alt nullable.Nullable[AltText] `json:"alt"`
+
+	// Created An RFC 3339 timestamp in UTC with millisecond precision.
+	//
+	// Examples: 2024-11-04T01:26:55.002Z
+	Created Timestamp `json:"created"`
+
+	// Creator The public fields of a user.
+	Creator Creator `json:"creator"`
+
+	// Height The height of the `full` image in pixels.
+	Height int `json:"height"`
+
+	// Id A record ID of 15 characters.
+	//
+	// Examples: k3x9m2p7q1w8z4a
+	Id RecordId `json:"id"`
+
+	// Review A record ID of 15 characters.
+	//
+	// Examples: k3x9m2p7q1w8z4a
+	Review RecordId `json:"review"`
+
+	// Urls The paths of the image files on the origin of the API. Clients use them as given.
+	Urls PhotoUrls `json:"urls"`
+
+	// Width The width of the `full` image in pixels.
+	Width int `json:"width"`
+}
+
+// PantryItemPhotoList A page of the photos of a pantry item.
+//
+// Examples: {"items":[{"alt":null,"created":"2026-11-23T19:04:30.811Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"height":2048,"id":"h6j1k5m9n3p7q2r","review":"t4s8n2q6m0k3h7a","urls":{"full":"/v1/pantry/p2k7m4q9s1v6x3z/reviews/t4s8n2q6m0k3h7a/photos/h6j1k5m9n3p7q2r/full","thumb":"/v1/pantry/p2k7m4q9s1v6x3z/reviews/t4s8n2q6m0k3h7a/photos/h6j1k5m9n3p7q2r/thumb"},"width":1536}],"next_cursor":null}
+type PantryItemPhotoList struct {
+	Items []PantryItemPhoto `json:"items"`
+
+	// NextCursor The cursor for the next page. It is `null` on the last page.
+	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
+}
+
+// PantryItemRating The average of each score over the reviewers of a pantry item.
+// Each reviewer counts one time with the average of the own reviews.
+// `overall` is the average of the four averages.
+// The API rounds each value to one decimal.
+type PantryItemRating struct {
+	// Aroma An average score from 1 to 10. The property tells its number of decimals.
+	//
+	// Examples: 7.6
+	Aroma AverageScore `json:"aroma"`
+
+	// Overall An average score from 1 to 10. The property tells its number of decimals.
+	//
+	// Examples: 7.6
+	Overall AverageScore `json:"overall"`
+
+	// Taste An average score from 1 to 10. The property tells its number of decimals.
+	//
+	// Examples: 7.6
+	Taste AverageScore `json:"taste"`
+
+	// Texture An average score from 1 to 10. The property tells its number of decimals.
+	//
+	// Examples: 7.6
+	Texture AverageScore `json:"texture"`
+
+	// Value An average score from 1 to 10. The property tells its number of decimals.
+	//
+	// Examples: 7.6
+	Value AverageScore `json:"value"`
+}
+
+// PantryItemReview A review of a pantry item. It scores the taste, the aroma, the texture, and the value.
+//
+// Examples: {"aroma":8,"created":"2026-11-23T19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"date":"2026-11-23","feedback":"Very fresh. The sweetness is low.","id":"t4s8n2q6m0k3h7a","overall":8.25,"pantry_item":"p2k7m4q9s1v6x3z","pantry_item_name":"Wehlener Sonnenuhr Kabinett","photos":[],"taste":9,"texture":7,"title":"A light white for a warm evening","updated":"2026-11-23T19:02:11.120Z","value":9}
+type PantryItemReview struct {
+	// Aroma How good the smell is.
+	Aroma AromaScore `json:"aroma"`
+
+	// Created An RFC 3339 timestamp in UTC with millisecond precision.
+	//
+	// Examples: 2024-11-04T01:26:55.002Z
+	Created Timestamp `json:"created"`
+
+	// Creator The public fields of a user.
+	Creator Creator `json:"creator"`
+
+	// Date The date of the tasting.
+	//
+	// Examples: 2024-11-06
+	Date ReviewDate `json:"date"`
+
+	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Feedback *LongText `json:"feedback,omitempty"`
+
+	// Id A record ID of 15 characters.
+	//
+	// Examples: k3x9m2p7q1w8z4a
+	Id RecordId `json:"id"`
+
+	// Overall The average of the four scores. The API computes it. A client cannot set it.
+	// Each value is exact with two decimals.
+	// The average of the `overall` values of the reviews of a pantry item is its `rating.overall` before the rounding.
+	//
+	//
+	// Examples: 7.6
+	Overall AverageScore `json:"overall"`
+
+	// PantryItem A record ID of 15 characters.
+	//
+	// Examples: k3x9m2p7q1w8z4a
+	PantryItem RecordId `json:"pantry_item"`
+
+	// PantryItemName The `name` of the reviewed pantry item.
+	// It is the current name. A rename of the pantry item changes it.
+	PantryItemName Name `json:"pantry_item_name"`
+
+	// Photos The photos of the review, the oldest first.
+	Photos []Photo `json:"photos"`
+
+	// Taste How good the flavor is.
+	Taste PantryItemTasteScore `json:"taste"`
+
+	// Texture How good the feel in the mouth is.
+	// This is the body of a wine or a beer, the paste of a cheese, and the snap and melt of a chocolate.
+	Texture TextureScore `json:"texture"`
+
+	// Title A title with at least one character that is not ASCII whitespace.
+	// The API removes the ASCII spaces at the start and the end.
+	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Title Title `json:"title"`
+
+	// Updated An RFC 3339 timestamp in UTC with millisecond precision.
+	//
+	// Examples: 2024-11-04T01:26:55.002Z
+	Updated Timestamp `json:"updated"`
+
+	// Value Whether the pantry item is worth its price. A high score is good.
+	Value PantryItemValueScore `json:"value"`
+}
+
+// PantryItemReviewCreate The properties of a new pantry item review.
+//
+// Examples: {"aroma":8,"date":"2026-11-23","taste":9,"texture":7,"title":"A light white for a warm evening","value":9}
+type PantryItemReviewCreate struct {
+	// Aroma How good the smell is.
+	Aroma AromaScore `json:"aroma"`
+
+	// Date The date of the tasting.
+	//
+	// Examples: 2024-11-06
+	Date ReviewDate `json:"date"`
+
+	// Feedback A text of at most 10,000 characters.
+	// Line breaks and tabs are allowed. Other control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Feedback *LongText `json:"feedback,omitempty"`
+
+	// Taste How good the flavor is.
+	Taste PantryItemTasteScore `json:"taste"`
+
+	// Texture How good the feel in the mouth is.
+	// This is the body of a wine or a beer, the paste of a cheese, and the snap and melt of a chocolate.
+	Texture TextureScore `json:"texture"`
+
+	// Title A title with at least one character that is not ASCII whitespace.
+	// The API removes the ASCII spaces at the start and the end.
+	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Title Title `json:"title"`
+
+	// Value Whether the pantry item is worth its price. A high score is good.
+	Value PantryItemValueScore `json:"value"`
+}
+
+// PantryItemReviewList A page of pantry item reviews.
+//
+// Examples: {"items":[{"aroma":8,"created":"2026-11-23T19:02:11.120Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"date":"2026-11-23","id":"t4s8n2q6m0k3h7a","overall":8.25,"pantry_item":"p2k7m4q9s1v6x3z","pantry_item_name":"Wehlener Sonnenuhr Kabinett","photos":[],"taste":9,"texture":7,"title":"A light white for a warm evening","updated":"2026-11-23T19:02:11.120Z","value":9}],"next_cursor":null}
+type PantryItemReviewList struct {
+	Items []PantryItemReview `json:"items"`
+
+	// NextCursor The cursor for the next page. It is `null` on the last page.
+	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
+}
+
+// PantryItemReviewPatch A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+//
+// Examples: {"feedback":null,"texture":8}
+type PantryItemReviewPatch struct {
+	// Aroma How good the smell is.
+	Aroma *AromaScore `json:"aroma,omitempty"`
+
+	// Date The date of the tasting.
+	//
+	// Examples: 2024-11-06
+	Date     *ReviewDate                 `json:"date,omitempty"`
+	Feedback nullable.Nullable[LongText] `json:"feedback,omitempty"`
+
+	// Taste How good the flavor is.
+	Taste *PantryItemTasteScore `json:"taste,omitempty"`
+
+	// Texture How good the feel in the mouth is.
+	// This is the body of a wine or a beer, the paste of a cheese, and the snap and melt of a chocolate.
+	Texture *TextureScore `json:"texture,omitempty"`
+
+	// Title A title with at least one character that is not ASCII whitespace.
+	// The API removes the ASCII spaces at the start and the end.
+	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Title *Title `json:"title,omitempty"`
+
+	// Value Whether the pantry item is worth its price. A high score is good.
+	Value *PantryItemValueScore `json:"value,omitempty"`
+}
+
+// PantryItemTasteScore How good the flavor is.
+type PantryItemTasteScore = Score
+
+// PantryItemValueScore Whether the pantry item is worth its price. A high score is good.
+type PantryItemValueScore = Score
+
+// PantryItemVersion One create or one change of a pantry item.
+//
+// Examples: {"action":"update","after":{"style":"Riesling"},"before":{"style":null},"created":"2026-11-24T10:12:40.120Z","editor":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"v3p8n1t6r4s9q2a","number":2,"source":"user"}
+type PantryItemVersion struct {
+	// Action `create` is the version of a new subject. Its `before` is empty.
+	// `update` is a change.
+	Action VersionAction `json:"action"`
+
+	// After The properties of a pantry item that a version changed. `null` is a property without a value.
+	// The other properties are not in the object.
+	After PantryItemVersionValues `json:"after"`
+
+	// Before The properties of a pantry item that a version changed. `null` is a property without a value.
+	// The other properties are not in the object.
+	Before PantryItemVersionValues `json:"before"`
+
+	// Created An RFC 3339 timestamp in UTC with millisecond precision.
+	//
+	// Examples: 2024-11-04T01:26:55.002Z
+	Created Timestamp `json:"created"`
+
+	// Editor The user of the change. It is `null` for the source `admin` and after that user is deleted.
+	Editor nullable.Nullable[Creator] `json:"editor"`
+
+	// Id A record ID of 15 characters.
+	//
+	// Examples: k3x9m2p7q1w8z4a
+	Id RecordId `json:"id"`
+
+	// Number The number of the version. Each pantry item counts from 1. A bigger number is newer.
+	Number int `json:"number"`
+
+	// Source `user` is a change through the Public API. `editor` then names the user.
+	// `admin` is a change in the dashboard or by a migration. Its `editor` is `null`.
+	Source VersionSource `json:"source"`
+}
+
+// PantryItemVersionList A page of the versions of a pantry item. The newest version comes first.
+//
+// Examples: {"items":[{"action":"update","after":{"style":"Riesling"},"before":{"style":null},"created":"2026-11-24T10:12:40.120Z","editor":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"v3p8n1t6r4s9q2a","number":2,"source":"user"}],"next_cursor":null}
+type PantryItemVersionList struct {
+	Items []PantryItemVersion `json:"items"`
+
+	// NextCursor The cursor for the next page. It is `null` on the last page.
+	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
+}
+
+// PantryItemVersionValues The properties of a pantry item that a version changed. `null` is a property without a value.
+// The other properties are not in the object.
+type PantryItemVersionValues struct {
+	// Category The kind of a pantry item: `wine`, `beer`, `cheese`, or `chocolate`.
+	// A later version can add values. A client must show an unknown value as text.
+	Category    *PantryItemCategory         `json:"category,omitempty"`
+	Description nullable.Nullable[LongText] `json:"description,omitempty"`
+
+	// Name A name with at least one character that is not ASCII whitespace.
+	// The API removes the ASCII spaces at the start and the end.
+	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
+	Name     *Name                   `json:"name,omitempty"`
+	Origin   nullable.Nullable[Name] `json:"origin,omitempty"`
+	Producer nullable.Nullable[Name] `json:"producer,omitempty"`
+	Style    nullable.Nullable[Name] `json:"style,omitempty"`
+	Tags     nullable.Nullable[Tags] `json:"tags,omitempty"`
+}
 
 // Password A password of 8 to 71 characters.
 // Its UTF-8 encoding must be at most 72 bytes.
@@ -1661,7 +2117,7 @@ type RestaurantVersionValues struct {
 	Website      nullable.Nullable[Website]      `json:"website,omitempty"`
 }
 
-// ReviewDate The date of a visit or a cook in the form `YYYY-MM-DD`. It has no time and no time zone.
+// ReviewDate The date of a visit, a cook, or a tasting in the form `YYYY-MM-DD`. It has no time and no time zone.
 // The date must exist and be `1900-01-01` or later.
 // It must not be after the current date in UTC+14, the latest time zone.
 //
@@ -1670,7 +2126,7 @@ type ReviewDate = string
 
 // Reviewer The public profile of a user. It has the fields of `Creator` and no private data.
 //
-// Examples: {"id":"u5n1c8r3t6y0b2e","list_count":2,"name":"Ana","recipe_average_overall":8.1,"recipe_count":1,"recipe_review_count":4,"restaurant_average_overall":7.4,"restaurant_count":3,"restaurant_review_count":12}
+// Examples: {"id":"u5n1c8r3t6y0b2e","list_count":2,"name":"Ana","pantry_item_average_overall":7.9,"pantry_item_count":2,"pantry_item_review_count":3,"recipe_average_overall":8.1,"recipe_count":1,"recipe_review_count":4,"restaurant_average_overall":7.4,"restaurant_count":3,"restaurant_review_count":12}
 type Reviewer struct {
 	// Id A record ID of 15 characters.
 	//
@@ -1684,6 +2140,17 @@ type Reviewer struct {
 	// The API removes the ASCII spaces at the start and the end.
 	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
 	Name Name `json:"name"`
+
+	// PantryItemAverageOverall The average of the `overall` values of the pantry item reviews of the user.
+	// The API rounds it to one decimal. It is `null` for a user without pantry item reviews.
+	PantryItemAverageOverall nullable.Nullable[AverageScore] `json:"pantry_item_average_overall"`
+
+	// PantryItemCount The number of pantry items that the user created.
+	// `listPantryItems` with `creator[eq]` lists them.
+	PantryItemCount int `json:"pantry_item_count"`
+
+	// PantryItemReviewCount The number of pantry item reviews of the user. Each tasting has its own review.
+	PantryItemReviewCount int `json:"pantry_item_review_count"`
 
 	// RecipeAverageOverall The average of the `overall` values of the recipe reviews of the user.
 	// The API rounds it to one decimal. It is `null` for a user without recipe reviews.
@@ -1708,9 +2175,9 @@ type Reviewer struct {
 	RestaurantReviewCount int `json:"restaurant_review_count"`
 }
 
-// SavedList A public list of restaurants and recipes of a user. The `favorites` list of a user always exists.
+// SavedList A public list of restaurants, recipes, and pantry items of a user. The `favorites` list of a user always exists.
 //
-// Examples: {"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"l7d2f9h4j1k8m3p","kind":"custom","name":"Date night","recipe_count":0,"restaurant_count":4,"updated":"2024-11-04T01:26:55.002Z"}
+// Examples: {"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"l7d2f9h4j1k8m3p","kind":"custom","name":"Date night","pantry_item_count":1,"recipe_count":0,"restaurant_count":4,"updated":"2024-11-04T01:26:55.002Z"}
 type SavedList struct {
 	// Created An RFC 3339 timestamp in UTC with millisecond precision.
 	//
@@ -1719,6 +2186,10 @@ type SavedList struct {
 
 	// Creator The public fields of a user.
 	Creator Creator `json:"creator"`
+
+	// HasPantryItem `true` if the list has the pantry item of `pantry_item[eq]`.
+	// Only `listReviewerLists` with `pantry_item[eq]` gives this property.
+	HasPantryItem *bool `json:"has_pantry_item,omitempty"`
 
 	// HasRecipe `true` if the list has the recipe of `recipe[eq]`.
 	// Only `listReviewerLists` with `recipe[eq]` gives this property.
@@ -1740,6 +2211,10 @@ type SavedList struct {
 	// The API removes the ASCII spaces at the start and the end.
 	// Control characters, direction marks and overrides, and invisible characters such as zero-width spaces cause `422`.
 	Name Name `json:"name"`
+
+	// PantryItemCount The number of pantry items of the list.
+	// `listListPantryItems` and `listPantryItems` with `list[eq]` list them.
+	PantryItemCount int `json:"pantry_item_count"`
 
 	// RecipeCount The number of recipes of the list.
 	// `listListRecipes` and `listRecipes` with `list[eq]` list them.
@@ -1770,7 +2245,7 @@ type SavedListCreate struct {
 
 // SavedListPage All lists of a user.
 //
-// Examples: {"items":[{"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"f1a6c3e8g5i2k9m","kind":"favorites","name":"Favorites","recipe_count":0,"restaurant_count":12,"updated":"2024-11-04T01:26:55.002Z"}]}
+// Examples: {"items":[{"created":"2024-11-04T01:26:55.002Z","creator":{"id":"u5n1c8r3t6y0b2e","name":"Ana"},"id":"f1a6c3e8g5i2k9m","kind":"favorites","name":"Favorites","pantry_item_count":0,"recipe_count":0,"restaurant_count":12,"updated":"2024-11-04T01:26:55.002Z"}]}
 type SavedListPage struct {
 	Items []SavedList `json:"items"`
 }
@@ -1845,7 +2320,7 @@ type Tag = string
 
 // TagList A page of tags.
 //
-// Examples: {"items":[{"created":"2026-11-27T09:12:44.318Z","name":"wood-fired","recipe_count":1,"restaurant_count":4}],"next_cursor":null}
+// Examples: {"items":[{"created":"2026-11-27T09:12:44.318Z","name":"wood-fired","pantry_item_count":2,"recipe_count":1,"restaurant_count":4}],"next_cursor":null}
 type TagList struct {
 	Items []TagSummary `json:"items"`
 
@@ -1853,9 +2328,9 @@ type TagList struct {
 	NextCursor nullable.Nullable[NextCursor] `json:"next_cursor"`
 }
 
-// TagSummary A tag and the number of restaurants and recipes with it.
+// TagSummary A tag and the number of restaurants, recipes, and pantry items with it.
 //
-// Examples: {"created":"2026-11-27T09:12:44.318Z","name":"wood-fired","recipe_count":1,"restaurant_count":4}
+// Examples: {"created":"2026-11-27T09:12:44.318Z","name":"wood-fired","pantry_item_count":2,"recipe_count":1,"restaurant_count":4}
 type TagSummary struct {
 	// Created An RFC 3339 timestamp in UTC with millisecond precision.
 	//
@@ -1878,6 +2353,9 @@ type TagSummary struct {
 	// A text without a letter or a digit, such as `!!!`, is invalid.
 	Name Tag `json:"name"`
 
+	// PantryItemCount The number of pantry items with the tag.
+	PantryItemCount int `json:"pantry_item_count"`
+
 	// RecipeCount The number of recipes with the tag.
 	RecipeCount int `json:"recipe_count"`
 
@@ -1892,6 +2370,10 @@ type Tags = []Tag
 
 // TasteScore How good the result tastes.
 type TasteScore = Score
+
+// TextureScore How good the feel in the mouth is.
+// This is the body of a wine or a beer, the paste of a cheese, and the snap and melt of a chocolate.
+type TextureScore = Score
 
 // Timestamp An RFC 3339 timestamp in UTC with millisecond precision.
 //
@@ -2068,6 +2550,9 @@ type VersionSource string
 // Examples: https://cansole.example
 type Website = string
 
+// AromaFilter Comparisons for a score. All comparisons must match.
+type AromaFilter = ScoreRange
+
 // CreatedFilter Comparisons for a timestamp. All comparisons must match.
 type CreatedFilter = TimestampRange
 
@@ -2099,6 +2584,11 @@ type Limit = int
 // Examples: k3x9m2p7q1w8z4a
 type ListEq = RecordId
 
+// ListHasPantryItem A record ID of 15 characters.
+//
+// Examples: k3x9m2p7q1w8z4a
+type ListHasPantryItem = RecordId
+
 // ListHasRecipe A record ID of 15 characters.
 //
 // Examples: k3x9m2p7q1w8z4a
@@ -2122,6 +2612,38 @@ type NearFilter = Near
 
 // OverallFilter Comparisons for an average score. All comparisons must match.
 type OverallFilter = AverageRange
+
+// PantryItemCategoryEq The kind of a pantry item: `wine`, `beer`, `cheese`, or `chocolate`.
+// A later version can add values. A client must show an unknown value as text.
+type PantryItemCategoryEq = PantryItemCategory
+
+// PantryItemCategoryIn Examples: ["wine","beer"]
+type PantryItemCategoryIn = []PantryItemCategory
+
+// PantryItemEq A record ID of 15 characters.
+//
+// Examples: k3x9m2p7q1w8z4a
+type PantryItemEq = RecordId
+
+// PantryItemId A record ID of 15 characters.
+//
+// Examples: k3x9m2p7q1w8z4a
+type PantryItemId = RecordId
+
+// PantryItemIn Examples: ["p2k7m4q9s1v6x3z","w8n3b6c1d4f7g2h"]
+type PantryItemIn = []RecordId
+
+// PantryItemReviewSearch defines model for PantryItemReviewSearch.
+type PantryItemReviewSearch = string
+
+// PantryItemReviewSort defines model for PantryItemReviewSort.
+type PantryItemReviewSort = string
+
+// PantryItemSearch defines model for PantryItemSearch.
+type PantryItemSearch = string
+
+// PantryItemSort defines model for PantryItemSort.
+type PantryItemSort = string
 
 // PhotoId A record ID of 15 characters.
 //
@@ -2268,6 +2790,9 @@ type TagsHasAny = []Tag
 // TasteFilter Comparisons for a score. All comparisons must match.
 type TasteFilter = ScoreRange
 
+// TextureFilter Comparisons for a score. All comparisons must match.
+type TextureFilter = ScoreRange
+
 // TotalTimeFilter Comparisons for a total time. All comparisons must match.
 type TotalTimeFilter = TotalTimeRange
 
@@ -2350,6 +2875,17 @@ type UnprocessableContent = Problem
 // Examples: {"detail":"The request body has invalid properties.","errors":[{"message":"must be between 1 and 10","property":"food"}],"status":422,"title":"Unprocessable Content","type":"about:blank"}
 type UnsupportedMediaType = Problem
 
+// ListListPantryItemsParams defines parameters for ListListPantryItems.
+type ListListPantryItemsParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ListListRecipesParams defines parameters for ListListRecipes.
 type ListListRecipesParams struct {
 	// Limit The page size.
@@ -2363,6 +2899,213 @@ type ListListRecipesParams struct {
 
 // ListListRestaurantsParams defines parameters for ListListRestaurants.
 type ListListRestaurantsParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListPantryItemsParams defines parameters for ListPantryItems.
+type ListPantryItemsParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Sort A comma-separated list of properties.
+	// A `-` prefix sorts a property in descending order.
+	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
+	// The `name` sort ignores case only for the ASCII letters `A` to `Z`.
+	// The `overall` sort uses `rating.overall`. Equal values sort by the number of reviewers.
+	// `-overall` puts more reviewers first. `overall` puts fewer reviewers first.
+	// Sort properties after `overall` do not change the order.
+	// It puts pantry items without reviews last in both directions.
+	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
+	// With `search`, the default sort is `relevance`.
+	// The API always adds `id` as the last sort key.
+	Sort *PantryItemSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Search Full-text search in `name`, `description`, `tags`, `producer`, `style`, and `origin`.
+	// A pantry item matches when it has all words of the search. A word also matches longer words that start with it.
+	// The search ignores case and accents. `Cafe` matches `Café`.
+	// Matches in `name` count most for the `relevance` sort, then `tags`, then `producer`, then `style` and `origin`, then `description`.
+	// A search without a letter or a digit causes `400 Bad Request`.
+	Search *PantryItemSearch `form:"search,omitempty" json:"search,omitempty"`
+
+	// Overall Compares `rating.overall`, the rounded value of the response.
+	// Each key is an operator, for example `overall[gte]=`.
+	// A restaurant, a recipe, or a pantry item without reviews matches no `overall` filter.
+	Overall *OverallFilter `json:"overall,omitempty"`
+
+	// CategoryEq The `category` is equal to the value.
+	CategoryEq *PantryItemCategoryEq `form:"category[eq],omitempty" json:"category[eq],omitempty"`
+
+	// CategoryIn The `category` is equal to any of the values.
+	CategoryIn *PantryItemCategoryIn `form:"category[in],omitempty" json:"category[in],omitempty"`
+
+	// TagsHas The `tags` contain the tag.
+	TagsHas *TagsHas `form:"tags[has],omitempty" json:"tags[has],omitempty"`
+
+	// TagsHasAny The `tags` contain at least one of the tags.
+	TagsHasAny *TagsHasAny `form:"tags[has_any],omitempty" json:"tags[has_any],omitempty"`
+
+	// TagsHasAll The `tags` contain all of the tags.
+	TagsHasAll *TagsHasAll `form:"tags[has_all],omitempty" json:"tags[has_all],omitempty"`
+
+	// Created Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+	Created *CreatedFilter `json:"created,omitempty"`
+
+	// Updated Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+	Updated *UpdatedFilter `json:"updated,omitempty"`
+
+	// CreatorEq The `creator.id` is equal to the value.
+	CreatorEq *CreatorEq `form:"creator[eq],omitempty" json:"creator[eq],omitempty"`
+
+	// CreatorIn The `creator.id` is equal to any of the values.
+	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
+
+	// ListEq Selects the restaurants, the recipes, or the pantry items of the list with this ID.
+	// A list ID that does not exist selects none.
+	ListEq *ListEq `form:"list[eq],omitempty" json:"list[eq],omitempty"`
+}
+
+// ListAllPantryItemReviewsParams defines parameters for ListAllPantryItemReviews.
+type ListAllPantryItemReviewsParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Sort A comma-separated list of properties.
+	// A `-` prefix sorts a property in descending order.
+	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
+	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+	// The `overall` sort uses the `overall` value of the review.
+	// The `date` sort uses the `date` of the tasting, then `created`.
+	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
+	// With `search`, the default sort is `relevance`.
+	// The API always adds `id` as the last sort key.
+	Sort *PantryItemReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Search Full-text search in `title`, `feedback`, and `pantry_item_name`.
+	// A review matches when it has all words of the search. A word also matches longer words that start with it.
+	// The search ignores case and accents. `Cafe` matches `Café`.
+	// Matches in `title` count most for the `relevance` sort, then `pantry_item_name`, then `feedback`.
+	// A search without a letter or a digit causes `400 Bad Request`.
+	Search *PantryItemReviewSearch `form:"search,omitempty" json:"search,omitempty"`
+
+	// PantryItemEq The `pantry_item` of the review is equal to the value.
+	PantryItemEq *PantryItemEq `form:"pantry_item[eq],omitempty" json:"pantry_item[eq],omitempty"`
+
+	// PantryItemIn The `pantry_item` of the review is equal to any of the values.
+	PantryItemIn *PantryItemIn `form:"pantry_item[in],omitempty" json:"pantry_item[in],omitempty"`
+
+	// Taste Compares the `taste` score. Each key is an operator, for example `taste[gte]=`.
+	Taste *TasteFilter `json:"taste,omitempty"`
+
+	// Aroma Compares the `aroma` score. Each key is an operator, for example `aroma[gte]=`.
+	Aroma *AromaFilter `json:"aroma,omitempty"`
+
+	// Texture Compares the `texture` score. Each key is an operator, for example `texture[gte]=`.
+	Texture *TextureFilter `json:"texture,omitempty"`
+
+	// Value Compares the `value` score. Each key is an operator, for example `value[gte]=`.
+	Value *ValueFilter `json:"value,omitempty"`
+
+	// Overall Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
+	Overall *ReviewOverallFilter `json:"overall,omitempty"`
+
+	// Created Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+	Created *CreatedFilter `json:"created,omitempty"`
+
+	// Updated Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+	Updated *UpdatedFilter `json:"updated,omitempty"`
+
+	// CreatorEq The `creator.id` is equal to the value.
+	CreatorEq *CreatorEq `form:"creator[eq],omitempty" json:"creator[eq],omitempty"`
+
+	// CreatorIn The `creator.id` is equal to any of the values.
+	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
+}
+
+// ListPantryItemPhotosParams defines parameters for ListPantryItemPhotos.
+type ListPantryItemPhotosParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListPantryItemReviewsParams defines parameters for ListPantryItemReviews.
+type ListPantryItemReviewsParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Sort A comma-separated list of properties.
+	// A `-` prefix sorts a property in descending order.
+	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
+	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+	// The `overall` sort uses the `overall` value of the review.
+	// The `date` sort uses the `date` of the tasting, then `created`.
+	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
+	// With `search`, the default sort is `relevance`.
+	// The API always adds `id` as the last sort key.
+	Sort *PantryItemReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Search Full-text search in `title`, `feedback`, and `pantry_item_name`.
+	// A review matches when it has all words of the search. A word also matches longer words that start with it.
+	// The search ignores case and accents. `Cafe` matches `Café`.
+	// Matches in `title` count most for the `relevance` sort, then `pantry_item_name`, then `feedback`.
+	// A search without a letter or a digit causes `400 Bad Request`.
+	Search *PantryItemReviewSearch `form:"search,omitempty" json:"search,omitempty"`
+
+	// Taste Compares the `taste` score. Each key is an operator, for example `taste[gte]=`.
+	Taste *TasteFilter `json:"taste,omitempty"`
+
+	// Aroma Compares the `aroma` score. Each key is an operator, for example `aroma[gte]=`.
+	Aroma *AromaFilter `json:"aroma,omitempty"`
+
+	// Texture Compares the `texture` score. Each key is an operator, for example `texture[gte]=`.
+	Texture *TextureFilter `json:"texture,omitempty"`
+
+	// Value Compares the `value` score. Each key is an operator, for example `value[gte]=`.
+	Value *ValueFilter `json:"value,omitempty"`
+
+	// Overall Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
+	Overall *ReviewOverallFilter `json:"overall,omitempty"`
+
+	// Created Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+	Created *CreatedFilter `json:"created,omitempty"`
+
+	// Updated Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+	Updated *UpdatedFilter `json:"updated,omitempty"`
+
+	// CreatorEq The `creator.id` is equal to the value.
+	CreatorEq *CreatorEq `form:"creator[eq],omitempty" json:"creator[eq],omitempty"`
+
+	// CreatorIn The `creator.id` is equal to any of the values.
+	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
+}
+
+// ListPantryItemVersionsParams defines parameters for ListPantryItemVersions.
+type ListPantryItemVersionsParams struct {
 	// Limit The page size.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -2479,7 +3222,7 @@ type ListRecipesParams struct {
 
 	// Overall Compares `rating.overall`, the rounded value of the response.
 	// Each key is an operator, for example `overall[gte]=`.
-	// A restaurant or a recipe without reviews matches no `overall` filter.
+	// A restaurant, a recipe, or a pantry item without reviews matches no `overall` filter.
 	Overall *OverallFilter `json:"overall,omitempty"`
 
 	// TotalTime Compares the `total_time` of the recipe in minutes. Each key is an operator, for example `total_time[lte]=30`.
@@ -2507,7 +3250,7 @@ type ListRecipesParams struct {
 	// CreatorIn The `creator.id` is equal to any of the values.
 	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
 
-	// ListEq Selects the restaurants or the recipes of the list with this ID.
+	// ListEq Selects the restaurants, the recipes, or the pantry items of the list with this ID.
 	// A list ID that does not exist selects none.
 	ListEq *ListEq `form:"list[eq],omitempty" json:"list[eq],omitempty"`
 }
@@ -2686,7 +3429,7 @@ type ListRestaurantsParams struct {
 
 	// Overall Compares `rating.overall`, the rounded value of the response.
 	// Each key is an operator, for example `overall[gte]=`.
-	// A restaurant or a recipe without reviews matches no `overall` filter.
+	// A restaurant, a recipe, or a pantry item without reviews matches no `overall` filter.
 	Overall *OverallFilter `json:"overall,omitempty"`
 
 	// PriceLevel Compares the `price_level` of the restaurant. Each key is an operator, for example `price_level[lte]=2`.
@@ -2727,7 +3470,7 @@ type ListRestaurantsParams struct {
 	// CreatorIn The `creator.id` is equal to any of the values.
 	CreatorIn *CreatorIn `form:"creator[in],omitempty" json:"creator[in],omitempty"`
 
-	// ListEq Selects the restaurants or the recipes of the list with this ID.
+	// ListEq Selects the restaurants, the recipes, or the pantry items of the list with this ID.
 	// A list ID that does not exist selects none.
 	ListEq *ListEq `form:"list[eq],omitempty" json:"list[eq],omitempty"`
 }
@@ -2819,6 +3562,66 @@ type ListReviewerListsParams struct {
 	// RecipeEq The ID of a recipe. Each list of the response then has `has_recipe`.
 	// The parameter does not filter the lists.
 	RecipeEq *ListHasRecipe `form:"recipe[eq],omitempty" json:"recipe[eq],omitempty"`
+
+	// PantryItemEq The ID of a pantry item. Each list of the response then has `has_pantry_item`.
+	// The parameter does not filter the lists.
+	PantryItemEq *ListHasPantryItem `form:"pantry_item[eq],omitempty" json:"pantry_item[eq],omitempty"`
+}
+
+// ListReviewerPantryItemReviewsParams defines parameters for ListReviewerPantryItemReviews.
+type ListReviewerPantryItemReviewsParams struct {
+	// Limit The page size.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The `next_cursor` value of the previous page.
+	// Clients must not parse or build cursor values.
+	// A cursor is valid only with the same filters and sort that made it.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Sort A comma-separated list of properties.
+	// A `-` prefix sorts a property in descending order.
+	// Each property can occur only one time. A repeated property causes `400 Bad Request`.
+	// The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+	// The `overall` sort uses the `overall` value of the review.
+	// The `date` sort uses the `date` of the tasting, then `created`.
+	// The `relevance` sort puts the best matches of `search` first. It needs `search`.
+	// With `search`, the default sort is `relevance`.
+	// The API always adds `id` as the last sort key.
+	Sort *PantryItemReviewSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Search Full-text search in `title`, `feedback`, and `pantry_item_name`.
+	// A review matches when it has all words of the search. A word also matches longer words that start with it.
+	// The search ignores case and accents. `Cafe` matches `Café`.
+	// Matches in `title` count most for the `relevance` sort, then `pantry_item_name`, then `feedback`.
+	// A search without a letter or a digit causes `400 Bad Request`.
+	Search *PantryItemReviewSearch `form:"search,omitempty" json:"search,omitempty"`
+
+	// PantryItemEq The `pantry_item` of the review is equal to the value.
+	PantryItemEq *PantryItemEq `form:"pantry_item[eq],omitempty" json:"pantry_item[eq],omitempty"`
+
+	// PantryItemIn The `pantry_item` of the review is equal to any of the values.
+	PantryItemIn *PantryItemIn `form:"pantry_item[in],omitempty" json:"pantry_item[in],omitempty"`
+
+	// Taste Compares the `taste` score. Each key is an operator, for example `taste[gte]=`.
+	Taste *TasteFilter `json:"taste,omitempty"`
+
+	// Aroma Compares the `aroma` score. Each key is an operator, for example `aroma[gte]=`.
+	Aroma *AromaFilter `json:"aroma,omitempty"`
+
+	// Texture Compares the `texture` score. Each key is an operator, for example `texture[gte]=`.
+	Texture *TextureFilter `json:"texture,omitempty"`
+
+	// Value Compares the `value` score. Each key is an operator, for example `value[gte]=`.
+	Value *ValueFilter `json:"value,omitempty"`
+
+	// Overall Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
+	Overall *ReviewOverallFilter `json:"overall,omitempty"`
+
+	// Created Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
+	Created *CreatedFilter `json:"created,omitempty"`
+
+	// Updated Compares the `updated` timestamp. Each key is an operator, for example `updated[gte]=`.
+	Updated *UpdatedFilter `json:"updated,omitempty"`
 }
 
 // ListReviewerRecipeReviewsParams defines parameters for ListReviewerRecipeReviews.
@@ -2943,7 +3746,7 @@ type ListTagsParams struct {
 	// A cursor is valid only with the same filters and sort that made it.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Sort `-count` puts the tags with the most restaurants and recipes first. With `kind`, it counts only that kind.
+	// Sort `-count` puts the tags with the most restaurants, recipes, and pantry items first. With `kind`, it counts only that kind.
 	// `count` puts the fewest first. Equal counts sort by `name`.
 	// The `name` sort compares the code points of the names.
 	// The API always adds the ID of the tag as the last sort key.
@@ -2954,10 +3757,10 @@ type ListTagsParams struct {
 	// The search ignores case and accents. `Cafe` matches `café`.
 	// The API changes the search like a `Tag`. Spaces and punctuation then match hyphens. `wood f` matches `wood-fired`.
 	// A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next.
-	// It is in the list also without a restaurant or a recipe of `kind`. A client then finds an existing tag before it adds a new one.
+	// It is in the list also without a restaurant, a recipe, or a pantry item of `kind`. A client then finds an existing tag before it adds a new one.
 	Search *TagSearch `form:"search,omitempty" json:"search,omitempty"`
 
-	// Kind Lists only the tags of restaurants or only the tags of recipes.
+	// Kind Lists only the tags of restaurants, only the tags of recipes, or only the tags of pantry items.
 	// A tag with exactly the name of the changed `search`, or the same name without accents, is the one exception.
 	Kind *ListTagsParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
 }
@@ -3001,6 +3804,21 @@ type CreateListJSONRequestBody = SavedListCreate
 
 // UpdateListApplicationMergePatchPlusJSONRequestBody defines body for UpdateList for application/merge-patch+json ContentType.
 type UpdateListApplicationMergePatchPlusJSONRequestBody = SavedListPatch
+
+// CreatePantryItemJSONRequestBody defines body for CreatePantryItem for application/json ContentType.
+type CreatePantryItemJSONRequestBody = PantryItemCreate
+
+// UpdatePantryItemApplicationMergePatchPlusJSONRequestBody defines body for UpdatePantryItem for application/merge-patch+json ContentType.
+type UpdatePantryItemApplicationMergePatchPlusJSONRequestBody = PantryItemPatch
+
+// CreatePantryItemReviewJSONRequestBody defines body for CreatePantryItemReview for application/json ContentType.
+type CreatePantryItemReviewJSONRequestBody = PantryItemReviewCreate
+
+// UpdatePantryItemReviewApplicationMergePatchPlusJSONRequestBody defines body for UpdatePantryItemReview for application/merge-patch+json ContentType.
+type UpdatePantryItemReviewApplicationMergePatchPlusJSONRequestBody = PantryItemReviewPatch
+
+// UpdatePantryItemReviewPhotoApplicationMergePatchPlusJSONRequestBody defines body for UpdatePantryItemReviewPhoto for application/merge-patch+json ContentType.
+type UpdatePantryItemReviewPhotoApplicationMergePatchPlusJSONRequestBody = PhotoPatch
 
 // CreateRecipeJSONRequestBody defines body for CreateRecipe for application/json ContentType.
 type CreateRecipeJSONRequestBody = RecipeCreate
@@ -3070,12 +3888,21 @@ type ServerInterface interface {
 	// UpdateList Rename a list
 	// (PATCH /lists/{listId})
 	UpdateList(w http.ResponseWriter, r *http.Request, listId ListId)
+	// ListListPantryItems List the pantry items of a list
+	// (GET /lists/{listId}/pantry)
+	ListListPantryItems(w http.ResponseWriter, r *http.Request, listId ListId, params ListListPantryItemsParams)
 	// ListListRecipes List the recipes of a list
 	// (GET /lists/{listId}/recipes)
 	ListListRecipes(w http.ResponseWriter, r *http.Request, listId ListId, params ListListRecipesParams)
 	// ListListRestaurants List the restaurants of a list
 	// (GET /lists/{listId}/restaurants)
 	ListListRestaurants(w http.ResponseWriter, r *http.Request, listId ListId, params ListListRestaurantsParams)
+	// RemoveListPantryItem Remove a pantry item from a list
+	// (DELETE /lists/{listRef}/pantry/{pantryItemId})
+	RemoveListPantryItem(w http.ResponseWriter, r *http.Request, listRef ListRef, pantryItemId PantryItemId)
+	// AddListPantryItem Add a pantry item to a list
+	// (PUT /lists/{listRef}/pantry/{pantryItemId})
+	AddListPantryItem(w http.ResponseWriter, r *http.Request, listRef ListRef, pantryItemId PantryItemId)
 	// RemoveListRecipe Remove a recipe from a list
 	// (DELETE /lists/{listRef}/recipes/{recipeId})
 	RemoveListRecipe(w http.ResponseWriter, r *http.Request, listRef ListRef, recipeId RecipeId)
@@ -3088,6 +3915,57 @@ type ServerInterface interface {
 	// AddListRestaurant Add a restaurant to a list
 	// (PUT /lists/{listRef}/restaurants/{restaurantId})
 	AddListRestaurant(w http.ResponseWriter, r *http.Request, listRef ListRef, restaurantId RestaurantId)
+	// ListPantryItems List pantry items
+	// (GET /pantry)
+	ListPantryItems(w http.ResponseWriter, r *http.Request, params ListPantryItemsParams)
+	// CreatePantryItem Create a pantry item
+	// (POST /pantry)
+	CreatePantryItem(w http.ResponseWriter, r *http.Request)
+	// ListAllPantryItemReviews List the reviews of all pantry items
+	// (GET /pantry-item-reviews)
+	ListAllPantryItemReviews(w http.ResponseWriter, r *http.Request, params ListAllPantryItemReviewsParams)
+	// DeletePantryItem Delete a pantry item
+	// (DELETE /pantry/{pantryItemId})
+	DeletePantryItem(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId)
+	// GetPantryItem Get a pantry item
+	// (GET /pantry/{pantryItemId})
+	GetPantryItem(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId)
+	// UpdatePantryItem Update a pantry item
+	// (PATCH /pantry/{pantryItemId})
+	UpdatePantryItem(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId)
+	// ListPantryItemPhotos List the photos of all reviews of a pantry item
+	// (GET /pantry/{pantryItemId}/photos)
+	ListPantryItemPhotos(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, params ListPantryItemPhotosParams)
+	// ListPantryItemReviews List the reviews of a pantry item
+	// (GET /pantry/{pantryItemId}/reviews)
+	ListPantryItemReviews(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, params ListPantryItemReviewsParams)
+	// CreatePantryItemReview Create a review for a pantry item
+	// (POST /pantry/{pantryItemId}/reviews)
+	CreatePantryItemReview(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId)
+	// DeletePantryItemReview Delete a review of a pantry item
+	// (DELETE /pantry/{pantryItemId}/reviews/{reviewId})
+	DeletePantryItemReview(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId)
+	// GetPantryItemReview Get a review of a pantry item
+	// (GET /pantry/{pantryItemId}/reviews/{reviewId})
+	GetPantryItemReview(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId)
+	// UpdatePantryItemReview Update a review of a pantry item
+	// (PATCH /pantry/{pantryItemId}/reviews/{reviewId})
+	UpdatePantryItemReview(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId)
+	// AddPantryItemReviewPhoto Add a photo to a review of a pantry item
+	// (POST /pantry/{pantryItemId}/reviews/{reviewId}/photos)
+	AddPantryItemReviewPhoto(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId)
+	// DeletePantryItemReviewPhoto Delete a photo of a pantry item review
+	// (DELETE /pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId})
+	DeletePantryItemReviewPhoto(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId, photoId PhotoId)
+	// UpdatePantryItemReviewPhoto Change the alt text of a photo of a pantry item review
+	// (PATCH /pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId})
+	UpdatePantryItemReviewPhoto(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId, photoId PhotoId)
+	// GetPantryItemReviewPhotoFile Get the image file of a photo of a pantry item review
+	// (GET /pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId}/{variant})
+	GetPantryItemReviewPhotoFile(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant)
+	// ListPantryItemVersions List the versions of a pantry item
+	// (GET /pantry/{pantryItemId}/versions)
+	ListPantryItemVersions(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, params ListPantryItemVersionsParams)
 	// SearchPlaces Search for places
 	// (GET /places)
 	SearchPlaces(w http.ResponseWriter, r *http.Request, params SearchPlacesParams)
@@ -3199,6 +4077,9 @@ type ServerInterface interface {
 	// ListReviewerLists List the lists of a user
 	// (GET /reviewers/{reviewerId}/lists)
 	ListReviewerLists(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerListsParams)
+	// ListReviewerPantryItemReviews List the pantry item reviews of a user
+	// (GET /reviewers/{reviewerId}/pantry-item-reviews)
+	ListReviewerPantryItemReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerPantryItemReviewsParams)
 	// ListReviewerRecipeReviews List the recipe reviews of a user
 	// (GET /reviewers/{reviewerId}/recipe-reviews)
 	ListReviewerRecipeReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerRecipeReviewsParams)
@@ -3347,6 +4228,61 @@ func (siw *ServerInterfaceWrapper) UpdateList(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListListPantryItems operation middleware
+func (siw *ServerInterfaceWrapper) ListListPantryItems(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "listId" -------------
+	var listId ListId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "listId", r.PathValue("listId"), &listId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "listId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListListPantryItemsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListListPantryItems(w, r, listId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListListRecipes operation middleware
 func (siw *ServerInterfaceWrapper) ListListRecipes(w http.ResponseWriter, r *http.Request) {
 
@@ -3448,6 +4384,76 @@ func (siw *ServerInterfaceWrapper) ListListRestaurants(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListListRestaurants(w, r, listId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveListPantryItem operation middleware
+func (siw *ServerInterfaceWrapper) RemoveListPantryItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "listRef" -------------
+	var listRef ListRef
+
+	err = runtime.BindStyledParameterWithOptions("simple", "listRef", r.PathValue("listRef"), &listRef, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "listRef", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveListPantryItem(w, r, listRef, pantryItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddListPantryItem operation middleware
+func (siw *ServerInterfaceWrapper) AddListPantryItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "listRef" -------------
+	var listRef ListRef
+
+	err = runtime.BindStyledParameterWithOptions("simple", "listRef", r.PathValue("listRef"), &listRef, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "listRef", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddListPantryItem(w, r, listRef, pantryItemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3588,6 +4594,1143 @@ func (siw *ServerInterfaceWrapper) AddListRestaurant(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AddListRestaurant(w, r, listRef, restaurantId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPantryItems operation middleware
+func (siw *ServerInterfaceWrapper) ListPantryItems(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPantryItemsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "overall" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "overall", r.URL.Query(), &params.Overall, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overall"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overall", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "category[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "category[eq]", r.URL.Query(), &params.CategoryEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "category[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "category[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "category[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "category[in]", r.URL.Query(), &params.CategoryIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "category[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "category[in]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tags[has]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tags[has]", r.URL.Query(), &params.TagsHas, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tags[has]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tags[has]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tags[has_any]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tags[has_any]", r.URL.Query(), &params.TagsHasAny, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tags[has_any]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tags[has_any]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tags[has_all]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tags[has_all]", r.URL.Query(), &params.TagsHasAll, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tags[has_all]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tags[has_all]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "created" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "created", r.URL.Query(), &params.Created, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "updated" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "updated", r.URL.Query(), &params.Updated, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "updated"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "updated", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[eq]", r.URL.Query(), &params.CreatorEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[in]", r.URL.Query(), &params.CreatorIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[in]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "list[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list[eq]", r.URL.Query(), &params.ListEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list[eq]", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPantryItems(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreatePantryItem operation middleware
+func (siw *ServerInterfaceWrapper) CreatePantryItem(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreatePantryItem(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAllPantryItemReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListAllPantryItemReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAllPantryItemReviewsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pantry_item[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pantry_item[eq]", r.URL.Query(), &params.PantryItemEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pantry_item[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantry_item[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pantry_item[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pantry_item[in]", r.URL.Query(), &params.PantryItemIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pantry_item[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantry_item[in]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "taste" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "taste", r.URL.Query(), &params.Taste, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "taste"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taste", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "aroma" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "aroma", r.URL.Query(), &params.Aroma, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "aroma"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "aroma", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "texture" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "texture", r.URL.Query(), &params.Texture, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "texture"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "texture", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "value", r.URL.Query(), &params.Value, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "overall" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "overall", r.URL.Query(), &params.Overall, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overall"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overall", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "created" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "created", r.URL.Query(), &params.Created, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "updated" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "updated", r.URL.Query(), &params.Updated, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "updated"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "updated", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[eq]", r.URL.Query(), &params.CreatorEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[in]", r.URL.Query(), &params.CreatorIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[in]", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAllPantryItemReviews(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeletePantryItem operation middleware
+func (siw *ServerInterfaceWrapper) DeletePantryItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePantryItem(w, r, pantryItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPantryItem operation middleware
+func (siw *ServerInterfaceWrapper) GetPantryItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPantryItem(w, r, pantryItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePantryItem operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePantryItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePantryItem(w, r, pantryItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPantryItemPhotos operation middleware
+func (siw *ServerInterfaceWrapper) ListPantryItemPhotos(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPantryItemPhotosParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPantryItemPhotos(w, r, pantryItemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPantryItemReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListPantryItemReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPantryItemReviewsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "taste" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "taste", r.URL.Query(), &params.Taste, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "taste"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taste", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "aroma" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "aroma", r.URL.Query(), &params.Aroma, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "aroma"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "aroma", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "texture" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "texture", r.URL.Query(), &params.Texture, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "texture"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "texture", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "value", r.URL.Query(), &params.Value, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "overall" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "overall", r.URL.Query(), &params.Overall, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overall"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overall", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "created" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "created", r.URL.Query(), &params.Created, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "updated" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "updated", r.URL.Query(), &params.Updated, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "updated"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "updated", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[eq]", r.URL.Query(), &params.CreatorEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "creator[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "creator[in]", r.URL.Query(), &params.CreatorIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "creator[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "creator[in]", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPantryItemReviews(w, r, pantryItemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreatePantryItemReview operation middleware
+func (siw *ServerInterfaceWrapper) CreatePantryItemReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreatePantryItemReview(w, r, pantryItemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeletePantryItemReview operation middleware
+func (siw *ServerInterfaceWrapper) DeletePantryItemReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePantryItemReview(w, r, pantryItemId, reviewId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPantryItemReview operation middleware
+func (siw *ServerInterfaceWrapper) GetPantryItemReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPantryItemReview(w, r, pantryItemId, reviewId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePantryItemReview operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePantryItemReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePantryItemReview(w, r, pantryItemId, reviewId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddPantryItemReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) AddPantryItemReviewPhoto(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddPantryItemReviewPhoto(w, r, pantryItemId, reviewId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeletePantryItemReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) DeletePantryItemReviewPhoto(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "photoId" -------------
+	var photoId PhotoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "photoId", r.PathValue("photoId"), &photoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "photoId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePantryItemReviewPhoto(w, r, pantryItemId, reviewId, photoId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePantryItemReviewPhoto operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePantryItemReviewPhoto(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "photoId" -------------
+	var photoId PhotoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "photoId", r.PathValue("photoId"), &photoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "photoId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePantryItemReviewPhoto(w, r, pantryItemId, reviewId, photoId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPantryItemReviewPhotoFile operation middleware
+func (siw *ServerInterfaceWrapper) GetPantryItemReviewPhotoFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reviewId" -------------
+	var reviewId ReviewId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewId", r.PathValue("reviewId"), &reviewId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "photoId" -------------
+	var photoId PhotoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "photoId", r.PathValue("photoId"), &photoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "photoId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variant" -------------
+	var variant PhotoVariant
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variant", r.PathValue("variant"), &variant, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPantryItemReviewPhotoFile(w, r, pantryItemId, reviewId, photoId, variant)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPantryItemVersions operation middleware
+func (siw *ServerInterfaceWrapper) ListPantryItemVersions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "pantryItemId" -------------
+	var pantryItemId PantryItemId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pantryItemId", r.PathValue("pantryItemId"), &pantryItemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantryItemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPantryItemVersionsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPantryItemVersions(w, r, pantryItemId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6000,8 +8143,219 @@ func (siw *ServerInterfaceWrapper) ListReviewerLists(w http.ResponseWriter, r *h
 		return
 	}
 
+	// ------------- Optional query parameter "pantry_item[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pantry_item[eq]", r.URL.Query(), &params.PantryItemEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pantry_item[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantry_item[eq]", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListReviewerLists(w, r, reviewerId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReviewerPantryItemReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListReviewerPantryItemReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "reviewerId" -------------
+	var reviewerId ReviewerId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reviewerId", r.PathValue("reviewerId"), &reviewerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reviewerId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReviewerPantryItemReviewsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pantry_item[eq]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pantry_item[eq]", r.URL.Query(), &params.PantryItemEq, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pantry_item[eq]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantry_item[eq]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pantry_item[in]" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pantry_item[in]", r.URL.Query(), &params.PantryItemIn, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pantry_item[in]"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pantry_item[in]", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "taste" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "taste", r.URL.Query(), &params.Taste, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "taste"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taste", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "aroma" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "aroma", r.URL.Query(), &params.Aroma, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "aroma"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "aroma", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "texture" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "texture", r.URL.Query(), &params.Texture, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "texture"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "texture", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "value", r.URL.Query(), &params.Value, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "overall" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "overall", r.URL.Query(), &params.Overall, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overall"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overall", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "created" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "created", r.URL.Query(), &params.Created, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "updated" -------------
+
+	err = runtime.BindQueryParameterWithOptions("deepObject", true, false, "updated", r.URL.Query(), &params.Updated, runtime.BindQueryParameterOptions{Type: "object", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "updated"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "updated", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReviewerPantryItemReviews(w, r, reviewerId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6893,6 +9247,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}", wrapper.GetReviewer)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}/restaurant-reviews", wrapper.ListReviewerRestaurantReviews)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}/recipe-reviews", wrapper.ListReviewerRecipeReviews)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}/pantry-item-reviews", wrapper.ListReviewerPantryItemReviews)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.DeleteRestaurantReview)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.GetRestaurantReview)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/restaurants/{restaurantId}/reviews/{reviewId}", wrapper.UpdateRestaurantReview)
@@ -6917,6 +9272,23 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/recipes/{recipeId}/reviews/{reviewId}/photos/{photoId}", wrapper.DeleteRecipeReviewPhoto)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/recipes/{recipeId}/reviews/{reviewId}/photos/{photoId}", wrapper.UpdateRecipeReviewPhoto)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/recipes/{recipeId}/reviews/{reviewId}/photos/{photoId}/{variant}", wrapper.GetRecipeReviewPhotoFile)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/pantry", wrapper.ListPantryItems)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/pantry", wrapper.CreatePantryItem)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/pantry/{pantryItemId}", wrapper.DeletePantryItem)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/pantry/{pantryItemId}", wrapper.GetPantryItem)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/pantry/{pantryItemId}", wrapper.UpdatePantryItem)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews", wrapper.ListPantryItemReviews)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews", wrapper.CreatePantryItemReview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/pantry/{pantryItemId}/photos", wrapper.ListPantryItemPhotos)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/pantry/{pantryItemId}/versions", wrapper.ListPantryItemVersions)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/pantry-item-reviews", wrapper.ListAllPantryItemReviews)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews/{reviewId}", wrapper.DeletePantryItemReview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews/{reviewId}", wrapper.GetPantryItemReview)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews/{reviewId}", wrapper.UpdatePantryItemReview)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews/{reviewId}/photos", wrapper.AddPantryItemReviewPhoto)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId}", wrapper.DeletePantryItemReviewPhoto)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId}", wrapper.UpdatePantryItemReviewPhoto)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId}/{variant}", wrapper.GetPantryItemReviewPhotoFile)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/reviewers/{reviewerId}/lists", wrapper.ListReviewerLists)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/lists", wrapper.CreateList)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/lists/{listId}", wrapper.DeleteList)
@@ -6928,6 +9300,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/lists/{listId}/recipes", wrapper.ListListRecipes)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/lists/{listRef}/recipes/{recipeId}", wrapper.RemoveListRecipe)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/lists/{listRef}/recipes/{recipeId}", wrapper.AddListRecipe)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/lists/{listId}/pantry", wrapper.ListListPantryItems)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/lists/{listRef}/pantry/{pantryItemId}", wrapper.RemoveListPantryItem)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/lists/{listRef}/pantry/{pantryItemId}", wrapper.AddListPantryItem)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tags", wrapper.ListTags)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tags/{tagName}", wrapper.GetTag)
 
@@ -7532,6 +9907,98 @@ func (response UpdateListdefaultApplicationProblemPlusJSONResponse) VisitUpdateL
 	return err
 }
 
+type ListListPantryItemsRequestObject struct {
+	ListId ListId `json:"listId"`
+	Params ListListPantryItemsParams
+}
+
+type ListListPantryItemsResponseObject interface {
+	VisitListListPantryItemsResponse(w http.ResponseWriter) error
+}
+
+type ListListPantryItems200JSONResponse PantryItemList
+
+func (response ListListPantryItems200JSONResponse) VisitListListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListListPantryItems400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListListPantryItems400ApplicationProblemPlusJSONResponse) VisitListListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListListPantryItems401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListListPantryItems401ApplicationProblemPlusJSONResponse) VisitListListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListListPantryItems404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ListListPantryItems404ApplicationProblemPlusJSONResponse) VisitListListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListListPantryItemsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListListPantryItemsdefaultApplicationProblemPlusJSONResponse) VisitListListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListListRecipesRequestObject struct {
 	ListId ListId `json:"listId"`
 	Params ListListRecipesParams
@@ -7705,6 +10172,260 @@ type ListListRestaurantsdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response ListListRestaurantsdefaultApplicationProblemPlusJSONResponse) VisitListListRestaurantsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveListPantryItemRequestObject struct {
+	ListRef      ListRef      `json:"listRef"`
+	PantryItemId PantryItemId `json:"pantryItemId"`
+}
+
+type RemoveListPantryItemResponseObject interface {
+	VisitRemoveListPantryItemResponse(w http.ResponseWriter) error
+}
+
+type RemoveListPantryItem204Response struct {
+}
+
+func (response RemoveListPantryItem204Response) VisitRemoveListPantryItemResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveListPantryItem400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveListPantryItem400ApplicationProblemPlusJSONResponse) VisitRemoveListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveListPantryItem401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveListPantryItem401ApplicationProblemPlusJSONResponse) VisitRemoveListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveListPantryItem403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveListPantryItem403ApplicationProblemPlusJSONResponse) VisitRemoveListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveListPantryItem404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveListPantryItem404ApplicationProblemPlusJSONResponse) VisitRemoveListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveListPantryItem429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveListPantryItem429ApplicationProblemPlusJSONResponse) VisitRemoveListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveListPantryItemdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RemoveListPantryItemdefaultApplicationProblemPlusJSONResponse) VisitRemoveListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddListPantryItemRequestObject struct {
+	ListRef      ListRef      `json:"listRef"`
+	PantryItemId PantryItemId `json:"pantryItemId"`
+}
+
+type AddListPantryItemResponseObject interface {
+	VisitAddListPantryItemResponse(w http.ResponseWriter) error
+}
+
+type AddListPantryItem204Response struct {
+}
+
+func (response AddListPantryItem204Response) VisitAddListPantryItemResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AddListPantryItem400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response AddListPantryItem400ApplicationProblemPlusJSONResponse) VisitAddListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddListPantryItem401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response AddListPantryItem401ApplicationProblemPlusJSONResponse) VisitAddListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddListPantryItem403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response AddListPantryItem403ApplicationProblemPlusJSONResponse) VisitAddListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddListPantryItem404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response AddListPantryItem404ApplicationProblemPlusJSONResponse) VisitAddListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddListPantryItem409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response AddListPantryItem409ApplicationProblemPlusJSONResponse) VisitAddListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddListPantryItem429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response AddListPantryItem429ApplicationProblemPlusJSONResponse) VisitAddListPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddListPantryItemdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AddListPantryItemdefaultApplicationProblemPlusJSONResponse) VisitAddListPantryItemResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -8213,6 +10934,2164 @@ type AddListRestaurantdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response AddListRestaurantdefaultApplicationProblemPlusJSONResponse) VisitAddListRestaurantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemsRequestObject struct {
+	Params ListPantryItemsParams
+}
+
+type ListPantryItemsResponseObject interface {
+	VisitListPantryItemsResponse(w http.ResponseWriter) error
+}
+
+type ListPantryItems200JSONResponse PantryItemList
+
+func (response ListPantryItems200JSONResponse) VisitListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItems400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItems400ApplicationProblemPlusJSONResponse) VisitListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItems401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItems401ApplicationProblemPlusJSONResponse) VisitListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListPantryItemsdefaultApplicationProblemPlusJSONResponse) VisitListPantryItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemRequestObject struct {
+	Body *CreatePantryItemJSONRequestBody
+}
+
+type CreatePantryItemResponseObject interface {
+	VisitCreatePantryItemResponse(w http.ResponseWriter) error
+}
+
+type CreatePantryItem201ResponseHeaders struct {
+	Location *string
+}
+
+type CreatePantryItem201JSONResponse struct {
+	Body    PantryItem
+	Headers CreatePantryItem201ResponseHeaders
+}
+
+func (response CreatePantryItem201JSONResponse) VisitCreatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.Location != nil {
+		w.Header().Set("Location", fmt.Sprint(*response.Headers.Location))
+	}
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItem400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItem400ApplicationProblemPlusJSONResponse) VisitCreatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItem401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItem401ApplicationProblemPlusJSONResponse) VisitCreatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItem403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItem403ApplicationProblemPlusJSONResponse) VisitCreatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItem415ApplicationProblemPlusJSONResponse struct {
+	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItem415ApplicationProblemPlusJSONResponse) VisitCreatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItem422ApplicationProblemPlusJSONResponse struct {
+	UnprocessableContentApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItem422ApplicationProblemPlusJSONResponse) VisitCreatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItem429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItem429ApplicationProblemPlusJSONResponse) VisitCreatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreatePantryItemdefaultApplicationProblemPlusJSONResponse) VisitCreatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllPantryItemReviewsRequestObject struct {
+	Params ListAllPantryItemReviewsParams
+}
+
+type ListAllPantryItemReviewsResponseObject interface {
+	VisitListAllPantryItemReviewsResponse(w http.ResponseWriter) error
+}
+
+type ListAllPantryItemReviews200JSONResponse PantryItemReviewList
+
+func (response ListAllPantryItemReviews200JSONResponse) VisitListAllPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllPantryItemReviews400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListAllPantryItemReviews400ApplicationProblemPlusJSONResponse) VisitListAllPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllPantryItemReviews401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListAllPantryItemReviews401ApplicationProblemPlusJSONResponse) VisitListAllPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAllPantryItemReviewsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListAllPantryItemReviewsdefaultApplicationProblemPlusJSONResponse) VisitListAllPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+}
+
+type DeletePantryItemResponseObject interface {
+	VisitDeletePantryItemResponse(w http.ResponseWriter) error
+}
+
+type DeletePantryItem204Response struct {
+}
+
+func (response DeletePantryItem204Response) VisitDeletePantryItemResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeletePantryItem400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItem400ApplicationProblemPlusJSONResponse) VisitDeletePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItem401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItem401ApplicationProblemPlusJSONResponse) VisitDeletePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItem403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItem403ApplicationProblemPlusJSONResponse) VisitDeletePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItem404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItem404ApplicationProblemPlusJSONResponse) VisitDeletePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItem409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItem409ApplicationProblemPlusJSONResponse) VisitDeletePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItem429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItem429ApplicationProblemPlusJSONResponse) VisitDeletePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeletePantryItemdefaultApplicationProblemPlusJSONResponse) VisitDeletePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+}
+
+type GetPantryItemResponseObject interface {
+	VisitGetPantryItemResponse(w http.ResponseWriter) error
+}
+
+type GetPantryItem200JSONResponse PantryItem
+
+func (response GetPantryItem200JSONResponse) VisitGetPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItem400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItem400ApplicationProblemPlusJSONResponse) VisitGetPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItem401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItem401ApplicationProblemPlusJSONResponse) VisitGetPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItem404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItem404ApplicationProblemPlusJSONResponse) VisitGetPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetPantryItemdefaultApplicationProblemPlusJSONResponse) VisitGetPantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	Body         *UpdatePantryItemApplicationMergePatchPlusJSONRequestBody
+}
+
+type UpdatePantryItemResponseObject interface {
+	VisitUpdatePantryItemResponse(w http.ResponseWriter) error
+}
+
+type UpdatePantryItem200JSONResponse PantryItem
+
+func (response UpdatePantryItem200JSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItem400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItem400ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItem401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItem401ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItem403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItem403ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItem404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItem404ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItem415ApplicationProblemPlusJSONResponse struct {
+	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItem415ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItem422ApplicationProblemPlusJSONResponse struct {
+	UnprocessableContentApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItem422ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItem429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItem429ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdatePantryItemdefaultApplicationProblemPlusJSONResponse) VisitUpdatePantryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemPhotosRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	Params       ListPantryItemPhotosParams
+}
+
+type ListPantryItemPhotosResponseObject interface {
+	VisitListPantryItemPhotosResponse(w http.ResponseWriter) error
+}
+
+type ListPantryItemPhotos200JSONResponse PantryItemPhotoList
+
+func (response ListPantryItemPhotos200JSONResponse) VisitListPantryItemPhotosResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemPhotos400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemPhotos400ApplicationProblemPlusJSONResponse) VisitListPantryItemPhotosResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemPhotos401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemPhotos401ApplicationProblemPlusJSONResponse) VisitListPantryItemPhotosResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemPhotos404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemPhotos404ApplicationProblemPlusJSONResponse) VisitListPantryItemPhotosResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemPhotosdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListPantryItemPhotosdefaultApplicationProblemPlusJSONResponse) VisitListPantryItemPhotosResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemReviewsRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	Params       ListPantryItemReviewsParams
+}
+
+type ListPantryItemReviewsResponseObject interface {
+	VisitListPantryItemReviewsResponse(w http.ResponseWriter) error
+}
+
+type ListPantryItemReviews200JSONResponse PantryItemReviewList
+
+func (response ListPantryItemReviews200JSONResponse) VisitListPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemReviews400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemReviews400ApplicationProblemPlusJSONResponse) VisitListPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemReviews401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemReviews401ApplicationProblemPlusJSONResponse) VisitListPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemReviews404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemReviews404ApplicationProblemPlusJSONResponse) VisitListPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemReviewsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListPantryItemReviewsdefaultApplicationProblemPlusJSONResponse) VisitListPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReviewRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	Body         *CreatePantryItemReviewJSONRequestBody
+}
+
+type CreatePantryItemReviewResponseObject interface {
+	VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error
+}
+
+type CreatePantryItemReview201ResponseHeaders struct {
+	Location *string
+}
+
+type CreatePantryItemReview201JSONResponse struct {
+	Body    PantryItemReview
+	Headers CreatePantryItemReview201ResponseHeaders
+}
+
+func (response CreatePantryItemReview201JSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.Location != nil {
+		w.Header().Set("Location", fmt.Sprint(*response.Headers.Location))
+	}
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReview400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItemReview400ApplicationProblemPlusJSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReview401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItemReview401ApplicationProblemPlusJSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReview403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItemReview403ApplicationProblemPlusJSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReview404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItemReview404ApplicationProblemPlusJSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReview415ApplicationProblemPlusJSONResponse struct {
+	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItemReview415ApplicationProblemPlusJSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReview422ApplicationProblemPlusJSONResponse struct {
+	UnprocessableContentApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItemReview422ApplicationProblemPlusJSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReview429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response CreatePantryItemReview429ApplicationProblemPlusJSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePantryItemReviewdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreatePantryItemReviewdefaultApplicationProblemPlusJSONResponse) VisitCreatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReviewRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+}
+
+type DeletePantryItemReviewResponseObject interface {
+	VisitDeletePantryItemReviewResponse(w http.ResponseWriter) error
+}
+
+type DeletePantryItemReview204Response struct {
+}
+
+func (response DeletePantryItemReview204Response) VisitDeletePantryItemReviewResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeletePantryItemReview400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReview400ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReview401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReview401ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReview403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReview403ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReview404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReview404ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReview429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReview429ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReviewdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeletePantryItemReviewdefaultApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReviewRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+}
+
+type GetPantryItemReviewResponseObject interface {
+	VisitGetPantryItemReviewResponse(w http.ResponseWriter) error
+}
+
+type GetPantryItemReview200JSONResponse PantryItemReview
+
+func (response GetPantryItemReview200JSONResponse) VisitGetPantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReview400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItemReview400ApplicationProblemPlusJSONResponse) VisitGetPantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReview401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItemReview401ApplicationProblemPlusJSONResponse) VisitGetPantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReview404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItemReview404ApplicationProblemPlusJSONResponse) VisitGetPantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReviewdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetPantryItemReviewdefaultApplicationProblemPlusJSONResponse) VisitGetPantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	Body         *UpdatePantryItemReviewApplicationMergePatchPlusJSONRequestBody
+}
+
+type UpdatePantryItemReviewResponseObject interface {
+	VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error
+}
+
+type UpdatePantryItemReview200JSONResponse PantryItemReview
+
+func (response UpdatePantryItemReview200JSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReview400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReview400ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReview401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReview401ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReview403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReview403ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReview404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReview404ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReview415ApplicationProblemPlusJSONResponse struct {
+	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReview415ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReview422ApplicationProblemPlusJSONResponse struct {
+	UnprocessableContentApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReview422ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReview429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReview429ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdatePantryItemReviewdefaultApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhotoRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	ContentType  string
+	Body         io.Reader
+}
+
+type AddPantryItemReviewPhotoResponseObject interface {
+	VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error
+}
+
+type AddPantryItemReviewPhoto201ResponseHeaders struct {
+	Location *string
+}
+
+type AddPantryItemReviewPhoto201JSONResponse struct {
+	Body    Photo
+	Headers AddPantryItemReviewPhoto201ResponseHeaders
+}
+
+func (response AddPantryItemReviewPhoto201JSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.Location != nil {
+		w.Header().Set("Location", fmt.Sprint(*response.Headers.Location))
+	}
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto400ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto401ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto403ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto404ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto409ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto413ApplicationProblemPlusJSONResponse struct {
+	ContentTooLargeApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto413ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto415ApplicationProblemPlusJSONResponse struct {
+	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto415ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto422ApplicationProblemPlusJSONResponse struct {
+	InvalidImageApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto422ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhoto429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response AddPantryItemReviewPhoto429ApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddPantryItemReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AddPantryItemReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitAddPantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReviewPhotoRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	PhotoId      PhotoId      `json:"photoId"`
+}
+
+type DeletePantryItemReviewPhotoResponseObject interface {
+	VisitDeletePantryItemReviewPhotoResponse(w http.ResponseWriter) error
+}
+
+type DeletePantryItemReviewPhoto204Response struct {
+}
+
+func (response DeletePantryItemReviewPhoto204Response) VisitDeletePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeletePantryItemReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReviewPhoto400ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReviewPhoto401ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReviewPhoto403ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReviewPhoto404ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReviewPhoto429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response DeletePantryItemReviewPhoto429ApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeletePantryItemReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeletePantryItemReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitDeletePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhotoRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	PhotoId      PhotoId      `json:"photoId"`
+	Body         *UpdatePantryItemReviewPhotoApplicationMergePatchPlusJSONRequestBody
+}
+
+type UpdatePantryItemReviewPhotoResponseObject interface {
+	VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error
+}
+
+type UpdatePantryItemReviewPhoto200JSONResponse Photo
+
+func (response UpdatePantryItemReviewPhoto200JSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhoto400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReviewPhoto400ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhoto401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReviewPhoto401ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhoto403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReviewPhoto403ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhoto404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReviewPhoto404ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhoto415ApplicationProblemPlusJSONResponse struct {
+	UnsupportedMediaTypeApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReviewPhoto415ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhoto422ApplicationProblemPlusJSONResponse struct {
+	UnprocessableContentApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReviewPhoto422ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhoto429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response UpdatePantryItemReviewPhoto429ApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePantryItemReviewPhotodefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdatePantryItemReviewPhotodefaultApplicationProblemPlusJSONResponse) VisitUpdatePantryItemReviewPhotoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReviewPhotoFileRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	ReviewId     ReviewId     `json:"reviewId"`
+	PhotoId      PhotoId      `json:"photoId"`
+	Variant      PhotoVariant `json:"variant"`
+}
+
+type GetPantryItemReviewPhotoFileResponseObject interface {
+	VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error
+}
+
+type GetPantryItemReviewPhotoFile200ResponseHeaders struct {
+	CacheControl          string
+	ContentSecurityPolicy string
+	ETag                  string
+	XContentTypeOptions   string
+}
+
+type GetPantryItemReviewPhotoFile200ImagejpegResponse struct {
+	Body          io.Reader
+	Headers       GetPantryItemReviewPhotoFile200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetPantryItemReviewPhotoFile200ImagejpegResponse) VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.Header().Set("Content-Security-Policy", fmt.Sprint(response.Headers.ContentSecurityPolicy))
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.Header().Set("X-Content-Type-Options", fmt.Sprint(response.Headers.XContentTypeOptions))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetPantryItemReviewPhotoFile206ResponseHeaders struct {
+	ContentRange string
+	ETag         string
+}
+
+type GetPantryItemReviewPhotoFile206ImagejpegResponse struct {
+	Body          io.Reader
+	Headers       GetPantryItemReviewPhotoFile206ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetPantryItemReviewPhotoFile206ImagejpegResponse) VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Content-Range", fmt.Sprint(response.Headers.ContentRange))
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(206)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetPantryItemReviewPhotoFile304ResponseHeaders struct {
+	ETag string
+}
+
+type GetPantryItemReviewPhotoFile304Response struct {
+	Headers GetPantryItemReviewPhotoFile304ResponseHeaders
+}
+
+func (response GetPantryItemReviewPhotoFile304Response) VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(304)
+	return nil
+}
+
+type GetPantryItemReviewPhotoFile400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItemReviewPhotoFile400ApplicationProblemPlusJSONResponse) VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReviewPhotoFile401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItemReviewPhotoFile401ApplicationProblemPlusJSONResponse) VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReviewPhotoFile404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response GetPantryItemReviewPhotoFile404ApplicationProblemPlusJSONResponse) VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPantryItemReviewPhotoFile416ResponseHeaders struct {
+	ContentRange string
+}
+
+type GetPantryItemReviewPhotoFile416Response struct {
+	Headers GetPantryItemReviewPhotoFile416ResponseHeaders
+}
+
+func (response GetPantryItemReviewPhotoFile416Response) VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Range", fmt.Sprint(response.Headers.ContentRange))
+	w.WriteHeader(416)
+	return nil
+}
+
+type GetPantryItemReviewPhotoFiledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetPantryItemReviewPhotoFiledefaultApplicationProblemPlusJSONResponse) VisitGetPantryItemReviewPhotoFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemVersionsRequestObject struct {
+	PantryItemId PantryItemId `json:"pantryItemId"`
+	Params       ListPantryItemVersionsParams
+}
+
+type ListPantryItemVersionsResponseObject interface {
+	VisitListPantryItemVersionsResponse(w http.ResponseWriter) error
+}
+
+type ListPantryItemVersions200JSONResponse PantryItemVersionList
+
+func (response ListPantryItemVersions200JSONResponse) VisitListPantryItemVersionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemVersions400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemVersions400ApplicationProblemPlusJSONResponse) VisitListPantryItemVersionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemVersions401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemVersions401ApplicationProblemPlusJSONResponse) VisitListPantryItemVersionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemVersions403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemVersions403ApplicationProblemPlusJSONResponse) VisitListPantryItemVersionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemVersions404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ListPantryItemVersions404ApplicationProblemPlusJSONResponse) VisitListPantryItemVersionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPantryItemVersionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListPantryItemVersionsdefaultApplicationProblemPlusJSONResponse) VisitListPantryItemVersionsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -12911,6 +17790,98 @@ func (response ListReviewerListsdefaultApplicationProblemPlusJSONResponse) Visit
 	return err
 }
 
+type ListReviewerPantryItemReviewsRequestObject struct {
+	ReviewerId ReviewerId `json:"reviewerId"`
+	Params     ListReviewerPantryItemReviewsParams
+}
+
+type ListReviewerPantryItemReviewsResponseObject interface {
+	VisitListReviewerPantryItemReviewsResponse(w http.ResponseWriter) error
+}
+
+type ListReviewerPantryItemReviews200JSONResponse PantryItemReviewList
+
+func (response ListReviewerPantryItemReviews200JSONResponse) VisitListReviewerPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReviewerPantryItemReviews400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListReviewerPantryItemReviews400ApplicationProblemPlusJSONResponse) VisitListReviewerPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReviewerPantryItemReviews401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListReviewerPantryItemReviews401ApplicationProblemPlusJSONResponse) VisitListReviewerPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.Header().Set("WWW-Authenticate", fmt.Sprint(response.Headers.WWWAuthenticate))
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReviewerPantryItemReviews404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ListReviewerPantryItemReviews404ApplicationProblemPlusJSONResponse) VisitListReviewerPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReviewerPantryItemReviewsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListReviewerPantryItemReviewsdefaultApplicationProblemPlusJSONResponse) VisitListReviewerPantryItemReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListReviewerRecipeReviewsRequestObject struct {
 	ReviewerId ReviewerId `json:"reviewerId"`
 	Params     ListReviewerRecipeReviewsParams
@@ -14420,12 +19391,21 @@ type StrictServerInterface interface {
 	// UpdateList Rename a list
 	// (PATCH /lists/{listId})
 	UpdateList(ctx context.Context, request UpdateListRequestObject) (UpdateListResponseObject, error)
+	// ListListPantryItems List the pantry items of a list
+	// (GET /lists/{listId}/pantry)
+	ListListPantryItems(ctx context.Context, request ListListPantryItemsRequestObject) (ListListPantryItemsResponseObject, error)
 	// ListListRecipes List the recipes of a list
 	// (GET /lists/{listId}/recipes)
 	ListListRecipes(ctx context.Context, request ListListRecipesRequestObject) (ListListRecipesResponseObject, error)
 	// ListListRestaurants List the restaurants of a list
 	// (GET /lists/{listId}/restaurants)
 	ListListRestaurants(ctx context.Context, request ListListRestaurantsRequestObject) (ListListRestaurantsResponseObject, error)
+	// RemoveListPantryItem Remove a pantry item from a list
+	// (DELETE /lists/{listRef}/pantry/{pantryItemId})
+	RemoveListPantryItem(ctx context.Context, request RemoveListPantryItemRequestObject) (RemoveListPantryItemResponseObject, error)
+	// AddListPantryItem Add a pantry item to a list
+	// (PUT /lists/{listRef}/pantry/{pantryItemId})
+	AddListPantryItem(ctx context.Context, request AddListPantryItemRequestObject) (AddListPantryItemResponseObject, error)
 	// RemoveListRecipe Remove a recipe from a list
 	// (DELETE /lists/{listRef}/recipes/{recipeId})
 	RemoveListRecipe(ctx context.Context, request RemoveListRecipeRequestObject) (RemoveListRecipeResponseObject, error)
@@ -14438,6 +19418,57 @@ type StrictServerInterface interface {
 	// AddListRestaurant Add a restaurant to a list
 	// (PUT /lists/{listRef}/restaurants/{restaurantId})
 	AddListRestaurant(ctx context.Context, request AddListRestaurantRequestObject) (AddListRestaurantResponseObject, error)
+	// ListPantryItems List pantry items
+	// (GET /pantry)
+	ListPantryItems(ctx context.Context, request ListPantryItemsRequestObject) (ListPantryItemsResponseObject, error)
+	// CreatePantryItem Create a pantry item
+	// (POST /pantry)
+	CreatePantryItem(ctx context.Context, request CreatePantryItemRequestObject) (CreatePantryItemResponseObject, error)
+	// ListAllPantryItemReviews List the reviews of all pantry items
+	// (GET /pantry-item-reviews)
+	ListAllPantryItemReviews(ctx context.Context, request ListAllPantryItemReviewsRequestObject) (ListAllPantryItemReviewsResponseObject, error)
+	// DeletePantryItem Delete a pantry item
+	// (DELETE /pantry/{pantryItemId})
+	DeletePantryItem(ctx context.Context, request DeletePantryItemRequestObject) (DeletePantryItemResponseObject, error)
+	// GetPantryItem Get a pantry item
+	// (GET /pantry/{pantryItemId})
+	GetPantryItem(ctx context.Context, request GetPantryItemRequestObject) (GetPantryItemResponseObject, error)
+	// UpdatePantryItem Update a pantry item
+	// (PATCH /pantry/{pantryItemId})
+	UpdatePantryItem(ctx context.Context, request UpdatePantryItemRequestObject) (UpdatePantryItemResponseObject, error)
+	// ListPantryItemPhotos List the photos of all reviews of a pantry item
+	// (GET /pantry/{pantryItemId}/photos)
+	ListPantryItemPhotos(ctx context.Context, request ListPantryItemPhotosRequestObject) (ListPantryItemPhotosResponseObject, error)
+	// ListPantryItemReviews List the reviews of a pantry item
+	// (GET /pantry/{pantryItemId}/reviews)
+	ListPantryItemReviews(ctx context.Context, request ListPantryItemReviewsRequestObject) (ListPantryItemReviewsResponseObject, error)
+	// CreatePantryItemReview Create a review for a pantry item
+	// (POST /pantry/{pantryItemId}/reviews)
+	CreatePantryItemReview(ctx context.Context, request CreatePantryItemReviewRequestObject) (CreatePantryItemReviewResponseObject, error)
+	// DeletePantryItemReview Delete a review of a pantry item
+	// (DELETE /pantry/{pantryItemId}/reviews/{reviewId})
+	DeletePantryItemReview(ctx context.Context, request DeletePantryItemReviewRequestObject) (DeletePantryItemReviewResponseObject, error)
+	// GetPantryItemReview Get a review of a pantry item
+	// (GET /pantry/{pantryItemId}/reviews/{reviewId})
+	GetPantryItemReview(ctx context.Context, request GetPantryItemReviewRequestObject) (GetPantryItemReviewResponseObject, error)
+	// UpdatePantryItemReview Update a review of a pantry item
+	// (PATCH /pantry/{pantryItemId}/reviews/{reviewId})
+	UpdatePantryItemReview(ctx context.Context, request UpdatePantryItemReviewRequestObject) (UpdatePantryItemReviewResponseObject, error)
+	// AddPantryItemReviewPhoto Add a photo to a review of a pantry item
+	// (POST /pantry/{pantryItemId}/reviews/{reviewId}/photos)
+	AddPantryItemReviewPhoto(ctx context.Context, request AddPantryItemReviewPhotoRequestObject) (AddPantryItemReviewPhotoResponseObject, error)
+	// DeletePantryItemReviewPhoto Delete a photo of a pantry item review
+	// (DELETE /pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId})
+	DeletePantryItemReviewPhoto(ctx context.Context, request DeletePantryItemReviewPhotoRequestObject) (DeletePantryItemReviewPhotoResponseObject, error)
+	// UpdatePantryItemReviewPhoto Change the alt text of a photo of a pantry item review
+	// (PATCH /pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId})
+	UpdatePantryItemReviewPhoto(ctx context.Context, request UpdatePantryItemReviewPhotoRequestObject) (UpdatePantryItemReviewPhotoResponseObject, error)
+	// GetPantryItemReviewPhotoFile Get the image file of a photo of a pantry item review
+	// (GET /pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId}/{variant})
+	GetPantryItemReviewPhotoFile(ctx context.Context, request GetPantryItemReviewPhotoFileRequestObject) (GetPantryItemReviewPhotoFileResponseObject, error)
+	// ListPantryItemVersions List the versions of a pantry item
+	// (GET /pantry/{pantryItemId}/versions)
+	ListPantryItemVersions(ctx context.Context, request ListPantryItemVersionsRequestObject) (ListPantryItemVersionsResponseObject, error)
 	// SearchPlaces Search for places
 	// (GET /places)
 	SearchPlaces(ctx context.Context, request SearchPlacesRequestObject) (SearchPlacesResponseObject, error)
@@ -14549,6 +19580,9 @@ type StrictServerInterface interface {
 	// ListReviewerLists List the lists of a user
 	// (GET /reviewers/{reviewerId}/lists)
 	ListReviewerLists(ctx context.Context, request ListReviewerListsRequestObject) (ListReviewerListsResponseObject, error)
+	// ListReviewerPantryItemReviews List the pantry item reviews of a user
+	// (GET /reviewers/{reviewerId}/pantry-item-reviews)
+	ListReviewerPantryItemReviews(ctx context.Context, request ListReviewerPantryItemReviewsRequestObject) (ListReviewerPantryItemReviewsResponseObject, error)
 	// ListReviewerRecipeReviews List the recipe reviews of a user
 	// (GET /reviewers/{reviewerId}/recipe-reviews)
 	ListReviewerRecipeReviews(ctx context.Context, request ListReviewerRecipeReviewsRequestObject) (ListReviewerRecipeReviewsResponseObject, error)
@@ -14751,6 +19785,33 @@ func (sh *strictHandler) UpdateList(w http.ResponseWriter, r *http.Request, list
 	}
 }
 
+// ListListPantryItems operation middleware
+func (sh *strictHandler) ListListPantryItems(w http.ResponseWriter, r *http.Request, listId ListId, params ListListPantryItemsParams) {
+	var request ListListPantryItemsRequestObject
+
+	request.ListId = listId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListListPantryItems(ctx, request.(ListListPantryItemsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListListPantryItems")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListListPantryItemsResponseObject); ok {
+		if err := validResponse.VisitListListPantryItemsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListListRecipes operation middleware
 func (sh *strictHandler) ListListRecipes(w http.ResponseWriter, r *http.Request, listId ListId, params ListListRecipesParams) {
 	var request ListListRecipesRequestObject
@@ -14798,6 +19859,60 @@ func (sh *strictHandler) ListListRestaurants(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListListRestaurantsResponseObject); ok {
 		if err := validResponse.VisitListListRestaurantsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveListPantryItem operation middleware
+func (sh *strictHandler) RemoveListPantryItem(w http.ResponseWriter, r *http.Request, listRef ListRef, pantryItemId PantryItemId) {
+	var request RemoveListPantryItemRequestObject
+
+	request.ListRef = listRef
+	request.PantryItemId = pantryItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveListPantryItem(ctx, request.(RemoveListPantryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveListPantryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveListPantryItemResponseObject); ok {
+		if err := validResponse.VisitRemoveListPantryItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddListPantryItem operation middleware
+func (sh *strictHandler) AddListPantryItem(w http.ResponseWriter, r *http.Request, listRef ListRef, pantryItemId PantryItemId) {
+	var request AddListPantryItemRequestObject
+
+	request.ListRef = listRef
+	request.PantryItemId = pantryItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddListPantryItem(ctx, request.(AddListPantryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddListPantryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddListPantryItemResponseObject); ok {
+		if err := validResponse.VisitAddListPantryItemResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -14906,6 +20021,498 @@ func (sh *strictHandler) AddListRestaurant(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AddListRestaurantResponseObject); ok {
 		if err := validResponse.VisitAddListRestaurantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPantryItems operation middleware
+func (sh *strictHandler) ListPantryItems(w http.ResponseWriter, r *http.Request, params ListPantryItemsParams) {
+	var request ListPantryItemsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPantryItems(ctx, request.(ListPantryItemsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPantryItems")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPantryItemsResponseObject); ok {
+		if err := validResponse.VisitListPantryItemsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreatePantryItem operation middleware
+func (sh *strictHandler) CreatePantryItem(w http.ResponseWriter, r *http.Request) {
+	var request CreatePantryItemRequestObject
+
+	var body CreatePantryItemJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreatePantryItem(ctx, request.(CreatePantryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreatePantryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreatePantryItemResponseObject); ok {
+		if err := validResponse.VisitCreatePantryItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAllPantryItemReviews operation middleware
+func (sh *strictHandler) ListAllPantryItemReviews(w http.ResponseWriter, r *http.Request, params ListAllPantryItemReviewsParams) {
+	var request ListAllPantryItemReviewsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAllPantryItemReviews(ctx, request.(ListAllPantryItemReviewsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAllPantryItemReviews")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAllPantryItemReviewsResponseObject); ok {
+		if err := validResponse.VisitListAllPantryItemReviewsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeletePantryItem operation middleware
+func (sh *strictHandler) DeletePantryItem(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId) {
+	var request DeletePantryItemRequestObject
+
+	request.PantryItemId = pantryItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePantryItem(ctx, request.(DeletePantryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePantryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePantryItemResponseObject); ok {
+		if err := validResponse.VisitDeletePantryItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPantryItem operation middleware
+func (sh *strictHandler) GetPantryItem(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId) {
+	var request GetPantryItemRequestObject
+
+	request.PantryItemId = pantryItemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPantryItem(ctx, request.(GetPantryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPantryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPantryItemResponseObject); ok {
+		if err := validResponse.VisitGetPantryItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdatePantryItem operation middleware
+func (sh *strictHandler) UpdatePantryItem(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId) {
+	var request UpdatePantryItemRequestObject
+
+	request.PantryItemId = pantryItemId
+
+	var body UpdatePantryItemApplicationMergePatchPlusJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdatePantryItem(ctx, request.(UpdatePantryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdatePantryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdatePantryItemResponseObject); ok {
+		if err := validResponse.VisitUpdatePantryItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPantryItemPhotos operation middleware
+func (sh *strictHandler) ListPantryItemPhotos(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, params ListPantryItemPhotosParams) {
+	var request ListPantryItemPhotosRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPantryItemPhotos(ctx, request.(ListPantryItemPhotosRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPantryItemPhotos")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPantryItemPhotosResponseObject); ok {
+		if err := validResponse.VisitListPantryItemPhotosResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPantryItemReviews operation middleware
+func (sh *strictHandler) ListPantryItemReviews(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, params ListPantryItemReviewsParams) {
+	var request ListPantryItemReviewsRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPantryItemReviews(ctx, request.(ListPantryItemReviewsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPantryItemReviews")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPantryItemReviewsResponseObject); ok {
+		if err := validResponse.VisitListPantryItemReviewsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreatePantryItemReview operation middleware
+func (sh *strictHandler) CreatePantryItemReview(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId) {
+	var request CreatePantryItemReviewRequestObject
+
+	request.PantryItemId = pantryItemId
+
+	var body CreatePantryItemReviewJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreatePantryItemReview(ctx, request.(CreatePantryItemReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreatePantryItemReview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreatePantryItemReviewResponseObject); ok {
+		if err := validResponse.VisitCreatePantryItemReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeletePantryItemReview operation middleware
+func (sh *strictHandler) DeletePantryItemReview(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId) {
+	var request DeletePantryItemReviewRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.ReviewId = reviewId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePantryItemReview(ctx, request.(DeletePantryItemReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePantryItemReview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePantryItemReviewResponseObject); ok {
+		if err := validResponse.VisitDeletePantryItemReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPantryItemReview operation middleware
+func (sh *strictHandler) GetPantryItemReview(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId) {
+	var request GetPantryItemReviewRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.ReviewId = reviewId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPantryItemReview(ctx, request.(GetPantryItemReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPantryItemReview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPantryItemReviewResponseObject); ok {
+		if err := validResponse.VisitGetPantryItemReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdatePantryItemReview operation middleware
+func (sh *strictHandler) UpdatePantryItemReview(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId) {
+	var request UpdatePantryItemReviewRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.ReviewId = reviewId
+
+	var body UpdatePantryItemReviewApplicationMergePatchPlusJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdatePantryItemReview(ctx, request.(UpdatePantryItemReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdatePantryItemReview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdatePantryItemReviewResponseObject); ok {
+		if err := validResponse.VisitUpdatePantryItemReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddPantryItemReviewPhoto operation middleware
+func (sh *strictHandler) AddPantryItemReviewPhoto(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId) {
+	var request AddPantryItemReviewPhotoRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.ReviewId = reviewId
+	request.ContentType = r.Header.Get("Content-Type")
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddPantryItemReviewPhoto(ctx, request.(AddPantryItemReviewPhotoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddPantryItemReviewPhoto")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddPantryItemReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitAddPantryItemReviewPhotoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeletePantryItemReviewPhoto operation middleware
+func (sh *strictHandler) DeletePantryItemReviewPhoto(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId, photoId PhotoId) {
+	var request DeletePantryItemReviewPhotoRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.ReviewId = reviewId
+	request.PhotoId = photoId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePantryItemReviewPhoto(ctx, request.(DeletePantryItemReviewPhotoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePantryItemReviewPhoto")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePantryItemReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitDeletePantryItemReviewPhotoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdatePantryItemReviewPhoto operation middleware
+func (sh *strictHandler) UpdatePantryItemReviewPhoto(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId, photoId PhotoId) {
+	var request UpdatePantryItemReviewPhotoRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.ReviewId = reviewId
+	request.PhotoId = photoId
+
+	var body UpdatePantryItemReviewPhotoApplicationMergePatchPlusJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdatePantryItemReviewPhoto(ctx, request.(UpdatePantryItemReviewPhotoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdatePantryItemReviewPhoto")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdatePantryItemReviewPhotoResponseObject); ok {
+		if err := validResponse.VisitUpdatePantryItemReviewPhotoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPantryItemReviewPhotoFile operation middleware
+func (sh *strictHandler) GetPantryItemReviewPhotoFile(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, reviewId ReviewId, photoId PhotoId, variant PhotoVariant) {
+	var request GetPantryItemReviewPhotoFileRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.ReviewId = reviewId
+	request.PhotoId = photoId
+	request.Variant = variant
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPantryItemReviewPhotoFile(ctx, request.(GetPantryItemReviewPhotoFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPantryItemReviewPhotoFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPantryItemReviewPhotoFileResponseObject); ok {
+		if err := validResponse.VisitGetPantryItemReviewPhotoFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPantryItemVersions operation middleware
+func (sh *strictHandler) ListPantryItemVersions(w http.ResponseWriter, r *http.Request, pantryItemId PantryItemId, params ListPantryItemVersionsParams) {
+	var request ListPantryItemVersionsRequestObject
+
+	request.PantryItemId = pantryItemId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPantryItemVersions(ctx, request.(ListPantryItemVersionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPantryItemVersions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPantryItemVersionsResponseObject); ok {
+		if err := validResponse.VisitListPantryItemVersionsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -15976,6 +21583,33 @@ func (sh *strictHandler) ListReviewerLists(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// ListReviewerPantryItemReviews operation middleware
+func (sh *strictHandler) ListReviewerPantryItemReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerPantryItemReviewsParams) {
+	var request ListReviewerPantryItemReviewsRequestObject
+
+	request.ReviewerId = reviewerId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListReviewerPantryItemReviews(ctx, request.(ListReviewerPantryItemReviewsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListReviewerPantryItemReviews")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListReviewerPantryItemReviewsResponseObject); ok {
+		if err := validResponse.VisitListReviewerPantryItemReviewsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListReviewerRecipeReviews operation middleware
 func (sh *strictHandler) ListReviewerRecipeReviews(w http.ResponseWriter, r *http.Request, reviewerId ReviewerId, params ListReviewerRecipeReviewsParams) {
 	var request ListReviewerRecipeReviewsRequestObject
@@ -16415,371 +22049,420 @@ func (sh *strictHandler) RefreshToken(w http.ResponseWriter, r *http.Request, pa
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"UaKgE+fFlcuINcvAW3Dz4eb/GwA=",
+	"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",
+	"CuluIuzGxQCbWeMBvnt/9/8NAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

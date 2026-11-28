@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants and recipes are the exception. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
+ * The Public API lets users sign up, sign in, and review restaurants, recipes, and pantry items.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants, recipes, and pantry items are the exception. Create, update, and delete operations of restaurants, recipes, pantry items, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -449,7 +449,7 @@ export interface ListRestaurantsRequest {
     /**
      * Compares `rating.overall`, the rounded value of the response.
      * Each key is an operator, for example `overall[gte]=`.
-     * A restaurant or a recipe without reviews matches no `overall` filter.
+     * A restaurant, a recipe, or a pantry item without reviews matches no `overall` filter.
      * 
      */
     overall?: AverageRange;
@@ -505,7 +505,7 @@ export interface ListRestaurantsRequest {
      */
     creatorIn?: Array<string>;
     /**
-     * Selects the restaurants or the recipes of the list with this ID.
+     * Selects the restaurants, the recipes, or the pantry items of the list with this ID.
      * A list ID that does not exist selects none.
      * 
      */
@@ -961,7 +961,7 @@ export interface RestaurantsApiInterface {
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. Equal values sort by the number of reviewers. &#x60;-overall&#x60; puts more reviewers first. &#x60;overall&#x60; puts fewer reviewers first. Sort properties after &#x60;overall&#x60; do not change the order. It puts restaurants without reviews last in both directions. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The &#x60;distance&#x60; sort puts the restaurants nearest to the point of &#x60;near&#x60; first. It needs &#x60;near&#x60;. It uses the same approximation of the distance as &#x60;near&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
      * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, &#x60;tags&#x60;, and &#x60;location.address&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;location.address&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
-     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant or a recipe without reviews matches no &#x60;overall&#x60; filter. 
+     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant, a recipe, or a pantry item without reviews matches no &#x60;overall&#x60; filter. 
      * @param {PriceLevelRange} [priceLevel] Compares the &#x60;price_level&#x60; of the restaurant. Each key is an operator, for example &#x60;price_level[lte]&#x3D;2&#x60;. A restaurant without a &#x60;price_level&#x60; matches no &#x60;price_level&#x60; filter. 
      * @param {Near} [near] Selects the restaurants with a &#x60;location&#x60; at most &#x60;radius&#x60; meters from a point. Each key is a property, for example &#x60;near[latitude]&#x3D;41.3874&amp;near[longitude]&#x3D;2.1686&amp;near[radius]&#x3D;75&#x60;. &#x60;latitude&#x60; and &#x60;longitude&#x60; are required. Without &#x60;radius&#x60;, &#x60;near&#x60; selects all restaurants. It then only gives the point of the &#x60;distance&#x60; sort. The distance is an approximation on a flat surface. Its error is small for the radii that the API allows. 
      * @param {Box} [within] Selects the restaurants with a &#x60;location&#x60; in a box of coordinates, such as the view of a map. Each key is a side, for example &#x60;within[west]&#x3D;2.1&amp;within[south]&#x3D;41.3&amp;within[east]&#x3D;2.2&amp;within[north]&#x3D;41.4&#x60;. All four sides are required. &#x60;south&#x60; must not be more than &#x60;north&#x60;. A box with &#x60;west&#x60; more than &#x60;east&#x60; goes across the 180th meridian. 
@@ -972,7 +972,7 @@ export interface RestaurantsApiInterface {
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
      * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
-     * @param {string} [listEq] Selects the restaurants or the recipes of the list with this ID. A list ID that does not exist selects none. 
+     * @param {string} [listEq] Selects the restaurants, the recipes, or the pantry items of the list with this ID. A list ID that does not exist selects none. 
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface
      */
@@ -985,7 +985,7 @@ export interface RestaurantsApiInterface {
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. Equal values sort by the number of reviewers. &#x60;-overall&#x60; puts more reviewers first. &#x60;overall&#x60; puts fewer reviewers first. Sort properties after &#x60;overall&#x60; do not change the order. It puts restaurants without reviews last in both directions. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The &#x60;distance&#x60; sort puts the restaurants nearest to the point of &#x60;near&#x60; first. It needs &#x60;near&#x60;. It uses the same approximation of the distance as &#x60;near&#x60;. The API always adds &#x60;id&#x60; as the last sort key. 
      * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, &#x60;tags&#x60;, and &#x60;location.address&#x60;. A restaurant matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;location.address&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
-     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant or a recipe without reviews matches no &#x60;overall&#x60; filter. 
+     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant, a recipe, or a pantry item without reviews matches no &#x60;overall&#x60; filter. 
      * @param {PriceLevelRange} [priceLevel] Compares the &#x60;price_level&#x60; of the restaurant. Each key is an operator, for example &#x60;price_level[lte]&#x3D;2&#x60;. A restaurant without a &#x60;price_level&#x60; matches no &#x60;price_level&#x60; filter. 
      * @param {Near} [near] Selects the restaurants with a &#x60;location&#x60; at most &#x60;radius&#x60; meters from a point. Each key is a property, for example &#x60;near[latitude]&#x3D;41.3874&amp;near[longitude]&#x3D;2.1686&amp;near[radius]&#x3D;75&#x60;. &#x60;latitude&#x60; and &#x60;longitude&#x60; are required. Without &#x60;radius&#x60;, &#x60;near&#x60; selects all restaurants. It then only gives the point of the &#x60;distance&#x60; sort. The distance is an approximation on a flat surface. Its error is small for the radii that the API allows. 
      * @param {Box} [within] Selects the restaurants with a &#x60;location&#x60; in a box of coordinates, such as the view of a map. Each key is a side, for example &#x60;within[west]&#x3D;2.1&amp;within[south]&#x3D;41.3&amp;within[east]&#x3D;2.2&amp;within[north]&#x3D;41.4&#x60;. All four sides are required. &#x60;south&#x60; must not be more than &#x60;north&#x60;. A box with &#x60;west&#x60; more than &#x60;east&#x60; goes across the 180th meridian. 
@@ -996,7 +996,7 @@ export interface RestaurantsApiInterface {
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
      * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
-     * @param {string} [listEq] Selects the restaurants or the recipes of the list with this ID. A list ID that does not exist selects none. 
+     * @param {string} [listEq] Selects the restaurants, the recipes, or the pantry items of the list with this ID. A list ID that does not exist selects none. 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof RestaurantsApiInterface

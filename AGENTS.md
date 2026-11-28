@@ -131,7 +131,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `restaurants` tag has the restaurant and restaurant review operations. The names of restaurant review operations, schemas, and paths have `restaurant`, like the recipe ones. See decision 00001.
     - a restaurant review has four scores: `space`, `service`, `food`, and `price`. Its `overall` is their average. See decision 00005.
     - the `recipes` tag has the recipe and recipe review operations. Recipes have ingredients, steps, and four scores. See decision 00004.
-    - a review is one visit or one cook. A user can write many reviews of one restaurant or recipe. See decision 00005.
+    - the `pantry` tag has the pantry item and tasting operations. A pantry item is a wine, a beer, a cheese, or a chocolate with a `category`. Its paths start with `/pantry`. A tasting has the scores `taste`, `aroma`, `texture`, and `value`. See decision 00012.
+    - a review is one visit, one cook, or one tasting. A user can write many reviews of one subject. See decision 00005.
     - each review has a `date` without a time. The `review-date` format allows the dates from 1900-01-01 to today in UTC+14. The review lists sort by `-date` by default.
     - `rating` counts each reviewer one time with the average of the own reviews. `review_count` counts each review. See decision 00005.
     - `own_review_count` of a restaurant or a recipe counts the reviews of the user of the token, like `favorite`. The UI uses it for the delete rules of decision 00004.
@@ -153,10 +154,10 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the UI keeps its auth token in the HttpOnly `reviews_session` cookie. Other clients send a bearer token. See decision 00003.
     - the `reviewers` tag has the public profile of a user and the lists of the restaurant reviews and the recipe reviews of a user
     - the `places` tag has the place search for the location of a restaurant
-    - the `lists` tag has the public lists of restaurants and recipes of users. Each user has a favorites list. See decisions 00006 and 00004.
-    - `listRestaurants` and `listRecipes` with `list[eq]` search, sort, and filter the restaurants or the recipes of a list. See decisions 00006 and 00004.
-    - the `tags` tag has `listTags` and `getTag`. A tag is a record. A create or an update of a restaurant or a recipe makes its new tags. See decision 00011.
-    - a tag without a restaurant or a recipe does not exist for the Public API. A save that leaves a tag without a subject deletes it.
+    - the `lists` tag has the public lists of restaurants, recipes, and pantry items of users. Each user has a favorites list. See decisions 00006 and 00004.
+    - `listRestaurants`, `listRecipes`, and `listPantryItems` with `list[eq]` search, sort, and filter the subjects of a list. See decisions 00006 and 00004.
+    - the `tags` tag has `listTags` and `getTag`. A tag is a record. A create or an update of a restaurant, a recipe, or a pantry item makes its new tags. See decision 00011.
+    - a tag without a restaurant, a recipe, or a pantry item does not exist for the Public API. A save that leaves a tag without a subject deletes it.
   - **`specs/api/vacuum-ruleset.yaml`** - the vacuum lint rules for the API specifications
   - **`specs/api/sdk`** - the SDKs generated from `specs/api/public-openapi.yaml`. Do not edit generated files. See decision 00001.
     - **`specs/api/sdk/client/typescript`** - the TypeScript client `@reviews/sdk` that the UI uses
@@ -169,12 +170,14 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Written in the Go programming language
   - Built using the Pocketbase framework. See decision 00002.
   - **`app/api/main.go`** - the PocketBase app
-  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, `list_recipes`, `restaurant_versions`, `recipe_versions`, and `tags` collections
+  - **`app/api/migrations`** - the Go migrations of the `users`, `restaurants`, `reviews`, `review_photos`, `lists`, `list_items`, `recipes`, `recipe_reviews`, `recipe_review_photos`, `list_recipes`, `restaurant_versions`, `recipe_versions`, `tags`, `pantry_items`, `pantry_item_reviews`, `pantry_item_review_photos`, `list_pantry_items`, and `pantry_item_versions` collections
     - `1795737600_tags.go` makes the `tags` collection. The `tags` field of `restaurants` and `recipes` is a relation to it. See decision 00011.
     - `1796342400_tag_names.go` changes the old tag names to the rules of decision 00011. It has a copy of `tagname.Of`.
-    - The `restaurant_tags` and `recipe_tags` tables have the IDs of the tags. The tag filters find the IDs of the names first.
+    - `1796947200_pantry_items.go` makes the collections and the tables of the pantry items. See decision 00012.
+    - `pantryItemKind` is not in `subjectKinds`. The older migrations loop over `subjectKinds`, and on a new database they run before the pantry collections exist. A migration test of all kinds uses `allKinds`.
+    - The `restaurant_tags`, `recipe_tags`, and `pantry_item_tags` tables have the IDs of the tags. The tag filters find the IDs of the names first.
     - A migration that drops or renames a property of `restaurants` or `recipes` also changes the `snapshot` of their versions. See decision 00004.
-    - SQLite triggers keep the `restaurant_overall`, `restaurant_tags`, `recipe_overall`, and `recipe_tags` tables equal to the records. See decisions 00004 and 00005.
+    - SQLite triggers keep the overall tables and the tag tables of each kind, such as `recipe_overall` and `recipe_tags`, equal to the records. See decisions 00004 and 00005.
     - `restaurant_overall` and `recipe_overall` have the rating of each restaurant or recipe. Each reviewer counts one time. The `overall` sort uses the overall and the number of reviewers. See decision 00005.
     - A migration that drops a score column of `reviews` or `recipe_reviews` also drops its column of the overall table.
     - Drop these triggers before a migration drops a column that they use. SQLite refuses the drop.
@@ -194,10 +197,11 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - Record hooks set the `name_key` of each tag, give a tag save in the dashboard the checks of the `Tag` schema, and delete the tags without a subject. See decision 00011.
     - `mail.go` sends the emails of the sign up, the password reset, and the approval. See decision 00003.
   - **`app/api/internal/searchindex`** - the record hooks that keep the FTS5 search tables equal to the records. See decision 00002.
-  - **`app/api/internal/history`** - the record hooks that write a version of each save of a restaurant or a recipe. See decision 00004.
+  - **`app/api/internal/history`** - the record hooks that write a version of each save of a restaurant, a recipe, or a pantry item. See decision 00004.
+    - `writeRenames` loops over the kinds of the history package, not over `subjects.All`. A new kind must join both.
     - A rename of a tag in the dashboard writes a version with the source `admin` for each subject with the tag. See decision 00011.
     - A Public API save of a restaurant or a recipe calls `SaveWithContext` with `history.WithEditor`. A save without it gets the source `admin`.
-  - **`app/api/internal/recordvalues`** - the API values of the fields of restaurants and recipes. The Public API, the history, and the search index use them. See decision 00004.
+  - **`app/api/internal/recordvalues`** - the API values of the fields of restaurants, recipes, and pantry items. The Public API, the history, and the search index use them. See decision 00004.
     - `ExpandTags` loads the tag records of a relation. `Tags` gives their names. See decision 00011.
   - **`app/api/internal/tagname`** - the change of free text to a tag name. The Public API and `webui` use it. See decision 00011.
   - **`app/api/internal/subjects`** - the table names of each kind of thing that users review. The Public API and the search index use them. See decision 00004.
@@ -208,7 +212,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - `testapp.LowCostDir` has the bcrypt cost 4 in the password fields. The `publicapi` tests use it. Production and `testapp.Dir` have the default cost 10.
     - `make test-coverage` does not count `testapp`.
   - **`app/api/internal/webui`** - embeds the UI build and serves it. See decision 00002.
-    - It writes the title and link preview tags of restaurant, review, reviewer, list, and tag pages into `index.html`. See decision 00002.
+    - It writes the title and link preview tags of restaurant, recipe, pantry item, review, reviewer, list, and tag pages into `index.html`. See decision 00002.
     - It serves `/robots.txt`. It disallows all paths for all crawlers. Link preview bots that obey it show no preview. See decision 00002.
     - The app has no structured data, no sitemap, and no canonical link. See decision 00002.
     - It serves `/map-config.json` with the tile server of the maps and allows its origin in the Content Security Policy. See decision 00008.

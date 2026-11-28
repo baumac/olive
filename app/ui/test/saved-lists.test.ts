@@ -31,6 +31,7 @@ function list(kind: 'favorites' | 'custom', name: string, restaurantCount = 1): 
     creator: { id: ana.id, name: 'Ana' },
     restaurantCount,
     recipeCount: 0,
+    pantryItemCount: 0,
     created: '2024-11-04T01:26:55.002Z',
     updated: '2024-11-04T01:26:55.002Z',
   }

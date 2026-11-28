@@ -3,13 +3,13 @@ info:
   title: Reviews Public API
   version: 1.0.0
   description: |
-    The Public API lets users sign up, sign in, and review restaurants and recipes.
+    The Public API lets users sign up, sign in, and review restaurants, recipes, and pantry items.
 
     Sign up and sign in do not require authentication.
     Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token.
     Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter.
-    Read operations do not require authentication. The version lists of restaurants and recipes are the exception.
-    Create, update, and delete operations of restaurants, recipes, and reviews require an auth token.
+    Read operations do not require authentication. The version lists of restaurants, recipes, and pantry items are the exception.
+    Create, update, and delete operations of restaurants, recipes, pantry items, and reviews require an auth token.
     The place search also requires an auth token.
     A request with an invalid token gets `401 Unauthorized`, also on read operations.
 
@@ -36,17 +36,19 @@ tags:
     description: Restaurants and their reviews.
   - name: recipes
     description: Recipes and their reviews.
+  - name: pantry
+    description: Pantry items and their reviews. A pantry item is a wine, a beer, a cheese, or a chocolate.
   - name: reviewers
     description: The public profiles of users and their reviews.
   - name: places
     description: The search for the place of a restaurant.
   - name: lists
-    description: The lists of restaurants and recipes of users. Each user has a favorites list.
+    description: The lists of restaurants, recipes, and pantry items of users. Each user has a favorites list.
   - name: tags
     description: |
-      The tags of restaurants and recipes.
-      A create or an update of a restaurant or a recipe makes its new tags.
-      A tag without a restaurant or a recipe does not exist.
+      The tags of restaurants, recipes, and pantry items.
+      A create or an update of a restaurant, a recipe, or a pantry item makes its new tags.
+      A tag without a restaurant, a recipe, or a pantry item does not exist.
 
 paths:
   /users:
@@ -1013,6 +1015,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RecipeReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviewers/{reviewerId}/pantry-item-reviews:
+    parameters:
+      - $ref: '#/components/parameters/ReviewerId'
+    get:
+      operationId: listReviewerPantryItemReviews
+      summary: List the pantry item reviews of a user
+      description: The same filters, sorts, and pages as `listAllPantryItemReviews`, for the pantry item reviews of one user.
+      tags: [reviewers]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PantryItemReviewSort'
+        - $ref: '#/components/parameters/PantryItemReviewSearch'
+        - $ref: '#/components/parameters/PantryItemEq'
+        - $ref: '#/components/parameters/PantryItemIn'
+        - $ref: '#/components/parameters/TasteFilter'
+        - $ref: '#/components/parameters/AromaFilter'
+        - $ref: '#/components/parameters/TextureFilter'
+        - $ref: '#/components/parameters/ValueFilter'
+        - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/CreatedFilter'
+        - $ref: '#/components/parameters/UpdatedFilter'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of reviews.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemReviewList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -2005,6 +2049,685 @@ paths:
               schema:
                 type: string
 
+  /pantry:
+    post:
+      operationId: createPantryItem
+      x-rate-limit:
+        key: user
+        name: create
+      summary: Create a pantry item
+      description: |
+        A pantry item is a wine, a beer, a cheese, or a chocolate. It needs a `name` and a `category`.
+        Two pantry items can have one name, such as two vintages of one wine.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The pantry item to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PantryItemCreate'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '201':
+          description: The pantry item was created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    get:
+      operationId: listPantryItems
+      summary: List pantry items
+      tags: [pantry]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PantryItemSort'
+        - $ref: '#/components/parameters/PantryItemSearch'
+        - $ref: '#/components/parameters/OverallFilter'
+        - $ref: '#/components/parameters/PantryItemCategoryEq'
+        - $ref: '#/components/parameters/PantryItemCategoryIn'
+        - $ref: '#/components/parameters/TagsHas'
+        - $ref: '#/components/parameters/TagsHasAny'
+        - $ref: '#/components/parameters/TagsHasAll'
+        - $ref: '#/components/parameters/CreatedFilter'
+        - $ref: '#/components/parameters/UpdatedFilter'
+        - $ref: '#/components/parameters/CreatorEq'
+        - $ref: '#/components/parameters/CreatorIn'
+        - $ref: '#/components/parameters/ListEq'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of pantry items.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /pantry/{pantryItemId}:
+    parameters:
+      - $ref: '#/components/parameters/PantryItemId'
+    get:
+      operationId: getPantryItem
+      summary: Get a pantry item
+      tags: [pantry]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The pantry item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updatePantryItem
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Update a pantry item
+      description: |
+        Each approved user can update each pantry item. The reviews of other users do not block an update.
+        A value that is equal to the stored value is not a change.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The pantry item properties to change.
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/PantryItemPatch'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The updated pantry item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      operationId: deletePantryItem
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Delete a pantry item
+      description: |
+        Only the creator of the pantry item can delete it.
+        A pantry item without a creator can be deleted by each user who has a review of it.
+        A pantry item that has a review of another user cannot be deleted.
+        The review of the user is deleted with the pantry item.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The pantry item was deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /pantry/{pantryItemId}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/PantryItemId'
+    post:
+      operationId: createPantryItemReview
+      x-rate-limit:
+        key: user
+        name: create
+      summary: Create a review for a pantry item
+      description: A review is one tasting. A user can write many reviews of one pantry item.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The review to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PantryItemReviewCreate'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '201':
+          description: The review was created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemReview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    get:
+      operationId: listPantryItemReviews
+      summary: List the reviews of a pantry item
+      tags: [pantry]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PantryItemReviewSort'
+        - $ref: '#/components/parameters/PantryItemReviewSearch'
+        - $ref: '#/components/parameters/TasteFilter'
+        - $ref: '#/components/parameters/AromaFilter'
+        - $ref: '#/components/parameters/TextureFilter'
+        - $ref: '#/components/parameters/ValueFilter'
+        - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/CreatedFilter'
+        - $ref: '#/components/parameters/UpdatedFilter'
+        - $ref: '#/components/parameters/CreatorEq'
+        - $ref: '#/components/parameters/CreatorIn'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of reviews.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pantry/{pantryItemId}/photos:
+    parameters:
+      - $ref: '#/components/parameters/PantryItemId'
+    get:
+      operationId: listPantryItemPhotos
+      summary: List the photos of all reviews of a pantry item
+      description: |
+        The photos of the review with the highest overall score come first.
+        For an equal score, the photos of the newer review come first.
+        The photos of one review are in the order of `photos` of the review.
+        The first photo is the `cover` of the pantry item.
+      tags: [pantry]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of photos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemPhotoList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pantry/{pantryItemId}/versions:
+    parameters:
+      - $ref: '#/components/parameters/PantryItemId'
+    get:
+      operationId: listPantryItemVersions
+      summary: List the versions of a pantry item
+      description: |
+        Each create and each change of a pantry item makes a version. The newest version comes first.
+        A version has only the properties that changed. `before` has their old values. `after` has their new values.
+        An undo is a normal update. It makes a new version.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of versions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemVersionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pantry-item-reviews:
+    get:
+      operationId: listAllPantryItemReviews
+      summary: List the reviews of all pantry items
+      description: |
+        The same filters, sorts, and pages as `listPantryItemReviews`, for the reviews of all pantry items.
+        `pantry_item[eq]` and `pantry_item[in]` select pantry items. `creator[eq]` gives the reviews of one user.
+        `listReviewerPantryItemReviews` also gives the reviews of one user. It returns `404` for an unknown user.
+      tags: [pantry]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PantryItemReviewSort'
+        - $ref: '#/components/parameters/PantryItemReviewSearch'
+        - $ref: '#/components/parameters/PantryItemEq'
+        - $ref: '#/components/parameters/PantryItemIn'
+        - $ref: '#/components/parameters/TasteFilter'
+        - $ref: '#/components/parameters/AromaFilter'
+        - $ref: '#/components/parameters/TextureFilter'
+        - $ref: '#/components/parameters/ValueFilter'
+        - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/CreatedFilter'
+        - $ref: '#/components/parameters/UpdatedFilter'
+        - $ref: '#/components/parameters/CreatorEq'
+        - $ref: '#/components/parameters/CreatorIn'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of reviews.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /pantry/{pantryItemId}/reviews/{reviewId}:
+    parameters:
+      - $ref: '#/components/parameters/PantryItemId'
+      - $ref: '#/components/parameters/ReviewId'
+    get:
+      operationId: getPantryItemReview
+      summary: Get a review of a pantry item
+      tags: [pantry]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The review.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemReview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updatePantryItemReview
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Update a review of a pantry item
+      description: Only the creator of the review can update it.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The review properties to change.
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/PantryItemReviewPatch'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The updated review.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemReview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      operationId: deletePantryItemReview
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Delete a review of a pantry item
+      description: Only the creator of the review can delete it.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The review was deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /pantry/{pantryItemId}/reviews/{reviewId}/photos:
+    parameters:
+      - $ref: '#/components/parameters/PantryItemId'
+      - $ref: '#/components/parameters/ReviewId'
+    post:
+      operationId: addPantryItemReviewPhoto
+      x-rate-limit:
+        key: user
+        name: photo-upload
+      summary: Add a photo to a review of a pantry item
+      description: |
+        The same rules as `addRestaurantReviewPhoto`.
+        Only the creator of the review can add a photo. A review has at most 5 photos.
+        Set the alt text with `updatePantryItemReviewPhoto`.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: |
+          The bytes of the image.
+          The `Content-Type` is `image/jpeg`, `image/png`, or `image/webp`. Other types get `415`.
+        required: true
+        content:
+          image/*:
+            schema:
+              $ref: '#/components/schemas/ImageUpload'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '201':
+          description: The photo was added.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/ContentTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/InvalidImage'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId}:
+    parameters:
+      - $ref: '#/components/parameters/PantryItemId'
+      - $ref: '#/components/parameters/ReviewId'
+      - $ref: '#/components/parameters/PhotoId'
+    patch:
+      operationId: updatePantryItemReviewPhoto
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Change the alt text of a photo of a pantry item review
+      description: Only the creator of the review can change its photos.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        description: The photo properties to change.
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/PhotoPatch'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The updated photo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      operationId: deletePantryItemReviewPhoto
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Delete a photo of a pantry item review
+      description: Only the creator of the review can delete its photos.
+      tags: [pantry]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The photo was deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /pantry/{pantryItemId}/reviews/{reviewId}/photos/{photoId}/{variant}:
+    parameters:
+      - $ref: '#/components/parameters/PantryItemId'
+      - $ref: '#/components/parameters/ReviewId'
+      - $ref: '#/components/parameters/PhotoId'
+      - $ref: '#/components/parameters/PhotoVariant'
+    get:
+      operationId: getPantryItemReviewPhotoFile
+      summary: Get the image file of a photo of a pantry item review
+      description: |
+        Clients use the `urls` of the photo and do not build this path.
+        The file never changes, so clients can cache it for a long time.
+        The operation supports `HEAD`, `If-None-Match`, and `Range`.
+      tags: [pantry]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: The image file.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PhotoCacheControl'
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Content-Security-Policy:
+              $ref: '#/components/headers/PhotoContentSecurityPolicy'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            image/jpeg:
+              schema:
+                $ref: '#/components/schemas/ImageFile'
+        '206':
+          description: A range of the image file.
+          headers:
+            Content-Range:
+              description: The range of the file in the body.
+              required: true
+              schema:
+                type: string
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            image/jpeg:
+              schema:
+                $ref: '#/components/schemas/ImageFile'
+        '304':
+          description: The file did not change since the version of `If-None-Match`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '416':
+          description: The range of the `Range` header is not in the file.
+          headers:
+            Content-Range:
+              description: The size of the file, such as `bytes */48213`.
+              required: true
+              schema:
+                type: string
+
   /reviewers/{reviewerId}/lists:
     parameters:
       - $ref: '#/components/parameters/ReviewerId'
@@ -2016,6 +2739,7 @@ paths:
         A user has at most 50 lists. The response has all of them.
         With `restaurant[eq]`, each list tells in `has_restaurant` if it has the restaurant.
         With `recipe[eq]`, each list tells in `has_recipe` if it has the recipe.
+        With `pantry_item[eq]`, each list tells in `has_pantry_item` if it has the pantry item.
       tags: [lists]
       security:
         - {}
@@ -2024,6 +2748,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ListHasRestaurant'
         - $ref: '#/components/parameters/ListHasRecipe'
+        - $ref: '#/components/parameters/ListHasPantryItem'
       responses:
         default:
           $ref: '#/components/responses/UnexpectedError'
@@ -2168,7 +2893,7 @@ paths:
       summary: Delete a list
       description: |
         Only the creator of the list can delete it. The favorites list cannot be deleted.
-        The restaurants and the recipes of the list stay.
+        The restaurants, the recipes, and the pantry items of the list stay.
       tags: [lists]
       security:
         - bearerAuth: []
@@ -2387,13 +3112,112 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /lists/{listId}/pantry:
+    parameters:
+      - $ref: '#/components/parameters/ListId'
+    get:
+      operationId: listListPantryItems
+      summary: List the pantry items of a list
+      description: |
+        The pantry item that was added last is first.
+        `listPantryItems` with `list[eq]` can search, sort, and filter the pantry items of a list.
+      tags: [lists]
+      security:
+        - {}
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '200':
+          description: A page of pantry items.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lists/{listRef}/pantry/{pantryItemId}:
+    parameters:
+      - $ref: '#/components/parameters/ListRef'
+      - $ref: '#/components/parameters/PantryItemId'
+    put:
+      operationId: addListPantryItem
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Add a pantry item to a list
+      description: |
+        Only the creator of the list can add a pantry item.
+        A pantry item that the list already has changes nothing.
+        A list with 500 pantry items gets `409 Conflict`. The restaurants and the recipes of the list do not count.
+        A new pantry item changes `updated` of the list.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The list has the pantry item.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      operationId: removeListPantryItem
+      x-rate-limit:
+        key: user
+        name: edit
+      summary: Remove a pantry item from a list
+      description: |
+        Only the creator of the list can remove a pantry item.
+        A pantry item that the list does not have changes nothing.
+        A removed pantry item changes `updated` of the list.
+      tags: [lists]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+        '204':
+          description: The list does not have the pantry item.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /tags:
     get:
       operationId: listTags
       summary: List tags
       description: |
-        Lists the tags of restaurants and recipes.
-        A tag without a restaurant or a recipe is not in the list.
+        Lists the tags of restaurants, recipes, and pantry items.
+        A tag without a restaurant, a recipe, or a pantry item is not in the list.
       tags: [tags]
       security:
         - {}
@@ -2426,8 +3250,8 @@ paths:
       operationId: getTag
       summary: Get a tag
       description: |
-        A tag without a restaurant or a recipe causes `404 Not Found`.
-        `listRestaurants` and `listRecipes` with `tags[has]` list the restaurants and the recipes of the tag.
+        A tag without a restaurant, a recipe, or a pantry item causes `404 Not Found`.
+        `listRestaurants`, `listRecipes`, and `listPantryItems` with `tags[has]` list the restaurants, the recipes, and the pantry items of the tag.
       tags: [tags]
       security:
         - {}
@@ -2531,6 +3355,13 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/RecordId'
+    PantryItemId:
+      name: pantryItemId
+      in: path
+      description: The ID of the pantry item.
+      required: true
+      schema:
+        $ref: '#/components/schemas/RecordId'
     ReviewId:
       name: reviewId
       in: path
@@ -2557,7 +3388,7 @@ components:
       in: path
       description: |
         The ID of the list, or `favorites` for the favorites list of the user of the token.
-        Only `addListRestaurant`, `removeListRestaurant`, `addListRecipe`, and `removeListRecipe` take `favorites`.
+        Only `addListRestaurant`, `removeListRestaurant`, `addListRecipe`, `removeListRecipe`, `addListPantryItem`, and `removeListPantryItem` take `favorites`.
         A client then changes the favorites without a request for the ID of the list.
         The other operations of `/lists` need the ID. `listReviewerLists` gives it.
       required: true
@@ -2578,6 +3409,14 @@ components:
       in: query
       description: |
         The ID of a recipe. Each list of the response then has `has_recipe`.
+        The parameter does not filter the lists.
+      schema:
+        $ref: '#/components/schemas/RecordId'
+    ListHasPantryItem:
+      name: pantry_item[eq]
+      in: query
+      description: |
+        The ID of a pantry item. Each list of the response then has `has_pantry_item`.
         The parameter does not filter the lists.
       schema:
         $ref: '#/components/schemas/RecordId'
@@ -2699,6 +3538,44 @@ components:
         pattern: '^-?(overall|taste|ease|instructions|value|relevance|title|date|created|updated)(,-?(overall|taste|ease|instructions|value|relevance|title|date|created|updated))*$'
         default: '-date'
       example: '-taste,title'
+    PantryItemSort:
+      name: sort
+      in: query
+      description: |
+        A comma-separated list of properties.
+        A `-` prefix sorts a property in descending order.
+        Each property can occur only one time. A repeated property causes `400 Bad Request`.
+        The `name` sort ignores case only for the ASCII letters `A` to `Z`.
+        The `overall` sort uses `rating.overall`. Equal values sort by the number of reviewers.
+        `-overall` puts more reviewers first. `overall` puts fewer reviewers first.
+        Sort properties after `overall` do not change the order.
+        It puts pantry items without reviews last in both directions.
+        The `relevance` sort puts the best matches of `search` first. It needs `search`.
+        With `search`, the default sort is `relevance`.
+        The API always adds `id` as the last sort key.
+      schema:
+        type: string
+        pattern: '^-?(name|overall|relevance|created|updated)(,-?(name|overall|relevance|created|updated))*$'
+        default: '-created'
+      example: '-overall,name'
+    PantryItemReviewSort:
+      name: sort
+      in: query
+      description: |
+        A comma-separated list of properties.
+        A `-` prefix sorts a property in descending order.
+        Each property can occur only one time. A repeated property causes `400 Bad Request`.
+        The `title` sort ignores case only for the ASCII letters `A` to `Z`.
+        The `overall` sort uses the `overall` value of the review.
+        The `date` sort uses the `date` of the tasting, then `created`.
+        The `relevance` sort puts the best matches of `search` first. It needs `search`.
+        With `search`, the default sort is `relevance`.
+        The API always adds `id` as the last sort key.
+      schema:
+        type: string
+        pattern: '^-?(overall|taste|aroma|texture|value|relevance|title|date|created|updated)(,-?(overall|taste|aroma|texture|value|relevance|title|date|created|updated))*$'
+        default: '-date'
+      example: '-aroma,title'
 
     RestaurantSearch:
       name: search
@@ -2756,6 +3633,34 @@ components:
         minLength: 1
         maxLength: 255
       example: shakshuka
+    PantryItemSearch:
+      name: search
+      in: query
+      description: |
+        Full-text search in `name`, `description`, `tags`, `producer`, `style`, and `origin`.
+        A pantry item matches when it has all words of the search. A word also matches longer words that start with it.
+        The search ignores case and accents. `Cafe` matches `Café`.
+        Matches in `name` count most for the `relevance` sort, then `tags`, then `producer`, then `style` and `origin`, then `description`.
+        A search without a letter or a digit causes `400 Bad Request`.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      example: riesling
+    PantryItemReviewSearch:
+      name: search
+      in: query
+      description: |
+        Full-text search in `title`, `feedback`, and `pantry_item_name`.
+        A review matches when it has all words of the search. A word also matches longer words that start with it.
+        The search ignores case and accents. `Cafe` matches `Café`.
+        Matches in `title` count most for the `relevance` sort, then `pantry_item_name`, then `feedback`.
+        A search without a letter or a digit causes `400 Bad Request`.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      example: slate
     TagName:
       name: tagName
       in: path
@@ -2767,7 +3672,7 @@ components:
       name: sort
       in: query
       description: |
-        `-count` puts the tags with the most restaurants and recipes first. With `kind`, it counts only that kind.
+        `-count` puts the tags with the most restaurants, recipes, and pantry items first. With `kind`, it counts only that kind.
         `count` puts the fewest first. Equal counts sort by `name`.
         The `name` sort compares the code points of the names.
         The API always adds the ID of the tag as the last sort key.
@@ -2784,7 +3689,7 @@ components:
         The search ignores case and accents. `Cafe` matches `café`.
         The API changes the search like a `Tag`. Spaces and punctuation then match hyphens. `wood f` matches `wood-fired`.
         A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next.
-        It is in the list also without a restaurant or a recipe of `kind`. A client then finds an existing tag before it adds a new one.
+        It is in the list also without a restaurant, a recipe, or a pantry item of `kind`. A client then finds an existing tag before it adds a new one.
       schema:
         type: string
         x-nfc: true
@@ -2795,11 +3700,11 @@ components:
       name: kind
       in: query
       description: |
-        Lists only the tags of restaurants or only the tags of recipes.
+        Lists only the tags of restaurants, only the tags of recipes, or only the tags of pantry items.
         A tag with exactly the name of the changed `search`, or the same name without accents, is the one exception.
       schema:
         type: string
-        enum: [restaurants, recipes]
+        enum: [restaurants, recipes, pantry]
     TagsHas:
       name: tags[has]
       in: query
@@ -2913,6 +3818,46 @@ components:
         $ref: '#/components/schemas/ScoreRange'
       example: {gte: 7}
 
+    AromaFilter:
+      name: aroma
+      in: query
+      description: Compares the `aroma` score. Each key is an operator, for example `aroma[gte]=`.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/ScoreRange'
+      example: {gte: 7}
+
+    TextureFilter:
+      name: texture
+      in: query
+      description: Compares the `texture` score. Each key is an operator, for example `texture[gte]=`.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/ScoreRange'
+      example: {gte: 7}
+
+    PantryItemCategoryEq:
+      name: category[eq]
+      in: query
+      description: The `category` is equal to the value.
+      schema:
+        $ref: '#/components/schemas/PantryItemCategory'
+    PantryItemCategoryIn:
+      name: category[in]
+      in: query
+      description: The `category` is equal to any of the values.
+      style: form
+      explode: true
+      schema:
+        type: array
+        minItems: 1
+        maxItems: 4
+        items:
+          $ref: '#/components/schemas/PantryItemCategory'
+        examples: [[wine, beer]]
+
     TotalTimeFilter:
       name: total_time
       in: query
@@ -2931,7 +3876,7 @@ components:
       description: |
         Compares `rating.overall`, the rounded value of the response.
         Each key is an operator, for example `overall[gte]=`.
-        A restaurant or a recipe without reviews matches no `overall` filter.
+        A restaurant, a recipe, or a pantry item without reviews matches no `overall` filter.
       style: deepObject
       explode: true
       schema:
@@ -3057,7 +4002,7 @@ components:
       name: list[eq]
       in: query
       description: |
-        Selects the restaurants or the recipes of the list with this ID.
+        Selects the restaurants, the recipes, or the pantry items of the list with this ID.
         A list ID that does not exist selects none.
       schema:
         $ref: '#/components/schemas/RecordId'
@@ -3099,6 +4044,25 @@ components:
         items:
           $ref: '#/components/schemas/RecordId'
         examples: [[c4r8e2p6i0s3t7a, d5f9h3j7l1n4q8s]]
+    PantryItemEq:
+      name: pantry_item[eq]
+      in: query
+      description: The `pantry_item` of the review is equal to the value.
+      schema:
+        $ref: '#/components/schemas/RecordId'
+    PantryItemIn:
+      name: pantry_item[in]
+      in: query
+      description: The `pantry_item` of the review is equal to any of the values.
+      style: form
+      explode: true
+      schema:
+        type: array
+        minItems: 1
+        maxItems: 100
+        items:
+          $ref: '#/components/schemas/RecordId'
+        examples: [[p2k7m4q9s1v6x3z, w8n3b6c1d4f7g2h]]
 
   responses:
     BadRequest:
@@ -3129,8 +4093,9 @@ components:
     Forbidden:
       description: |
         A change or a delete of a review, a photo, or a list gets this response when the user is not its creator.
-        A delete of a restaurant or a recipe gets it when the user is not its creator. For a restaurant or a recipe without a creator, the user has no review of it.
-        The problem then has the `code` `not_creator`. An update of a restaurant or a recipe never gets `not_creator`.
+        A delete of a restaurant, a recipe, or a pantry item gets it when the user is not its creator.
+        For a restaurant, a recipe, or a pantry item without a creator, the user has no review of it.
+        The problem then has the `code` `not_creator`. An update of a restaurant, a recipe, or a pantry item never gets `not_creator`.
         A rename or a delete of a favorites list gets this response also. The `code` is `favorites_list`.
         A user who is not approved gets this response for each operation that needs a token.
         The problem then has the `code` `not_approved`.
@@ -3141,8 +4106,8 @@ components:
             $ref: '#/components/schemas/Problem'
     NotFound:
       description: |
-        The resource or the restaurant or recipe in the path does not exist.
-        A review of a different restaurant or recipe does not exist.
+        The resource or the restaurant, recipe, or pantry item in the path does not exist.
+        A review of a different restaurant, recipe, or pantry item does not exist.
       content:
         application/problem+json:
           schema:
@@ -3151,7 +4116,7 @@ components:
       description: |
         The request conflicts with the current state. The `code` of the problem tells the reason.
 
-        - `other_reviews` is a delete of a restaurant or a recipe that has a review of another user.
+        - `other_reviews` is a delete of a restaurant, a recipe, or a pantry item that has a review of another user.
         - `place_taken` is a `location.place_id` that another restaurant has.
         - `source_taken` is a `source` that another recipe has.
         - `photo_limit` is a sixth photo of a review.
@@ -3159,6 +4124,7 @@ components:
         - `list_limit` is a list above the 50 lists of a user.
         - `list_restaurant_limit` is a restaurant above the 500 restaurants of a list.
         - `list_recipe_limit` is a recipe above the 500 recipes of a list.
+        - `list_pantry_item_limit` is a pantry item above the 500 pantry items of a list.
       content:
         application/problem+json:
           schema:
@@ -3270,7 +4236,7 @@ components:
       examples: ['2024-11-04T01:26:55.002Z']
     ReviewDate:
       description: |
-        The date of a visit or a cook in the form `YYYY-MM-DD`. It has no time and no time zone.
+        The date of a visit, a cook, or a tasting in the form `YYYY-MM-DD`. It has no time and no time zone.
         The date must exist and be `1900-01-01` or later.
         It must not be after the current date in UTC+14, the latest time zone.
       type: string
@@ -3345,9 +4311,9 @@ components:
         $ref: '#/components/schemas/Tag'
       examples: [[italian, pasta]]
     TagSummary:
-      description: A tag and the number of restaurants and recipes with it.
+      description: A tag and the number of restaurants, recipes, and pantry items with it.
       type: object
-      required: [name, restaurant_count, recipe_count, created]
+      required: [name, restaurant_count, recipe_count, pantry_item_count, created]
       properties:
         name:
           $ref: '#/components/schemas/Tag'
@@ -3359,12 +4325,17 @@ components:
           description: The number of recipes with the tag.
           type: integer
           minimum: 0
+        pantry_item_count:
+          description: The number of pantry items with the tag.
+          type: integer
+          minimum: 0
         created:
           $ref: '#/components/schemas/Timestamp'
       examples:
         - name: wood-fired
           restaurant_count: 4
           recipe_count: 1
+          pantry_item_count: 2
           created: '2026-11-27T09:12:44.318Z'
     TagList:
       description: A page of tags.
@@ -3382,6 +4353,7 @@ components:
             - name: wood-fired
               restaurant_count: 4
               recipe_count: 1
+              pantry_item_count: 2
               created: '2026-11-27T09:12:44.318Z'
           next_cursor: null
     Latitude:
@@ -3924,6 +4896,309 @@ components:
               updated: '2024-11-04T01:26:55.002Z'
           next_cursor: null
 
+    PantryItemCategory:
+      description: |
+        The kind of a pantry item: `wine`, `beer`, `cheese`, or `chocolate`.
+        A later version can add values. A client must show an unknown value as text.
+      type: string
+      enum: [wine, beer, cheese, chocolate]
+    PantryItem:
+      description: A wine, a beer, a cheese, or a chocolate that users taste and review.
+      type: object
+      required: [id, name, category, creator, review_count, rating, cover, favorite, own_review_count, created, updated]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        name:
+          $ref: '#/components/schemas/Name'
+        category:
+          $ref: '#/components/schemas/PantryItemCategory'
+        producer:
+          description: The maker, such as the winery, the brewery, the dairy, or the chocolate maker.
+          type: string
+          $ref: '#/components/schemas/Name'
+        origin:
+          description: The place of origin, such as `Mosel, Germany`.
+          type: string
+          $ref: '#/components/schemas/Name'
+        style:
+          description: The style, such as the grape, the beer style, the type of cheese, or the cocoa content.
+          type: string
+          $ref: '#/components/schemas/Name'
+        description:
+          $ref: '#/components/schemas/LongText'
+        tags:
+          $ref: '#/components/schemas/Tags'
+        creator:
+          description: The user who created the pantry item. It is `null` after that user is deleted.
+          oneOf:
+            - $ref: '#/components/schemas/Creator'
+            - type: 'null'
+        review_count:
+          description: The number of reviews of the pantry item. Each tasting of a user has its own review.
+          type: integer
+          minimum: 0
+        rating:
+          description: The average scores of the reviews. It is `null` for a pantry item without reviews.
+          oneOf:
+            - $ref: '#/components/schemas/PantryItemRating'
+            - type: 'null'
+        cover:
+          description: |
+            The first photo of `listPantryItemPhotos`. It is `null` for a pantry item without photos.
+            It changes when a review gets photos or new scores.
+          oneOf:
+            - $ref: '#/components/schemas/PantryItemPhoto'
+            - type: 'null'
+        favorite:
+          description: |
+            `true` if the favorites list of the user of the token has the pantry item.
+            It is `false` for a request without a token.
+          type: boolean
+        own_review_count:
+          description: |
+            The number of reviews of the user of the token for the pantry item. Each tasting has its own review.
+            It is `0` for a request without a token.
+          type: integer
+          minimum: 0
+        created:
+          $ref: '#/components/schemas/Timestamp'
+        updated:
+          $ref: '#/components/schemas/Timestamp'
+      examples:
+        - id: p2k7m4q9s1v6x3z
+          name: Wehlener Sonnenuhr Kabinett
+          category: wine
+          producer: Weingut Example
+          origin: Mosel, Germany
+          style: Riesling
+          description: Off-dry, with green apple and slate.
+          tags: [off-dry, white]
+          creator:
+            id: u5n1c8r3t6y0b2e
+            name: Ana
+          review_count: 2
+          own_review_count: 1
+          rating:
+            overall: 8.1
+            taste: 8.5
+            aroma: 8
+            texture: 7.5
+            value: 8.5
+          cover: null
+          favorite: false
+          created: '2026-11-23T18:20:11.410Z'
+          updated: '2026-11-23T18:20:11.410Z'
+    PantryItemRating:
+      description: |
+        The average of each score over the reviewers of a pantry item.
+        Each reviewer counts one time with the average of the own reviews.
+        `overall` is the average of the four averages.
+        The API rounds each value to one decimal.
+      type: object
+      required: [overall, taste, aroma, texture, value]
+      properties:
+        overall:
+          $ref: '#/components/schemas/AverageScore'
+        taste:
+          $ref: '#/components/schemas/AverageScore'
+        aroma:
+          $ref: '#/components/schemas/AverageScore'
+        texture:
+          $ref: '#/components/schemas/AverageScore'
+        value:
+          $ref: '#/components/schemas/AverageScore'
+    PantryItemCreate:
+      description: The properties of a new pantry item.
+      type: object
+      additionalProperties: false
+      required: [name, category]
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+        category:
+          $ref: '#/components/schemas/PantryItemCategory'
+        producer:
+          description: The maker, such as the winery, the brewery, the dairy, or the chocolate maker.
+          type: string
+          $ref: '#/components/schemas/Name'
+        origin:
+          description: The place of origin, such as `Mosel, Germany`.
+          type: string
+          $ref: '#/components/schemas/Name'
+        style:
+          description: The style, such as the grape, the beer style, the type of cheese, or the cocoa content.
+          type: string
+          $ref: '#/components/schemas/Name'
+        description:
+          $ref: '#/components/schemas/LongText'
+        tags:
+          $ref: '#/components/schemas/Tags'
+      examples:
+        - name: Wehlener Sonnenuhr Kabinett
+          category: wine
+          producer: Weingut Example
+          origin: Mosel, Germany
+          style: Riesling
+          tags: [off-dry, white]
+    PantryItemPatch:
+      description: |
+        A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+        `category` cannot be `null`.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+        category:
+          $ref: '#/components/schemas/PantryItemCategory'
+        producer:
+          oneOf:
+            - $ref: '#/components/schemas/Name'
+            - type: 'null'
+        origin:
+          oneOf:
+            - $ref: '#/components/schemas/Name'
+            - type: 'null'
+        style:
+          oneOf:
+            - $ref: '#/components/schemas/Name'
+            - type: 'null'
+        description:
+          oneOf:
+            - $ref: '#/components/schemas/LongText'
+            - type: 'null'
+        tags:
+          oneOf:
+            - $ref: '#/components/schemas/Tags'
+            - type: 'null'
+      examples:
+        - style: Riesling
+          origin: null
+    PantryItemVersionValues:
+      description: |
+        The properties of a pantry item that a version changed. `null` is a property without a value.
+        The other properties are not in the object.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+        category:
+          $ref: '#/components/schemas/PantryItemCategory'
+        producer:
+          oneOf:
+            - $ref: '#/components/schemas/Name'
+            - type: 'null'
+        origin:
+          oneOf:
+            - $ref: '#/components/schemas/Name'
+            - type: 'null'
+        style:
+          oneOf:
+            - $ref: '#/components/schemas/Name'
+            - type: 'null'
+        description:
+          oneOf:
+            - $ref: '#/components/schemas/LongText'
+            - type: 'null'
+        tags:
+          oneOf:
+            - $ref: '#/components/schemas/Tags'
+            - type: 'null'
+    PantryItemVersion:
+      description: One create or one change of a pantry item.
+      type: object
+      required: [id, number, action, source, editor, before, after, created]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        number:
+          description: The number of the version. Each pantry item counts from 1. A bigger number is newer.
+          type: integer
+          minimum: 1
+        action:
+          $ref: '#/components/schemas/VersionAction'
+        source:
+          $ref: '#/components/schemas/VersionSource'
+        editor:
+          description: The user of the change. It is `null` for the source `admin` and after that user is deleted.
+          oneOf:
+            - $ref: '#/components/schemas/Creator'
+            - type: 'null'
+        before:
+          $ref: '#/components/schemas/PantryItemVersionValues'
+        after:
+          $ref: '#/components/schemas/PantryItemVersionValues'
+        created:
+          $ref: '#/components/schemas/Timestamp'
+      examples:
+        - id: v3p8n1t6r4s9q2a
+          number: 2
+          action: update
+          source: user
+          editor:
+            id: u5n1c8r3t6y0b2e
+            name: Ana
+          before:
+            style: null
+          after:
+            style: Riesling
+          created: '2026-11-24T10:12:40.120Z'
+    PantryItemVersionList:
+      description: A page of the versions of a pantry item. The newest version comes first.
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PantryItemVersion'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: v3p8n1t6r4s9q2a
+              number: 2
+              action: update
+              source: user
+              editor:
+                id: u5n1c8r3t6y0b2e
+                name: Ana
+              before:
+                style: null
+              after:
+                style: Riesling
+              created: '2026-11-24T10:12:40.120Z'
+          next_cursor: null
+    PantryItemList:
+      description: A page of pantry items.
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PantryItem'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: p2k7m4q9s1v6x3z
+              name: Wehlener Sonnenuhr Kabinett
+              category: wine
+              creator:
+                id: u5n1c8r3t6y0b2e
+                name: Ana
+              review_count: 0
+              rating: null
+              cover: null
+              favorite: false
+              own_review_count: 0
+              created: '2026-11-23T18:20:11.410Z'
+              updated: '2026-11-23T18:20:11.410Z'
+          next_cursor: null
+
     Creator:
       description: The public fields of a user.
       type: object
@@ -3936,7 +5211,7 @@ components:
     Reviewer:
       description: The public profile of a user. It has the fields of `Creator` and no private data.
       type: object
-      required: [id, name, restaurant_review_count, restaurant_average_overall, restaurant_count, recipe_review_count, recipe_average_overall, recipe_count, list_count]
+      required: [id, name, restaurant_review_count, restaurant_average_overall, restaurant_count, recipe_review_count, recipe_average_overall, recipe_count, pantry_item_review_count, pantry_item_average_overall, pantry_item_count, list_count]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -3976,6 +5251,23 @@ components:
             `listRecipes` with `creator[eq]` lists them.
           type: integer
           minimum: 0
+        pantry_item_review_count:
+          description: The number of pantry item reviews of the user. Each tasting has its own review.
+          type: integer
+          minimum: 0
+        pantry_item_average_overall:
+          description: |
+            The average of the `overall` values of the pantry item reviews of the user.
+            The API rounds it to one decimal. It is `null` for a user without pantry item reviews.
+          oneOf:
+            - $ref: '#/components/schemas/AverageScore'
+            - type: 'null'
+        pantry_item_count:
+          description: |
+            The number of pantry items that the user created.
+            `listPantryItems` with `creator[eq]` lists them.
+          type: integer
+          minimum: 0
         list_count:
           description: The number of lists of the user. `listReviewerLists` lists them.
           type: integer
@@ -3989,6 +5281,9 @@ components:
           recipe_review_count: 4
           recipe_average_overall: 8.1
           recipe_count: 1
+          pantry_item_review_count: 3
+          pantry_item_average_overall: 7.9
+          pantry_item_count: 2
           list_count: 2
 
     ScoreRange:
@@ -4375,9 +5670,9 @@ components:
           next_cursor: c2Fk9xQe7LmT2vBn
 
     SavedList:
-      description: A public list of restaurants and recipes of a user. The `favorites` list of a user always exists.
+      description: A public list of restaurants, recipes, and pantry items of a user. The `favorites` list of a user always exists.
       type: object
-      required: [id, name, kind, creator, restaurant_count, recipe_count, created, updated]
+      required: [id, name, kind, creator, restaurant_count, recipe_count, pantry_item_count, created, updated]
       properties:
         id:
           $ref: '#/components/schemas/RecordId'
@@ -4401,6 +5696,12 @@ components:
             `listListRecipes` and `listRecipes` with `list[eq]` list them.
           type: integer
           minimum: 0
+        pantry_item_count:
+          description: |
+            The number of pantry items of the list.
+            `listListPantryItems` and `listPantryItems` with `list[eq]` list them.
+          type: integer
+          minimum: 0
         has_restaurant:
           description: |
             `true` if the list has the restaurant of `restaurant[eq]`.
@@ -4410,6 +5711,11 @@ components:
           description: |
             `true` if the list has the recipe of `recipe[eq]`.
             Only `listReviewerLists` with `recipe[eq]` gives this property.
+          type: boolean
+        has_pantry_item:
+          description: |
+            `true` if the list has the pantry item of `pantry_item[eq]`.
+            Only `listReviewerLists` with `pantry_item[eq]` gives this property.
           type: boolean
         created:
           $ref: '#/components/schemas/Timestamp'
@@ -4424,6 +5730,7 @@ components:
             name: Ana
           restaurant_count: 4
           recipe_count: 0
+          pantry_item_count: 1
           created: '2024-11-04T01:26:55.002Z'
           updated: '2024-11-04T01:26:55.002Z'
     SavedListCreate:
@@ -4465,6 +5772,7 @@ components:
                 name: Ana
               restaurant_count: 12
               recipe_count: 0
+              pantry_item_count: 0
               created: '2024-11-04T01:26:55.002Z'
               updated: '2024-11-04T01:26:55.002Z'
 
@@ -4830,6 +6138,177 @@ components:
               updated: '2024-11-06T19:02:11.120Z'
           next_cursor: null
 
+    PantryItemReview:
+      description: A review of a pantry item. It scores the taste, the aroma, the texture, and the value.
+      type: object
+      required: [id, pantry_item, pantry_item_name, date, overall, taste, aroma, texture, value, title, creator, photos, created, updated]
+      properties:
+        id:
+          $ref: '#/components/schemas/RecordId'
+        pantry_item:
+          $ref: '#/components/schemas/RecordId'
+        pantry_item_name:
+          description: |
+            The `name` of the reviewed pantry item.
+            It is the current name. A rename of the pantry item changes it.
+          type: string
+          $ref: '#/components/schemas/Name'
+        date:
+          description: The date of the tasting.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
+        overall:
+          description: |
+            The average of the four scores. The API computes it. A client cannot set it.
+            Each value is exact with two decimals.
+            The average of the `overall` values of the reviews of a pantry item is its `rating.overall` before the rounding.
+          type: number
+          $ref: '#/components/schemas/AverageScore'
+        taste:
+          $ref: '#/components/schemas/PantryItemTasteScore'
+        aroma:
+          $ref: '#/components/schemas/AromaScore'
+        texture:
+          $ref: '#/components/schemas/TextureScore'
+        value:
+          $ref: '#/components/schemas/PantryItemValueScore'
+        title:
+          $ref: '#/components/schemas/Title'
+        feedback:
+          $ref: '#/components/schemas/LongText'
+        creator:
+          $ref: '#/components/schemas/Creator'
+        photos:
+          description: The photos of the review, the oldest first.
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/Photo'
+        created:
+          $ref: '#/components/schemas/Timestamp'
+        updated:
+          $ref: '#/components/schemas/Timestamp'
+      examples:
+        - id: t4s8n2q6m0k3h7a
+          pantry_item: p2k7m4q9s1v6x3z
+          pantry_item_name: Wehlener Sonnenuhr Kabinett
+          date: '2026-11-23'
+          overall: 8.25
+          taste: 9
+          aroma: 8
+          texture: 7
+          value: 9
+          title: A light white for a warm evening
+          feedback: Very fresh. The sweetness is low.
+          creator:
+            id: u5n1c8r3t6y0b2e
+            name: Ana
+          photos: []
+          created: '2026-11-23T19:02:11.120Z'
+          updated: '2026-11-23T19:02:11.120Z'
+    PantryItemTasteScore:
+      description: How good the flavor is.
+      $ref: '#/components/schemas/Score'
+    AromaScore:
+      description: How good the smell is.
+      $ref: '#/components/schemas/Score'
+    TextureScore:
+      description: |
+        How good the feel in the mouth is.
+        This is the body of a wine or a beer, the paste of a cheese, and the snap and melt of a chocolate.
+      $ref: '#/components/schemas/Score'
+    PantryItemValueScore:
+      description: Whether the pantry item is worth its price. A high score is good.
+      $ref: '#/components/schemas/Score'
+
+    PantryItemReviewCreate:
+      description: The properties of a new pantry item review.
+      type: object
+      additionalProperties: false
+      required: [date, taste, aroma, texture, value, title]
+      properties:
+        date:
+          description: The date of the tasting.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
+        taste:
+          $ref: '#/components/schemas/PantryItemTasteScore'
+        aroma:
+          $ref: '#/components/schemas/AromaScore'
+        texture:
+          $ref: '#/components/schemas/TextureScore'
+        value:
+          $ref: '#/components/schemas/PantryItemValueScore'
+        title:
+          $ref: '#/components/schemas/Title'
+        feedback:
+          $ref: '#/components/schemas/LongText'
+      examples:
+        - date: '2026-11-23'
+          taste: 9
+          aroma: 8
+          texture: 7
+          value: 9
+          title: A light white for a warm evening
+
+    PantryItemReviewPatch:
+      description: A JSON Merge Patch. `null` clears an optional property. An empty patch changes nothing.
+      type: object
+      additionalProperties: false
+      properties:
+        date:
+          description: The date of the tasting.
+          type: string
+          $ref: '#/components/schemas/ReviewDate'
+        taste:
+          $ref: '#/components/schemas/PantryItemTasteScore'
+        aroma:
+          $ref: '#/components/schemas/AromaScore'
+        texture:
+          $ref: '#/components/schemas/TextureScore'
+        value:
+          $ref: '#/components/schemas/PantryItemValueScore'
+        title:
+          $ref: '#/components/schemas/Title'
+        feedback:
+          oneOf:
+            - $ref: '#/components/schemas/LongText'
+            - type: 'null'
+      examples:
+        - texture: 8
+          feedback: null
+
+    PantryItemReviewList:
+      description: A page of pantry item reviews.
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PantryItemReview'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: t4s8n2q6m0k3h7a
+              pantry_item: p2k7m4q9s1v6x3z
+              pantry_item_name: Wehlener Sonnenuhr Kabinett
+              date: '2026-11-23'
+              overall: 8.25
+              taste: 9
+              aroma: 8
+              texture: 7
+              value: 9
+              title: A light white for a warm evening
+              creator:
+                id: u5n1c8r3t6y0b2e
+                name: Ana
+              photos: []
+              created: '2026-11-23T19:02:11.120Z'
+              updated: '2026-11-23T19:02:11.120Z'
+          next_cursor: null
+
     Photo:
       description: A photo of a review. The image of a photo never changes.
       type: object
@@ -4965,6 +6444,56 @@ components:
                 id: u5n1c8r3t6y0b2e
                 name: Ana
           next_cursor: null
+    PantryItemPhoto:
+      description: A photo of a review of a pantry item. It has the properties of `Photo`, the review, and the creator of the review.
+      allOf:
+        - $ref: '#/components/schemas/Photo'
+        - type: object
+          required: [review, creator]
+          properties:
+            review:
+              $ref: '#/components/schemas/RecordId'
+            creator:
+              $ref: '#/components/schemas/Creator'
+      examples:
+        - id: h6j1k5m9n3p7q2r
+          alt: A glass of white wine on a table
+          width: 1536
+          height: 2048
+          urls:
+            full: /v1/pantry/p2k7m4q9s1v6x3z/reviews/t4s8n2q6m0k3h7a/photos/h6j1k5m9n3p7q2r/full
+            thumb: /v1/pantry/p2k7m4q9s1v6x3z/reviews/t4s8n2q6m0k3h7a/photos/h6j1k5m9n3p7q2r/thumb
+          created: '2026-11-23T19:04:30.811Z'
+          review: t4s8n2q6m0k3h7a
+          creator:
+            id: u5n1c8r3t6y0b2e
+            name: Ana
+    PantryItemPhotoList:
+      description: A page of the photos of a pantry item.
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PantryItemPhoto'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+      examples:
+        - items:
+            - id: h6j1k5m9n3p7q2r
+              alt: null
+              width: 1536
+              height: 2048
+              urls:
+                full: /v1/pantry/p2k7m4q9s1v6x3z/reviews/t4s8n2q6m0k3h7a/photos/h6j1k5m9n3p7q2r/full
+                thumb: /v1/pantry/p2k7m4q9s1v6x3z/reviews/t4s8n2q6m0k3h7a/photos/h6j1k5m9n3p7q2r/thumb
+              created: '2026-11-23T19:04:30.811Z'
+              review: t4s8n2q6m0k3h7a
+              creator:
+                id: u5n1c8r3t6y0b2e
+                name: Ana
+          next_cursor: null
     PhotoUrls:
       description: The paths of the image files on the origin of the API. Clients use them as given.
       type: object
@@ -5055,6 +6584,7 @@ components:
             - list_restaurant_limit
             - source_taken
             - list_recipe_limit
+            - list_pantry_item_limit
         property:
           description: |
             The request property that causes a conflict, such as `name`, `location`, or `source`.

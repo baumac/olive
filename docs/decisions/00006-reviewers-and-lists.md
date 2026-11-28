@@ -55,13 +55,16 @@ Out of scope:
   "recipe_review_count": 4,
   "recipe_average_overall": 8.1,
   "recipe_count": 1,
+  "pantry_item_review_count": 3,
+  "pantry_item_average_overall": 7.9,
+  "pantry_item_count": 2,
   "list_count": 2
 }
 ```
 
 - the profile has no email address and no timestamps
 - an average is the average of the `overall` values of the reviews of the user, rounded to one decimal. It is `null` without reviews.
-- `restaurant_count` and `recipe_count` count the subjects with the user as their creator. `listRestaurants` with `creator[eq]` lists them.
+- `restaurant_count`, `recipe_count`, and `pantry_item_count` count the subjects with the user as their creator. `listRestaurants` with `creator[eq]` lists them. The pantry items are the subjects of decision 00012.
 - an unknown user, a deleted user, and a user who waits for approval get `404`
 
 | Operation | Route |
@@ -69,6 +72,7 @@ Out of scope:
 | `getReviewer` | `GET /reviewers/{reviewerId}` |
 | `listReviewerRestaurantReviews` | `GET /reviewers/{reviewerId}/restaurant-reviews` |
 | `listReviewerRecipeReviews` | `GET /reviewers/{reviewerId}/recipe-reviews` |
+| `listReviewerPantryItemReviews` | `GET /reviewers/{reviewerId}/pantry-item-reviews` |
 | `listReviewerLists` | `GET /reviewers/{reviewerId}/lists` |
 
 The review lists have the filters, the sorts, and the pages of the lists of all reviews, without the `creator` filters.
@@ -83,6 +87,7 @@ The review lists have the filters, the sorts, and the pages of the lists of all 
   "creator": { "id": "u5n1c8r3t6y0b2e", "name": "Ana" },
   "restaurant_count": 4,
   "recipe_count": 1,
+  "pantry_item_count": 0,
   "created": "2024-11-04T01:26:55.002Z",
   "updated": "2024-11-04T01:26:55.002Z"
 }
@@ -92,7 +97,8 @@ The review lists have the filters, the sorts, and the pages of the lists of all 
 - a rename or a delete of the favorites list gets `403` with `favorites_list`
 - a list name is a `Name`. The names of one user are unique, without the case of ASCII letters. A second list with a name gets `409` with `list_name_taken` and `"property": "name"`.
 - a user cannot make a list with the name "favorites"
-- a user has at most 50 lists. A list has at most 500 restaurants and 500 recipes. The next one gets `409` with `list_limit`, `list_restaurant_limit`, or `list_recipe_limit`.
+- a user has at most 50 lists. A list has at most 500 restaurants, 500 recipes, and 500 pantry items. The next one gets `409` with `list_limit`, `list_restaurant_limit`, `list_recipe_limit`, or `list_pantry_item_limit`.
+- `listListPantryItems`, `addListPantryItem`, and `removeListPantryItem` have the paths `/lists/{listId}/pantry` and `/lists/{listRef}/pantry/{pantryItemId}`. `listReviewerLists` with `pantry_item[eq]` gives `has_pantry_item`.
 
 | Operation | Route | Who |
 |---|---|---|

@@ -17,7 +17,8 @@ import (
 )
 
 // The spec has the limits in the descriptions of createList,
-// addListRestaurant, and addListRecipe. maxListItems is for each kind.
+// addListRestaurant, addListRecipe, and addListPantryItem. maxListItems is
+// for each kind.
 const (
 	maxLists     = 50
 	maxListItems = 500
@@ -184,21 +185,21 @@ func (s *Server) favoritesQuery(sub subject, userID string, records ...*core.Rec
 
 func toSavedList(list, creator *core.Record, counts listCounts) reviewsapi.SavedList {
 	return reviewsapi.SavedList{
-		Id: list.Id, Name: list.GetString("name"), Kind: reviewsapi.SavedListKind(list.GetString("kind")),
-		Creator: toCreator(creator), RestaurantCount: counts.restaurants[list.Id], RecipeCount: counts.recipes[list.Id],
+		Id: list.Id, Name: list.GetString("name"), Kind: reviewsapi.SavedListKind(list.GetString("kind")), Creator: toCreator(creator),
+		RestaurantCount: counts.restaurants[list.Id], RecipeCount: counts.recipes[list.Id], PantryItemCount: counts.pantryItems[list.Id],
 		Created: apiTimestamp(list.GetDateTime("created")), Updated: apiTimestamp(list.GetDateTime("updated")),
 	}
 }
 
-// listCounts has the number of restaurants and the number of recipes of each
-// list. A list without items has no entry.
+// listCounts has the number of items of each kind of each list. A list
+// without items has no entry.
 type listCounts struct {
-	restaurants, recipes map[string]int
+	restaurants, recipes, pantryItems map[string]int
 }
 
-// listCounts counts the items of both kinds in one statement.
+// listCounts counts the items of all kinds in one statement.
 func (s *Server) listCounts(lists ...*core.Record) (listCounts, error) {
-	counts := listCounts{restaurants: map[string]int{}, recipes: map[string]int{}}
+	counts := listCounts{restaurants: map[string]int{}, recipes: map[string]int{}, pantryItems: map[string]int{}}
 	if len(lists) == 0 {
 		return counts, nil
 	}
@@ -214,14 +215,18 @@ func (s *Server) listCounts(lists ...*core.Record) (listCounts, error) {
 		List        string `db:"list"`
 		Restaurants int    `db:"restaurants"`
 		Recipes     int    `db:"recipes"`
+		PantryItems int    `db:"pantry_items"`
 	}
-	err := s.app.DB().NewQuery("SELECT [[list]], SUM([[restaurant]]) AS [[restaurants]], SUM([[recipe]]) AS [[recipes]] FROM (" +
-		"SELECT [[list]], 1 AS [[restaurant]], 0 AS [[recipe]] FROM {{" + restaurantSubject.ListItems + "}} WHERE " + in +
-		" UNION ALL SELECT [[list]], 0, 1 FROM {{" + recipeSubject.ListItems + "}} WHERE " + in +
+	err := s.app.DB().NewQuery("SELECT [[list]], SUM([[restaurant]]) AS [[restaurants]], SUM([[recipe]]) AS [[recipes]], " +
+		"SUM([[pantry_item]]) AS [[pantry_items]] FROM (" +
+		"SELECT [[list]], 1 AS [[restaurant]], 0 AS [[recipe]], 0 AS [[pantry_item]] FROM {{" + restaurantSubject.ListItems + "}} WHERE " + in +
+		" UNION ALL SELECT [[list]], 0, 1, 0 FROM {{" + recipeSubject.ListItems + "}} WHERE " + in +
+		" UNION ALL SELECT [[list]], 0, 0, 1 FROM {{" + pantryItemSubject.ListItems + "}} WHERE " + in +
 		") GROUP BY [[list]]").Bind(params).All(&rows)
 	for _, r := range rows {
 		counts.restaurants[r.List] = r.Restaurants
 		counts.recipes[r.List] = r.Recipes
+		counts.pantryItems[r.List] = r.PantryItems
 	}
 	return counts, err
 }
@@ -265,7 +270,7 @@ func (s *Server) ListReviewerLists(ctx context.Context, req reviewsapi.ListRevie
 	if err != nil {
 		return nil, err
 	}
-	var withRestaurant, withRecipe map[string]bool
+	var withRestaurant, withRecipe, withPantryItem map[string]bool
 	if req.Params.RestaurantEq != nil {
 		if withRestaurant, err = s.listsWith(restaurantSubject, *req.Params.RestaurantEq, lists); err != nil {
 			return nil, err
@@ -273,6 +278,11 @@ func (s *Server) ListReviewerLists(ctx context.Context, req reviewsapi.ListRevie
 	}
 	if req.Params.RecipeEq != nil {
 		if withRecipe, err = s.listsWith(recipeSubject, *req.Params.RecipeEq, lists); err != nil {
+			return nil, err
+		}
+	}
+	if req.Params.PantryItemEq != nil {
+		if withPantryItem, err = s.listsWith(pantryItemSubject, *req.Params.PantryItemEq, lists); err != nil {
 			return nil, err
 		}
 	}
@@ -286,6 +296,10 @@ func (s *Server) ListReviewerLists(ctx context.Context, req reviewsapi.ListRevie
 		if withRecipe != nil {
 			has := withRecipe[l.Id]
 			items[i].HasRecipe = &has
+		}
+		if withPantryItem != nil {
+			has := withPantryItem[l.Id]
+			items[i].HasPantryItem = &has
 		}
 	}
 	return reviewsapi.ListReviewerLists200JSONResponse{Items: items}, nil
@@ -418,8 +432,8 @@ func (s *Server) UpdateList(ctx context.Context, req reviewsapi.UpdateListReques
 	return reviewsapi.UpdateList200JSONResponse(toSavedList(saved, user, counts)), nil
 }
 
-// DeleteList also deletes the items of the list. The restaurants and the
-// recipes stay.
+// DeleteList also deletes the items of the list. The restaurants, the
+// recipes, and the pantry items stay.
 func (s *Server) DeleteList(ctx context.Context, req reviewsapi.DeleteListRequestObject) (reviewsapi.DeleteListResponseObject, error) {
 	user := stateFrom(ctx).user
 	var response reviewsapi.DeleteListResponseObject = reviewsapi.DeleteList204Response{}
@@ -540,7 +554,7 @@ func ownList(app core.App, sub subject, ref string, user *core.Record) (*core.Re
 		return nil, notFoundProblem(listNotFound), nil
 	}
 	if list.GetString("creator") != user.Id {
-		return nil, notCreatorProblem("Only the creator of the list can change its " + sub.Table + "."), nil
+		return nil, notCreatorProblem("Only the creator of the list can change its " + sub.plural + "."), nil
 	}
 	return list, nil, nil
 }
@@ -598,7 +612,7 @@ func (s *Server) addListItem(sub subject, ref, parentID string, user *core.Recor
 			return err
 		}
 		if n >= maxListItems {
-			p = conflictProblem(sub.listLimitCode, "The list has the maximum number of "+sub.Table+".")
+			p = conflictProblem(sub.listLimitCode, "The list has the maximum number of "+sub.plural+".")
 			return nil
 		}
 		items, err := tx.FindCachedCollectionByNameOrId(sub.ListItems)

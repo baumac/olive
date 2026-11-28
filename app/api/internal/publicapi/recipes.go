@@ -24,6 +24,7 @@ const recipeNotFound = "The recipe does not exist."
 var recipeSubject = newSubject(subject{
 	Tables:        subjects.Recipes,
 	noun:          "recipe",
+	plural:        "recipes",
 	notFound:      recipeNotFound,
 	listLimitCode: reviewsapi.ProblemCodeListRecipeLimit,
 	search:        []scoreColumn{{"name", 10}, {"tags", 4}, {"ingredients", 2}, {"description", 1}},

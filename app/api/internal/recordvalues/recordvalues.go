@@ -1,5 +1,6 @@
-// Package recordvalues gets the API values of the fields of a restaurant or
-// a recipe. The Public API and the history use it. See decision 00004.
+// Package recordvalues gets the API values of the fields of a restaurant, a
+// recipe, or a pantry item. The Public API and the history use it. See
+// decision 00004.
 package recordvalues
 
 import (

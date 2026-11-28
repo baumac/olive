@@ -71,6 +71,7 @@ For the restaurant reviews, under `/restaurants/{restaurantId}/reviews/{reviewId
 | `listRestaurantPhotos` | `GET /restaurants/{restaurantId}/photos`, the gallery |
 
 The recipe reviews have the same operations with `Recipe` in their names and `/recipes/{recipeId}` in their paths.
+The tastings of decision 00012 have them with `PantryItem` in their names and `/pantry/{pantryItemId}` in their paths.
 
 ```http
 POST /v1/restaurants/k3x9m2p7q1w8z4a/reviews/r1b8c5e2g9i6k3m/photos

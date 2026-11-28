@@ -33,8 +33,8 @@ func Register(app core.App) {
 }
 
 // Run deletes each user without approval that is at least MaxAge old at
-// now. A user with a review, a restaurant, a recipe, or an item in a list
-// stays.
+// now. A user with a review, a restaurant, a recipe, a pantry item, or an
+// item in a list stays.
 // A superuser took the approval of such a user back. It returns the number
 // of deleted users.
 func Run(app core.App, now time.Time) (int, error) {
@@ -51,6 +51,10 @@ func Run(app core.App, now time.Time) (int, error) {
 				AND NOT EXISTS (SELECT 1 FROM {{list_items}} INNER JOIN {{lists}} ON [[lists.id]] = [[list_items.list]]
 					WHERE [[lists.creator]] = [[users.id]])
 				AND NOT EXISTS (SELECT 1 FROM {{list_recipes}} INNER JOIN {{lists}} ON [[lists.id]] = [[list_recipes.list]]
+					WHERE [[lists.creator]] = [[users.id]])
+				AND NOT EXISTS (SELECT 1 FROM {{pantry_item_reviews}} WHERE [[pantry_item_reviews.creator]] = [[users.id]])
+				AND NOT EXISTS (SELECT 1 FROM {{pantry_items}} WHERE [[pantry_items.creator]] = [[users.id]])
+				AND NOT EXISTS (SELECT 1 FROM {{list_pantry_items}} INNER JOIN {{lists}} ON [[lists.id]] = [[list_pantry_items.list]]
 					WHERE [[lists.creator]] = [[users.id]])
 			LIMIT {:limit}`).
 			Bind(dbx.Params{"before": now.Add(-MaxAge).UTC().Format("2006-01-02 15:04:05.000Z"), "limit": batchSize}).

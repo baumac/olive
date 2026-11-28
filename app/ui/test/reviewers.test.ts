@@ -47,6 +47,7 @@ const favorites: SavedList = {
   creator: { id: 'u5n1c8r3t6y0b2e', name: 'Ana' },
   restaurantCount: 0,
   recipeCount: 0,
+  pantryItemCount: 0,
   created: '2024-11-04T01:26:55.002Z',
   updated: '2024-11-04T01:26:55.002Z',
 }
@@ -109,6 +110,9 @@ describe('ReviewerPage', () => {
       recipeReviewCount: 0,
       recipeAverageOverall: null,
       recipeCount: 0,
+      pantryItemReviewCount: 0,
+      pantryItemAverageOverall: null,
+      pantryItemCount: 0,
       listCount: 1,
     })
     const list = vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [review], nextCursor: null })
@@ -139,6 +143,9 @@ describe('ReviewerPage', () => {
       recipeReviewCount: 0,
       recipeAverageOverall: null,
       recipeCount: 0,
+      pantryItemReviewCount: 0,
+      pantryItemAverageOverall: null,
+      pantryItemCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
@@ -158,6 +165,9 @@ describe('ReviewerPage', () => {
       recipeReviewCount: 0,
       recipeAverageOverall: null,
       recipeCount: 0,
+      pantryItemReviewCount: 0,
+      pantryItemAverageOverall: null,
+      pantryItemCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
@@ -181,6 +191,9 @@ describe('ReviewerPage', () => {
       recipeReviewCount: 0,
       recipeAverageOverall: null,
       recipeCount: 0,
+      pantryItemReviewCount: 0,
+      pantryItemAverageOverall: null,
+      pantryItemCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
@@ -199,6 +212,9 @@ describe('ReviewerPage', () => {
       recipeReviewCount: 0,
       recipeAverageOverall: null,
       recipeCount: 0,
+      pantryItemReviewCount: 0,
+      pantryItemAverageOverall: null,
+      pantryItemCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })

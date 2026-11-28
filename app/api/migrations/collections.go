@@ -70,6 +70,29 @@ func newRecipes(users *core.Collection) *core.Collection {
 	return c
 }
 
+// newPantryItems has the values of the PantryItemCategory schema. The tags
+// are a relation to the tags collection of decision 00011.
+func newPantryItems(users, tags *core.Collection) *core.Collection {
+	c := core.NewBaseCollection("pantry_items")
+	c.Fields.Add(
+		&core.TextField{Name: "name", Required: true, Max: 255},
+		&core.SelectField{Name: "category", Values: []string{"wine", "beer", "cheese", "chocolate"}, MaxSelect: 1, Required: true},
+		&core.TextField{Name: "producer", Max: 255},
+		&core.TextField{Name: "origin", Max: 255},
+		&core.TextField{Name: "style", Max: 255},
+		&core.TextField{Name: "description", Max: 10000},
+		&core.RelationField{Name: "tags", CollectionId: tags.Id, MaxSelect: maxTags},
+		&core.RelationField{Name: "creator", CollectionId: users.Id, MaxSelect: 1},
+		&core.AutodateField{Name: "created", OnCreate: true},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
+	)
+	c.AddIndex("idx_pantry_items_name", false, "name COLLATE NOCASE, id", "")
+	c.AddIndex("idx_pantry_items_created", false, "created, id", "")
+	c.AddIndex("idx_pantry_items_category_created", false, "category, created, id", "")
+	c.AddIndex("idx_pantry_items_creator_created", false, "creator, created, id", "")
+	return c
+}
+
 // newLists has a unique index that keeps one favorites list for each user.
 // See decision 00006.
 func newLists(users *core.Collection) *core.Collection {

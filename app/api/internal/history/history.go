@@ -1,5 +1,5 @@
 // Package history keeps a version of each create and each change of a
-// restaurant or a recipe. See decision 00004.
+// restaurant, a recipe, or a pantry item. See decision 00004.
 package history
 
 import (
@@ -69,7 +69,12 @@ var (
 		text("name"), optionalText("description"), {"tags", tags}, list("ingredients"), list("steps"),
 		optionalText("source"), optionalNumber("total_time"), optionalNumber("servings"),
 	}}
-	kinds = []Kind{Restaurants, Recipes}
+	// PantryItems has the properties of PantryItemCreate.
+	PantryItems = Kind{subjects.PantryItems, []Property{
+		text("name"), text("category"), optionalText("producer"), optionalText("origin"), optionalText("style"),
+		optionalText("description"), {"tags", tags},
+	}}
+	kinds = []Kind{Restaurants, Recipes, PantryItems}
 )
 
 func text(name string) Property {

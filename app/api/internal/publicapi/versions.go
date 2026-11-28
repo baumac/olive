@@ -14,7 +14,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// versionItem has the JSON shape of a RestaurantVersion or a RecipeVersion.
+// versionItem has the JSON shape of a RestaurantVersion, a RecipeVersion,
+// or a PantryItemVersion.
 // Before and After have only the changed properties.
 type versionItem struct {
 	ID      string              `json:"id"`
@@ -77,6 +78,27 @@ func (s *Server) ListRecipeVersions(_ context.Context, req reviewsapi.ListRecipe
 		return nil, err
 	}
 	return reviewsapi.ListRecipeVersions200JSONResponse{Items: items, NextCursor: next}, nil
+}
+
+func (s *Server) ListPantryItemVersions(_ context.Context, req reviewsapi.ListPantryItemVersionsRequestObject) (reviewsapi.ListPantryItemVersionsResponseObject, error) {
+	versions, next, p, err := s.versionPage(pantryItemSubject, req.PantryItemId, req.Params.Cursor, req.Params.Limit)
+	if err != nil {
+		return nil, err
+	}
+	if p != nil {
+		switch p.status() {
+		case http.StatusBadRequest:
+			return reviewsapi.ListPantryItemVersions400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: p.badRequest()}, nil
+		case http.StatusNotFound:
+			return reviewsapi.ListPantryItemVersions404ApplicationProblemPlusJSONResponse{NotFoundApplicationProblemPlusJSONResponse: p.notFound()}, nil
+		}
+		return nil, p.unexpected()
+	}
+	items, err := remarshal[reviewsapi.PantryItemVersion](versions)
+	if err != nil {
+		return nil, err
+	}
+	return reviewsapi.ListPantryItemVersions200JSONResponse{Items: items, NextCursor: next}, nil
 }
 
 // versionPage gets one page of the versions of a parent, the newest first.
