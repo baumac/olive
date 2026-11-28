@@ -221,13 +221,15 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - Keeps the preferred location of a person in the `localStorage` of the browser. The restaurant list and the maps use it. See decision 00008.
   - Written in TypeScript with Vue, Vue Router, and shadcn-vue on Tailwind CSS. See decision 00009.
   - Follows `specs/design-system`. Components live in `app/ui/src/components/ui`, route-aware components in `app/ui/src/components/app`, and screens in `app/ui/src/pages`.
-  - `app/ui/src/lib/reviewKinds.ts` has the score fields, the paths, and the API calls of restaurants and recipes. The review form, the review page, the review list, and the gallery work for both. See decision 00004.
-  - The UI shows the `date` of a review as "Visited on" or "Cooked on". `parseDay` of `format.ts` reads it as a local date. `new Date()` would read it as UTC. See decision 00005.
-  - `/` is the table, the latest reviews of both kinds. `useEntries` merges the two review lists. The journal of a reviewer at `/reviewers/{id}` uses it too. See decision 00009.
-  - `?kind=restaurants` or `?kind=recipes` selects one kind on the table and on a journal. `KindSwitch` sets it. Without it, both kinds show.
-  - `/reviews/new` is "Add review" without a subject. `?kind=recipes` starts it with "I cooked". `NewReviewPage` embeds `ReviewFormPage`. See decision 00005.
+  - `app/ui/src/lib/reviewKinds.ts` has the score fields, the paths, and the API calls of restaurants, recipes, and pantry items. The review form, the review page, the review list, and the gallery work for all kinds. See decisions 00004 and 00012.
+  - `app/ui/src/lib/pantry.ts` has the categories, their icons, and the filters of the Pantry at `/pantry`. The category chips set `?category=`.
+  - The UI shows the `date` of a review as "Visited on", "Cooked on", or "Tasted on". `parseDay` of `format.ts` reads it as a local date. `new Date()` would read it as UTC. See decision 00005.
+  - `/` is the table, the latest reviews of all kinds. `useEntries` merges the review lists. The journal of a reviewer at `/reviewers/{id}` uses it too. See decision 00009.
+  - `?kind=restaurants`, `?kind=recipes`, or `?kind=pantry` selects one kind on the table, on a journal, and on a tag page. `KindSwitch` sets it. Without it, all kinds show.
+  - `/reviews/new` is "Add review" without a subject. `?kind=recipes` starts it with "I cooked", and `?kind=pantry` with "I tasted". `NewReviewPage` embeds `ReviewFormPage`. See decision 00005.
+  - `BottomNav` has "Table", "Restaurants", "Add review", "Recipes", and "Pantry". "You" is in `UserMenu`. See decision 00012.
   - The Fraunces font files and their license are in `app/ui/src/assets/fonts`. See decision 00009.
-  - `TagInput` suggests the existing tags from `listTags`. `TagPage.vue` at `/tags/{name}` shows the restaurants and the recipes of a tag. See decision 00011.
+  - `TagInput` suggests the existing tags from `listTags`. `TagPage.vue` at `/tags/{name}` shows the restaurants, the recipes, and the pantry items of a tag. See decision 00011.
   - `HistoryPage.vue` shows the versions. `?undo=NUMBER` of the edit form undoes one version. `lib/history.ts` has the undo. See decision 00004.
 - **`tests`** - the end-to-end tests, the npm workspace `@reviews/tests`. See decision 00010.
   - Playwright runs the specs in `tests/e2e` against `./bin/olive` with a new database

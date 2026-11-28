@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { RecipeSummary, Restaurant, TagSummary } from '@reviews/sdk'
+import type { PantryItem, RecipeSummary, Restaurant, TagSummary } from '@reviews/sdk'
 import { SlidersHorizontalIcon, TagIcon } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import KindSwitch from '@/components/app/KindSwitch.vue'
 import PagedList from '@/components/app/PagedList.vue'
+import PantryItemCard from '@/components/app/PantryItemCard.vue'
 import RecipeCard from '@/components/app/RecipeCard.vue'
 import RestaurantCard from '@/components/app/RestaurantCard.vue'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -14,7 +15,7 @@ import { useKindQuery } from '@/composables/useKindQuery'
 import { useLoad } from '@/composables/useLoad'
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { recipesApi, restaurantsApi, tagsApi } from '@/lib/api'
+import { pantryApi, recipesApi, restaurantsApi, tagsApi } from '@/lib/api'
 import { tagCountText, tagPath } from '@/lib/tags'
 import { toTag } from '@/lib/validation'
 
@@ -39,7 +40,7 @@ watch(
 const tag = useLoad<TagSummary>(() => tagsApi.getTag({ tagName: name.value }))
 
 // Each kind has its own section. The overall sort of the API also counts the
-// reviewers. The UI then cannot merge the two lists. See decision 00011.
+// reviewers. The UI then cannot merge the lists. See decision 00011.
 const restaurants = usePagedList<Restaurant>(async (cursor) => {
   const page = await restaurantsApi.listRestaurants({ tagsHas: name.value, cursor, sort: '-overall' })
   return { items: page.items, nextCursor: page.nextCursor }
@@ -48,9 +49,15 @@ const recipes = usePagedList<RecipeSummary>(async (cursor) => {
   const page = await recipesApi.listRecipes({ tagsHas: name.value, cursor, sort: '-overall' })
   return { items: page.items, nextCursor: page.nextCursor }
 })
+const pantry = usePagedList<PantryItem>(async (cursor) => {
+  const page = await pantryApi.listPantryItems({ tagsHas: name.value, cursor, sort: '-overall' })
+  return { items: page.items, nextCursor: page.nextCursor }
+})
 
-const showRestaurants = computed(() => kind.value !== 'recipe')
-const showRecipes = computed(() => kind.value !== 'restaurant')
+// Each section shows for all kinds or for its own kind only.
+const showRestaurants = computed(() => kind.value === 'all' || kind.value === 'restaurant')
+const showRecipes = computed(() => kind.value === 'all' || kind.value === 'recipe')
+const showPantry = computed(() => kind.value === 'all' || kind.value === 'pantryItem')
 
 watch(name, () => void tag.load(), { immediate: true })
 
@@ -71,6 +78,7 @@ function loadWhenShown(list: { reload: () => Promise<void> }, shown: () => boole
 }
 loadWhenShown(restaurants, () => showRestaurants.value)
 loadWhenShown(recipes, () => showRecipes.value)
+loadWhenShown(pantry, () => showPantry.value)
 
 usePageTitle(() => (tag.data.value ? `Tag ${tag.data.value.name}` : ''))
 const filterQuery = computed(() => `?tags=${encodeURIComponent(name.value)}`)
@@ -135,6 +143,27 @@ const failedStatus = computed(() => {
           </template>
           <template #empty>
             <EmptyState :icon="TagIcon" title="No recipes with this tag" :description="`No recipe has the tag ${tag.data.value.name} yet.`" />
+          </template>
+        </PagedList>
+      </section>
+
+      <section v-if="showPantry" aria-labelledby="tag-pantry-heading" class="flex flex-col gap-3">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="tag-pantry-heading" class="font-serif text-2xl font-semibold">Pantry</h2>
+          <RouterLink
+            v-if="tag.data.value.pantryItemCount"
+            :to="`/pantry${filterQuery}`"
+            class="text-primary inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline-offset-4 hover:underline"
+          >
+            <SlidersHorizontalIcon class="size-4" aria-hidden="true" />Sort and filter<span class="sr-only"> the pantry items</span>
+          </RouterLink>
+        </div>
+        <PagedList :list="pantry" noun="pantry items" list-class="gap-2.5" skeleton-class="h-[86px] rounded-xl" :skeleton-count="3" unfiltered>
+          <template #item="{ item }">
+            <PantryItemCard :item="item" heading="h3" />
+          </template>
+          <template #empty>
+            <EmptyState :icon="TagIcon" title="No pantry items with this tag" :description="`No pantry item has the tag ${tag.data.value.name} yet.`" />
           </template>
         </PagedList>
       </section>

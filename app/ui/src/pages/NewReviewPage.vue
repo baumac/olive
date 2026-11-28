@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RecipeSummary, Restaurant } from '@reviews/sdk'
+import type { PantryItem, RecipeSummary, Restaurant } from '@reviews/sdk'
 import { ChefHatIcon, UtensilsIcon } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -7,13 +7,14 @@ import SubjectPicker from '@/components/app/SubjectPicker.vue'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { type ReviewKind, kinds } from '@/lib/reviewKinds'
+import { pantryIcon } from '@/lib/pantry'
+import { type ReviewKind, kinds, subjectKindOf } from '@/lib/reviewKinds'
 import ReviewFormPage from './ReviewFormPage.vue'
 
 // NewReviewPage is "Add review" of the navigation. The person selects the
 // kind and the subject, then fills the review form. See decision 00005.
-// startKind is the kind of kind=recipes in the URL.
-const props = defineProps<{ restaurantId?: string; recipeId?: string; startKind?: ReviewKind }>()
+// startKind is the kind of kind=recipes or kind=pantry in the URL.
+const props = defineProps<{ restaurantId?: string; recipeId?: string; pantryItemId?: string; startKind?: ReviewKind }>()
 const router = useRouter()
 
 usePageTitle('Add review')
@@ -33,9 +34,9 @@ let linked = 0
 async function loadLinked() {
   const l = ++linked
   form.value?.saveDraftNow()
-  kind.value = props.recipeId !== undefined || props.startKind === 'recipe' ? 'recipe' : 'restaurant'
+  const id = props.pantryItemId ?? props.recipeId ?? props.restaurantId
+  kind.value = id !== undefined ? subjectKindOf(props) : (props.startKind ?? 'restaurant')
   subject.value = null
-  const id = props.recipeId ?? props.restaurantId
   if (!id) {
     loadingSubject.value = false
     return
@@ -54,7 +55,7 @@ async function loadLinked() {
     }
   }
 }
-watch([() => props.restaurantId, () => props.recipeId, () => props.startKind], () => void loadLinked(), { immediate: true })
+watch([() => props.restaurantId, () => props.recipeId, () => props.pantryItemId, () => props.startKind], () => void loadLinked(), { immediate: true })
 
 function chooseKind(next: ReviewKind) {
   if (next !== kind.value) {
@@ -64,7 +65,7 @@ function chooseKind(next: ReviewKind) {
   }
 }
 
-function select(item: Restaurant | RecipeSummary) {
+function select(item: Restaurant | RecipeSummary | PantryItem) {
   subject.value = { id: item.id, name: item.name }
 }
 
@@ -81,14 +82,16 @@ function addNew() {
 const choices: { kind: ReviewKind; label: string; icon: typeof UtensilsIcon }[] = [
   { kind: 'restaurant', label: 'I ate out', icon: UtensilsIcon },
   { kind: 'recipe', label: 'I cooked', icon: ChefHatIcon },
+  { kind: 'pantryItem', label: 'I tasted', icon: pantryIcon },
 ]
+const icons: Record<ReviewKind, typeof UtensilsIcon> = { restaurant: UtensilsIcon, recipe: ChefHatIcon, pantryItem: pantryIcon }
 </script>
 
 <template>
   <main id="main" class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
     <h1 class="font-serif text-[34px] leading-10 font-semibold">Add review</h1>
     <section class="grid gap-4" aria-labelledby="what-heading">
-      <h2 id="what-heading" class="font-serif text-[26px] leading-8 font-semibold">What did you eat?</h2>
+      <h2 id="what-heading" class="font-serif text-[26px] leading-8 font-semibold">What did you have?</h2>
       <div role="group" aria-labelledby="what-heading" class="flex gap-2.5">
         <button
           v-for="c in choices"
@@ -96,7 +99,7 @@ const choices: { kind: ReviewKind; label: string; icon: typeof UtensilsIcon }[] 
           type="button"
           :aria-pressed="kind === c.kind"
           :class="[
-            'flex h-[88px] flex-1 flex-col items-center justify-center gap-2 rounded-2xl border text-[15px] font-semibold',
+            'flex h-[88px] min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-2xl border text-[15px] font-semibold',
             kind === c.kind ? 'bg-accent text-accent-foreground border-primary border-2' : 'bg-card border-input hover:bg-accent',
           ]"
           @click="chooseKind(c.kind)"
@@ -108,13 +111,13 @@ const choices: { kind: ReviewKind; label: string; icon: typeof UtensilsIcon }[] 
     </section>
     <Skeleton v-if="loadingSubject" class="h-[74px] rounded-xl" />
     <div v-else-if="subject" class="grid gap-2">
-      <p class="text-sm font-semibold">{{ kind === 'recipe' ? 'Recipe' : 'Restaurant' }}</p>
+      <p class="text-sm font-semibold">{{ kinds[kind].label }}</p>
       <div class="bg-card border-input flex items-center gap-3 rounded-xl border p-3">
         <span class="bg-accent text-primary flex size-12 shrink-0 items-center justify-center rounded-lg">
-          <component :is="kind === 'recipe' ? ChefHatIcon : UtensilsIcon" class="size-[22px]" aria-hidden="true" />
+          <component :is="icons[kind]" class="size-[22px]" aria-hidden="true" />
         </span>
         <span class="min-w-0 flex-1 font-serif text-lg font-semibold wrap-anywhere">{{ subject.name }}</span>
-        <Button type="button" variant="outline" size="sm" :aria-label="`Change the ${kind === 'recipe' ? 'recipe' : 'restaurant'}`" @click="change">Change</Button>
+        <Button type="button" variant="outline" size="sm" :aria-label="`Change the ${kinds[kind].noun}`" @click="change">Change</Button>
       </div>
     </div>
     <SubjectPicker v-else :kind="kind" @select="select" @add-new="addNew" />
@@ -126,6 +129,7 @@ const choices: { kind: ReviewKind; label: string; icon: typeof UtensilsIcon }[] 
       :draft-name="draftName"
       :restaurant-id="kind === 'restaurant' ? subject.id : undefined"
       :recipe-id="kind === 'recipe' ? subject.id : undefined"
+      :pantry-item-id="kind === 'pantryItem' ? subject.id : undefined"
     />
   </main>
 </template>

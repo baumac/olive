@@ -3,6 +3,7 @@ export const sections = [
   { path: '/', label: 'Table' },
   { path: '/restaurants', label: 'Restaurants' },
   { path: '/recipes', label: 'Recipes' },
+  { path: '/pantry', label: 'Pantry' },
 ] as const
 
 // A section is current on each page of its section, such as

@@ -6,7 +6,7 @@ import { usePagedList } from '@/composables/usePagedList'
 import { type Parent, type ParentPhoto, type ReviewKind, kinds } from '@/lib/reviewKinds'
 import PagedList from './PagedList.vue'
 
-// The gallery has the photos of all reviews of a restaurant or a recipe.
+// The gallery has the photos of all reviews of one parent.
 const props = withDefaults(defineProps<{ parent: Parent; kind?: ReviewKind }>(), { kind: 'restaurant' })
 
 // closeCover tells the parent to focus the cover after the viewer closes.
@@ -20,7 +20,7 @@ const list = usePagedList<ParentPhoto>(async (cursor) => {
   return { items: page.items, nextCursor: page.nextCursor }
 })
 
-// The page makes a new gallery for each restaurant or recipe that it loads.
+// The page makes a new gallery for each parent that it loads.
 if (props.parent.cover) {
   void list.reload()
 }

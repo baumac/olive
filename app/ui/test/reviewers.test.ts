@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type RouteLocationNormalized, createMemoryHistory, createRouter } from 'vue-router'
 import ReviewCard from '@/components/app/ReviewCard.vue'
-import { listsApi, restaurantsApi, reviewersApi } from '@/lib/api'
+import { listsApi, pantryApi, restaurantsApi, reviewersApi } from '@/lib/api'
 import ReviewerPage from '@/pages/ReviewerPage.vue'
 import { router as appRouter } from '@/router'
 import { expectAccessible } from './axe'
@@ -94,6 +94,8 @@ describe('ReviewerPage', () => {
   beforeEach(() => {
     vi.spyOn(listsApi, 'listReviewerLists').mockResolvedValue({ items: [favorites] })
     vi.spyOn(reviewersApi, 'listReviewerRecipeReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(reviewersApi, 'listReviewerPantryItemReviews').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(pantryApi, 'listPantryItems').mockResolvedValue({ items: [], nextCursor: null })
   })
 
   afterEach(() => {
@@ -120,7 +122,7 @@ describe('ReviewerPage', () => {
     const w = await mountPage('u5n1c8r3t6y0b2e')
     expect(w.get('h1').text()).toBe('Ana')
     expect(w.find('[aria-label="Average restaurant score: 7.6 out of 10"]').exists()).toBe(true)
-    expect(w.text()).toContain('1 visit · 0 cooks · 1 list')
+    expect(w.text()).toContain('1 visit · 0 cooks · 0 tastings · 1 list')
     expect(w.text()).not.toContain('added')
     expect(restaurants).not.toHaveBeenCalled()
     expect(w.find('[role=search], input[type=search]').exists()).toBe(false)
@@ -173,7 +175,7 @@ describe('ReviewerPage', () => {
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })
     const list = vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items: [restaurant], nextCursor: null })
     const w = await mountPage('u2g6k0m4o8q1s5w')
-    expect(w.text()).toContain('0 visits · 0 cooks · 1 list')
+    expect(w.text()).toContain('0 visits · 0 cooks · 0 tastings · 1 list')
     expect(w.findAll('h2').map((h) => h.text())).toEqual(['Lists', 'Restaurants added', 'Journal', 'Joe keeps food notes here'])
     expect(w.get('h3 a').text()).toBe("Luigi's Trattoria")
     expect(w.get('h3 a').attributes('href')).toBe('/restaurants/k3x9m2p7q1w8z4a')

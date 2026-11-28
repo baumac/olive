@@ -1,5 +1,17 @@
 import type { Middleware, Problem } from '@reviews/sdk'
-import { Configuration, FetchError, ListsApi, PlacesApi, RecipesApi, ResponseError, RestaurantsApi, ReviewersApi, TagsApi, UsersApi } from '@reviews/sdk'
+import {
+  Configuration,
+  FetchError,
+  ListsApi,
+  PantryApi,
+  PlacesApi,
+  RecipesApi,
+  ResponseError,
+  RestaurantsApi,
+  ReviewersApi,
+  TagsApi,
+  UsersApi,
+} from '@reviews/sdk'
 import { clearSession, markNotApproved, signedIn } from './session'
 
 type SessionEndedHandler = () => void
@@ -60,6 +72,7 @@ const configuration = new Configuration({
 
 export const restaurantsApi = new RestaurantsApi(configuration)
 export const recipesApi = new RecipesApi(configuration)
+export const pantryApi = new PantryApi(configuration)
 export const usersApi = new UsersApi(configuration)
 export const reviewersApi = new ReviewersApi(configuration)
 export const placesApi = new PlacesApi(configuration)

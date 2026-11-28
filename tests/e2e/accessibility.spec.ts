@@ -194,7 +194,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectNoViolations(page)
 
       await page.goto('/reviews/new')
-      await expect(page.getByRole('heading', { name: 'What did you eat?' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'What did you have?' })).toBeVisible()
       await expectNoViolations(page)
     })
 

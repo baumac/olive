@@ -142,14 +142,14 @@ test('the header has the home link and the page has one sections navigation', as
   // Below md, the sections are in the bottom bar.
   // From md, they are in the header.
   await expect(page.getByRole('navigation', { name: 'Sections' })).toHaveCount(1)
-  await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('link')).toHaveText(['Table', 'Restaurants', 'Recipes'])
+  await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('link')).toHaveText(['Table', 'Restaurants', 'Recipes', 'Pantry'])
   await expect(page.getByRole('link', { name: 'Reviews', exact: true })).toHaveCount(0)
 })
 
 test('the table tells a signed out visitor what the site is', async ({ page }) => {
   await page.goto('/')
   const main = page.getByRole('main')
-  await expect(main.getByText('These are the latest visits and cooks')).toBeVisible()
+  await expect(main.getByText('These are the latest visits, cooks, and tastings')).toBeVisible()
   await main.getByRole('link', { name: 'Sign up' }).click()
   await expect(page).toHaveURL(/\/sign-up$/)
 })

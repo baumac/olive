@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ErrorPage from '@/components/app/ErrorPage.vue'
 import { checkSession, signInPath } from '@/composables/useAuth'
 import { tellPendingApproval } from '@/lib/approval'
+import { kindOfQuery } from '@/lib/reviewKinds'
 import { currentUser, pendingApproval, signedIn } from '@/lib/session'
 import { safeRedirect } from '@/lib/validation'
 
@@ -25,6 +26,7 @@ export const router = createRouter({
     { path: '/', component: () => import('@/pages/TablePage.vue') },
     { path: '/restaurants', component: () => import('@/pages/RestaurantsPage.vue') },
     { path: '/recipes', component: () => import('@/pages/RecipesPage.vue') },
+    { path: '/pantry', component: () => import('@/pages/PantryPage.vue') },
     { path: '/reviewers/:reviewerId', component: () => import('@/pages/ReviewerPage.vue'), props: true },
     { path: '/lists/:listId', component: () => import('@/pages/ListPage.vue'), props: true },
     { path: '/tags/:name', component: () => import('@/pages/TagPage.vue'), props: true },
@@ -36,7 +38,8 @@ export const router = createRouter({
       props: (route) => ({
         restaurantId: typeof route.query.restaurant === 'string' ? route.query.restaurant : undefined,
         recipeId: typeof route.query.recipe === 'string' ? route.query.recipe : undefined,
-        startKind: route.query.kind === 'recipes' ? 'recipe' : undefined,
+        pantryItemId: typeof route.query.pantry_item === 'string' ? route.query.pantry_item : undefined,
+        startKind: kindOfQuery(route.query.kind),
       }),
       meta: { requiresAuth: true, requiresApproval: true },
     },
@@ -102,6 +105,37 @@ export const router = createRouter({
     { path: '/recipes/:recipeId/reviews/:reviewId', component: () => import('@/pages/ReviewPage.vue'), props: true },
     {
       path: '/recipes/:recipeId/reviews/:reviewId/edit',
+      component: () => import('@/pages/ReviewFormPage.vue'),
+      props: true,
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    {
+      path: '/pantry/new',
+      component: () => import('@/pages/PantryItemFormPage.vue'),
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    { path: '/pantry/:pantryItemId', component: () => import('@/pages/PantryItemPage.vue'), props: true },
+    {
+      path: '/pantry/:pantryItemId/history',
+      component: () => import('@/pages/HistoryPage.vue'),
+      props: (route) => ({ kind: 'pantryItem', parentId: route.params.pantryItemId }),
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    {
+      path: '/pantry/:pantryItemId/edit',
+      component: () => import('@/pages/PantryItemFormPage.vue'),
+      props: true,
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    {
+      path: '/pantry/:pantryItemId/reviews/new',
+      component: () => import('@/pages/ReviewFormPage.vue'),
+      props: true,
+      meta: { requiresAuth: true, requiresApproval: true },
+    },
+    { path: '/pantry/:pantryItemId/reviews/:reviewId', component: () => import('@/pages/ReviewPage.vue'), props: true },
+    {
+      path: '/pantry/:pantryItemId/reviews/:reviewId/edit',
       component: () => import('@/pages/ReviewFormPage.vue'),
       props: true,
       meta: { requiresAuth: true, requiresApproval: true },

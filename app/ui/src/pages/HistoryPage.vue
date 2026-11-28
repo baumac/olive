@@ -15,8 +15,8 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { type AnyVersion, changedProperties, propertyLabel, valueText } from '@/lib/history'
 import { type ReviewKind, kinds } from '@/lib/reviewKinds'
 
-// HistoryPage lists the versions of a restaurant or a recipe. See decision
-// 00004.
+// HistoryPage lists the versions of a restaurant, a recipe, or a pantry
+// item. See decision 00004.
 const props = defineProps<{ kind: ReviewKind; parentId: string }>()
 
 const info = computed(() => kinds[props.kind])

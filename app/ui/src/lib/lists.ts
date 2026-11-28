@@ -2,15 +2,20 @@ import type { SavedList } from '@reviews/sdk'
 import { apiFailure, failureText, fieldErrors, listsApi } from './api'
 import { formatCount } from './format'
 
-// listCountText names the restaurants and the recipes of a list. A list
-// without items has 0 restaurants.
-export function listCountText(list: Pick<SavedList, 'restaurantCount' | 'recipeCount'>): string {
-  const restaurants = formatCount(list.restaurantCount, 'restaurant')
-  const recipes = formatCount(list.recipeCount, 'recipe')
-  if (list.recipeCount === 0) {
-    return restaurants
-  }
-  return list.restaurantCount === 0 ? recipes : `${restaurants}, ${recipes}`
+// listCountText names the restaurants, the recipes, and the pantry items of
+// a list. A list without items has 0 restaurants.
+export function listCountText(list: Pick<SavedList, 'restaurantCount' | 'recipeCount' | 'pantryItemCount'>): string {
+  const parts = [
+    list.restaurantCount ? formatCount(list.restaurantCount, 'restaurant') : '',
+    list.recipeCount ? formatCount(list.recipeCount, 'recipe') : '',
+    list.pantryItemCount ? formatCount(list.pantryItemCount, 'pantry item') : '',
+  ].filter(Boolean)
+  return parts.length ? parts.join(', ') : formatCount(0, 'restaurant')
+}
+
+// itemCountOf counts the items of all kinds of a list.
+export function itemCountOf(list: Pick<SavedList, 'restaurantCount' | 'recipeCount' | 'pantryItemCount'>): number {
+  return list.restaurantCount + list.recipeCount + list.pantryItemCount
 }
 
 let cached: { userId: string; lists: Promise<SavedList[]> } | undefined
@@ -48,6 +53,8 @@ export async function listFailureText(error: unknown, fallback: string): Promise
       return 'This list is full. Remove a restaurant first.'
     case 'list_recipe_limit':
       return 'This list is full. Remove a recipe first.'
+    case 'list_pantry_item_limit':
+      return 'This list is full. Remove a pantry item first.'
     case 'favorites_list':
       return 'The favorites list cannot be renamed or deleted.'
     case 'not_creator':

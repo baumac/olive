@@ -295,6 +295,13 @@ describe('tags', () => {
     expect(tagCountText(tag, 'recipes')).toBe('3 recipes')
   })
 
+  it('counts the pantry items of a tag', () => {
+    expect(tagCountText({ ...tag, restaurantCount: 4, recipeCount: 1, pantryItemCount: 2 })).toBe('4 restaurants, 1 recipe, and 2 pantry items')
+    expect(tagCountText({ ...tag, restaurantCount: 0, recipeCount: 0, pantryItemCount: 1 })).toBe('1 pantry item')
+    expect(tagCountText({ ...tag, recipeCount: 0, pantryItemCount: 3 })).toBe('1 restaurant and 3 pantry items')
+    expect(tagCountText({ ...tag, pantryItemCount: 5 }, 'pantry')).toBe('5 pantry items')
+  })
+
   it('encodes the name in the path', () => {
     expect(tagPath('café')).toBe('/tags/caf%C3%A9')
   })
@@ -304,11 +311,13 @@ describe('tags', () => {
     const items = [
       { name: 'soup', restaurantCount: 0, recipeCount: 3, pantryItemCount: 0, created },
       { name: 'soup-bar', restaurantCount: 2, recipeCount: 0, pantryItemCount: 0, created },
+      { name: 'soup-wine', restaurantCount: 0, recipeCount: 0, pantryItemCount: 1, created },
     ]
     const list = vi.spyOn(tagsApi, 'listTags').mockResolvedValue({ items, nextCursor: null })
-    expect((await tagSuggester('restaurants')(' soup ')).map((t) => t.name)).toEqual(['soup', 'soup-bar'])
+    expect((await tagSuggester('restaurants')(' soup ')).map((t) => t.name)).toEqual(['soup', 'soup-bar', 'soup-wine'])
     expect(list).toHaveBeenCalledWith({ kind: 'restaurants', search: 'soup', limit: 8 })
     expect(await tagSuggester('restaurants', { onlyUsed: true })('soup')).toEqual([{ name: 'soup-bar', label: '2 restaurants' }])
+    expect(await tagSuggester('pantry', { onlyUsed: true })('soup')).toEqual([{ name: 'soup-wine', label: '1 pantry item' }])
     vi.restoreAllMocks()
   })
 })

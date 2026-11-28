@@ -1,5 +1,5 @@
 export interface ScoreField {
-  name: 'space' | 'service' | 'food' | 'price' | 'taste' | 'ease' | 'instructions' | 'value'
+  name: 'space' | 'service' | 'food' | 'price' | 'taste' | 'ease' | 'instructions' | 'value' | 'aroma' | 'texture'
   label: string
   max: number
   // description is a copy of the score description in the API spec.
@@ -75,6 +75,44 @@ export const recipeScoreFields: ScoreField[] = [
     label: 'Value',
     max: 10,
     description: 'Whether the result is worth the cost of the ingredients and the time.',
+    lowest: 'poor value',
+    highest: 'great value',
+  },
+]
+
+// pantryItemScoreFields are the scores of a tasting. All categories have the
+// same four scores. See decision 00012.
+export const pantryItemScoreFields: ScoreField[] = [
+  {
+    name: 'taste',
+    label: 'Taste',
+    max: 10,
+    description: 'How good the flavor is.',
+    lowest: 'bland',
+    highest: 'delicious',
+  },
+  {
+    name: 'aroma',
+    label: 'Aroma',
+    max: 10,
+    description: 'How good the smell is.',
+    lowest: 'faint',
+    highest: 'wonderful',
+  },
+  {
+    name: 'texture',
+    label: 'Texture',
+    max: 10,
+    description:
+      'How good the feel in the mouth is. This is the body of a wine or a beer, the paste of a cheese, and the snap and melt of a chocolate.',
+    lowest: 'unpleasant',
+    highest: 'perfect',
+  },
+  {
+    name: 'value',
+    label: 'Value',
+    max: 10,
+    description: 'Whether it is worth its price. A high score is good.',
     lowest: 'poor value',
     highest: 'great value',
   },

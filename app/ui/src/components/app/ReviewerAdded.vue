@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import type { RecipeSummary, Restaurant } from '@reviews/sdk'
+import type { PantryItem, RecipeSummary, Restaurant } from '@reviews/sdk'
 import { watch } from 'vue'
 import { usePagedList } from '@/composables/usePagedList'
 import { type ParentSummary, type ReviewKind, kinds } from '@/lib/reviewKinds'
 import PagedList from './PagedList.vue'
+import PantryItemCard from './PantryItemCard.vue'
 import RecipeCard from './RecipeCard.vue'
 import RestaurantCard from './RestaurantCard.vue'
 
-// ReviewerAdded lists the restaurants or the recipes that a user added.
+// ReviewerAdded lists the restaurants, the recipes, or the pantry items that
+// a user added.
 const props = defineProps<{ creator: string; kind: ReviewKind }>()
 
 // The list is above the reviews. A short page keeps the reviews near the top.
@@ -32,6 +34,7 @@ watch(() => props.creator, () => void list.reload(), { immediate: true })
   >
     <template #item="{ item }">
       <RecipeCard v-if="kind === 'recipe'" :recipe="item as RecipeSummary" heading="h3" />
+      <PantryItemCard v-else-if="kind === 'pantryItem'" :item="item as PantryItem" heading="h3" />
       <RestaurantCard v-else :restaurant="item as Restaurant" heading="h3" />
     </template>
     <!-- The profile has a count above 0. A delete after that empties the list. -->

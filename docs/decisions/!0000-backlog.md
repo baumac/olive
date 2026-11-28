@@ -16,9 +16,6 @@ Each sub-bullet point contains notes about the incomplete decision.
   - deploy latest code
 
 ## For the Future
-- Support reviewing products
-  - see https://github.com/baumac/olive/pull/5
-  - Decision 00012 proposes them as pantry items: wines, beers, cheeses, and chocolates
 - Replace the public Photon server of Komoot and the tile server of OpenStreetMap with self-hosted options
   - `REVIEWS_PLACES_URL` and `REVIEWS_MAP_TILE_URL` already change the servers. The move needs no code change, only the servers on the home server.
   - The tile server of OpenStreetMap has no guarantee and can block heavy use. See decision 00008.

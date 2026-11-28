@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RecipeSummary, Restaurant, SavedList } from '@reviews/sdk'
+import type { PantryItem, RecipeSummary, Restaurant, SavedList } from '@reviews/sdk'
 import { HeartIcon, ListIcon, MapIcon, PencilIcon, SlidersHorizontalIcon } from 'lucide-vue-next'
 import { formatDate, formatFullDate, formatMinutes } from '@/lib/format'
 import { tagList } from '@/lib/reviews'
@@ -20,8 +20,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useLoad } from '@/composables/useLoad'
 import { usePagedList } from '@/composables/usePagedList'
 import { usePageTitle } from '@/composables/usePageTitle'
-import { listsApi, recipesApi, restaurantsApi } from '@/lib/api'
-import { forgetOwnLists, listCountText, listFailureText } from '@/lib/lists'
+import { listsApi, pantryApi, recipesApi, restaurantsApi } from '@/lib/api'
+import { forgetOwnLists, itemCountOf, listCountText, listFailureText } from '@/lib/lists'
+import { pantryItemMeta } from '@/lib/pantry'
 import { useMapConfig } from '@/lib/mapConfig'
 import { currentUser } from '@/lib/session'
 
@@ -41,6 +42,10 @@ const recipes = usePagedList<RecipeSummary>(async (cursor) => {
   const page = await recipesApi.listRecipes({ listEq: props.listId, limit, cursor, sort: '-overall' })
   return { items: page.items, nextCursor: page.nextCursor }
 })
+const pantry = usePagedList<PantryItem>(async (cursor) => {
+  const page = await pantryApi.listPantryItems({ listEq: props.listId, limit, cursor, sort: '-overall' })
+  return { items: page.items, nextCursor: page.nextCursor }
+})
 
 watch(() => props.listId, () => void list.load(), { immediate: true })
 watch(
@@ -48,6 +53,7 @@ watch(
   () => {
     void restaurants.reload()
     void recipes.reload()
+    void pantry.reload()
   },
   { immediate: true },
 )
@@ -60,12 +66,17 @@ const mapConfig = useMapConfig()
 const listQuery = computed(() => `?list=${encodeURIComponent(props.listId)}`)
 const restaurantCount = computed(() => list.data.value?.restaurantCount ?? 0)
 const recipeCount = computed(() => list.data.value?.recipeCount ?? 0)
+const pantryItemCount = computed(() => list.data.value?.pantryItemCount ?? 0)
+const itemCount = computed(() => (list.data.value ? itemCountOf(list.data.value) : 0))
 
 function restaurantMeta(r: Restaurant): string {
   return [r.location.address, ...tagList(r.tags)].join(' · ')
 }
 function recipeMeta(r: RecipeSummary): string {
   return [...(r.totalTime ? [formatMinutes(r.totalTime)] : []), ...tagList(r.tags)].join(' · ')
+}
+function pantryMeta(p: PantryItem): string {
+  return [pantryItemMeta(p), ...tagList(p.tags)].join(' · ')
 }
 
 // The API gives 400 for a malformed ID. The link then has a typo.
@@ -153,6 +164,28 @@ function recipeFavoriteChanged(recipe: RecipeSummary, favorite: boolean) {
   }
 }
 
+function dropPantryItem(itemId: string) {
+  pantry.items.value = pantry.items.value.filter((p) => p.id !== itemId)
+  if (list.data.value) {
+    list.data.value = { ...list.data.value, pantryItemCount: Math.max(0, list.data.value.pantryItemCount - 1) }
+  }
+}
+
+async function removePantryItem(item: PantryItem) {
+  try {
+    await listsApi.removeListPantryItem({ listRef: props.listId, pantryItemId: item.id })
+    dropPantryItem(item.id)
+  } catch (e) {
+    toast.error('Pantry item not removed', { description: await listFailureText(e, 'Try again in a moment.') })
+  }
+}
+
+function pantryFavoriteChanged(item: PantryItem, favorite: boolean) {
+  if (isOwner.value && isFavorites.value && !favorite) {
+    dropPantryItem(item.id)
+  }
+}
+
 async function removeRestaurant(restaurant: Restaurant) {
   try {
     await listsApi.removeListRestaurant({ listRef: props.listId, restaurantId: restaurant.id })
@@ -200,7 +233,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
               <span class="border-input w-12 border-t" /><span class="bg-primary size-2 rounded-full" /><span class="border-input w-12 border-t" />
             </span>
             <p class="text-muted-foreground text-[13px]">
-              {{ restaurantCount || recipeCount ? listCountText(list.data.value) : 'No restaurants or recipes yet' }} · Updated
+              {{ itemCount ? listCountText(list.data.value) : 'No restaurants, recipes, or pantry items yet' }} · Updated
               <time :datetime="list.data.value.updated" :title="formatFullDate(list.data.value.updated)">{{ formatDate(list.data.value.updated) }}</time>
             </p>
             <div v-if="isOwner && !isFavorites" class="flex flex-wrap justify-center gap-2">
@@ -210,7 +243,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
               <ConfirmDelete
                 label="Delete list"
                 title="Delete this list?"
-                :description="`${list.data.value.name} will be deleted permanently. Its restaurants and recipes stay.`"
+                :description="`${list.data.value.name} will be deleted permanently. Its restaurants, recipes, and pantry items stay.`"
                 @confirm="remove"
               />
             </div>
@@ -223,7 +256,7 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
             </form>
           </header>
 
-          <section v-if="restaurantCount || !recipeCount" aria-labelledby="list-restaurants-heading" class="flex flex-col gap-4">
+          <section v-if="restaurantCount || !itemCount" aria-labelledby="list-restaurants-heading" class="flex flex-col gap-4">
             <h2 id="list-restaurants-heading" class="flex items-center gap-3">
               <span class="flex-1 border-t" aria-hidden="true" /><span class="kicker">Restaurants</span><span class="flex-1 border-t" aria-hidden="true" />
             </h2>
@@ -321,6 +354,55 @@ function favoriteChanged(restaurant: Restaurant, favorite: boolean) {
                         ? 'Select the heart of a recipe to add it here.'
                         : 'Open a recipe and select Save to list to add it here.'
                       : `${list.data.value.creator.name} has not added a recipe yet.`
+                  "
+                />
+              </template>
+            </PagedList>
+          </section>
+          <section v-if="pantryItemCount" aria-labelledby="list-pantry-heading" class="flex flex-col gap-4">
+            <h2 id="list-pantry-heading" class="flex items-center gap-3">
+              <span class="flex-1 border-t" aria-hidden="true" /><span class="kicker">Pantry</span><span class="flex-1 border-t" aria-hidden="true" />
+            </h2>
+            <RouterLink :to="`/pantry${listQuery}`" class="text-primary inline-flex min-h-11 w-fit items-center gap-1.5 self-center text-sm font-semibold underline-offset-4 hover:underline">
+              <SlidersHorizontalIcon class="size-4" aria-hidden="true" />Sort and filter<span class="sr-only"> the pantry items</span>
+            </RouterLink>
+            <PagedList :list="pantry" noun="pantry items" list-class="gap-4" skeleton-class="h-12 rounded-md" :skeleton-count="3" unfiltered>
+              <template #item="{ item }">
+                <div class="relative flex items-center gap-2">
+                  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div class="flex items-baseline">
+                      <h3 class="font-serif text-[19px] leading-6 font-semibold wrap-anywhere">
+                        <RouterLink :to="`/pantry/${item.id}`" class="rounded-sm after:absolute after:inset-0">{{ item.name }}</RouterLink>
+                      </h3>
+                      <span class="mx-2 min-w-4 flex-1 border-b-2 border-dotted" aria-hidden="true" />
+                      <RatingDisplay v-if="item.rating" :value="item.rating.overall" :max="10" label="Overall" />
+                    </div>
+                    <p class="text-muted-foreground text-[13px] leading-[18px]">{{ pantryMeta(item) }}</p>
+                  </div>
+                  <FavoriteButton :pantry-item-id="item.id" :name="item.name" :favorite="item.favorite" class="relative z-10 shrink-0" @change="pantryFavoriteChanged(item, $event)" />
+                  <Button
+                    v-if="isOwner && !isFavorites"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    class="relative z-10"
+                    :aria-label="`Remove ${item.name} from the list`"
+                    @click="removePantryItem(item)"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </template>
+              <template #empty>
+                <EmptyState
+                  :icon="isFavorites ? HeartIcon : ListIcon"
+                  title="No pantry items yet"
+                  :description="
+                    isOwner
+                      ? isFavorites
+                        ? 'Select the heart of a pantry item to add it here.'
+                        : 'Open a pantry item and select Save to list to add it here.'
+                      : `${list.data.value.creator.name} has not added a pantry item yet.`
                   "
                 />
               </template>

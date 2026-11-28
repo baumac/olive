@@ -9,7 +9,7 @@ import JournalLists from '@/components/app/JournalLists.vue'
 import SaveToListMenu from '@/components/app/SaveToListMenu.vue'
 import { useListFilter } from '@/composables/useListFilter'
 import { useListQuery } from '@/composables/useListQuery'
-import { listsApi, recipesApi, restaurantsApi } from '@/lib/api'
+import { listsApi, pantryApi, recipesApi, restaurantsApi } from '@/lib/api'
 import { forgetOwnLists } from '@/lib/lists'
 import { resetMapConfig } from '@/lib/mapConfig'
 import { clearSession, saveSession } from '@/lib/session'
@@ -302,6 +302,7 @@ describe('ListPage', () => {
     vi.spyOn(listsApi, 'getList').mockResolvedValue(data)
     vi.spyOn(restaurantsApi, 'listRestaurants').mockResolvedValue({ items, nextCursor: null })
     vi.spyOn(recipesApi, 'listRecipes').mockResolvedValue({ items: [], nextCursor: null })
+    vi.spyOn(pantryApi, 'listPantryItems').mockResolvedValue({ items: [], nextCursor: null })
     const router = await routerAt(`/lists/${data.id}`)
     const w = mount(ListPage, { props: { listId: data.id }, global: { plugins: [router] }, attachTo: attach() })
     await flushPromises()
@@ -378,6 +379,7 @@ describe('ListPage', () => {
     vi.spyOn(listsApi, 'getList').mockRejectedValue(rejectWith(404))
     vi.spyOn(restaurantsApi, 'listRestaurants').mockRejectedValue(rejectWith(404))
     vi.spyOn(recipesApi, 'listRecipes').mockRejectedValue(rejectWith(404))
+    vi.spyOn(pantryApi, 'listPantryItems').mockRejectedValue(rejectWith(404))
     const w = mount(ListPage, { props: { listId: 'aaaaaaaaaaaaaaa' }, global: { plugins: [await routerAt('/lists/aaaaaaaaaaaaaaa')] }, attachTo: attach() })
     await flushPromises()
     expect(w.text()).toContain('We cannot find this page')

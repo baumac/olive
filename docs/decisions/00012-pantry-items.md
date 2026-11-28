@@ -1,6 +1,6 @@
 ---
 description: Pantry items are a third kind of subject. A pantry item is a wine, a beer, a cheese, or a chocolate that users taste and review. One kind with a category holds all of them, with the subject pattern of decision 00004 and four tasting scores. Pantry items share the tag records of decision 00011 with restaurants and recipes.
-status: in progress
+status: implemented
 ---
 
 # Motivation
@@ -242,7 +242,7 @@ When this decision is implemented, these decisions change with it:
 | 00009 | the Pantry section, the bottom bar, and `KindSwitch` |
 | 00011 | `pantry_item_count`, the `pantry` kind of `listTags`, the third section of the tag page, and the tag link preview. The section "Product reviews" goes. The tags work is done. |
 
-The backlog item of the products points here until then.
+The backlog item of the products is done.
 
 ## Work order
 

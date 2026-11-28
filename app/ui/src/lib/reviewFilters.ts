@@ -1,9 +1,9 @@
 import type { FilterDef, FilterValue, Option } from '@/components/ui/filter-bar'
 import { type ReviewKind, kinds } from '@/lib/reviewKinds'
-import { recipeScoreFields } from '@/lib/reviews'
+import { type ScoreField, pantryItemScoreFields, recipeScoreFields } from '@/lib/reviews'
 
-// The review filters and sorts of the restaurant and recipe pages and the
-// reviewer pages.
+// The review filters and sorts of the restaurant, recipe, and pantry item
+// pages and the reviewer pages.
 
 function scoreOptions(max: number): Option[] {
   return Array.from({ length: max }, (_, i) => max - i).map((n) => ({ value: String(n), label: `${n} or more` }))
@@ -18,7 +18,7 @@ export const reviewFilterDefs: FilterDef[] = [
   { key: 'price', label: 'Value', type: 'select', options: scoreOptions(10), chip: (v) => `Value: ${v} or more` },
 ]
 
-// reviewDefaultSort puts the newest visit or cook first. See decision 00005.
+// reviewDefaultSort puts the newest occasion first. See decision 00005.
 export const reviewDefaultSort = '-date'
 
 export function reviewSortOptionsOf(kind: ReviewKind): Option[] {
@@ -46,19 +46,27 @@ export const oldReviewSortOptions: Option[] = [
   { value: 'title', label: 'Title, A to Z' },
 ]
 
+function scoreFilterDefs(fields: ScoreField[]): FilterDef[] {
+  return [
+    reviewFilterDefs[0]!,
+    reviewFilterDefs[1]!,
+    ...fields.map((f): FilterDef => ({
+      key: f.name,
+      label: f.label,
+      type: 'select',
+      options: scoreOptions(10),
+      chip: (v) => `${f.label}: ${v} or more`,
+    })),
+  ]
+}
+
 // recipeReviewFilterDefs have the scores of recipe reviews. See decision
 // 00004.
-export const recipeReviewFilterDefs: FilterDef[] = [
-  reviewFilterDefs[0]!,
-  reviewFilterDefs[1]!,
-  ...recipeScoreFields.map((f): FilterDef => ({
-    key: f.name,
-    label: f.label,
-    type: 'select',
-    options: scoreOptions(10),
-    chip: (v) => `${f.label}: ${v} or more`,
-  })),
-]
+export const recipeReviewFilterDefs = scoreFilterDefs(recipeScoreFields)
+
+// pantryItemReviewFilterDefs have the scores of tastings. See decision
+// 00012.
+export const pantryItemReviewFilterDefs = scoreFilterDefs(pantryItemScoreFields)
 
 export const oldRecipeReviewSortOptions: Option[] = [
   { value: 'date', label: `Oldest ${kinds.recipe.occasion}` },
@@ -70,12 +78,34 @@ export const oldRecipeReviewSortOptions: Option[] = [
   { value: 'title', label: 'Title, A to Z' },
 ]
 
+export const oldPantryItemReviewSortOptions: Option[] = [
+  { value: 'date', label: `Oldest ${kinds.pantryItem.occasion}` },
+  ...writtenSortOptions,
+  { value: '-taste', label: 'Best taste' },
+  { value: '-aroma', label: 'Best aroma' },
+  { value: '-texture', label: 'Best texture' },
+  { value: '-value', label: 'Best value' },
+  { value: 'title', label: 'Title, A to Z' },
+]
+
+const filterDefsOf: Record<ReviewKind, FilterDef[]> = {
+  restaurant: reviewFilterDefs,
+  recipe: recipeReviewFilterDefs,
+  pantryItem: pantryItemReviewFilterDefs,
+}
+
 export function reviewFilterDefsOf(kind: ReviewKind): FilterDef[] {
-  return kind === 'recipe' ? recipeReviewFilterDefs : reviewFilterDefs
+  return filterDefsOf[kind]
+}
+
+const oldSortOptionsOf: Record<ReviewKind, Option[]> = {
+  restaurant: oldReviewSortOptions,
+  recipe: oldRecipeReviewSortOptions,
+  pantryItem: oldPantryItemReviewSortOptions,
 }
 
 export function oldReviewSortOptionsOf(kind: ReviewKind): Option[] {
-  return kind === 'recipe' ? oldRecipeReviewSortOptions : oldReviewSortOptions
+  return oldSortOptionsOf[kind]
 }
 
 function atLeast(filters: Record<string, FilterValue>, key: string) {
@@ -106,6 +136,24 @@ export function recipeReviewFilterParams(f: Record<string, FilterValue>) {
   }
 }
 
+export function pantryItemReviewFilterParams(f: Record<string, FilterValue>) {
+  return {
+    search: typeof f.search === 'string' ? f.search : undefined,
+    overall: atLeast(f, 'overall'),
+    taste: atLeast(f, 'taste'),
+    aroma: atLeast(f, 'aroma'),
+    texture: atLeast(f, 'texture'),
+    value: atLeast(f, 'value'),
+  }
+}
+
 export function reviewFilterParamsOf(kind: ReviewKind, f: Record<string, FilterValue>): Record<string, unknown> {
-  return kind === 'recipe' ? recipeReviewFilterParams(f) : reviewFilterParams(f)
+  switch (kind) {
+    case 'recipe':
+      return recipeReviewFilterParams(f)
+    case 'pantryItem':
+      return pantryItemReviewFilterParams(f)
+    default:
+      return reviewFilterParams(f)
+  }
 }

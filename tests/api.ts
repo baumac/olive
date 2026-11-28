@@ -1,6 +1,10 @@
 import type {
   AuthToken,
   Location,
+  PantryItem,
+  PantryItemCreate,
+  PantryItemReview,
+  PantryItemReviewCreate,
   Photo,
   Recipe,
   RecipeCreate,
@@ -14,7 +18,7 @@ import type {
   RestaurantReviewCreate,
   SavedList,
 } from '@reviews/sdk'
-import { Configuration, ListsApi, RecipesApi, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
+import { Configuration, ListsApi, PantryApi, RecipesApi, ResponseError, RestaurantsApi, UsersApi } from '@reviews/sdk'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -204,6 +208,19 @@ export class TestApi {
       { recipeId: review.recipe, reviewId: review.id, body: new Blob([new Uint8Array(photoFile(name))], { type }) },
       async ({ init }) => ({ headers: { ...(init.headers as Record<string, string>), 'Content-Type': type } }),
     )
+  }
+
+  // createPantryItem gives a pantry item without a category the category
+  // wine.
+  createPantryItem(user: TestUser, item: Partial<WithTagArray<PantryItemCreate>> & { name: string }): Promise<PantryItem> {
+    const { tags, category, ...rest } = item
+    return new PantryApi(this.config(user.token)).createPantryItem({
+      pantryItemCreate: { ...rest, category: category ?? 'wine', tags: tags ? new Set(tags) : undefined },
+    })
+  }
+
+  createPantryItemReview(user: TestUser, pantryItemId: string, review: WithOptionalDate<PantryItemReviewCreate>): Promise<PantryItemReview> {
+    return new PantryApi(this.config(user.token)).createPantryItemReview({ pantryItemId, pantryItemReviewCreate: { date: today(), ...review } })
   }
 
   createList(user: TestUser, name: string): Promise<SavedList> {
