@@ -284,7 +284,12 @@ func TestPageMeta(t *testing.T) {
 
 func newHandler(t *testing.T, app core.App, files fs.FS) http.Handler {
 	t.Helper()
-	if err := register(app, files, Options{}); err != nil {
+	return newHandlerWith(t, app, files, Options{})
+}
+
+func newHandlerWith(t *testing.T, app core.App, files fs.FS, opts Options) http.Handler {
+	t.Helper()
+	if err := register(app, files, opts); err != nil {
 		t.Fatal(err)
 	}
 	router, err := apis.NewRouter(app)

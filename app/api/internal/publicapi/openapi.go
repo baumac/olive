@@ -207,6 +207,7 @@ var validationOptions = &openapi3filter.Options{
 	SchemaValidationOptions: []openapi3.SchemaValidationOption{
 		openapi3.WithStringFormatValidator("email", openapi3.NewCallbackValidator(checkEmailFormat)),
 		openapi3.WithStringFormatValidator("review-date", openapi3.NewCallbackValidator(checkReviewDate)),
+		openapi3.WithStringFormatValidator("calendar-date", openapi3.NewCallbackValidator(checkCalendarDate)),
 	},
 }
 

@@ -8,6 +8,10 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
+	// The zones of REVIEWS_TIME_ZONE then work on a host without a zone
+	// database. Go reads the zones of the host first.
+	_ "time/tzdata"
 
 	"github.com/baumac/olive/app/api/internal/history"
 	"github.com/baumac/olive/app/api/internal/photocleanup"
@@ -53,6 +57,17 @@ func setup(app *pocketbase.PocketBase, getenv func(string) string) error {
 // Production section of AGENTS.md lists the variables.
 func uiOptions(getenv func(string) string) (webui.Options, error) {
 	opts := webui.Options{TileURL: webui.DefaultTileURL, TileAttribution: getenv("REVIEWS_MAP_ATTRIBUTION")}
+	zone := getenv("REVIEWS_TIME_ZONE")
+	if zone == "" {
+		zone = webui.DefaultTimeZone
+	}
+	// LoadLocation gives the zone of the host for Local. It is not an IANA
+	// name.
+	loc, err := time.LoadLocation(zone)
+	if err != nil || zone == "Local" {
+		return opts, fmt.Errorf("REVIEWS_TIME_ZONE must be an IANA time zone name, not %q", zone)
+	}
+	opts.TimeZone = loc
 	switch v := getenv("REVIEWS_MAP_TILE_URL"); {
 	case v == "off":
 		opts.TileURL = ""

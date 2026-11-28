@@ -24,6 +24,11 @@ import {
     BoxToJSON,
 } from '../models/Box.js';
 import {
+    type DateRange,
+    DateRangeFromJSON,
+    DateRangeToJSON,
+} from '../models/DateRange.js';
+import {
     type Near,
     NearFromJSON,
     NearToJSON,
@@ -279,6 +284,12 @@ export interface ListAllRestaurantReviewsRequest {
      */
     overall?: AverageRange;
     /**
+     * Compares the `date` of the review. Each key is an operator, for example `date[gte]=`.
+     * The form `YYYY-MM-DD` sorts like the dates.
+     * 
+     */
+    date?: DateRange;
+    /**
      * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
      */
     created?: TimestampRange;
@@ -372,6 +383,12 @@ export interface ListRestaurantReviewsRequest {
      * Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
      */
     overall?: AverageRange;
+    /**
+     * Compares the `date` of the review. Each key is an operator, for example `date[gte]=`.
+     * The form `YYYY-MM-DD` sorts like the dates.
+     * 
+     */
+    date?: DateRange;
     /**
      * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
      */
@@ -811,6 +828,7 @@ export interface RestaurantsApiInterface {
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
      * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {DateRange} [date] Compares the &#x60;date&#x60; of the review. Each key is an operator, for example &#x60;date[gte]&#x3D;&#x60;. The form &#x60;YYYY-MM-DD&#x60; sorts like the dates. 
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -834,6 +852,7 @@ export interface RestaurantsApiInterface {
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
      * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {DateRange} [date] Compares the &#x60;date&#x60; of the review. Each key is an operator, for example &#x60;date[gte]&#x3D;&#x60;. The form &#x60;YYYY-MM-DD&#x60; sorts like the dates. 
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -890,6 +909,7 @@ export interface RestaurantsApiInterface {
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
      * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {DateRange} [date] Compares the &#x60;date&#x60; of the review. Each key is an operator, for example &#x60;date[gte]&#x3D;&#x60;. The form &#x60;YYYY-MM-DD&#x60; sorts like the dates. 
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -912,6 +932,7 @@ export interface RestaurantsApiInterface {
      * @param {ScoreRange} [food] Compares the &#x60;food&#x60; score. Each key is an operator, for example &#x60;food[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [price] Compares the &#x60;price&#x60; score. Each key is an operator, for example &#x60;price[gte]&#x3D;&#x60;.
      * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {DateRange} [date] Compares the &#x60;date&#x60; of the review. Each key is an operator, for example &#x60;date[gte]&#x3D;&#x60;. The form &#x60;YYYY-MM-DD&#x60; sorts like the dates. 
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -1723,6 +1744,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
             queryParameters['overall'] = requestParameters['overall'];
         }
 
+        if (requestParameters['date'] != null) {
+            queryParameters['date'] = requestParameters['date'];
+        }
+
         if (requestParameters['created'] != null) {
             queryParameters['created'] = requestParameters['created'];
         }
@@ -1890,6 +1915,10 @@ export class RestaurantsApi extends runtime.BaseAPI implements RestaurantsApiInt
 
         if (requestParameters['overall'] != null) {
             queryParameters['overall'] = requestParameters['overall'];
+        }
+
+        if (requestParameters['date'] != null) {
+            queryParameters['date'] = requestParameters['date'];
         }
 
         if (requestParameters['created'] != null) {

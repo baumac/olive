@@ -737,6 +737,7 @@ paths:
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -852,6 +853,7 @@ paths:
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -962,6 +964,7 @@ paths:
         - $ref: '#/components/parameters/FoodFilter'
         - $ref: '#/components/parameters/PriceFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
       responses:
@@ -1004,6 +1007,7 @@ paths:
         - $ref: '#/components/parameters/InstructionsFilter'
         - $ref: '#/components/parameters/ValueFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
       responses:
@@ -1046,6 +1050,7 @@ paths:
         - $ref: '#/components/parameters/TextureFilter'
         - $ref: '#/components/parameters/ValueFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
       responses:
@@ -1620,6 +1625,7 @@ paths:
         - $ref: '#/components/parameters/InstructionsFilter'
         - $ref: '#/components/parameters/ValueFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -1735,6 +1741,7 @@ paths:
         - $ref: '#/components/parameters/InstructionsFilter'
         - $ref: '#/components/parameters/ValueFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -2299,6 +2306,7 @@ paths:
         - $ref: '#/components/parameters/TextureFilter'
         - $ref: '#/components/parameters/ValueFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -2414,6 +2422,7 @@ paths:
         - $ref: '#/components/parameters/TextureFilter'
         - $ref: '#/components/parameters/ValueFilter'
         - $ref: '#/components/parameters/ReviewOverallFilter'
+        - $ref: '#/components/parameters/DateFilter'
         - $ref: '#/components/parameters/CreatedFilter'
         - $ref: '#/components/parameters/UpdatedFilter'
         - $ref: '#/components/parameters/CreatorEq'
@@ -3959,6 +3968,18 @@ components:
         $ref: '#/components/schemas/AverageRange'
       example: {gte: 7.5}
 
+    DateFilter:
+      name: date
+      in: query
+      description: |
+        Compares the `date` of the review. Each key is an operator, for example `date[gte]=`.
+        The form `YYYY-MM-DD` sorts like the dates.
+      style: deepObject
+      explode: true
+      schema:
+        $ref: '#/components/schemas/DateRange'
+      example: {gte: '2025-11-23', lte: '2025-11-29'}
+
     CreatedFilter:
       name: created
       in: query
@@ -5346,6 +5367,29 @@ components:
           $ref: '#/components/schemas/Timestamp'
         gt:
           $ref: '#/components/schemas/Timestamp'
+
+    DateRange:
+      description: Comparisons for a date. All comparisons must match.
+      type: object
+      additionalProperties: false
+      properties:
+        lt:
+          $ref: '#/components/schemas/CalendarDate'
+        lte:
+          $ref: '#/components/schemas/CalendarDate'
+        eq:
+          $ref: '#/components/schemas/CalendarDate'
+        gte:
+          $ref: '#/components/schemas/CalendarDate'
+        gt:
+          $ref: '#/components/schemas/CalendarDate'
+    CalendarDate:
+      description: A date in the form `YYYY-MM-DD` that exists. It has no time and no time zone.
+      type: string
+      format: calendar-date
+      pattern: '^\d{4}-\d{2}-\d{2}$'
+      x-pattern-message: must be a date in the form YYYY-MM-DD
+      examples: ['2025-11-23']
 
     Restaurant:
       description: A restaurant that can be reviewed.

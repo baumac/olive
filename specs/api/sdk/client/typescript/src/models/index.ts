@@ -5,6 +5,7 @@ export * from './AverageRange.js';
 export * from './Box.js';
 export * from './Creator.js';
 export * from './Credentials.js';
+export * from './DateRange.js';
 export * from './EmailConfirmation.js';
 export * from './Location.js';
 export * from './Near.js';
