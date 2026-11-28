@@ -151,9 +151,8 @@ var tagKindSubjects = map[reviewsapi.ListTagsParamsKind]subject{
 	reviewsapi.ListTagsParamsKindPantry:      pantryItemSubject,
 }
 
-// tagKinds returns the subjects of kind. A nil kind is all subjects. An
-// unknown kind passes only without the spec validation. It also gets all
-// subjects.
+// tagKinds returns the subjects of kind. A nil or unknown kind gets all
+// subjects. Only a request without the spec validation has an unknown kind.
 func tagKinds(kind *reviewsapi.ListTagsParamsKind) []subject {
 	if kind != nil {
 		if sub, ok := tagKindSubjects[*kind]; ok {
