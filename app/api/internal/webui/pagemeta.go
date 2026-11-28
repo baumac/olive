@@ -34,7 +34,7 @@ const (
 const maxDescriptionRunes = 200
 
 // recordID is the RecordId pattern of the API spec. The path
-// /restaurants/new then does not match a restaurant or a recipe.
+// /restaurants/new then does not match a restaurant.
 var recordID = regexp.MustCompile(`^[a-z0-9]{15}$`)
 
 var (
@@ -167,12 +167,13 @@ func (p indexPage) pageTitle(title string) string {
 	return title + " · " + p.siteName
 }
 
-// errNoRecord tells that the path names a restaurant, a recipe, a review, a
-// user, or a list that does not exist.
+// errNoRecord tells that the path names a restaurant, a recipe, a pantry
+// item, a review, a user, a list, or a tag that does not exist.
 var errNoRecord = errors.New("no record")
 
-// metaFor returns false for a path that is not a restaurant, recipe, review,
-// reviewer, or list page. appURL is the Application URL of the PocketBase settings.
+// metaFor returns false for a path that is not a restaurant, recipe, pantry
+// item, review, reviewer, list, or tag page. appURL is the Application URL of
+// the PocketBase settings.
 // The literal path parts ignore case like Vue Router.
 func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, error) {
 	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
@@ -199,10 +200,7 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 		if !creator.GetBool("approved") {
 			return pageMeta{}, true, errNoRecord
 		}
-		var counts listItemCounts
-		err = app.DB().NewQuery("SELECT (SELECT COUNT(*) FROM {{list_items}} WHERE [[list]] = {:id}) AS [[restaurants]], " +
-			"(SELECT COUNT(*) FROM {{list_recipes}} WHERE [[list]] = {:id}) AS [[recipes]]").
-			Bind(dbx.Params{"id": list.Id}).One(&counts)
+		counts, err := countsOf(app, list.Id, "[[list]]", func(k subjects.Tables) string { return k.ListItems })
 		if err != nil {
 			return pageMeta{}, true, err
 		}
@@ -214,7 +212,7 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 	if len(parts) < 2 || !recordID.MatchString(parts[1]) {
 		return pageMeta{}, false, nil
 	}
-	i := slices.IndexFunc(reviewedKinds, func(k reviewedKind) bool { return strings.EqualFold(parts[0], k.Table) })
+	i := slices.IndexFunc(reviewedKinds, func(k reviewedKind) bool { return strings.EqualFold(parts[0], k.Path) })
 	isReview := len(parts) == 4 && strings.EqualFold(parts[2], "reviews") && recordID.MatchString(parts[3])
 	if i < 0 || (len(parts) != 2 && !isReview) {
 		return pageMeta{}, false, nil
@@ -253,16 +251,29 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 type reviewedKind struct {
 	subjects.Tables
 	photoFilePath func(parentID, reviewID, photoID string, variant reviewsapi.PhotoVariant) string
+	noun          string
+	// reviews and aReview start the default descriptions of the pages.
+	reviews, aReview string
 }
 
 var (
-	restaurantKind = reviewedKind{Tables: subjects.Restaurants, photoFilePath: publicapi.PhotoFilePath}
-	recipeKind     = reviewedKind{Tables: subjects.Recipes, photoFilePath: publicapi.RecipePhotoFilePath}
-	reviewedKinds  = []reviewedKind{restaurantKind, recipeKind}
+	restaurantKind = reviewedKind{
+		Tables: subjects.Restaurants, photoFilePath: publicapi.PhotoFilePath,
+		noun: "restaurant", reviews: "Reviews", aReview: "A review",
+	}
+	recipeKind = reviewedKind{
+		Tables: subjects.Recipes, photoFilePath: publicapi.RecipePhotoFilePath,
+		noun: "recipe", reviews: "Reviews", aReview: "A review",
+	}
+	pantryItemKind = reviewedKind{
+		Tables: subjects.PantryItems, photoFilePath: publicapi.PantryItemPhotoFilePath,
+		noun: "pantry item", reviews: "Tastings", aReview: "A tasting",
+	}
+	reviewedKinds = []reviewedKind{restaurantKind, recipeKind, pantryItemKind}
 )
 
 func (k reviewedKind) path(parent *core.Record) string {
-	return "/" + k.Table + "/" + parent.Id
+	return "/" + k.Path + "/" + parent.Id
 }
 
 func notFound(err error) error {
@@ -284,7 +295,7 @@ func (p indexPage) parentMeta(kind reviewedKind, parent *core.Record, baseURL st
 	name := parent.GetString("name")
 	description := shorten(parent.GetString("description"))
 	if description == "" {
-		description = "Reviews of " + name + " on " + p.siteName + "."
+		description = kind.reviews + " of " + name + " on " + p.siteName + "."
 	}
 	meta := p.siteImage
 	meta.Title = p.pageTitle(name)
@@ -295,22 +306,49 @@ func (p indexPage) parentMeta(kind reviewedKind, parent *core.Record, baseURL st
 	return meta
 }
 
-type listItemCounts struct {
-	Restaurants int `db:"restaurants"`
-	Recipes     int `db:"recipes"`
+// itemCounts has the number of items of each kind in the order of
+// reviewedKinds.
+type itemCounts []int
+
+// countsOf counts the rows of the table of each kind where the column is id.
+func countsOf(app core.App, id, column string, table func(subjects.Tables) string) (itemCounts, error) {
+	parts := make([]string, len(reviewedKinds))
+	for i, k := range reviewedKinds {
+		parts[i] = "(SELECT COUNT(*) FROM {{" + table(k.Tables) + "}} WHERE " + column + " = {:id}) AS [[n" + strconv.Itoa(i) + "]]"
+	}
+	row := dbx.NullStringMap{}
+	if err := app.DB().NewQuery("SELECT " + strings.Join(parts, ", ")).Bind(dbx.Params{"id": id}).One(row); err != nil {
+		return nil, err
+	}
+	counts := make(itemCounts, len(reviewedKinds))
+	for i := range counts {
+		counts[i], _ = strconv.Atoi(row["n"+strconv.Itoa(i)].String)
+	}
+	return counts, nil
 }
 
-// items names the restaurants and the recipes. A list without items has 0
+// items names the counts that are not 0. A list without items has 0
 // restaurants.
-func (c listItemCounts) items() string {
-	restaurants, recipes := countOf(c.Restaurants, "restaurant"), countOf(c.Recipes, "recipe")
-	switch {
-	case c.Recipes == 0:
-		return restaurants
-	case c.Restaurants == 0:
-		return recipes
+func (c itemCounts) items() string {
+	var names []string
+	for i, n := range c {
+		if n > 0 {
+			names = append(names, countOf(n, reviewedKinds[i].noun))
+		}
 	}
-	return restaurants + " and " + recipes
+	switch len(names) {
+	case 0:
+		return countOf(0, reviewedKinds[0].noun)
+	case 1:
+		return names[0]
+	case 2:
+		return names[0] + " and " + names[1]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + ", and " + names[len(names)-1]
+}
+
+func (c itemCounts) empty() bool {
+	return !slices.ContainsFunc(c, func(n int) bool { return n > 0 })
 }
 
 func countOf(n int, noun string) string {
@@ -321,7 +359,7 @@ func countOf(n int, noun string) string {
 }
 
 // listMeta has only the public fields of the creator.
-func (p indexPage) listMeta(list, creator *core.Record, counts listItemCounts, baseURL string) pageMeta {
+func (p indexPage) listMeta(list, creator *core.Record, counts itemCounts, baseURL string) pageMeta {
 	title := list.GetString("name") + " by " + creator.GetString("name")
 	meta := p.siteImage
 	meta.Title = p.pageTitle(title)
@@ -332,28 +370,25 @@ func (p indexPage) listMeta(list, creator *core.Record, counts listItemCounts, b
 	return meta
 }
 
-// tagPage has no record for a tag without a restaurant or a recipe. It
-// changes free text to a tag name. The Public API does the same. See
-// decision 00011.
+// tagPage has no record for a tag without a restaurant, a recipe, or a
+// pantry item. It changes free text to a tag name. The Public API does the
+// same. See decision 00011.
 func (p indexPage) tagPage(app core.App, appURL, name string) (pageMeta, bool, error) {
 	tag, err := app.FindFirstRecordByData(subjects.TagCollection, "name", tagname.Of(name))
 	if err != nil {
 		return pageMeta{}, true, notFound(err)
 	}
-	var counts listItemCounts
-	err = app.DB().NewQuery("SELECT (SELECT COUNT(*) FROM {{" + subjects.Restaurants.Tags + "}} WHERE [[tag]] = {:id}) AS [[restaurants]], " +
-		"(SELECT COUNT(*) FROM {{" + subjects.Recipes.Tags + "}} WHERE [[tag]] = {:id}) AS [[recipes]]").
-		Bind(dbx.Params{"id": tag.Id}).One(&counts)
+	counts, err := countsOf(app, tag.Id, "[[tag]]", func(k subjects.Tables) string { return k.Tags })
 	if err != nil {
 		return pageMeta{}, true, err
 	}
-	if counts.Restaurants == 0 && counts.Recipes == 0 {
+	if counts.empty() {
 		return pageMeta{}, true, errNoRecord
 	}
 	return p.tagMeta(tag.GetString("name"), counts, publicBaseURL(appURL)), true, nil
 }
 
-func (p indexPage) tagMeta(name string, counts listItemCounts, baseURL string) pageMeta {
+func (p indexPage) tagMeta(name string, counts itemCounts, baseURL string) pageMeta {
 	title := "Tag " + name
 	meta := p.siteImage
 	meta.Title = p.pageTitle(title)
@@ -382,7 +417,7 @@ func (p indexPage) reviewMeta(kind reviewedKind, parent, review, photo *core.Rec
 	title := review.GetString("title")
 	description := shorten(review.GetString("feedback"))
 	if description == "" {
-		description = "A review of " + parent.GetString("name") + " on " + p.siteName + "."
+		description = kind.aReview + " of " + parent.GetString("name") + " on " + p.siteName + "."
 	}
 	meta := p.siteImage
 	if photo != nil && baseURL != "" {

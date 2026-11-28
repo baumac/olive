@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants and recipes are the exception. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
+ * The Public API lets users sign up, sign in, and review restaurants, recipes, and pantry items.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants, recipes, and pantry items are the exception. Create, update, and delete operations of restaurants, recipes, pantry items, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -49,7 +49,7 @@ export interface ListTagsRequest {
      */
     cursor?: string;
     /**
-     * `-count` puts the tags with the most restaurants and recipes first. With `kind`, it counts only that kind.
+     * `-count` puts the tags with the most restaurants, recipes, and pantry items first. With `kind`, it counts only that kind.
      * `count` puts the fewest first. Equal counts sort by `name`.
      * The `name` sort compares the code points of the names.
      * The API always adds the ID of the tag as the last sort key.
@@ -62,12 +62,12 @@ export interface ListTagsRequest {
      * The search ignores case and accents. `Cafe` matches `café`.
      * The API changes the search like a `Tag`. Spaces and punctuation then match hyphens. `wood f` matches `wood-fired`.
      * A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next.
-     * It is in the list also without a restaurant or a recipe of `kind`. A client then finds an existing tag before it adds a new one.
+     * It is in the list also without a restaurant, a recipe, or a pantry item of `kind`. A client then finds an existing tag before it adds a new one.
      * 
      */
     search?: string;
     /**
-     * Lists only the tags of restaurants or only the tags of recipes.
+     * Lists only the tags of restaurants, only the tags of recipes, or only the tags of pantry items.
      * A tag with exactly the name of the changed `search`, or the same name without accents, is the one exception.
      * 
      */
@@ -90,7 +90,7 @@ export interface TagsApiInterface {
     getTagRequestOpts(requestParameters: GetTagRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * A tag without a restaurant or a recipe causes `404 Not Found`. `listRestaurants` and `listRecipes` with `tags[has]` list the restaurants and the recipes of the tag. 
+     * A tag without a restaurant, a recipe, or a pantry item causes `404 Not Found`. `listRestaurants`, `listRecipes`, and `listPantryItems` with `tags[has]` list the restaurants, the recipes, and the pantry items of the tag. 
      * @summary Get a tag
      * @param {string} tagName The name of the tag. The API changes free text to a tag. &#x60;Wood%20Fired&#x60; gets &#x60;wood-fired&#x60;.
      * @param {*} [options] Override http request option.
@@ -100,7 +100,7 @@ export interface TagsApiInterface {
     getTagRaw(requestParameters: GetTagRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TagSummary>>;
 
     /**
-     * A tag without a restaurant or a recipe causes `404 Not Found`. `listRestaurants` and `listRecipes` with `tags[has]` list the restaurants and the recipes of the tag. 
+     * A tag without a restaurant, a recipe, or a pantry item causes `404 Not Found`. `listRestaurants`, `listRecipes`, and `listPantryItems` with `tags[has]` list the restaurants, the recipes, and the pantry items of the tag. 
      * Get a tag
      */
     getTag(requestParameters: GetTagRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TagSummary>;
@@ -109,22 +109,22 @@ export interface TagsApiInterface {
      * Creates request options for listTags without sending the request
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {'count' | '-count' | 'name' | '-name'} [sort] &#x60;-count&#x60; puts the tags with the most restaurants and recipes first. With &#x60;kind&#x60;, it counts only that kind. &#x60;count&#x60; puts the fewest first. Equal counts sort by &#x60;name&#x60;. The &#x60;name&#x60; sort compares the code points of the names. The API always adds the ID of the tag as the last sort key. 
-     * @param {string} [search] The name or a word of the name starts with the search. The words of a name are the parts between its hyphens. &#x60;fired&#x60; matches &#x60;wood-fired&#x60;. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;café&#x60;. The API changes the search like a &#x60;Tag&#x60;. Spaces and punctuation then match hyphens. &#x60;wood f&#x60; matches &#x60;wood-fired&#x60;. A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next. It is in the list also without a restaurant or a recipe of &#x60;kind&#x60;. A client then finds an existing tag before it adds a new one. 
-     * @param {'restaurants' | 'recipes'} [kind] Lists only the tags of restaurants or only the tags of recipes. A tag with exactly the name of the changed &#x60;search&#x60;, or the same name without accents, is the one exception. 
+     * @param {'count' | '-count' | 'name' | '-name'} [sort] &#x60;-count&#x60; puts the tags with the most restaurants, recipes, and pantry items first. With &#x60;kind&#x60;, it counts only that kind. &#x60;count&#x60; puts the fewest first. Equal counts sort by &#x60;name&#x60;. The &#x60;name&#x60; sort compares the code points of the names. The API always adds the ID of the tag as the last sort key. 
+     * @param {string} [search] The name or a word of the name starts with the search. The words of a name are the parts between its hyphens. &#x60;fired&#x60; matches &#x60;wood-fired&#x60;. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;café&#x60;. The API changes the search like a &#x60;Tag&#x60;. Spaces and punctuation then match hyphens. &#x60;wood f&#x60; matches &#x60;wood-fired&#x60;. A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next. It is in the list also without a restaurant, a recipe, or a pantry item of &#x60;kind&#x60;. A client then finds an existing tag before it adds a new one. 
+     * @param {'restaurants' | 'recipes' | 'pantry'} [kind] Lists only the tags of restaurants, only the tags of recipes, or only the tags of pantry items. A tag with exactly the name of the changed &#x60;search&#x60;, or the same name without accents, is the one exception. 
      * @throws {RequiredError}
      * @memberof TagsApiInterface
      */
     listTagsRequestOpts(requestParameters: ListTagsRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Lists the tags of restaurants and recipes. A tag without a restaurant or a recipe is not in the list. 
+     * Lists the tags of restaurants, recipes, and pantry items. A tag without a restaurant, a recipe, or a pantry item is not in the list. 
      * @summary List tags
      * @param {number} [limit] The page size.
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
-     * @param {'count' | '-count' | 'name' | '-name'} [sort] &#x60;-count&#x60; puts the tags with the most restaurants and recipes first. With &#x60;kind&#x60;, it counts only that kind. &#x60;count&#x60; puts the fewest first. Equal counts sort by &#x60;name&#x60;. The &#x60;name&#x60; sort compares the code points of the names. The API always adds the ID of the tag as the last sort key. 
-     * @param {string} [search] The name or a word of the name starts with the search. The words of a name are the parts between its hyphens. &#x60;fired&#x60; matches &#x60;wood-fired&#x60;. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;café&#x60;. The API changes the search like a &#x60;Tag&#x60;. Spaces and punctuation then match hyphens. &#x60;wood f&#x60; matches &#x60;wood-fired&#x60;. A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next. It is in the list also without a restaurant or a recipe of &#x60;kind&#x60;. A client then finds an existing tag before it adds a new one. 
-     * @param {'restaurants' | 'recipes'} [kind] Lists only the tags of restaurants or only the tags of recipes. A tag with exactly the name of the changed &#x60;search&#x60;, or the same name without accents, is the one exception. 
+     * @param {'count' | '-count' | 'name' | '-name'} [sort] &#x60;-count&#x60; puts the tags with the most restaurants, recipes, and pantry items first. With &#x60;kind&#x60;, it counts only that kind. &#x60;count&#x60; puts the fewest first. Equal counts sort by &#x60;name&#x60;. The &#x60;name&#x60; sort compares the code points of the names. The API always adds the ID of the tag as the last sort key. 
+     * @param {string} [search] The name or a word of the name starts with the search. The words of a name are the parts between its hyphens. &#x60;fired&#x60; matches &#x60;wood-fired&#x60;. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;café&#x60;. The API changes the search like a &#x60;Tag&#x60;. Spaces and punctuation then match hyphens. &#x60;wood f&#x60; matches &#x60;wood-fired&#x60;. A tag with exactly the name of the changed search comes first in each sort. A tag with the same name without accents comes next. It is in the list also without a restaurant, a recipe, or a pantry item of &#x60;kind&#x60;. A client then finds an existing tag before it adds a new one. 
+     * @param {'restaurants' | 'recipes' | 'pantry'} [kind] Lists only the tags of restaurants, only the tags of recipes, or only the tags of pantry items. A tag with exactly the name of the changed &#x60;search&#x60;, or the same name without accents, is the one exception. 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof TagsApiInterface
@@ -132,7 +132,7 @@ export interface TagsApiInterface {
     listTagsRaw(requestParameters: ListTagsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TagList>>;
 
     /**
-     * Lists the tags of restaurants and recipes. A tag without a restaurant or a recipe is not in the list. 
+     * Lists the tags of restaurants, recipes, and pantry items. A tag without a restaurant, a recipe, or a pantry item is not in the list. 
      * List tags
      */
     listTags(requestParameters: ListTagsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TagList>;
@@ -180,7 +180,7 @@ export class TagsApi extends runtime.BaseAPI implements TagsApiInterface {
     }
 
     /**
-     * A tag without a restaurant or a recipe causes `404 Not Found`. `listRestaurants` and `listRecipes` with `tags[has]` list the restaurants and the recipes of the tag. 
+     * A tag without a restaurant, a recipe, or a pantry item causes `404 Not Found`. `listRestaurants`, `listRecipes`, and `listPantryItems` with `tags[has]` list the restaurants, the recipes, and the pantry items of the tag. 
      * Get a tag
      */
     async getTagRaw(requestParameters: GetTagRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TagSummary>> {
@@ -191,7 +191,7 @@ export class TagsApi extends runtime.BaseAPI implements TagsApiInterface {
     }
 
     /**
-     * A tag without a restaurant or a recipe causes `404 Not Found`. `listRestaurants` and `listRecipes` with `tags[has]` list the restaurants and the recipes of the tag. 
+     * A tag without a restaurant, a recipe, or a pantry item causes `404 Not Found`. `listRestaurants`, `listRecipes`, and `listPantryItems` with `tags[has]` list the restaurants, the recipes, and the pantry items of the tag. 
      * Get a tag
      */
     async getTag(requestParameters: GetTagRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TagSummary> {
@@ -247,7 +247,7 @@ export class TagsApi extends runtime.BaseAPI implements TagsApiInterface {
     }
 
     /**
-     * Lists the tags of restaurants and recipes. A tag without a restaurant or a recipe is not in the list. 
+     * Lists the tags of restaurants, recipes, and pantry items. A tag without a restaurant, a recipe, or a pantry item is not in the list. 
      * List tags
      */
     async listTagsRaw(requestParameters: ListTagsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TagList>> {
@@ -258,7 +258,7 @@ export class TagsApi extends runtime.BaseAPI implements TagsApiInterface {
     }
 
     /**
-     * Lists the tags of restaurants and recipes. A tag without a restaurant or a recipe is not in the list. 
+     * Lists the tags of restaurants, recipes, and pantry items. A tag without a restaurant, a recipe, or a pantry item is not in the list. 
      * List tags
      */
     async listTags(requestParameters: ListTagsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TagList> {
@@ -284,5 +284,6 @@ export type ListTagsSortEnum = typeof ListTagsSortEnum[keyof typeof ListTagsSort
 export const ListTagsKindEnum = {
     Restaurants: 'restaurants',
     Recipes: 'recipes',
+    Pantry: 'pantry',
 } as const;
 export type ListTagsKindEnum = typeof ListTagsKindEnum[keyof typeof ListTagsKindEnum];

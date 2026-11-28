@@ -209,9 +209,9 @@ Sign out ends all sessions of the user. A sign out on one device also signs out 
 | Name | Key | Operations | Default |
 |---|---|---|---|
 | `sign-in` | IP address | `signUp`, `confirmEmail`, `signIn`, `requestPasswordReset`, `resetPassword` | 10 per minute |
-| `create` | user | `createRestaurant`, `createRecipe`, `createRestaurantReview`, `createRecipeReview`, `createList` | 30 per hour |
-| `edit` | user | the updates and the deletes of restaurants, recipes, reviews, photos, lists, and the user, and the list changes | 300 per hour |
-| `photo-upload` | user | `addRestaurantReviewPhoto`, `addRecipeReviewPhoto` | 30 per hour |
+| `create` | user | `createRestaurant`, `createRecipe`, `createPantryItem`, `createRestaurantReview`, `createRecipeReview`, `createPantryItemReview`, `createList` | 30 per hour |
+| `edit` | user | the updates and the deletes of restaurants, recipes, pantry items, reviews, photos, lists, and the user, and the list changes | 300 per hour |
+| `photo-upload` | user | `addRestaurantReviewPhoto`, `addRecipeReviewPhoto`, `addPantryItemReviewPhoto` | 30 per hour |
 | `place-search` | user | `searchPlaces` | 30 per minute |
 
 - each operation has its own count. The 31st new restaurant of a user in one hour gets `429`, but the user can still create a review.
@@ -295,7 +295,7 @@ Why these values:
 - `prepare` checks `approved` after the token check and before the rate limit of the user. A refused request does not count for the limit.
 - the check reads the user record that PocketBase loads for the token. A change of the approval then works at the next request.
 - `findReviewer` returns no user without approval, except for the user of the token. The reviewer and list read operations use it. The `webui` package gives `404` and no link preview for these pages.
-- `app/api/internal/usercleanup` is the daily job `user-cleanup`. It deletes the users that are not approved, are older than 30 days, and have no review, restaurant, recipe, or list item.
+- `app/api/internal/usercleanup` is the daily job `user-cleanup`. It deletes the users that are not approved, are older than 30 days, and have no review, restaurant, recipe, pantry item, or list item.
   A user with data who lost the approval stays. The job does not delete data that people see.
 - `mail.go` sends the approval email from an `OnRecordAfterUpdateSuccess` hook of `users`
 

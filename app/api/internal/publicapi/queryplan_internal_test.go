@@ -87,6 +87,7 @@ func TestRatingsUseIndexes(t *testing.T) {
 	}{
 		{restaurantSubject, "SEARCH restaurant_overall USING PRIMARY KEY (restaurant=?)"},
 		{recipeSubject, "SEARCH recipe_overall USING PRIMARY KEY (recipe=?)"},
+		{pantryItemSubject, "SEARCH pantry_item_overall USING PRIMARY KEY (pantry_item=?)"},
 	} {
 		p := queryPlan(t, s, s.ratingsQuery(c.sub, ids))
 		if !strings.Contains(p, c.want) {

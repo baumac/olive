@@ -168,11 +168,14 @@ It has the title, the description, and the link preview tags of the site.
 
 | Page | Values |
 |---|---|
-| `/restaurants/{id}`, `/recipes/{id}` | the name and the description |
-| `/restaurants/{id}/reviews/{id}`, `/recipes/{id}/reviews/{id}` | `og:type` `article`, the title with the name of the subject, the feedback, and the first photo |
+| `/restaurants/{id}`, `/recipes/{id}`, `/pantry/{id}` | the name and the description |
+| `/restaurants/{id}/reviews/{id}`, `/recipes/{id}/reviews/{id}`, `/pantry/{id}/reviews/{id}` | `og:type` `article`, the title with the name of the subject, the feedback, and the first photo |
 | `/reviewers/{id}` | `og:type` `profile` and the name of the reviewer |
-| `/lists/{id}` | "NAME by CREATOR" and the number of restaurants and recipes |
-| `/tags/{name}` | "Tag NAME" and the number of restaurants and recipes. See decision 00011. |
+| `/lists/{id}` | "NAME by CREATOR" and the number of restaurants, recipes, and pantry items |
+| `/tags/{name}` | "Tag NAME" and the number of restaurants, recipes, and pantry items. See decision 00011. |
+
+- a pantry item without a description has `Tastings of NAME on Olive.`. A tasting without feedback has `A tasting of NAME on Olive.`. See decision 00012.
+- a count text names only the kinds with items, such as "1 restaurant, 1 recipe, and 2 pantry items"
 
 - `og:image` of a review with photos is the `full` file of its first photo, with its size and alt text. Other pages have the image of the site.
 - a missing record, a review of a different subject, and a reviewer without approval get `404` with the default `index.html`. The UI then shows its not found screen.

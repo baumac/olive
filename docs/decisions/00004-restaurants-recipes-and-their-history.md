@@ -8,7 +8,7 @@ status: implemented
 
 Decision 00000 wants one app to save each food experience.
 The first release has two kinds of subjects: restaurants and recipes.
-Wines and cheeses can come later. The backlog has them under "For the Future".
+Decision 00012 adds a third kind, the pantry items, with the same pattern.
 
 A restaurant needs a place. Without it, two restaurants with one name in different cities look the same, and the maps of decision 00008 have no point.
 People who look at a restaurant also want its website, its phone, its opening hours, and how much it costs.
@@ -301,15 +301,18 @@ Joe can change the values. The save makes version 4 with the editor Joe.
 `app/api/internal/subjects` has the table names of each kind in `subjects.Tables`. `subjects.All` lists the kinds.
 `subject` of `app/api/internal/publicapi/subject.go` adds the values that only the Public API uses.
 
-| Field | `restaurantSubject` | `recipeSubject` |
-|---|---|---|
-| `Table`, `Parent` | `restaurants`, `restaurant` | `recipes`, `recipe` |
-| `Reviews`, `Photos` | `reviews`, `review_photos` | `recipe_reviews`, `recipe_review_photos` |
-| `ListItems` | `list_items` | `list_recipes` |
-| `Overall`, `Tags` | `restaurant_overall`, `restaurant_tags` | `recipe_overall`, `recipe_tags` |
-| `FTS`, `ReviewsFTS` | `restaurants_fts`, `reviews_fts` | `recipes_fts`, `recipe_reviews_fts` |
-| `scores` | `space`, `service`, `food`, `price` | `taste`, `ease`, `instructions`, `value` |
-| `search`, `reviewSearch` | the column weights of the search | the column weights of the search |
+| Field | `restaurantSubject` | `recipeSubject` | `pantryItemSubject` |
+|---|---|---|---|
+| `Table`, `Parent` | `restaurants`, `restaurant` | `recipes`, `recipe` | `pantry_items`, `pantry_item` |
+| `Path` | `restaurants` | `recipes` | `pantry` |
+| `Reviews`, `Photos` | `reviews`, `review_photos` | `recipe_reviews`, `recipe_review_photos` | `pantry_item_reviews`, `pantry_item_review_photos` |
+| `ListItems` | `list_items` | `list_recipes` | `list_pantry_items` |
+| `Overall`, `Tags` | `restaurant_overall`, `restaurant_tags` | `recipe_overall`, `recipe_tags` | `pantry_item_overall`, `pantry_item_tags` |
+| `FTS`, `ReviewsFTS` | `restaurants_fts`, `reviews_fts` | `recipes_fts`, `recipe_reviews_fts` | `pantry_items_fts`, `pantry_item_reviews_fts` |
+| `scores` | `space`, `service`, `food`, `price` | `taste`, `ease`, `instructions`, `value` | `taste`, `aroma`, `texture`, `value` |
+| `search`, `reviewSearch` | the column weights of the search | the column weights of the search | the column weights of the search |
+
+- `Path` is the first segment of the API and UI paths. `plural` of `subject` is the plural noun of the problem details.
 
 - the review, photo, gallery, rating, search, tag, and list code takes a `subject`
 - the shared code returns a `problem` for a 4xx result. Each strict server method changes its request, calls the shared code, and changes the result to its own response type.
@@ -402,7 +405,7 @@ Joe can change the values. The save makes version 4 with the editor Joe.
 | A duplicate rule on the name and the distance | Not selected. It would refuse real restaurants, such as two bars in one food court. |
 | The details from a second request to OpenStreetMap | Not selected. It is a second service with its own terms. The place search fills them when the geocoder has them. |
 | Complete recipes in the list responses | Removed. A page of 100 recipes could have about 13 MB. |
-| Wines and cheeses in the first release | Not selected. The backlog has them under "For the Future". |
+| Wines and cheeses in the first release | Not selected. Decision 00012 adds them later as pantry items. |
 | Only the creator can change a subject | Removed. A creator who left froze wrong values. The group trusts its members. |
 | The reviews of other users lock the name, the location, the source, the ingredients, and the steps | Removed. The lock also kept the wrong values. |
 | The creator of the oldest review becomes the owner of a subject without a creator | Not selected. The UI would need a new property to know the owner. |

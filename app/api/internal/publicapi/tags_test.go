@@ -13,6 +13,7 @@ type tagPage struct {
 		Name            string `json:"name"`
 		RestaurantCount int    `json:"restaurant_count"`
 		RecipeCount     int    `json:"recipe_count"`
+		PantryItemCount int    `json:"pantry_item_count"`
 	} `json:"items"`
 	NextCursor *string `json:"next_cursor"`
 }

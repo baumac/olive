@@ -253,6 +253,7 @@ func TestRatingOfReviewersUsesTheCreatorIndex(t *testing.T) {
 	}{
 		{restaurantKind, "SEARCH reviews USING INDEX idx_reviews_restaurant_creator (restaurant=?)"},
 		{recipeKind, "SEARCH recipe_reviews USING INDEX idx_recipe_reviews_recipe_creator (recipe=?)"},
+		{pantryItemKind, "SEARCH pantry_item_reviews USING INDEX idx_pantry_item_reviews_pantry_item_creator (pantry_item=?)"},
 	} {
 		var rows []struct {
 			Detail string `db:"detail"`

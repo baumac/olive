@@ -578,6 +578,71 @@ func TestRecipeRows(t *testing.T) {
 	}
 }
 
+func TestPantryItemRows(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	brie := e.save(t, "pantry_items", map[string]any{
+		"name": "Brie", "category": "cheese", "description": "Soft", "producer": "Fromagerie", "style": "Bloomy rind",
+		"origin": "Île-de-France", "tags": []string{"raw-milk"},
+	})
+	rv := e.save(t, "pantry_item_reviews", map[string]any{
+		"pantry_item": brie.Id, "creator": e.user.Id, "date": "2024-11-06", "title": "Creamy", "feedback": "Good on bread",
+		"taste": 8, "aroma": 8, "texture": 8, "value": 8,
+	})
+	var item struct {
+		Name     string `db:"name"`
+		Tags     string `db:"tags"`
+		Producer string `db:"producer"`
+		Style    string `db:"style"`
+		Origin   string `db:"origin"`
+	}
+	e.mustRow(t, "pantry_items_fts", brie.Id, &item)
+	if item.Name != "Brie" || item.Tags != "raw-milk" || item.Producer != "Fromagerie" || item.Style != "Bloomy rind" || item.Origin != "Île-de-France" {
+		t.Errorf("pantry item row %+v", item)
+	}
+	if got := e.match(t, "pantry_items_fts", "ile"); !slices.Equal(got, []string{brie.Id}) {
+		t.Errorf("pantry items with ile: %v", got)
+	}
+
+	var review struct {
+		Title          string `db:"title"`
+		PantryItemName string `db:"pantry_item_name"`
+	}
+	e.mustRow(t, "pantry_item_reviews_fts", rv.Id, &review)
+	if review.Title != "Creamy" || review.PantryItemName != "Brie" {
+		t.Errorf("review row %+v", review)
+	}
+
+	e.update(t, brie, map[string]any{"name": "Brie de Meaux", "style": ""})
+	e.mustRow(t, "pantry_items_fts", brie.Id, &item)
+	e.mustRow(t, "pantry_item_reviews_fts", rv.Id, &review)
+	if item.Style != "" || review.PantryItemName != "Brie de Meaux" {
+		t.Errorf("after the change: pantry item %+v, review %+v", item, review)
+	}
+
+	tag, err := e.app.FindFirstRecordByData("tags", "name", "raw-milk")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tag.Set("name", "unpasteurized")
+	if err := e.app.Save(tag); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.match(t, "pantry_items_fts", "unpasteurized"); !slices.Equal(got, []string{brie.Id}) {
+		t.Errorf("pantry items with the new tag name: %v", got)
+	}
+
+	if err := e.app.Delete(rv); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.app.Delete(brie); err != nil {
+		t.Fatal(err)
+	}
+	if e.row(t, "pantry_items_fts", brie.Id, &item) || e.row(t, "pantry_item_reviews_fts", rv.Id, &review) {
+		t.Error("the rows of the deleted records stay")
+	}
+}
+
 func TestRenameOfTag(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t)

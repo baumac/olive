@@ -473,7 +473,7 @@ func (s *Server) findReview(app core.App, sub subject, parentID, reviewID string
 }
 
 func (sub subject) path(parentID string) string {
-	return basePath + "/" + sub.Table + "/" + parentID
+	return basePath + "/" + sub.Path + "/" + parentID
 }
 
 func (sub subject) reviewPath(parentID, reviewID string) string {

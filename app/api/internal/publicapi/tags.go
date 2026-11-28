@@ -138,22 +138,28 @@ func (s *Server) GetTag(_ context.Context, req reviewsapi.GetTagRequestObject) (
 	if err != nil {
 		return nil, err
 	}
-	if items[0].RestaurantCount == 0 && items[0].RecipeCount == 0 {
+	if items[0].RestaurantCount == 0 && items[0].RecipeCount == 0 && items[0].PantryItemCount == 0 {
 		return notFoundResponse, nil
 	}
 	return reviewsapi.GetTag200JSONResponse(items[0]), nil
 }
 
-// tagKinds returns the subjects of kind. A nil kind is all subjects.
+// tagKindSubjects has the subject of each value of the kind parameter.
+var tagKindSubjects = map[reviewsapi.ListTagsParamsKind]subject{
+	reviewsapi.ListTagsParamsKindRestaurants: restaurantSubject,
+	reviewsapi.ListTagsParamsKindRecipes:     recipeSubject,
+	reviewsapi.ListTagsParamsKindPantry:      pantryItemSubject,
+}
+
+// tagKinds returns the subjects of kind. A nil or unknown kind gets all
+// subjects. Only a request without the spec validation has an unknown kind.
 func tagKinds(kind *reviewsapi.ListTagsParamsKind) []subject {
-	switch {
-	case kind == nil:
-		return []subject{restaurantSubject, recipeSubject}
-	case *kind == reviewsapi.ListTagsParamsKindRecipes:
-		return []subject{recipeSubject}
-	default:
-		return []subject{restaurantSubject}
+	if kind != nil {
+		if sub, ok := tagKindSubjects[*kind]; ok {
+			return []subject{sub}
+		}
 	}
+	return []subject{restaurantSubject, recipeSubject, pantryItemSubject}
 }
 
 // tagCount is the SQL of the number of parents of the kinds with a tag of
@@ -194,8 +200,10 @@ func (s *Server) tagSummaries(records []*core.Record) ([]reviewsapi.TagSummary, 
 		ID          string `db:"id"`
 		Restaurants int    `db:"restaurants"`
 		Recipes     int    `db:"recipes"`
+		PantryItems int    `db:"pantry_items"`
 	}
-	err := s.app.DB().Select("id", tagCountOf(restaurantSubject)+" AS [[restaurants]]", tagCountOf(recipeSubject)+" AS [[recipes]]").
+	err := s.app.DB().Select("id", tagCountOf(restaurantSubject)+" AS [[restaurants]]", tagCountOf(recipeSubject)+" AS [[recipes]]",
+		tagCountOf(pantryItemSubject)+" AS [[pantry_items]]").
 		From(subjects.TagCollection).Where(dbx.In("id", ids...)).All(&rows)
 	if err != nil {
 		return nil, err
@@ -204,7 +212,7 @@ func (s *Server) tagSummaries(records []*core.Record) ([]reviewsapi.TagSummary, 
 		items[i] = reviewsapi.TagSummary{Name: r.GetString("name"), Created: apiTimestamp(r.GetDateTime("created"))}
 		for _, row := range rows {
 			if row.ID == r.Id {
-				items[i].RestaurantCount, items[i].RecipeCount = row.Restaurants, row.Recipes
+				items[i].RestaurantCount, items[i].RecipeCount, items[i].PantryItemCount = row.Restaurants, row.Recipes, row.PantryItems
 			}
 		}
 	}

@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants and recipes are the exception. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
+ * The Public API lets users sign up, sign in, and review restaurants, recipes, and pantry items.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants, recipes, and pantry items are the exception. Create, update, and delete operations of restaurants, recipes, pantry items, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -438,7 +438,7 @@ export interface ListRecipesRequest {
     /**
      * Compares `rating.overall`, the rounded value of the response.
      * Each key is an operator, for example `overall[gte]=`.
-     * A restaurant or a recipe without reviews matches no `overall` filter.
+     * A restaurant, a recipe, or a pantry item without reviews matches no `overall` filter.
      * 
      */
     overall?: AverageRange;
@@ -477,7 +477,7 @@ export interface ListRecipesRequest {
      */
     creatorIn?: Array<string>;
     /**
-     * Selects the restaurants or the recipes of the list with this ID.
+     * Selects the restaurants, the recipes, or the pantry items of the list with this ID.
      * A list ID that does not exist selects none.
      * 
      */
@@ -933,7 +933,7 @@ export interface RecipesApiInterface {
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. Equal values sort by the number of reviewers. &#x60;-overall&#x60; puts more reviewers first. &#x60;overall&#x60; puts fewer reviewers first. Sort properties after &#x60;overall&#x60; do not change the order. It puts recipes without reviews last in both directions. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The &#x60;total_time&#x60; sort puts recipes without a &#x60;total_time&#x60; last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
      * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, &#x60;tags&#x60;, and &#x60;ingredients&#x60;. A recipe matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;ingredients&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
-     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant or a recipe without reviews matches no &#x60;overall&#x60; filter. 
+     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant, a recipe, or a pantry item without reviews matches no &#x60;overall&#x60; filter. 
      * @param {TotalTimeRange} [totalTime] Compares the &#x60;total_time&#x60; of the recipe in minutes. Each key is an operator, for example &#x60;total_time[lte]&#x3D;30&#x60;. A recipe without a &#x60;total_time&#x60; matches no &#x60;total_time&#x60; filter. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
@@ -942,7 +942,7 @@ export interface RecipesApiInterface {
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
      * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
-     * @param {string} [listEq] Selects the restaurants or the recipes of the list with this ID. A list ID that does not exist selects none. 
+     * @param {string} [listEq] Selects the restaurants, the recipes, or the pantry items of the list with this ID. A list ID that does not exist selects none. 
      * @throws {RequiredError}
      * @memberof RecipesApiInterface
      */
@@ -955,7 +955,7 @@ export interface RecipesApiInterface {
      * @param {string} [cursor] The &#x60;next_cursor&#x60; value of the previous page. Clients must not parse or build cursor values. A cursor is valid only with the same filters and sort that made it. 
      * @param {string} [sort] A comma-separated list of properties. A &#x60;-&#x60; prefix sorts a property in descending order. Each property can occur only one time. A repeated property causes &#x60;400 Bad Request&#x60;. The &#x60;name&#x60; sort ignores case only for the ASCII letters &#x60;A&#x60; to &#x60;Z&#x60;. The &#x60;overall&#x60; sort uses &#x60;rating.overall&#x60;. Equal values sort by the number of reviewers. &#x60;-overall&#x60; puts more reviewers first. &#x60;overall&#x60; puts fewer reviewers first. Sort properties after &#x60;overall&#x60; do not change the order. It puts recipes without reviews last in both directions. The &#x60;relevance&#x60; sort puts the best matches of &#x60;search&#x60; first. It needs &#x60;search&#x60;. With &#x60;search&#x60;, the default sort is &#x60;relevance&#x60;. The &#x60;total_time&#x60; sort puts recipes without a &#x60;total_time&#x60; last in both directions. The API always adds &#x60;id&#x60; as the last sort key. 
      * @param {string} [search] Full-text search in &#x60;name&#x60;, &#x60;description&#x60;, &#x60;tags&#x60;, and &#x60;ingredients&#x60;. A recipe matches when it has all words of the search. A word also matches longer words that start with it. The search ignores case and accents. &#x60;Cafe&#x60; matches &#x60;Café&#x60;. Matches in &#x60;name&#x60; count most for the &#x60;relevance&#x60; sort, then &#x60;tags&#x60;, then &#x60;ingredients&#x60;, then &#x60;description&#x60;. A search without a letter or a digit causes &#x60;400 Bad Request&#x60;. 
-     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant or a recipe without reviews matches no &#x60;overall&#x60; filter. 
+     * @param {AverageRange} [overall] Compares &#x60;rating.overall&#x60;, the rounded value of the response. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;. A restaurant, a recipe, or a pantry item without reviews matches no &#x60;overall&#x60; filter. 
      * @param {TotalTimeRange} [totalTime] Compares the &#x60;total_time&#x60; of the recipe in minutes. Each key is an operator, for example &#x60;total_time[lte]&#x3D;30&#x60;. A recipe without a &#x60;total_time&#x60; matches no &#x60;total_time&#x60; filter. 
      * @param {string} [tagsHas] The &#x60;tags&#x60; contain the tag.
      * @param {Array<string>} [tagsHasAny] The &#x60;tags&#x60; contain at least one of the tags.
@@ -964,7 +964,7 @@ export interface RecipesApiInterface {
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
      * @param {Array<string>} [creatorIn] The &#x60;creator.id&#x60; is equal to any of the values.
-     * @param {string} [listEq] Selects the restaurants or the recipes of the list with this ID. A list ID that does not exist selects none. 
+     * @param {string} [listEq] Selects the restaurants, the recipes, or the pantry items of the list with this ID. A list ID that does not exist selects none. 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof RecipesApiInterface

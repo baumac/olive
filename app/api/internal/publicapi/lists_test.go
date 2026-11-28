@@ -18,8 +18,10 @@ type listPage struct {
 		Kind            string `json:"kind"`
 		RestaurantCount int    `json:"restaurant_count"`
 		RecipeCount     int    `json:"recipe_count"`
+		PantryItemCount int    `json:"pantry_item_count"`
 		HasRestaurant   *bool  `json:"has_restaurant"`
 		HasRecipe       *bool  `json:"has_recipe"`
+		HasPantryItem   *bool  `json:"has_pantry_item"`
 		Creator         struct {
 			ID string `json:"id"`
 		} `json:"creator"`

@@ -44,6 +44,9 @@ func TestRun(t *testing.T) {
 	cook := user("cook", false)
 	taster := user("taster", false)
 	saver := user("saver", false)
+	cellar := user("cellar", false)
+	sipper := user("sipper", false)
+	keeper := user("keeper", false)
 	restaurant := save(t, app, "restaurants", map[string]any{"address": "Carrer 1", "name": "Luigi's", "creator": owner.Id})
 	save(t, app, "reviews", map[string]any{
 		"restaurant": restaurant.Id, "creator": reviewer.Id, "date": "2024-11-06", "title": "Good",
@@ -59,6 +62,13 @@ func TestRun(t *testing.T) {
 	save(t, app, "lists", map[string]any{"creator": waiting.Id, "name": "Favorites", "kind": "favorites"})
 	saved := save(t, app, "lists", map[string]any{"creator": saver.Id, "name": "Favorites", "kind": "favorites"})
 	save(t, app, "list_recipes", map[string]any{"list": saved.Id, "recipe": recipe.Id})
+	item := save(t, app, "pantry_items", map[string]any{"name": "Gouda", "category": "cheese", "creator": cellar.Id})
+	save(t, app, "pantry_item_reviews", map[string]any{
+		"pantry_item": item.Id, "creator": sipper.Id, "date": "2024-11-06", "title": "Good",
+		"taste": 7, "aroma": 7, "texture": 7, "value": 7,
+	})
+	kept := save(t, app, "lists", map[string]any{"creator": keeper.Id, "name": "Favorites", "kind": "favorites"})
+	save(t, app, "list_pantry_items", map[string]any{"list": kept.Id, "pantry_item": item.Id})
 
 	exists := func(r *core.Record) bool {
 		_, err := app.FindRecordById("users", r.Id)
@@ -76,13 +86,13 @@ func TestRun(t *testing.T) {
 	if exists(waiting) {
 		t.Error("the user without approval and without data stays")
 	}
-	for _, r := range []*core.Record{approved, reviewer, owner, lister, cook, taster, saver} {
+	for _, r := range []*core.Record{approved, reviewer, owner, lister, cook, taster, saver, cellar, sipper, keeper} {
 		if !exists(r) {
 			t.Errorf("%s was deleted", r.GetString("name"))
 		}
 	}
-	if lists, err := app.CountRecords("lists"); err != nil || lists != 2 {
-		t.Errorf("%d lists (%v), want only the lists of the lister and the saver", lists, err)
+	if lists, err := app.CountRecords("lists"); err != nil || lists != 3 {
+		t.Errorf("%d lists (%v), want only the lists of the lister, the saver, and the keeper", lists, err)
 	}
 }
 

@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Reviews Public API
- * The Public API lets users sign up, sign in, and review restaurants and recipes.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants and recipes are the exception. Create, update, and delete operations of restaurants, recipes, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
+ * The Public API lets users sign up, sign in, and review restaurants, recipes, and pantry items.  Sign up and sign in do not require authentication. Sign up sends an email with a confirmation link. `confirmEmail` and sign in return an auth token. Browsers can keep the token in the `reviews_session` cookie instead. See the `cookie` parameter. Read operations do not require authentication. The version lists of restaurants, recipes, and pantry items are the exception. Create, update, and delete operations of restaurants, recipes, pantry items, and reviews require an auth token. The place search also requires an auth token. A request with an invalid token gets `401 Unauthorized`, also on read operations.  Timestamps are RFC 3339 in UTC with millisecond precision, for example `2024-11-04T01:26:55.002Z`.  Request bodies with unknown or read-only properties get `400 Bad Request`. Property values that break a schema rule get `422 Unprocessable Content`. Each `403 Forbidden` and each `409 Conflict` has a `code` that tells the reason.  The `/v1` of the path is the name of the API. It does not change with the version of this document. The first number of the version changes when a change can break a client.  - Version 1.0.0 is the first release. 
  *
  * The version of the OpenAPI document: 1.0.0
  * 
@@ -63,6 +63,22 @@ export interface Reviewer {
      */
     recipeCount: number;
     /**
+     * The number of pantry item reviews of the user. Each tasting has its own review.
+     */
+    pantryItemReviewCount: number;
+    /**
+     * The average of the `overall` values of the pantry item reviews of the user.
+     * The API rounds it to one decimal. It is `null` for a user without pantry item reviews.
+     * 
+     */
+    pantryItemAverageOverall: number | null;
+    /**
+     * The number of pantry items that the user created.
+     * `listPantryItems` with `creator[eq]` lists them.
+     * 
+     */
+    pantryItemCount: number;
+    /**
      * The number of lists of the user. `listReviewerLists` lists them.
      */
     listCount: number;
@@ -80,6 +96,9 @@ export function instanceOfReviewer(value: object): value is Reviewer {
     if ((!('recipeReviewCount' in (value as Record<string, any>)) && !('recipe_review_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['recipeReviewCount'] === undefined && (value as Record<string, any>)['recipe_review_count'] === undefined)) return false;
     if ((!('recipeAverageOverall' in (value as Record<string, any>)) && !('recipe_average_overall' in (value as Record<string, any>))) || ((value as Record<string, any>)['recipeAverageOverall'] === undefined && (value as Record<string, any>)['recipe_average_overall'] === undefined)) return false;
     if ((!('recipeCount' in (value as Record<string, any>)) && !('recipe_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['recipeCount'] === undefined && (value as Record<string, any>)['recipe_count'] === undefined)) return false;
+    if ((!('pantryItemReviewCount' in (value as Record<string, any>)) && !('pantry_item_review_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['pantryItemReviewCount'] === undefined && (value as Record<string, any>)['pantry_item_review_count'] === undefined)) return false;
+    if ((!('pantryItemAverageOverall' in (value as Record<string, any>)) && !('pantry_item_average_overall' in (value as Record<string, any>))) || ((value as Record<string, any>)['pantryItemAverageOverall'] === undefined && (value as Record<string, any>)['pantry_item_average_overall'] === undefined)) return false;
+    if ((!('pantryItemCount' in (value as Record<string, any>)) && !('pantry_item_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['pantryItemCount'] === undefined && (value as Record<string, any>)['pantry_item_count'] === undefined)) return false;
     if ((!('listCount' in (value as Record<string, any>)) && !('list_count' in (value as Record<string, any>))) || ((value as Record<string, any>)['listCount'] === undefined && (value as Record<string, any>)['list_count'] === undefined)) return false;
     return true;
 }
@@ -102,6 +121,9 @@ export function ReviewerFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'recipeReviewCount': json['recipe_review_count'],
         'recipeAverageOverall': json['recipe_average_overall'],
         'recipeCount': json['recipe_count'],
+        'pantryItemReviewCount': json['pantry_item_review_count'],
+        'pantryItemAverageOverall': json['pantry_item_average_overall'],
+        'pantryItemCount': json['pantry_item_count'],
         'listCount': json['list_count'],
     };
 }
@@ -125,6 +147,9 @@ export function ReviewerToJSONTyped(value?: Reviewer | null, ignoreDiscriminator
         'recipe_review_count': value['recipeReviewCount'],
         'recipe_average_overall': value['recipeAverageOverall'],
         'recipe_count': value['recipeCount'],
+        'pantry_item_review_count': value['pantryItemReviewCount'],
+        'pantry_item_average_overall': value['pantryItemAverageOverall'],
+        'pantry_item_count': value['pantryItemCount'],
         'list_count': value['listCount'],
     };
 }

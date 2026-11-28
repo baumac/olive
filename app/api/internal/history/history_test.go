@@ -209,6 +209,47 @@ func TestVersionsOfRecipes(t *testing.T) {
 	}
 }
 
+func TestVersionsOfPantryItems(t *testing.T) {
+	t.Parallel()
+	app := newApp(t)
+	history.Register(app)
+	ana := newRecord(t, app, "users", map[string]any{"email": "ana@example.com", "password": "correct-horse-battery", "name": "Ana"})
+	aged := newTag(t, app, "aged")
+	c, err := app.FindCollectionByNameOrId("pantry_items")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := core.NewRecord(c)
+	r.Load(map[string]any{"name": "Gouda", "category": "cheese", "producer": "Dairy", "tags": []string{aged}, "creator": ana.Id})
+	saveAs(t, app, ana.Id, r)
+	r.Set("category", "chocolate")
+	r.Set("producer", "")
+	r.Set("style", "Dark")
+	saveAs(t, app, ana.Id, r)
+	tag, err := app.FindRecordById("tags", aged)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tag.Set("name", "old")
+	if err := app.Save(tag); err != nil {
+		t.Fatal(err)
+	}
+
+	vs := versions(t, app, history.PantryItems, r.Id)
+	if len(vs) != 3 {
+		t.Fatalf("%d versions, want 3", len(vs))
+	}
+	wantVersion(t, vs[0], 1, history.ActionCreate, history.SourceUser, ana.Id, "name", "category", "producer", "tags")
+	wantVersion(t, vs[1], 2, history.ActionUpdate, history.SourceUser, ana.Id, "category", "producer", "style")
+	wantVersion(t, vs[2], 3, history.ActionUpdate, history.SourceAdmin, "", "tags")
+	want := map[string]any{
+		"name": "Gouda", "category": "chocolate", "producer": nil, "origin": nil, "style": "Dark", "description": nil, "tags": []any{"old"},
+	}
+	if got := snapshotOf(t, vs[2]); !reflect.DeepEqual(got, want) {
+		t.Errorf("snapshot %v, want %v", got, want)
+	}
+}
+
 func TestParentWithoutVersionGetsBaseline(t *testing.T) {
 	t.Parallel()
 	app := newApp(t)

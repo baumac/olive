@@ -11,6 +11,9 @@ import (
 	"github.com/pocketbase/pocketbase/tools/dbutils"
 )
 
+// allKinds has the kinds of all migrations.
+var allKinds = append(slices.Clone(subjectKinds), pantryItemKind)
+
 func newApp(t *testing.T) *tests.TestApp {
 	t.Helper()
 	app, err := tests.NewTestApp(testapp.Dir(t))
@@ -51,13 +54,18 @@ func TestDownRestoresTheDefaults(t *testing.T) {
 		t.Errorf("up: email index %+v", idx)
 	}
 
+	if err := pantryItemsDown(app); err != nil {
+		t.Fatal(err)
+	}
 	if err := down(app); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{
 		"restaurants", "reviews", "review_photos", "lists", "list_items", "restaurant_versions", "restaurant_overall", "restaurant_tags",
 		"restaurants_fts", "reviews_fts", "recipes", "recipe_reviews", "recipe_review_photos", "list_recipes", "recipe_versions",
-		"recipe_overall", "recipe_tags", "recipes_fts", "recipe_reviews_fts",
+		"recipe_overall", "recipe_tags", "recipes_fts", "recipe_reviews_fts", "pantry_items", "pantry_item_reviews",
+		"pantry_item_review_photos", "list_pantry_items", "pantry_item_versions", "pantry_item_overall", "pantry_item_tags",
+		"pantry_items_fts", "pantry_item_reviews_fts",
 	} {
 		if app.HasTable(name) {
 			t.Errorf("table %s stays", name)
@@ -85,6 +93,9 @@ func TestDownRestoresTheDefaults(t *testing.T) {
 
 	if err := up(app); err != nil {
 		t.Fatalf("up after down: %v", err)
+	}
+	if err := pantryItemsUp(app); err != nil {
+		t.Fatalf("pantry up after down: %v", err)
 	}
 }
 
@@ -126,7 +137,7 @@ func TestUsersHaveNoFileFields(t *testing.T) {
 func TestReviewPhotos(t *testing.T) {
 	t.Parallel()
 	app := newApp(t)
-	for _, k := range subjectKinds {
+	for _, k := range allKinds {
 		photos, err := app.FindCollectionByNameOrId(k.photos)
 		if err != nil {
 			t.Fatal(err)

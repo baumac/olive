@@ -287,7 +287,7 @@ describe('problem codes', () => {
 })
 
 describe('tags', () => {
-  const tag = { name: 'café', restaurantCount: 1, recipeCount: 3, created: '2026-11-27T09:12:44.318Z' }
+  const tag = { name: 'café', restaurantCount: 1, recipeCount: 3, pantryItemCount: 0, created: '2026-11-27T09:12:44.318Z' }
 
   it('counts the restaurants and the recipes of a tag', () => {
     expect(tagCountText(tag)).toBe('1 restaurant and 3 recipes')
@@ -302,8 +302,8 @@ describe('tags', () => {
   it('drops the tags of the other kind in a filter', async () => {
     const created = '2026-11-27T09:12:44.318Z'
     const items = [
-      { name: 'soup', restaurantCount: 0, recipeCount: 3, created },
-      { name: 'soup-bar', restaurantCount: 2, recipeCount: 0, created },
+      { name: 'soup', restaurantCount: 0, recipeCount: 3, pantryItemCount: 0, created },
+      { name: 'soup-bar', restaurantCount: 2, recipeCount: 0, pantryItemCount: 0, created },
     ]
     const list = vi.spyOn(tagsApi, 'listTags').mockResolvedValue({ items, nextCursor: null })
     expect((await tagSuggester('restaurants')(' soup ')).map((t) => t.name)).toEqual(['soup', 'soup-bar'])

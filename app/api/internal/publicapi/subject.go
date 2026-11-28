@@ -13,7 +13,9 @@ import (
 // photo, rating, search, and list code takes a subject. See decision 00004.
 type subject struct {
 	subjects.Tables
-	noun          string
+	noun string
+	// plural is the plural noun of the problem details.
+	plural        string
 	notFound      string
 	listLimitCode reviewsapi.ProblemCode
 	// The search scores depend only on the row. bm25 also depends on all
@@ -31,6 +33,7 @@ type subject struct {
 var restaurantSubject = newSubject(subject{
 	Tables:        subjects.Restaurants,
 	noun:          "restaurant",
+	plural:        "restaurants",
 	notFound:      restaurantNotFound,
 	listLimitCode: reviewsapi.ProblemCodeListRestaurantLimit,
 	search:        []scoreColumn{{"name", 10}, {"tags", 4}, {"address", 2}, {"description", 1}},

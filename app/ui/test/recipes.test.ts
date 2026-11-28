@@ -277,6 +277,7 @@ describe('recipe parts of the list and reviewer pages', () => {
     creator: { id: ana.id, name: 'Ana' },
     restaurantCount: 0,
     recipeCount: 1,
+    pantryItemCount: 0,
     created: '2024-11-04T01:26:55.002Z',
     updated: '2024-11-04T01:26:55.002Z',
   }
@@ -311,6 +312,9 @@ describe('recipe parts of the list and reviewer pages', () => {
       recipeReviewCount: 2,
       recipeAverageOverall: 7.5,
       recipeCount: 1,
+      pantryItemReviewCount: 0,
+      pantryItemAverageOverall: null,
+      pantryItemCount: 0,
       listCount: 1,
     })
     vi.spyOn(reviewersApi, 'listReviewerRestaurantReviews').mockResolvedValue({ items: [], nextCursor: null })

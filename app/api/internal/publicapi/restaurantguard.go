@@ -141,7 +141,13 @@ var restaurantGuard = fieldGuard{
 // tags are IDs of existing tags. PocketBase checks them. A location without
 // an address gets an error of the address.
 func restaurantProperties(r *core.Record, schema *openapi3.Schema) (map[string]json.RawMessage, error) {
-	raw, err := json.Marshal(toRestaurant(r, nil, nil, nil, viewerData{}))
+	return responseProperties(toRestaurant(r, nil, nil, nil, viewerData{}), schema)
+}
+
+// responseProperties gets the properties of schema that the response v has.
+// It leaves out the tags and the properties without a value.
+func responseProperties(v any, schema *openapi3.Schema) (map[string]json.RawMessage, error) {
+	raw, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}

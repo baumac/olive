@@ -20,24 +20,32 @@ type subjectKind struct {
 	versions  string
 	// reviewTriggers is the name prefix of the triggers on the reviews.
 	reviewTriggers string
-	// searchColumn is the last column of the FTS5 table of the parents.
-	searchColumn string
-	scores       []string
-	newParent    func(users *core.Collection) *core.Collection
+	// searchColumns are the last columns of the FTS5 table of the parents.
+	searchColumns []string
+	scores        []string
+	newParent     func(users *core.Collection) *core.Collection
 }
 
 var (
 	restaurantKind = subjectKind{
 		parent: "restaurant", parents: "restaurants", reviews: "reviews", photos: "review_photos",
 		listItems: "list_items", versions: "restaurant_versions", reviewTriggers: "review_overall",
-		searchColumn: "address", scores: []string{"space", "service", "food", "price"}, newParent: newRestaurants,
+		searchColumns: []string{"address"}, scores: []string{"space", "service", "food", "price"}, newParent: newRestaurants,
 	}
 	recipeKind = subjectKind{
 		parent: "recipe", parents: "recipes", reviews: "recipe_reviews", photos: "recipe_review_photos",
 		listItems: "list_recipes", versions: "recipe_versions", reviewTriggers: "recipe_review_overall",
-		searchColumn: "ingredients", scores: []string{"taste", "ease", "instructions", "value"}, newParent: newRecipes,
+		searchColumns: []string{"ingredients"}, scores: []string{"taste", "ease", "instructions", "value"}, newParent: newRecipes,
 	}
 	subjectKinds = []subjectKind{restaurantKind, recipeKind}
+	// pantryItemKind is not in subjectKinds. The migrations before
+	// 1796947200_pantry_items.go loop over subjectKinds. The pantry migration
+	// sets its newParent with the tags collection.
+	pantryItemKind = subjectKind{
+		parent: "pantry_item", parents: "pantry_items", reviews: "pantry_item_reviews", photos: "pantry_item_review_photos",
+		listItems: "list_pantry_items", versions: "pantry_item_versions", reviewTriggers: "pantry_item_review_overall",
+		searchColumns: []string{"producer", "style", "origin"}, scores: []string{"taste", "aroma", "texture", "value"},
+	}
 )
 
 func (k subjectKind) create(app core.App, users, lists *core.Collection) error {
@@ -121,7 +129,7 @@ func (k subjectKind) tables() []string {
 
 		// The tokenizer ignores case and accents. The prefix indexes serve
 		// prefix terms.
-		"CREATE VIRTUAL TABLE {{" + k.parents + "_fts}} USING fts5(id UNINDEXED, name, description, tags, " + k.searchColumn + ", " +
+		"CREATE VIRTUAL TABLE {{" + k.parents + "_fts}} USING fts5(id UNINDEXED, name, description, tags, " + strings.Join(k.searchColumns, ", ") + ", " +
 			"tokenize = 'unicode61 remove_diacritics 2', prefix = '2 3')",
 		"CREATE VIRTUAL TABLE {{" + k.reviews + "_fts}} USING fts5(id UNINDEXED, title, feedback, " + k.parent + "_name, " +
 			"tokenize = 'unicode61 remove_diacritics 2', prefix = '2 3')",

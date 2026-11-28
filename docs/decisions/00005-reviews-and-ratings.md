@@ -64,6 +64,12 @@ Each score is an integer from 1 to 10.
 | recipe | `ease` | how easy is it to make? A high score is easy. |
 | recipe | `instructions` | are the steps clear, and do the times and amounts work? |
 | recipe | `value` | is the result worth the cost of the ingredients and the time? |
+| pantry item | `taste` | how good is the flavor? |
+| pantry item | `aroma` | how good is the smell? |
+| pantry item | `texture` | how good is the feel in the mouth? |
+| pantry item | `value` | is it worth its price? A high score is good. |
+
+A review of a pantry item is a tasting. See decision 00012.
 
 ## A review
 
