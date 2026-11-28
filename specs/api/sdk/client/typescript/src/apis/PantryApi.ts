@@ -19,6 +19,11 @@ import {
     AverageRangeToJSON,
 } from '../models/AverageRange.js';
 import {
+    type DateRange,
+    DateRangeFromJSON,
+    DateRangeToJSON,
+} from '../models/DateRange.js';
+import {
     type PantryItem,
     PantryItemFromJSON,
     PantryItemToJSON,
@@ -269,6 +274,12 @@ export interface ListAllPantryItemReviewsRequest {
      */
     overall?: AverageRange;
     /**
+     * Compares the `date` of the review. Each key is an operator, for example `date[gte]=`.
+     * The form `YYYY-MM-DD` sorts like the dates.
+     * 
+     */
+    date?: DateRange;
+    /**
      * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
      */
     created?: TimestampRange;
@@ -362,6 +373,12 @@ export interface ListPantryItemReviewsRequest {
      * Compares the `overall` value of the review. Each key is an operator, for example `overall[gte]=`.
      */
     overall?: AverageRange;
+    /**
+     * Compares the `date` of the review. Each key is an operator, for example `date[gte]=`.
+     * The form `YYYY-MM-DD` sorts like the dates.
+     * 
+     */
+    date?: DateRange;
     /**
      * Compares the `created` timestamp. Each key is an operator, for example `created[gte]=`.
      */
@@ -784,6 +801,7 @@ export interface PantryApiInterface {
      * @param {ScoreRange} [texture] Compares the &#x60;texture&#x60; score. Each key is an operator, for example &#x60;texture[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [value] Compares the &#x60;value&#x60; score. Each key is an operator, for example &#x60;value[gte]&#x3D;&#x60;.
      * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {DateRange} [date] Compares the &#x60;date&#x60; of the review. Each key is an operator, for example &#x60;date[gte]&#x3D;&#x60;. The form &#x60;YYYY-MM-DD&#x60; sorts like the dates. 
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -807,6 +825,7 @@ export interface PantryApiInterface {
      * @param {ScoreRange} [texture] Compares the &#x60;texture&#x60; score. Each key is an operator, for example &#x60;texture[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [value] Compares the &#x60;value&#x60; score. Each key is an operator, for example &#x60;value[gte]&#x3D;&#x60;.
      * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {DateRange} [date] Compares the &#x60;date&#x60; of the review. Each key is an operator, for example &#x60;date[gte]&#x3D;&#x60;. The form &#x60;YYYY-MM-DD&#x60; sorts like the dates. 
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -863,6 +882,7 @@ export interface PantryApiInterface {
      * @param {ScoreRange} [texture] Compares the &#x60;texture&#x60; score. Each key is an operator, for example &#x60;texture[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [value] Compares the &#x60;value&#x60; score. Each key is an operator, for example &#x60;value[gte]&#x3D;&#x60;.
      * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {DateRange} [date] Compares the &#x60;date&#x60; of the review. Each key is an operator, for example &#x60;date[gte]&#x3D;&#x60;. The form &#x60;YYYY-MM-DD&#x60; sorts like the dates. 
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -885,6 +905,7 @@ export interface PantryApiInterface {
      * @param {ScoreRange} [texture] Compares the &#x60;texture&#x60; score. Each key is an operator, for example &#x60;texture[gte]&#x3D;&#x60;.
      * @param {ScoreRange} [value] Compares the &#x60;value&#x60; score. Each key is an operator, for example &#x60;value[gte]&#x3D;&#x60;.
      * @param {AverageRange} [overall] Compares the &#x60;overall&#x60; value of the review. Each key is an operator, for example &#x60;overall[gte]&#x3D;&#x60;.
+     * @param {DateRange} [date] Compares the &#x60;date&#x60; of the review. Each key is an operator, for example &#x60;date[gte]&#x3D;&#x60;. The form &#x60;YYYY-MM-DD&#x60; sorts like the dates. 
      * @param {TimestampRange} [created] Compares the &#x60;created&#x60; timestamp. Each key is an operator, for example &#x60;created[gte]&#x3D;&#x60;.
      * @param {TimestampRange} [updated] Compares the &#x60;updated&#x60; timestamp. Each key is an operator, for example &#x60;updated[gte]&#x3D;&#x60;.
      * @param {string} [creatorEq] The &#x60;creator.id&#x60; is equal to the value.
@@ -1694,6 +1715,10 @@ export class PantryApi extends runtime.BaseAPI implements PantryApiInterface {
             queryParameters['overall'] = requestParameters['overall'];
         }
 
+        if (requestParameters['date'] != null) {
+            queryParameters['date'] = requestParameters['date'];
+        }
+
         if (requestParameters['created'] != null) {
             queryParameters['created'] = requestParameters['created'];
         }
@@ -1861,6 +1886,10 @@ export class PantryApi extends runtime.BaseAPI implements PantryApiInterface {
 
         if (requestParameters['overall'] != null) {
             queryParameters['overall'] = requestParameters['overall'];
+        }
+
+        if (requestParameters['date'] != null) {
+            queryParameters['date'] = requestParameters['date'];
         }
 
         if (requestParameters['created'] != null) {

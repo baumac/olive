@@ -55,8 +55,17 @@ func TestOptions(t *testing.T) {
 	}
 
 	ui, err := uiOptions(env(nil))
-	if err != nil || ui != (webui.Options{TileURL: webui.DefaultTileURL}) {
-		t.Errorf("no map variables: %+v, %v", ui, err)
+	if err != nil || ui.TileURL != webui.DefaultTileURL || ui.TileAttribution != "" || ui.TimeZone.String() != webui.DefaultTimeZone {
+		t.Errorf("no UI variables: %+v, %v", ui, err)
+	}
+	ui, err = uiOptions(env(map[string]string{"REVIEWS_TIME_ZONE": "America/New_York"}))
+	if err != nil || ui.TimeZone.String() != "America/New_York" {
+		t.Errorf("time zone: %+v, %v", ui, err)
+	}
+	for _, zone := range []string{"Europe/Nowhere", "Local", "cet/../CET"} {
+		if _, err := uiOptions(env(map[string]string{"REVIEWS_TIME_ZONE": zone})); err == nil {
+			t.Errorf("time zone %q: no error", zone)
+		}
 	}
 	ui, err = uiOptions(env(map[string]string{"REVIEWS_MAP_TILE_URL": "off"}))
 	if err != nil || ui.TileURL != "" {
@@ -113,6 +122,7 @@ func TestSetup(t *testing.T) {
 	for _, vars := range []map[string]string{
 		{"REVIEWS_SIGN_IN_LIMIT": "many"},
 		{"REVIEWS_MAP_TILE_URL": "https://t.example.com/"},
+		{"REVIEWS_TIME_ZONE": "Europe/Nowhere"},
 	} {
 		if err := setup(newApp(), env(vars)); err == nil {
 			t.Errorf("%v: no error", vars)

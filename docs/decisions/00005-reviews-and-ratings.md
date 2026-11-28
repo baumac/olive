@@ -42,7 +42,7 @@ Out of scope:
 - the reviewer pages and the reviewer averages. Decision 00006 has them.
 - an overall that the reviewer types
 - tags on reviews
-- a `date` filter, and a count of the visits of one user, such as "You visited 3 times"
+- a count of the visits of one user, such as "You visited 3 times"
 - a `reviewer_count` property in the responses
 - a minimum number of reviews for the `overall` sort
 - replies, comments, and likes on reviews. Decision 00000 puts social features out of scope.
@@ -121,7 +121,9 @@ A review of a pantry item is a tasting. See decision 00012.
 - the scores, `title`, `feedback`, and `date` can change
 - a review of a different subject than the path gets `404`. An unknown subject in the path gets `404`, also for the list.
 - the lists have the sorts `overall`, the scores, `relevance`, `title`, `date`, `created`, and `updated`. The default is `-date`. Reviews of one day sort by `created`.
-- the lists have the filters `overall`, the scores, `created`, `updated`, and `creator`. The lists of all reviews also have `restaurant` or `recipe` with `eq` and `in`.
+- the lists have the filters `overall`, the scores, `date`, `created`, `updated`, and `creator`. The lists of all reviews also have `restaurant` or `recipe` with `eq` and `in`.
+- the `date` filter has the keys `lt`, `lte`, `eq`, `gte`, and `gt`. Each value is a date in the form `YYYY-MM-DD` that exists. Any date is valid, also a date after today.
+- the `date` filter compares the text of `date`. The form `YYYY-MM-DD` sorts like the dates. It uses the index `date, created, id`. See decision 00013.
 - the search looks in `title` 10, the name of the subject 2, and `feedback` 1
 - decision 00006 has the reviews of one reviewer
 

@@ -18,7 +18,7 @@ func (s *Server) ListRecipeReviews(_ context.Context, req reviewsapi.ListRecipeR
 	all := reviewsapi.ListAllRecipeReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, RecipeEq: &req.RecipeId,
 		Taste: p.Taste, Ease: p.Ease, Instructions: p.Instructions, Value: p.Value,
-		Overall: p.Overall, Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
+		Overall: p.Overall, Date: p.Date, Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
 	}
 	fingerprintOf := func(sort string) []any {
 		q := req.Params
@@ -64,7 +64,7 @@ func (s *Server) ListReviewerRecipeReviews(ctx context.Context, req reviewsapi.L
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, CreatorEq: &req.ReviewerId,
 		RecipeEq: p.RecipeEq, RecipeIn: p.RecipeIn,
 		Taste: p.Taste, Ease: p.Ease, Instructions: p.Instructions, Value: p.Value,
-		Overall: p.Overall, Created: p.Created, Updated: p.Updated,
+		Overall: p.Overall, Date: p.Date, Created: p.Created, Updated: p.Updated,
 	}
 	fingerprintOf := func(sort string) []any {
 		q := req.Params
@@ -116,7 +116,7 @@ func (s *Server) recipeReviewPage(
 		scores: map[string]*reviewsapi.ScoreRange{
 			"taste": p.Taste, "ease": p.Ease, "instructions": p.Instructions, "value": p.Value,
 		},
-		overall: p.Overall, created: p.Created, updated: p.Updated, creatorEq: p.CreatorEq, creatorIn: p.CreatorIn,
+		overall: p.Overall, date: p.Date, created: p.Created, updated: p.Updated, creatorEq: p.CreatorEq, creatorIn: p.CreatorIn,
 	}, fingerprintOf, recipe)
 	if err != nil || page.bad != "" || page.notFound {
 		return recipeReviewPageResult{bad: page.bad, notFound: page.notFound}, err

@@ -67,7 +67,7 @@ func (s *Server) ListRestaurantReviews(_ context.Context, req reviewsapi.ListRes
 	all := reviewsapi.ListAllRestaurantReviewsParams{
 		Limit: p.Limit, Cursor: p.Cursor, Sort: p.Sort, Search: p.Search, RestaurantEq: &req.RestaurantId,
 		Space: p.Space, Service: p.Service, Food: p.Food, Price: p.Price,
-		Overall: p.Overall, Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
+		Overall: p.Overall, Date: p.Date, Created: p.Created, Updated: p.Updated, CreatorEq: p.CreatorEq, CreatorIn: p.CreatorIn,
 	}
 	// The cursor keeps the fingerprint of the first version of this
 	// operation. Open pages can then still load more after a deploy.
@@ -133,7 +133,7 @@ func (s *Server) reviewPage(
 		scores: map[string]*reviewsapi.ScoreRange{
 			"space": p.Space, "service": p.Service, "food": p.Food, "price": p.Price,
 		},
-		overall: p.Overall, created: p.Created, updated: p.Updated, creatorEq: p.CreatorEq, creatorIn: p.CreatorIn,
+		overall: p.Overall, date: p.Date, created: p.Created, updated: p.Updated, creatorEq: p.CreatorEq, creatorIn: p.CreatorIn,
 	}, fingerprintOf, restaurant)
 	if err != nil || page.bad != "" || page.notFound {
 		return reviewPageResult{bad: page.bad, notFound: page.notFound}, err
@@ -157,6 +157,7 @@ type reviewQuery struct {
 	parentIn         *[]string
 	scores           map[string]*reviewsapi.ScoreRange
 	overall          *reviewsapi.AverageRange
+	date             *reviewsapi.DateRange
 	created, updated *reviewsapi.TimestampRange
 	creatorEq        *string
 	creatorIn        *[]string
@@ -219,6 +220,7 @@ func (s *Server) reviewsOf(
 	}
 	w.compare(sub.overallFilter(sort), averageComparisons(q.overall))
 	w.idFilters(sub.Reviews, "creator", q.creatorEq, q.creatorIn)
+	w.compare(column(sub.Reviews, "date"), dateComparisons(q.date))
 	w.compare(column(sub.Reviews, "created"), timestampComparisons(q.created))
 	w.compare(column(sub.Reviews, "updated"), timestampComparisons(q.updated))
 	if after != nil {
@@ -546,6 +548,15 @@ func toReview(r *core.Record, creator *core.Record, restaurantName string, photo
 		Title: r.GetString("title"), Feedback: optionalText(r, "feedback"),
 		Creator: toCreator(creator), Photos: photos, Created: apiTimestamp(r.GetDateTime("created")), Updated: apiTimestamp(r.GetDateTime("updated")),
 	}, nil
+}
+
+// dateComparisons compares the text of the dates. The form YYYY-MM-DD sorts
+// like the dates.
+func dateComparisons(r *reviewsapi.DateRange) []comparison {
+	if r == nil {
+		return nil
+	}
+	return comparisons(r.Lt, r.Lte, r.Eq, r.Gte, r.Gt)
 }
 
 func scoreComparisons(r *reviewsapi.ScoreRange) []comparison {

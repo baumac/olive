@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/baumac/olive/app/api/internal/publicapi"
 	"github.com/baumac/olive/app/api/internal/subjects"
@@ -111,6 +112,9 @@ type indexPage struct {
 	whole, before, after []byte
 	siteName             string
 	siteImage            pageMeta
+	// zone has the weeks of the week pages.
+	zone *time.Location
+	now  func() time.Time
 }
 
 // readIndex returns false if index.html has no page-meta block with a title
@@ -168,12 +172,12 @@ func (p indexPage) pageTitle(title string) string {
 }
 
 // errNoRecord tells that the path names a restaurant, a recipe, a pantry
-// item, a review, a user, a list, or a tag that does not exist.
+// item, a review, a user, a list, a tag, or a week that does not exist.
 var errNoRecord = errors.New("no record")
 
 // metaFor returns false for a path that is not a restaurant, recipe, pantry
-// item, review, reviewer, list, or tag page. appURL is the Application URL of
-// the PocketBase settings.
+// item, review, reviewer, list, tag, or week page. appURL is the Application
+// URL of the PocketBase settings.
 // The literal path parts ignore case like Vue Router.
 func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, error) {
 	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
@@ -205,6 +209,9 @@ func (p indexPage) metaFor(app core.App, appURL, path string) (pageMeta, bool, e
 			return pageMeta{}, true, err
 		}
 		return p.listMeta(list, creator, counts, publicBaseURL(appURL)), true, nil
+	}
+	if len(parts) == 2 && strings.EqualFold(parts[0], "weeks") {
+		return p.weekPage(app, appURL, parts[1])
 	}
 	if len(parts) == 2 && strings.EqualFold(parts[0], "tags") && parts[1] != "" {
 		return p.tagPage(app, appURL, norm.NFC.String(parts[1]))
@@ -252,6 +259,8 @@ type reviewedKind struct {
 	subjects.Tables
 	photoFilePath func(parentID, reviewID, photoID string, variant reviewsapi.PhotoVariant) string
 	noun          string
+	// entry is the word of one review on a week page. See decision 00013.
+	entry string
 	// reviews and aReview start the default descriptions of the pages.
 	reviews, aReview string
 }
@@ -259,15 +268,15 @@ type reviewedKind struct {
 var (
 	restaurantKind = reviewedKind{
 		Tables: subjects.Restaurants, photoFilePath: publicapi.PhotoFilePath,
-		noun: "restaurant", reviews: "Reviews", aReview: "A review",
+		noun: "restaurant", entry: "visit", reviews: "Reviews", aReview: "A review",
 	}
 	recipeKind = reviewedKind{
 		Tables: subjects.Recipes, photoFilePath: publicapi.RecipePhotoFilePath,
-		noun: "recipe", reviews: "Reviews", aReview: "A review",
+		noun: "recipe", entry: "cook", reviews: "Reviews", aReview: "A review",
 	}
 	pantryItemKind = reviewedKind{
 		Tables: subjects.PantryItems, photoFilePath: publicapi.PantryItemPhotoFilePath,
-		noun: "pantry item", reviews: "Tastings", aReview: "A tasting",
+		noun: "pantry item", entry: "tasting", reviews: "Tastings", aReview: "A tasting",
 	}
 	reviewedKinds = []reviewedKind{restaurantKind, recipeKind, pantryItemKind}
 )
@@ -336,9 +345,16 @@ func (c itemCounts) items() string {
 			names = append(names, countOf(n, reviewedKinds[i].noun))
 		}
 	}
+	if len(names) == 0 {
+		return countOf(0, reviewedKinds[0].noun)
+	}
+	return joinAnd(names)
+}
+
+func joinAnd(names []string) string {
 	switch len(names) {
 	case 0:
-		return countOf(0, reviewedKinds[0].noun)
+		return ""
 	case 1:
 		return names[0]
 	case 2:

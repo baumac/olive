@@ -118,6 +118,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
   - `REVIEWS_EDIT_LIMIT` sets the updates, deletes, and list changes of each operation per user and hour. The default is 300. See decision 00003.
   - `REVIEWS_MAP_TILE_URL` sets the tile server of the maps. It is a URL template with `{z}`, `{x}`, and `{y}`. The default is the tile server of OpenStreetMap. `off` turns the maps off. See decision 00008.
   - `REVIEWS_MAP_ATTRIBUTION` sets the credit of a tile server that is not from OpenStreetMap.
+  - `REVIEWS_TIME_ZONE` sets the zone of the weeks in the link previews of `/weeks/{date}`. It is an IANA name. The default is `CET`. An unknown name stops the app at start. The UI uses the zone of the browser. See decision 00013.
   - `REVIEWS_VALIDATE_RESPONSES=false` turns off the spec validation of responses. See decision 00001.
   - `REVIEWS_VALIDATE_REQUESTS=false` turns off the spec validation of parameters and body values. Invalid values can then be saved. Turn it off only with the response validation, or responses with these values get 500.
     The tags keep their limit of 20. See decision 00011.
@@ -134,6 +135,7 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - the `pantry` tag has the pantry item and tasting operations. A pantry item is a wine, a beer, a cheese, or a chocolate with a `category`. Its paths start with `/pantry`. A tasting has the scores `taste`, `aroma`, `texture`, and `value`. See decision 00012.
     - a review is one visit, one cook, or one tasting. A user can write many reviews of one subject. See decision 00005.
     - each review has a `date` without a time. The `review-date` format allows the dates from 1900-01-01 to today in UTC+14. The review lists sort by `-date` by default.
+    - the review lists have a `date` filter with `DateRange`. Its `calendar-date` values can be after today. See decision 00013.
     - `rating` counts each reviewer one time with the average of the own reviews. `review_count` counts each review. See decision 00005.
     - `own_review_count` of a restaurant or a recipe counts the reviews of the user of the token, like `favorite`. The UI uses it for the delete rules of decision 00004.
     - a list of recipes has `RecipeSummary` items without the ingredients and the steps. `getRecipe` has them. See decision 00004.
@@ -212,7 +214,8 @@ The `CI result` job passes only when all other jobs pass. Read it first.
     - `testapp.LowCostDir` has the bcrypt cost 4 in the password fields. The `publicapi` tests use it. Production and `testapp.Dir` have the default cost 10.
     - `make test-coverage` does not count `testapp`.
   - **`app/api/internal/webui`** - embeds the UI build and serves it. See decision 00002.
-    - It writes the title and link preview tags of restaurant, recipe, pantry item, review, reviewer, list, and tag pages into `index.html`. See decision 00002.
+    - It writes the title and link preview tags of restaurant, recipe, pantry item, review, reviewer, list, tag, and week pages into `index.html`. See decision 00002.
+    - `weeks.go` has the weeks of `/weeks/{date}` in the zone of `REVIEWS_TIME_ZONE`. `specs/api/week-starts.json` has the week starts that the Go tests and the UI tests check. See decision 00013.
     - It serves `/robots.txt`. It disallows all paths for all crawlers. Link preview bots that obey it show no preview. See decision 00002.
     - The app has no structured data, no sitemap, and no canonical link. See decision 00002.
     - It serves `/map-config.json` with the tile server of the maps and allows its origin in the Content Security Policy. See decision 00008.

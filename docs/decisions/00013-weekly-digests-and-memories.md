@@ -21,7 +21,7 @@ Expected outcome:
 - the archive at `/weeks` lists the weeks with entries
 - the link of a digest shows a preview with the counts
 - the weeks start on Monday at 00:00 in the time zone of the browser
-- the Public API keeps its operations and schemas. The review lists only get a `date` filter.
+- the Public API keeps its operations. The review lists only get a `date` filter.
 
 # Scope
 [scope]: #scope
@@ -35,7 +35,7 @@ In scope:
 - the words and the components of the design system for the digest
 
 Out of scope:
-- new operations or schemas for the digest. See [Alternatives](#alternatives).
+- new operations or response schemas for the digest. See [Alternatives](#alternatives).
 - a weekly email. The group talks in its own chats. See "Won't do" in the backlog.
 - memories of one month or six months ago. Memories are whole years.
 - the memories of one reviewer on the journal
@@ -176,7 +176,8 @@ The home and the digest page show the parts of a digest in the same way.
 - a device that moves to another zone gets the new weeks at the same moments
 - `REVIEWS_TIME_ZONE` sets the zone of the link previews only. It is an IANA name. The default is `CET`.
 - an unknown name stops the app at start with an error, like the other environment variables
-- the Docker image has the `tzdata` package. `time.LoadLocation` finds the zone files there.
+- the app embeds the zones of `time/tzdata`. It then starts on a host without zone files. Go reads the zone files of the host first.
+- the Docker image also has the `tzdata` package
 - `CET` has the summer time CEST from the last Sunday of March to the last Sunday of October
 - the week of 23 to 29 March 2026 has 167 hours in `CET`. The week of 19 to 25 October 2026 has 169 hours.
 - only the weeks and today use the zone. The `date` check of decision 00005 keeps UTC+14.
@@ -185,12 +186,13 @@ The home and the digest page show the parts of a digest in the same way.
 
 The Public API gets one change. The nine review lists with the `created` filter also get a `date` filter.
 
-- `DateFilter` is a shared parameter, like `CreatedFilter`. Its keys are `lt`, `lte`, `eq`, `gte`, and `gt`, as in `TimestampRange`.
-- each value is a date in the form `YYYY-MM-DD`. All comparisons must match.
+- `DateFilter` is a shared parameter, like `CreatedFilter`. Its schema `DateRange` has the keys `lt`, `lte`, `eq`, `gte`, and `gt`, as in `TimestampRange`.
+- each value is a `CalendarDate` in the form `YYYY-MM-DD`. Its format `calendar-date` needs a date that exists. All comparisons must match.
+- `ReviewDate` does not fit. Its format refuses a date after today, and a filter can end in the future.
 - `listAllRestaurantReviews` with `date[gte]=2025-11-23` and `date[lte]=2025-11-29` gives the restaurant reviews of that week in 2025
 - the filter compares the text of `date`. The form `YYYY-MM-DD` sorts like the dates.
 - each review table has the index `date, created, id`. The filter uses it.
-- the review lists keep their other filters and sorts. The API gets no new operation and no new schema type.
+- the review lists keep their other filters and sorts. The API gets no new operation. `DateRange` and `CalendarDate` are its only new schemas.
 
 ## Requests
 
@@ -225,6 +227,7 @@ The UI calls the Public API only through `@reviews/sdk`, as before.
 - the UI has no date library
 - the start of a week is the first instant on or after Monday 00:00 in the zone. The UI finds it from the offset of the zone at that time.
 - in a few zones the clocks jump at midnight. Monday 00:00 then does not exist, and the week starts at the first instant after the jump.
+- in a few zones the clocks go back over midnight. Monday 00:00 then happens two times, and the week starts at the first one. Asia/Jerusalem had this on 24 September 2001.
 - `webui` uses the same rule for `REVIEWS_TIME_ZONE`
 - the `created` filters get the start and the end as RFC 3339 timestamps
 - today is the date of now in the zone
@@ -287,8 +290,8 @@ The memories:
 - `webui` writes the page meta of `/weeks/{date}`. See decision 00002.
 - it uses `REVIEWS_TIME_ZONE` for the start and the end of the week. A crawler has no browser zone.
 - a reader in another zone can see counts that differ from the preview. Only entries near Monday 00:00 move.
-- it counts the reviews of each kind with one query of each kind. It has no copy of the rules.
-- it gets the creator IDs of the three kinds and counts each ID one time. A person with entries of two kinds is one person, as in the UI.
+- one query counts the reviews of each kind and the people. It has no copy of the rules.
+- it joins the creator IDs of the three kinds with `UNION` and counts each ID one time. A person with entries of two kinds is one person, as in the UI.
 - the title is "Week of 16 November 2026". `og:type` is `article`.
 - the description has the counts, such as "14 entries from 6 people: 6 visits, 5 cooks, and 3 tastings."
 - the description of the current week starts with "So far". A week without entries has "A quiet week on Olive."
@@ -346,6 +349,9 @@ The backlog item "redesign or rename table concept" is done.
 1. the `date` filter, the generated SDKs, `REVIEWS_TIME_ZONE`, and the page meta. One pull request.
 2. the home, the digest page, the archive, and the design system. A second pull request.
 
+Deploy the two pull requests together.
+The UI has no screen at `/weeks/{date}` before the second pull request. A shared link then shows a preview and opens the not found screen.
+
 The second pull request also moves the end-to-end tests of the table.
 
 - `tests/e2e/pantry.spec.ts` opens `/?kind=pantry` today. Its check moves to "Every entry" of the week of its review with `?kind=pantry`.
@@ -366,7 +372,8 @@ Each pull request has its Go, unit, and end-to-end tests.
 - they check the memories of 29 February and of the turn of the year
 - they check that a memory with a low overall and the date of today still goes first
 - they check the weeks of the summer time changes in `Europe/Berlin`
-- they check a zone with a jump at midnight, such as `America/Santiago`. Go and TypeScript then give the same start.
+- they check the zones with a jump at Monday 00:00, such as `Asia/Tehran` on 22 March 2021. `America/Santiago` jumps only on a Sunday. It checks the start of a day.
+- `specs/api/week-starts.json` has these weeks and days. The Go tests and the UI tests both read it. Go and TypeScript then give the same start.
 - they run in the time zone `America/Los_Angeles` and give the zone `Europe/Berlin` to the week code. They then show that the code uses the given zone.
 - all projects of one end-to-end run share one app and one week. The end-to-end tests check only their own entries.
 - an end-to-end test finds its entry in "Every entry" by a name from `uniqueTag`
@@ -377,6 +384,8 @@ Each pull request has its Go, unit, and end-to-end tests.
 | Alternative | Result |
 |---|---|
 | A `weeks` tag with `getCurrentWeek`, `getWeek`, and `listWeeks` | Not selected. It adds three operations and the first `discriminator` of the spec. The review lists already have the data. |
+| An inline schema for the `date` filter | Not selected. The generator makes one Go type for each operation. |
+| `ReviewDate` for the values of the `date` filter | Not selected. Its format refuses a date after today. |
 | A filter of the month and the day of `date` | Not selected. It is a new kind of filter. The `date` range works like the `created` range. |
 | Memories from more than five years back | Not selected. Each year costs three requests. |
 | The 20 best memories of each kind and year | Not selected. An entry of today with a low overall could fall out before the ranking. |

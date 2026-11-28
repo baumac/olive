@@ -29,6 +29,15 @@ func checkReviewDate(s string) error {
 	return nil
 }
 
+// checkCalendarDate checks the calendar-date format of the spec. The
+// pattern of the spec checks the form.
+func checkCalendarDate(s string) error {
+	if _, err := time.Parse(reviewDateLayout, s); err != nil {
+		return errors.New("not a date")
+	}
+	return nil
+}
+
 // reviewDateGuard gives the date of a save in the dashboard the checks of the
 // Public API.
 func reviewDateGuard(sub subject, schema string) fieldGuard {

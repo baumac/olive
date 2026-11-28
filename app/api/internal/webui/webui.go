@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing/fstest"
+	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -53,6 +54,11 @@ type Options struct {
 	// TileAttribution is the credit of a tile server that is not from
 	// OpenStreetMap. The map shows it before the OpenStreetMap credit.
 	TileAttribution string
+	// TimeZone has the weeks of the link previews. Nil uses
+	// DefaultTimeZone.
+	TimeZone *time.Location
+	// now gives the current week. Nil uses time.Now. The tests set it.
+	now func() time.Time
 }
 
 // tilePlaceholders are the parts of a tile URL that Leaflet replaces. {r}
@@ -144,6 +150,14 @@ func register(app core.App, files fs.FS, opts Options) error {
 		return err
 	}
 	index, hasMetaBlock := readIndex(files)
+	if index.now = opts.now; index.now == nil {
+		index.now = time.Now
+	}
+	if index.zone = opts.TimeZone; index.zone == nil {
+		if index.zone, err = time.LoadLocation(DefaultTimeZone); err != nil {
+			return err
+		}
+	}
 	if _, built := files.(noDotFiles); built && !hasMetaBlock {
 		app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 			warnNoMetaBlock(se.App)

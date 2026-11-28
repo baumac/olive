@@ -173,12 +173,16 @@ It has the title, the description, and the link preview tags of the site.
 | `/reviewers/{id}` | `og:type` `profile` and the name of the reviewer |
 | `/lists/{id}` | "NAME by CREATOR" and the number of restaurants, recipes, and pantry items |
 | `/tags/{name}` | "Tag NAME" and the number of restaurants, recipes, and pantry items. See decision 00011. |
+| `/weeks/{date}` | `og:type` `article`, "Week of 16 November 2026", and the number of entries, people, and each kind. See decision 00013. |
 
 - a pantry item without a description has `Tastings of NAME on Olive.`. A tasting without feedback has `A tasting of NAME on Olive.`. See decision 00012.
 - a count text names only the kinds with items, such as "1 restaurant, 1 recipe, and 2 pantry items"
+- a week page uses the weeks of `REVIEWS_TIME_ZONE`. Its description is such as "14 entries from 6 people: 6 visits, 5 cooks, and 3 tastings.". The current week starts with "So far,". A week without entries has "A quiet week on Olive.".
+- another day of a week gets the page meta of its week. `og:url` has the Monday.
 
 - `og:image` of a review with photos is the `full` file of its first photo, with its size and alt text. Other pages have the image of the site.
 - a missing record, a review of a different subject, and a reviewer without approval get `404` with the default `index.html`. The UI then shows its not found screen.
+- a week after the current week, a date that does not exist, and a date before `1900-01-01` also get this `404`
 - `og:url` and the photo URL start with the Application URL of the PocketBase settings
 
 ### The Application URL
