@@ -29,6 +29,19 @@ async function restaurantWithReview(api: TestApi, owner: TestUser) {
   return restaurant
 }
 
+async function pantryItemWithReview(api: TestApi, owner: TestUser) {
+  const item = await api.createPantryItem(owner, {
+    name: uniqueTag('Kabinett'),
+    category: 'wine',
+    producer: 'Weingut Example',
+    origin: 'Mosel, Germany',
+    style: 'Riesling',
+    tags: ['white'],
+  })
+  await api.createPantryItemReview(owner, item.id, { taste: 9, aroma: 8, texture: 7, value: 9, title: 'Fresh and light' })
+  return item
+}
+
 async function recipeWithReview(api: TestApi, owner: TestUser) {
   const recipe = await api.createRecipe(owner, {
     name: uniqueTag('Shakshuka'),
@@ -220,6 +233,29 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'Add step' }).click()
       // The first remove button fades in from the disabled opacity.
       await expect(page.getByRole('button', { name: 'Remove step 1' })).toBeEnabled()
+      await waitForAnimations(page)
+      await expectNoViolations(page)
+    })
+
+    test('the pantry has no axe violations', async ({ page, api }) => {
+      await pantryItemWithReview(api, await api.signUp('Joe'))
+      await page.goto('/pantry?category=wine')
+      await expect(page.getByRole('heading', { name: 'Pantry', level: 1 })).toBeAttached()
+      await expect(page.getByRole('status')).not.toHaveText('Loading pantry items')
+      await expectNoViolations(page)
+    })
+
+    test('the pantry item page has no axe violations', async ({ page, api }) => {
+      const item = await pantryItemWithReview(api, await api.signUp('Joe'))
+      await page.goto(`/pantry/${item.id}`)
+      await expect(page.getByRole('heading', { name: 'Fresh and light' })).toBeVisible()
+      await expectNoViolations(page)
+    })
+
+    test('the pantry item form has no axe violations', async ({ page, user: _ }) => {
+      await page.goto('/pantry/new')
+      await page.getByRole('button', { name: 'Add pantry item' }).click()
+      await expect(page.getByText('Select a category.')).toBeVisible()
       await waitForAnimations(page)
       await expectNoViolations(page)
     })

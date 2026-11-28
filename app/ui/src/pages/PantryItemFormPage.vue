@@ -18,7 +18,7 @@ import { usePageTitle } from '@/composables/usePageTitle'
 import { apiFailure, fieldErrors, notApprovedText, pantryApi, writeLimitText } from '@/lib/api'
 import { clearDraft, saveDraft, takeDraft } from '@/lib/drafts'
 import { type Undo, findUndo, undoNumber } from '@/lib/history'
-import { categories, isCategory, pantryItemMeta, pantryIcon } from '@/lib/pantry'
+import { categories, categoryLabel, isCategory, pantryItemMeta, pantryIcon } from '@/lib/pantry'
 import { changedPatch, parentAccess } from '@/lib/parents'
 import { tagList } from '@/lib/reviews'
 import { tagSuggester } from '@/lib/tags'
@@ -35,8 +35,9 @@ usePageTitle(() => (editing.value ? 'Edit pantry item' : 'Add a pantry item'))
 
 interface Fields {
   name: string
-  // category is empty until the person selects one.
-  category: PantryItemCategory | ''
+  // category is empty until the person selects one. A stored category of a
+  // newer API stays as its text.
+  category: string
   producer: string
   origin: string
   style: string
@@ -77,7 +78,7 @@ function subjectPath(id: string) {
 function fieldsOf(p: Pick<PantryItem, 'name' | 'category' | 'producer' | 'origin' | 'style' | 'description' | 'tags'>): Fields {
   return {
     name: p.name,
-    category: isCategory(p.category) ? p.category : '',
+    category: p.category,
     producer: p.producer ?? '',
     origin: p.origin ?? '',
     style: p.style ?? '',
@@ -115,8 +116,7 @@ onMounted(async () => {
 })
 
 // sameName has the pantry items with the name of the form. Two wines of one
-// producer can share a name. The check is a hint. A failed check shows
-// nothing. See decision 00012.
+// producer can share a name. The check is a hint without an error message.
 const sameName = ref<PantryItem[]>([])
 let nameCheck = 0
 let nameTimer: ReturnType<typeof setTimeout> | undefined
@@ -137,7 +137,8 @@ watch(
     }
     nameTimer = setTimeout(async () => {
       try {
-        const page = await pantryApi.listPantryItems({ search: name.trim().slice(0, 255), limit: 20 })
+        const search = Array.from(name.trim()).slice(0, 255).join('')
+        const page = await pantryApi.listPantryItems({ search, limit: 20 })
         if (check === nameCheck) {
           sameName.value = page.items.filter((p) => p.id !== props.pantryItemId && sameText(p.name, name)).slice(0, 5)
         }
@@ -153,8 +154,15 @@ watch(
 const categoryValue = computed({
   get: () => fields.value.category || undefined,
   set: (v: string | undefined) => {
-    fields.value.category = isCategory(v) ? v : ''
+    fields.value.category = v ?? ''
   },
+})
+
+// categoryOptions add an unknown stored category. The form can then keep it.
+const categoryOptions = computed(() => {
+  const stored = loaded.value.category
+  const known = categories.map((c) => ({ value: c.value as string, label: c.label }))
+  return stored && !isCategory(stored) ? [...known, { value: stored, label: categoryLabel(stored) }] : known
 })
 
 // optionalName checks a detail only when it has a value.
@@ -184,7 +192,7 @@ function validate(): boolean {
 function patchOf(f: Fields) {
   return {
     name: f.name,
-    category: f.category || undefined,
+    category: (f.category || undefined) as PantryItemCategory | undefined,
     producer: f.producer.trim() ? f.producer : null,
     origin: f.origin.trim() ? f.origin : null,
     style: f.style.trim() ? f.style : null,
@@ -294,7 +302,7 @@ async function submit() {
             </SelectTrigger>
           </FormControl>
           <SelectContent>
-            <SelectItem v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</SelectItem>
+            <SelectItem v-for="c in categoryOptions" :key="c.value" :value="c.value">{{ c.label }}</SelectItem>
           </SelectContent>
         </Select>
         <FormMessage />

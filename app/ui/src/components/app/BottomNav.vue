@@ -6,8 +6,8 @@ import { pantryIcon } from '@/lib/pantry'
 import { isCurrentSection } from '@/lib/sections'
 import { currentUser } from '@/lib/session'
 
-// BottomNav has the sections below md. AppHeader has them from md. The
-// journal is in UserMenu. Five slots then fit at 375px. See decision 00012.
+// BottomNav has the sections below md. The journal is in UserMenu. Five
+// slots then fit at 375px.
 const route = useRoute()
 
 const items = computed(() => [

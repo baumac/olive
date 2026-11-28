@@ -254,6 +254,21 @@ describe('PantryItemFormPage', () => {
     expect(links.map((a) => a.attributes('href'))).toEqual([`/reviews/new?pantry_item=${item.id}`])
   })
 
+  it('keeps a category that this UI does not know', async () => {
+    const spirits = { ...item, category: 'spirits' } as unknown as PantryItem
+    vi.spyOn(pantryApi, 'getPantryItem').mockResolvedValue(spirits)
+    const update = vi.spyOn(pantryApi, 'updatePantryItem').mockResolvedValue({ ...spirits, name: 'Renamed' })
+    signIn()
+    const edit = mount(PantryItemFormPage, { props: { pantryItemId: item.id }, global: { plugins: [await routerAt(`/pantry/${item.id}/edit`)] }, attachTo: attach() })
+    await flushPromises()
+    expect(edit.get('#pantry-item-category').text()).toBe('spirits')
+    await edit.get('#pantry-item-name').setValue('Renamed')
+    await edit.get('form').trigger('submit')
+    await flushPromises()
+    expect(edit.text()).not.toContain('Select a category.')
+    expect(update).toHaveBeenCalledWith({ pantryItemId: item.id, pantryItemPatch: { name: 'Renamed' } })
+  })
+
   it('suggests the tags of the pantry', async () => {
     const tags: TagSummary[] = [{ name: 'raw-milk', restaurantCount: 1, recipeCount: 0, pantryItemCount: 2, created: '2026-11-27T09:12:44.318Z' }]
     const list = vi.spyOn(tagsApi, 'listTags').mockResolvedValue({ items: tags, nextCursor: null })

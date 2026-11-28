@@ -117,7 +117,7 @@ A new component goes into the set only when a screen needs it.
 ## Navigation
 
 - below the `md` breakpoint, a bottom bar has "Table", "Restaurants", "Add review", "Recipes", and "Pantry". "Add review" is a round olive button in the middle. "You" is in the account menu. Five slots then fit at 375px. See decision 00012.
-- below `md`, the header has the logo and the account menu. The account menu has the account page, the theme, and "Sign out".
+- below `md`, the header has the logo and the account menu. The account menu has "You", the account page, the theme, and "Sign out".
 - from `md`, the header has the logo, "Table", "Restaurants", "Recipes", "Pantry", the "Add review" button, and the account menu. The account menu has "You".
 - a signed out visitor has no "Add review" and no "You". The header has "Sign in".
 - `/` opens the table. `/restaurants`, `/recipes`, and `/pantry` open the lists of the subjects.
